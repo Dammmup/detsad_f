@@ -10,7 +10,6 @@ import {
 import classNames from 'classnames';
 
 //images
-import profile from '../../images/main-profile.png';
 import config from '../../config';
 
 // styles
@@ -80,7 +79,7 @@ export default function Header(props) {
     <AppBar position='fixed' className={classes.appBar}>
       <Toolbar className={classes.toolbar}>
         <IconButton
-          color='inherit'
+          color='primary'
           onClick={() => toggleSidebar(layoutDispatch)}
           className={classNames(
             classes.headerMenuButton,
@@ -114,7 +113,7 @@ export default function Header(props) {
         <div className={classes.grow} />
         <IconButton
           aria-haspopup='true'
-          color='inherit'
+          color='primary'
           className={classes.headerMenuButton}
           aria-controls='profile-menu'
           onClick={(e) => setProfileMenu(e.currentTarget)}
@@ -124,7 +123,7 @@ export default function Header(props) {
             // eslint-disable-next-line no-mixed-operators
             src={
               (currentUser?.avatar?.length >= 1 &&
-              currentUser?.avatar[currentUser.avatar.length - 1].publicUrl) || profile
+              currentUser?.avatar[currentUser.avatar.length - 1].publicUrl)
             }
             classes={{ root: classes.headerIcon }}
           >

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { Drawer, IconButton, List } from '@mui/material';
 import { useTheme } from '@mui/material';
@@ -18,7 +19,7 @@ import {
   toggleSidebar,
 } from '../../context/LayoutContext';
 
-function Sidebar({ location, structure }) {
+function Sidebar({ location, structure = [] }) {
   let classes = useStyles();
   let theme = useTheme();
 
@@ -83,7 +84,7 @@ function Sidebar({ location, structure }) {
         className={classes.sidebarList}
         classes={{ padding: classes.padding }}
       >
-        {structure.map(link => (
+        {Array.isArray(structure) && structure.map(link => (
           <SidebarLink
             key={link.id}
             location={location}
@@ -109,5 +110,23 @@ function Sidebar({ location, structure }) {
     }
   }
 }
+
+Sidebar.propTypes = {
+  location: PropTypes.object.isRequired,
+  structure: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+      label: PropTypes.string,
+      link: PropTypes.string,
+      icon: PropTypes.node,
+      type: PropTypes.string,
+      children: PropTypes.array
+    })
+  ),
+};
+
+Sidebar.defaultProps = {
+  structure: [],
+};
 
 export default withRouter(Sidebar);

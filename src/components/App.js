@@ -5,16 +5,16 @@ import { SnackbarProvider } from './Snackbar';
 
 // components
 import Layout from './Layout';
-import Documentation from './Documentation/Documentation';
 
 // pages
 import Error from '../pages/error';
 import Login from '../pages/login';
 import Verify from '../pages/verify';
-import Reset from '../pages/reset';
 
 // context
 import { useUserState } from '../context/UserContext';
+import { GroupsProvider } from '../context/GroupsContext';
+import { StaffProvider } from '../context/StaffContext';
 import { getHistory } from '../index';
 
 export default function App() {
@@ -25,31 +25,32 @@ export default function App() {
   return (
     <>
       <SnackbarProvider>
-        <ConnectedRouter history={getHistory()}>
-          <Router history={getHistory()}>
-            <Switch>
-              <Route
-                exact
-                path='/'
-                render={() => <Redirect to='/app/profile' />}
-              />
+        <GroupsProvider>
+          <StaffProvider>
+          <ConnectedRouter history={getHistory()}>
+            <Router history={getHistory()}>
+              <Switch>
+                <Route
+                  exact
+                  path='/'
+                  render={() => <Redirect to='/app/profile' />}
+                />
 
-              <Route
-                exact
-                path='/app'
-                render={() => <Redirect to='/app/dashboard' />}
-              />
+                <Route
+                  exact
+                  path='/app'
+                  render={() => <Redirect to='/app/dashboard' />}
+                />
 
-              <Route path='/documentation' component={Documentation} />
-              <PrivateRoute path='/app' component={Layout} />
-              <PublicRoute path='/login' component={Login} />
-              <PublicRoute path='/verify-email' exact component={Verify} />
-              <PublicRoute path='/password-reset' exact component={Reset} />
-              <Redirect from='*' to='/app/dashboard' />
-              <Route component={Error} />
-            </Switch>
-          </Router>
-        </ConnectedRouter>
+                <PrivateRoute path='/app' component={Layout} />
+                <PublicRoute path='/login' component={Login} />
+                <Redirect from='*' to='/app/dashboard' />
+                <Route component={Error} />
+              </Switch>
+            </Router>
+          </ConnectedRouter>
+          </StaffProvider>
+        </GroupsProvider>
       </SnackbarProvider>
     </>
   );

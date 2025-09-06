@@ -1,285 +1,141 @@
 import React from 'react';
-import {
-  Home as HomeIcon,
-  FilterNone as UIElementsIcon,
-  BorderAll as TableIcon,
-  QuestionAnswer as SupportIcon,
-  LibraryBooks as LibraryIcon,
-  HelpOutline as FAQIcon,
-  BarChart as ChartIcon,
-  Map as MapIcon,
-  Apps as CoreIcon,
-  Description as DescriptionIcon,
-  ShoppingCart as ShoppingCartIcon,
-  StarBorder as ExtraIcon,
-  AddCircle as AddSectionIcon,
-  FolderOpen as FolderIcon,
-  Description as DocumentationIcon,
-  Person as PersonIcon,
-  AccountCircle as ProfileIcon
-} from '@mui/icons-material';
-import ChatIcon from '@mui/icons-material/Chat';
-import ViewCompactRoundedIcon from '@mui/icons-material/ViewCompactRounded';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import SchoolIcon from '@mui/icons-material/School';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import SettingsIcon from '@mui/icons-material/Settings';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 
-// components
+// Components
 import Dot from './components/Dot';
 
 const structure = [
-  { id: 100, label: 'Profile', link: '/app/profile', icon: <ProfileIcon /> },
-  { id: 0, label: 'Dashboard', link: '/app/dashboard', icon: <HomeIcon /> },
+  { 
+    id: 0, 
+    label: 'Главная', 
+    link: '/app/kindergarten/dashboard', 
+    icon: <DashboardIcon /> 
+  },
   {
     id: 1,
-    label: 'E-commerce',
-    badge: 'NodeJS',
-    badgeColor: 'success',
-    link: '/app/ecommerce',
-    icon: <ShoppingCartIcon />,
+    label: 'Учет времени',
+    link: '/app/time-tracking',
+    icon: <AccessTimeIcon />,
     children: [
       {
-        label: 'Product Manage',
-        link: '/app/ecommerce/management',
+        label: 'Отметка времени',
+        link: '/app/time-tracking/clock',
+        icon: <Dot size="small" color="success" />,
       },
       {
-        label: 'Products Grid',
-        link: '/app/ecommerce/gridproducts',
+        label: 'Мой табель',
+        link: '/app/time-tracking/timesheet',
+        icon: <Dot size="small" color="primary" />,
       },
       {
-        label: 'Product Page',
-        link: '/app/ecommerce/product',
+        label: 'Расписание смен',
+        link: '/app/time-tracking/schedule',
+        icon: <Dot size="small" color="info" />,
       },
     ],
   },
-  {
+  { 
     id: 2,
-    label: 'User',
-    link: '/app/user',
-    badge: 'New',
-    badgeColor: 'secondary',
-    icon: <PersonIcon />,
+    label: 'Детский сад',
+    link: '/app/kindergarten',
+    icon: <SchoolIcon />,
     children: [
       {
-        label: 'User List',
-        link: '/app/users',
+        label: 'Группы',
+        link: '/app/kindergarten/groups',
+        icon: <Dot size="small" color="primary" />,
       },
       {
-        label: 'User Add',
-        link: '/app/user/new',
+        label: 'Сотрудники',
+        link: '/app/kindergarten/staff',
+        icon: <Dot size="small" color="primary" />,
       },
       {
-        label: 'User Edit',
-        link: '/app/user/edit',
+        label: 'Посещаемость',
+        link: '/app/kindergarten/attendance',
+        icon: <Dot size="small" color="warning" />,
       },
     ],
   },
   {
     id: 3,
-    label: 'Documentation',
-    link: '/documentation',
-    icon: <DocumentationIcon />,
-  },
-  { id: 4, type: 'divider' },
-  { id: 5, type: 'title', label: 'TEMPLATE' },
-  {
-    id: 6,
-    label: 'Core',
-    link: '/app/core',
-    icon: <CoreIcon />,
+    label: 'Управление',
+    link: '/app/management',
+    icon: <CalendarTodayIcon />,
     children: [
       {
-        label: 'Typography',
-        link: '/app/core/typography',
+        label: 'Планирование смен',
+        link: '/app/management/shifts',
+        icon: <Dot size="small" color="primary" />,
       },
       {
-        label: 'Colors',
-        link: '/app/core/colors',
+        label: 'Циклограмма',
+        link: '/app/management/cyclogram',
+        icon: <Dot size="small" color="info" />,
       },
       {
-        label: 'Grid',
-        link: '/app/core/grid',
-      },
-    ],
-  },
-  {
-    id: 7,
-    label: 'Tables',
-    link: '/app/tables',
-    icon: <TableIcon />,
-    children: [
-      {   label: 'Tables Basic',
-        link: '/app/tables/static'
+        label: 'Отпуска',
+        link: '/app/management/leaves',
+        icon: <Dot size="small" color="secondary" />,
       },
       {
-        label: 'Tables Dynamic',
-        link: '/app/tables/dynamic',
+        label: 'Локации',
+        link: '/app/management/locations',
+        icon: <Dot size="small" color="success" />,
       },
     ],
   },
   {
-    id: 8,
-    label: 'UI Elements',
-    link: '/app/ui',
-    icon: <UIElementsIcon />,
+    id: 4,
+    label: 'Отчеты',
+    link: '/app/reports',
+    icon: <AssessmentIcon />,
     children: [
-      { label: 'Icons', link: '/app/ui/icons' },
-      { label: 'Badge', link: '/app/ui/badge' },
-      { label: 'Carousel', link: '/app/ui/carousel' },
-      { label: 'Cards', link: '/app/ui/cards' },
-      { label: 'Modal', link: '/app/ui/modal' },
       {
-        label: 'Notifications',
-        link: '/app/ui/notifications',
+        label: 'Рабочее время',
+        link: '/app/reports/time',
+        icon: <Dot size="small" color="primary" />,
       },
-      { label: 'Navbar', link: '/app/ui/navbar' },
-      { label: 'Tooltips', link: '/app/ui/tooltips' },
-      { label: 'Tabs', link: '/app/ui/tabs' },
-      { label: 'Pagination', link: '/app/tables/dynamic' },
-      { label: 'Progress', link: '/app/ui/progress' },
-      { label: 'Widget', link: '/app/ui/widget' },
-    ],
-  },
-  {
-    id: 9,
-    label: 'Forms',
-    link: '/app/forms',
-    icon: <DescriptionIcon />,
-    children: [
-      { label: 'Form Elements', link: '/app/forms/elements' },
-      { label: 'Form Validation', link: '/app/forms/validation' },
-    ],
-  },
-  {
-    id: 10,
-    label: 'Charts',
-    link: '/app/charts',
-    icon: <ChartIcon />,
-    children: [
-      { label: 'Charts Overview', link: '/app/charts/overview' },
-      { label: 'Line Charts', link: '/app/charts/line' },
-      { label: 'Bar Charts', link: '/app/charts/bar' },
-      { label: 'Pie Charts', link: '/app/charts/pie' },
-    ],
-  },
-  {
-    id: 200,
-    label: 'Grid',
-    link: '/app/grid',
-    icon: <ViewCompactRoundedIcon />,
-  },
-  {
-    id: 11,
-    label: 'Maps',
-    link: '/app/maps',
-    icon: <MapIcon />,
-    children: [
-      { label: 'Google Maps', link: '/app/maps/google' },
-      { label: 'Vector Map', link: '/app/maps/vector' },
-    ],
-  },
-  {
-    id: 12,
-    label: 'Extra',
-    link: '/app/extra',
-    icon: <ExtraIcon />,
-    children: [
-      { label: 'Calendar', link: '/app/extra/calendar' },
-      { label: 'Invoice', link: '/app/extra/invoice' },
+
       {
-        label: 'Login Page',
-        click: function(...rest) {
-          const name = 'onLogin'
-          rest.forEach(c => {
-            if (c.clickName === name) {
-              return c()
-            }
-            return false
-          })
-        },
+        label: 'Зарплата',
+        link: '/app/reports/payroll',
+        icon: <Dot size="small" color="success" />,
       },
-      { label: 'Error Page', link: '/404' },
-      { label: 'Gallery', link: '/app/extra/gallery' },
-      { label: 'Search Result', link: '/app/extra/search' },
-      { label: 'Time Line', link: '/app/extra/timeline' },
-    ],
-  },
-  {
-    id: 13,
-    label: 'Menu Levels',
-    icon: <FolderIcon />,
-    children: [
-      { label: 'Level 1.1' },
       {
-        label: 'Level 1.2',
-        type: 'nested',
-        children: [
-          { label: 'Level 2.1' },
-          {
-            label: 'Level 2.2',
-            children: [
-              {
-                label: 'Level 3.1',
-              },
-            ],
-          },
-        ],
+        label: 'Аналитика',
+        link: '/app/reports/analytics',
+        icon: <Dot size="small" color="info" />,
       },
     ],
   },
-  { id: 14, type: 'divider' },
-  { id: 15, type: 'title', label: 'HELP' },
-  { id: 16, label: 'Library', link: 'https://flatlogic.com/templates/', icon: <LibraryIcon />, ext: true },
-  { id: 17, label: 'Support', link: 'https://flatlogic.com/forum/', icon: <SupportIcon />, ext: true },
-  { id: 18, label: 'FAQ', link: 'https://flatlogic.com/forum/', icon: <FAQIcon />, ext: true },
-  { id: 19, type: 'divider' },
-  { id: 20, type: 'title', label: 'PROJECTS' },
-  {
-    id: 21,
-    label: 'My recent',
-    link: '',
-    icon: <Dot size="medium" color="secondary" />,
+  { id: 2, type: 'divider' },
+  { 
+    id: 3, 
+    label: 'Профиль', 
+    link: '/app/profile', 
+    icon: <AccountCircleIcon /> 
   },
-  {
-    id: 22,
-    label: 'Starred',
-    link: '',
-    icon: <Dot size="medium" color="primary" />,
+  { 
+    id: 4, 
+    label: 'Настройки', 
+    link: '/app/settings', 
+    icon: <SettingsIcon /> 
   },
-  {
-    id: 23,
-    label: 'Background',
-    link: '',
-    icon: <Dot size="medium" color="secondary" />,
-  },
-  { id: 24, type: 'divider' },
-  {
-    id: 25,
-    label: 'Add section',
-    icon: <AddSectionIcon />,
-    click: function(event, ...rest) {
-      const name = 'addSectionClick'
-      rest.forEach(c => {
-        if (c.clickName === name) {
-          return c(event)
-        }
-        return false
-      })
-    },
-  },
-  { id: 26, type: 'divider' },
-  { id: 27, type: 'margin' },
-  { id: 28, type: 'divider' },
-  {
-    id: 29,
-    label: 'Chat',
-    icon: <ChatIcon />,
-    click: function(event, ...rest) {
-      const name = 'chatSetOpen'
-      rest.forEach(c => {
-        if (c.clickName === name) {
-          return c(event)
-        }
-        return false
-      })
-    },
+  { id: 5, type: 'divider' },
+  { 
+    id: 6, 
+    label: 'Выход', 
+    link: '/login', 
+    icon: <ExitToAppIcon /> 
   },
 ];
 

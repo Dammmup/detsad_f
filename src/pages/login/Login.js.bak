@@ -1,0 +1,744 @@
+import React, { useState, useEffect } from 'react';
+import { withRouter } from 'react-router-dom';
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Grid,
+  Tab,
+  Tabs,
+  TextField,
+  Typography
+} from '@mui/material';
+
+// Styles
+import useStyles from './styles';
+
+// Logo
+import logo from './logo.svg';
+
+// Context
+import {
+  useUserDispatch,
+  loginUser,
+  registerUser,
+  sendPasswordResetEmail,
+  receiveToken,
+  doInit
+} from '../../context/UserContext';
+
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour >= 4 && hour <= 11) return 'Good Morning';
+  if (hour >= 12 && hour <= 16) return 'Good Afternoon';
+  if (hour >= 17 && hour <= 23) return 'Good Evening';
+  return 'Good Night';
+};
+
+function Login({ history, location }) {
+  const classes = useStyles();
+  const tab = new URLSearchParams(location.search).get('tab');
+  const userDispatch = useUserDispatch();
+
+  // Local state
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [activeTabId, setActiveTabId] = useState(Number(tab) || 0);
+  const [nameValue, setNameValue] = useState('');
+  const [loginValue, setLoginValue] = useState('');
+  const [passwordValue, setPasswordValue] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [isForgot, setIsForgot] = useState(false);
+
+  // Handle token from URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token');
+    if (token) {
+      receiveToken(token, userDispatch);
+      doInit()(userDispatch);
+    }
+  }, [location.search, userDispatch]);
+
+  // Form validation
+  const isLoginFormValid = () => loginValue && passwordValue;
+  const isRegisterFormValid = () => nameValue && loginValue && passwordValue;
+
+  // Event handlers
+  const handleLogin = () => {
+    if (isLoginFormValid()) {
+      loginUser(
+        userDispatch,
+        loginValue,
+        passwordValue,
+        history,
+        setIsLoading,
+        setError
+      );
+    }
+  };
+
+  const handleRegister = () => {
+    if (isRegisterFormValid()) {
+      registerUser(
+        userDispatch,
+        nameValue,
+        loginValue,
+        passwordValue,
+        history,
+        setIsLoading,
+        setError
+      );
+    }
+  };
+
+  const handleForgotPassword = () => {
+    if (forgotEmail) {
+      sendPasswordResetEmail(forgotEmail)(userDispatch);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      if (isForgot) {
+        handleForgotPassword();
+      } else if (activeTabId === 0) {
+        handleLogin();
+      } else {
+        handleRegister();
+      }
+    }
+  };
+
+  // Render the login/register form
+  const renderAuthForm = () => (
+    <div className={classes.form}>
+      {isForgot ? (
+        <div>
+          <Typography variant="h2" className={classes.greeting}>
+            Reset Password
+          </Typography>
+          <Typography variant="h2" className={classes.subGreeting}>
+            Enter your email and we'll send you a link to reset your password
+          </Typography>
+          <TextField
+            id="forgot-email"
+            InputProps={{
+              classes: {
+                underline: classes.InputUnderline,
+                input: classes.Input,
+              },
+            }}
+            value={forgotEmail}
+            onChange={(e) => setForgotEmail(e.target.value)}
+            margin="normal"
+            placeholder="Email"
+            type="email"
+            fullWidth
+            onKeyPress={handleKeyPress}
+          />
+          <div className={classes.formButtons}>
+            {isLoading ? (
+              <CircularProgress size={26} className={classes.loginLoader} />
+            ) : (
+              <Button
+                disabled={!forgotEmail}
+                onClick={handleForgotPassword}
+                variant="contained"
+                color="primary"
+                size="large"
+              >
+                Send Reset Link
+              </Button>
+            )}
+            <Button
+              color="primary"
+              size="large"
+              onClick={() => setIsForgot(false)}
+              className={classes.forgetButton}
+            >
+              Back to Login
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <Tabs
+            value={activeTabId}
+            onChange={(e, id) => setActiveTabId(id)}
+            indicatorColor="primary"
+            textColor="primary"
+            centered
+          >
+            <Tab label="Login" classes={{ root: classes.tab }} />
+            <Tab label="Register" classes={{ root: classes.tab }} />
+          </Tabs>
+          {activeTabId === 0 ? (
+            <div>
+              <Typography variant="h1" className={classes.greeting}>
+                {getGreeting()}
+              </Typography>
+              <Typography variant="h2" className={classes.subGreeting}>
+                Welcome to Kindergarten Management
+              </Typography>
+              {error && (
+                <Typography color="error" className={classes.errorMessage}>
+                  {error}
+                </Typography>
+              )}
+              <TextField
+                id="email"
+                InputProps={{
+                  classes: {
+                    underline: classes.InputUnderline,
+                    input: classes.Input,
+                  },
+                }}
+                value={loginValue}
+                onChange={(e) => setLoginValue(e.target.value)}
+                margin="normal"
+                placeholder="Email"
+                type="email"
+                fullWidth
+                onKeyPress={handleKeyPress}
+              />
+              <TextField
+                id="password"
+                InputProps={{
+                  classes: {
+                    underline: classes.InputUnderline,
+                    input: classes.Input,
+                  },
+                }}
+                value={passwordValue}
+                onChange={(e) => setPasswordValue(e.target.value)}
+                margin="normal"
+                placeholder="Password"
+                type="password"
+                fullWidth
+                onKeyPress={handleKeyPress}
+              />
+              <div className={classes.formButtons}>
+                {isLoading ? (
+                  <CircularProgress size={26} className={classes.loginLoader} />
+                ) : (
+                  <Button
+                    disabled={!isLoginFormValid()}
+                    onClick={handleLogin}
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                  >
+                    Login
+                  </Button>
+                )}
+                <Button
+                  color="primary"
+                  size="large"
+                  onClick={() => setIsForgot(true)}
+                  className={classes.forgetButton}
+                >
+                  Forgot Password?
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <Typography variant="h1" className={classes.greeting}>
+                Create Account
+              </Typography>
+              <Typography variant="h2" className={classes.subGreeting}>
+                Sign up to get started
+              </Typography>
+              {error && (
+                <Typography color="error" className={classes.errorMessage}>
+                  {error}
+                </Typography>
+              )}
+              <TextField
+                id="name"
+                InputProps={{
+                  classes: {
+                    underline: classes.InputUnderline,
+                    input: classes.Input,
+                  },
+                }}
+                value={nameValue}
+                onChange={(e) => setNameValue(e.target.value)}
+                margin="normal"
+                placeholder="Full Name"
+                type="text"
+                fullWidth
+                onKeyPress={handleKeyPress}
+              />
+              <TextField
+                id="email"
+                InputProps={{
+                  classes: {
+                    underline: classes.InputUnderline,
+                    input: classes.Input,
+                  },
+                }}
+                value={loginValue}
+                onChange={(e) => setLoginValue(e.target.value)}
+                margin="normal"
+                placeholder="Email"
+                type="email"
+                fullWidth
+                onKeyPress={handleKeyPress}
+              />
+              <TextField
+                id="password"
+                InputProps={{
+                  classes: {
+                    underline: classes.InputUnderline,
+                    input: classes.Input,
+                  },
+                }}
+                value={passwordValue}
+                onChange={(e) => setPasswordValue(e.target.value)}
+                margin="normal"
+                placeholder="Password"
+                type="password"
+                fullWidth
+                onKeyPress={handleKeyPress}
+              />
+              <div className={classes.formButtons}>
+                {isLoading ? (
+                  <CircularProgress size={26} />
+                ) : (
+                  <Button
+                    onClick={handleRegister}
+                    disabled={!isRegisterFormValid() || isLoading}
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    fullWidth
+                  >
+                    Create Account
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+
+  return (
+    <Grid container className={classes.container}>
+      <div className={classes.logoContainer}>
+        <img src={logo} alt="Logo" className={classes.logo} />
+        <Typography variant="h4" className={classes.appName}>
+          Kindergarten Management
+        </Typography>
+      </div>
+      <div className={!isForgot ? classes.formContainer : classes.forgotFormContainer}>
+            <div>
+              <Input
+                id='forgot-email'
+                InputProps={{
+                  classes: {
+                    underline: classes.InputUnderline,
+                    input: classes.Input,
+                  },
+                }}
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                margin='normal'
+                placeholder='Email'
+                type='email'
+                fullWidth
+              />
+              <div className={classes.formButtons}>
+                {isLoading ? (
+                  <CircularProgress size={26} className={classes.loginLoader} />
+                ) : (
+                  <Button
+                    disabled={forgotEmail.length === 0}
+                    onClick={() => sendPasswordResetEmail(forgotEmail)(userDispatch)}
+                    variant='contained'
+                    color='primary'
+                    size='large'
+                  >
+                    Send
+                  </Button>
+                )}
+                <Button
+                  color='primary'
+                  size='large'
+                  onClick={() => setIsForgot(!isForgot)}
+                  className={classes.forgetButton}
+                >
+                  Back to login
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Tabs
+                value={activeTabId}
+                onChange={(e, id) => setActiveTabId(id)}
+                indicatorColor='primary'
+                textColor='primary'
+                centered
+              >
+                <Tab label='Login' classes={{ root: classes.tab }} />
+                <Tab label='New User' classes={{ root: classes.tab }} />
+              </Tabs>
+              {activeTabId === 0 && (
+                <React.Fragment>
+                  <Typography variant='h1' className={classes.greeting}>
+                    {getGreeting()}
+                  </Typography>
+                  <Typography variant='h2' className={classes.subGreeting}>
+                    Welcome to Kindergarten Management
+                  </Typography>
+                  <Button
+                    size='large'
+                    className={classes.googleButton}
+                    onClick={() =>
+                      loginUser(
+                        userDispatch,
+                        loginValue,
+                        passwordValue,
+                        props.history,
+                        setIsLoading,
+                        setError,
+                        'google',
+                      )
+                    }
+                  >
+                   
+                    &nbsp;Sign in with Google
+                  </Button>
+                  <div className={classes.formDividerContainer}>
+                    <div className={classes.formDivider} />
+                    <Typography className={classes.formDividerWord}>
+                      or
+                    </Typography>
+                    <div className={classes.formDivider} />
+                  </div>
+                  <Input
+                    id='email'
+                    InputProps={{
+                      classes: {
+                        underline: classes.InputUnderline,
+                        input: classes.Input,
+                      },
+                    }}
+                    value={loginValue}
+                    onChange={(e) => setLoginValue(e.target.value)}
+                    margin='normal'
+                    placeholder='Email Address'
+                    type='email'
+                    fullWidth
+                    onKeyDown={(e) => loginOnEnterKey(e)}
+                  />
+                  <Input
+                    id='password'
+                    InputProps={{
+                      classes: {
+                        underline: classes.InputUnderline,
+                        input: classes.Input,
+                      },
+                    }}
+                    value={passwordValue}
+                    onChange={(e) => setPasswordValue(e.target.value)}
+                    margin='normal'
+                    placeholder='Password'
+                    type='password'
+                    fullWidth
+                    onKeyDown={(e) => loginOnEnterKey(e)}
+                  />
+                  <div className={classes.formButtons}>
+                    {isLoading ? (
+                      <CircularProgress size={26} className={classes.loginLoader} />
+                    ) : (
+                      <Button
+                        disabled={!isLoginFormValid()}
+                        onClick={() =>
+                          loginUser(
+                            userDispatch,
+                            loginValue,
+                            passwordValue,
+                            props.history,
+                            setIsLoading,
+                            setError,
+                          )
+                        }
+                        variant='contained'
+                        color='primary'
+                        size='large'
+                      >
+                        Login
+                      </Button>
+                    )}
+                    <Button
+                      color='primary'
+                      size='large'
+                      onClick={() => setIsForgot(!isForgot)}
+                      className={classes.forgetButton}
+                    >
+                      Forgot Password?
+                    </Button>
+                  </div>
+                </React.Fragment>
+              )}
+              {activeTabId === 1 && (
+                <React.Fragment>
+                  <Typography variant='h1' className={classes.greeting}>
+                    Welcome!
+                  </Typography>
+                  <Typography variant='h2' className={classes.subGreeting}>
+                    Create your account
+                  </Typography>
+                  <Grow in={error}>
+                    <Typography className={classes.errorMessage}>
+                      Something is wrong with your login or password :(
+                    </Typography>
+                  </Grow>
+                  <Input
+                    id='name'
+                    InputProps={{
+                      classes: {
+                        underline: classes.InputUnderline,
+                        input: classes.Input,
+                      },
+                    }}
+                    value={nameValue}
+                    onChange={(e) => setNameValue(e.target.value)}
+                    margin='normal'
+                    placeholder='Full Name'
+                    type='text'
+                    fullWidth
+                  />
+                  <Input
+                    id='email'
+                    InputProps={{
+                      classes: {
+                        underline: classes.InputUnderline,
+                        input: classes.Input,
+                      },
+                    }}
+                    value={loginValue}
+                    onChange={(e) => setLoginValue(e.target.value)}
+                    margin='normal'
+                    placeholder='Email'
+                    type='email'
+                    fullWidth
+                  />
+                  <Input
+                    id='password'
+                    InputProps={{
+                      classes: {
+                        underline: classes.InputUnderline,
+                        input: classes.Input,
+                      },
+                    }}
+                    value={passwordValue}
+                    onChange={(e) => setPasswordValue(e.target.value)}
+                    margin='normal'
+                    placeholder='Password'
+                    type='password'
+                    fullWidth
+                  />
+                  <div className={classes.creatingButtonContainer}>
+                    {isLoading ? (
+                      <CircularProgress size={26} />
+                    ) : (
+                      <Button
+                        onClick={() =>
+                          registerUser(
+                            userDispatch,
+                            nameValue,
+                            loginValue,
+                            passwordValue,
+                            props.history,
+                            setIsLoading,
+                            setError,
+                          )
+                        }
+                        disabled={
+                          !loginValue || !passwordValue || !nameValue || isLoading
+                        }
+                        size='large'
+                        variant='contained'
+                        color='primary'
+                        fullWidth
+                        className={classes.createAccountButton}
+                      >
+                        Create your account
+                      </Button>
+                    )}
+                  </div>
+      </div>
+      <Typography color="textSecondary" className={classes.copyright}>
+        {new Date().getFullYear()} Kindergarten Management System
+      </Typography>
+    </Grid>
+  );
+};
+
+Login.propTypes = {
+  history: PropTypes.object.isRequired,
+  location: PropTypes.object.isRequired,
+};
+                  onChange={(e) => setPasswordValue(e.target.value)}
+                  margin='normal'
+                  placeholder='Password'
+                  type='password'
+                  fullWidth
+                  onKeyDown={(e) => loginOnEnterKey(e)}
+                />
+                <div className={classes.formButtons}>
+                  {isLoading ? (
+                    <CircularProgress
+                      size={26}
+                      className={classes.loginLoader}
+                    />
+                  ) : (
+                    <Button
+                      disabled={!isLoginFormValid()}
+                      onClick={() =>
+                        loginUser(
+                          userDispatch,
+                          loginValue,
+                          passwordValue,
+                          props.history,
+                          setIsLoading,
+                          setError,
+                        )
+                      }
+                      variant='contained'
+                      color='primary'
+                      size='large'
+                    >
+                      Login
+                    </Button>
+                  )}
+                    id='name'
+                    InputProps={{
+                      classes: {
+                        underline: classes.InputUnderline,
+                        input: classes.Input,
+                      },
+                    }}
+                    value={nameValue}
+                    onChange={(e) => setNameValue(e.target.value)}
+                    margin='normal'
+                    placeholder='Full Name'
+                    type='email'
+                    fullWidth
+                  />
+                  <Input
+                    id='email'
+                    InputProps={{
+                      classes: {
+                        underline: classes.InputUnderline,
+                        input: classes.Input,
+                      },
+                    }}
+                    value={loginValue}
+                    onChange={(e) => setLoginValue(e.target.value)}
+                    margin='normal'
+                    placeholder='Email Adress'
+                    type='email'
+                    fullWidth
+                  />
+                  <Input
+                    id='password'
+                    InputProps={{
+                      classes: {
+                        underline: classes.InputUnderline,
+                        input: classes.Input,
+                      },
+                    }}
+                    value={passwordValue}
+                    onChange={(e) => setPasswordValue(e.target.value)}
+                    margin='normal'
+                    placeholder='Password'
+                    type='password'
+                    fullWidth
+                  />
+                  <div className={classes.creatingButtonContainer}>
+                    {isLoading ? (
+                      <CircularProgress size={26} />
+                    ) : (
+                      <Button
+                        onClick={() =>
+                          registerUser(
+                            userDispatch,
+                            loginValue,
+                            passwordValue,
+                            props.history,
+                            setIsLoading,
+                            setError,
+                          )()
+                        }
+                        disabled={
+                          loginValue.length === 0 ||
+                          passwordValue.length === 0 ||
+                          nameValue.length === 0
+                        }
+                        size='large'
+                        variant='contained'
+                        color='primary'
+                        fullWidth
+                        className={classes.createAccountButton}
+                      >
+                        Create your account
+                      </Button>
+                    )}
+                  </div>
+                  <div className={classes.formDividerContainer}>
+                    <div className={classes.formDivider} />
+                    <Typography className={classes.formDividerWord}>
+                      or
+                    </Typography>
+                    <div className={classes.formDivider} />
+                  </div>
+                  <Button
+                    size='large'
+                    className={classnames(
+                      classes.googleButton,
+                      classes.googleButtonCreating,
+                    )}
+                    onClick={() =>
+                      loginUser(
+                        userDispatch,
+                        loginValue,
+                        passwordValue,
+                        props.history,
+                        setIsLoading,
+                        setError,
+                        'google',
+                      )
+                    }
+                  >
+                    &nbsp;Sign in with Google
+                  </Button>
+                </React.Fragment>
+              )}
+            </>
+          )}
+        </div>
+        <Typography color='primary' className={classes.copyright}>
+          2014-{new Date().getFullYear()}{' '}
+          <a
+            style={{ textDecoration: 'none', color: 'inherit' }}
+            href='https://flatlogic.com'
+            rel='noopener noreferrer'
+            target='_blank'
+          >
+            Flatlogic
+          </a>
+          , LLC. All rights reserved.
+        </Typography>
+      </div>
+    </Grid>
+  );
+}
+
+export default withRouter(Login);

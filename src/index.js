@@ -12,6 +12,9 @@ import * as serviceWorker from './serviceWorker';
 import { LayoutProvider } from './context/LayoutContext';
 import { UserProvider } from './context/UserContext';
 import { ManagementProvider } from './context/ManagementContext';
+import { TimeTrackingProvider } from './context/TimeTrackingContext';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import createRootReducer from './reducers';
 import {
   ThemeProvider as ThemeChangeProvider,
@@ -57,8 +60,22 @@ root.render(
               {(theme) => (
                 <ThemeProviderV5 theme={theme}>
                   <ManagementProvider>
-                    <CssBaseline />
-                    <App />
+                    <TimeTrackingProvider>
+                      <CssBaseline />
+                      <App />
+                      <ToastContainer
+                        position="top-right"
+                        autoClose={5000}
+                        hideProgressBar={false}
+                        newestOnTop={false}
+                        closeOnClick
+                        rtl={false}
+                        pauseOnFocusLoss
+                        draggable
+                        pauseOnHover
+                        theme="light"
+                      />
+                    </TimeTrackingProvider>
                   </ManagementProvider>
                 </ThemeProviderV5>
               )}

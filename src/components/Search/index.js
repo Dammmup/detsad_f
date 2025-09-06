@@ -50,7 +50,7 @@ const styles = (theme) => ({
     color: 'rgba(255, 255, 255, 0.35)',
   },
   inputRoot: {
-    color: 'inherit',
+    color: 'primary',
     width: '100%',
   },
   inputInput: {

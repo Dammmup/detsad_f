@@ -82,7 +82,7 @@ const Header = ({ classes, isSidebarOpened, toggleSidebar, ...props }) => (
   <AppBar position="fixed" className={classes.appBar}>
     <Toolbar className={classes.toolbar}>
       <IconButton
-        color="inherit"
+        color="primary"
         onClick={toggleSidebar}
         className={classNames(
           classes.headerMenuButton,
@@ -129,7 +129,7 @@ const Header = ({ classes, isSidebarOpened, toggleSidebar, ...props }) => (
         />
       </div>
       <IconButton
-        color="inherit"
+        color="primary"
         aria-haspopup="true"
         aria-controls="mail-menu"
         onClick={props.openNotificationsMenu}
@@ -144,7 +144,7 @@ const Header = ({ classes, isSidebarOpened, toggleSidebar, ...props }) => (
         </Badge>
       </IconButton>
       <IconButton
-        color="inherit"
+        color="primary"
         aria-haspopup="true"
         aria-controls="mail-menu"
         onClick={props.openMailMenu}
@@ -159,7 +159,7 @@ const Header = ({ classes, isSidebarOpened, toggleSidebar, ...props }) => (
       </IconButton>
       <IconButton
         aria-haspopup="true"
-        color="inherit"
+        color="primary"
         className={classes.headerMenuButton}
         aria-controls="profile-menu"
         onClick={props.openProfileMenu}
@@ -233,7 +233,7 @@ const Header = ({ classes, isSidebarOpened, toggleSidebar, ...props }) => (
             onClick={props.closeNotificationsMenu}
             className={classes.headerMenuItem}
           >
-            <Notification {...notification} typographyVariant="inherit" />
+            <Notification {...notification} typographyVariant="primary" />
           </MenuItem>
         ))}
       </Menu>
@@ -363,7 +363,7 @@ const styles = theme => ({
     right: theme.spacing(1.25)
   },
   inputRoot: {
-    color: "inherit",
+    color: "primary",
     width: "100%"
   },
   inputInput: {

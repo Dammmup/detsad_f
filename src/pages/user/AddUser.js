@@ -1,201 +1,631 @@
-import React from 'react'
-import Stepper from '@material-ui/core/Stepper'
-import Step from '@material-ui/core/Step'
-import StepLabel from '@material-ui/core/StepLabel'
-import Grid from '@material-ui/core/Grid'
-import Box from '@material-ui/core/Box'
-import TextField from '@material-ui/core/TextField'
-import FormControl from '@material-ui/core/FormControl'
-import InputLabel from '@material-ui/core/InputLabel'
-import Select from '@material-ui/core/Select'
-import MenuItem from '@material-ui/core/MenuItem'
-import FormHelperText from '@material-ui/core/FormHelperText'
-import { useHistory } from 'react-router-dom'
-import useStyles from './styles'
-import { toast } from 'react-toastify'
-import Axios from 'axios'
-import config from '../../config'
-import uuid from 'uuid/v4'
-
-import Notification from "../../components/Notification";
-
-import { Button, Typography } from '../../components/Wrappers'
-import Widget from '../../components/Widget'
-
-import { actions } from '../../context/ManagementContext'
+import React from 'react';
 import {
-  useManagementDispatch,
-} from '../../context/ManagementContext'
-
-
-function getSteps() {
-    return ['Create Account', 'User Details', 'Business Details', 'Social']
-}
-
-function getStepContent(step) {
-    switch (step) {
-        case 0:
-            return 'Create New Account'
-        case 1:
-            return 'Create User Details'
-        case 2:
-            return 'Business Details'
-        case 3:
-            return 'Social'
-        default:
-            return ''
-    }
-}
+    Grid,
+    Box,
+    TextField,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    FormHelperText,
+    Switch,
+    FormControlLabel,
+    Alert,
+    Snackbar,
+    CircularProgress
+} from '@mui/material';
+import { Link, useHistory } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import Axios from 'axios';
+import config from '../../config';
+import { Button, Typography } from '../../components/Wrappers';
+import Widget from '../../components/Widget';
+import Notification from "../../components/Notification";
+import { useGroups } from '../../context/GroupsContext';
+import useStyles from './styles';
 
 const AddUser = () => {
-    const [activeStep, setActiveStep] = React.useState(0)
-    const [skipped, setSkipped] = React.useState(new Set())
-    const [newUser, setNewUser] = React.useState({
-      avatars: [],
-      disabled: null,
-      email: '',
-      emailVerificationToken: null,
-      emailVerificationTokenExpiresAt: null,
-      emailVerified: true,
-      firstName: '',
-      fullName: '',
-      lastName: '',
-      password: null,
-      passwordResetToken: null,
-      passwordResetTokenExpiresAt: null,
-      phoneNumber: '',
-      role: 'user',
-    });
-    function handleChange(e) {
-      setNewUser({
-        ...newUser,
-        [e.target.name]: e.target.value,
-      });
-    }
-    const fileInput = React.useRef(null);
-    const steps = getSteps()
-    const classes = useStyles()
-
-    function extractExtensionFrom(filename) {
-      if (!filename) {
-        return null;
-      }
+    const history = useHistory();
+    const classes = useStyles();
+    const { groups, loading: groupsLoading, fetchGroups } = useGroups();
     
-      const regex = /(?:\.([^.]+))?$/;
-      return regex.exec(filename)[1];
-    }
+    // Начальное состояние формы
+    const [formData, setFormData] = React.useState({
+        fullName: '',
+        phone: '', // WhatsApp номер для входа
+        type: 'adult', // adult или child
+        role: '',
+        birthday: '',
+        notes: '',
+        active: true,
+        // Поля для сотрудников
+        salary: '',
+        // Поля для детей
+        parentName: '',
+        parentPhone: '',
+        groupId: '',
+    });
 
-    const uploadToServer = async (file, path, filename) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('filename', filename);
-      const uri = `${config.baseURLApi}/file/upload/${path}`;
-      await Axios.post(uri, formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        },
-      );
-  
-      const privateUrl = `${path}/${filename}`;
-  
-      return `${config.baseURLApi}/file/download?privateUrl=${privateUrl}`;
-    }
+    // Состояние для ошибок валидации
+    const [errors, setErrors] = React.useState({});
+    const [loading, setLoading] = React.useState(false);
 
-    const handleFile = async (event) => {
-      const file = event.target.files[0];
-  
-      const extension = extractExtensionFrom(file.name);
-      const id = uuid();
-      const filename = `${id}.${extension}`;
-      const privateUrl = `users/avatar/${filename}`;
-  
-      const publicUrl = await uploadToServer(
-        file,
-        'users/avatar',
-        filename,
-      );
-      let avatarObj = {
-        id: id,
-        name: file.name,
-        sizeInBytes: file.size,
-        privateUrl,
-        publicUrl,
-        new: true      
-      }
+    React.useEffect(() => {
+        // Загружаем группы при монтировании компонента
+        if (groups.length === 0) {
+            fetchGroups();
+        }
+    }, [groups.length, fetchGroups]);
 
-      setNewUser({
-          ...newUser,
-          avatars: [...newUser.avatars, avatarObj]
-      })
-
-      return ;
-    }
-    const isStepSkipped = step => {
-        return skipped.has(step)
-    }
-
-    var managementDispatch = useManagementDispatch()
-    const history = useHistory()
-    const doSubmit = (id, data) => {
-        actions.doCreate(data, history)(managementDispatch);
-      
+    // Обработчик изменения полей формы
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+        
+        // Очищаем ошибку при изменении поля
+        if (errors[name]) {
+            setErrors(prev => ({
+                ...prev,
+                [name]: null
+            }));
+        }
     };
 
-    const handleNext = () => {
-        let newSkipped = skipped
-        if (isStepSkipped(activeStep)) {
-            newSkipped = new Set(newSkipped.values())
-            newSkipped.delete(activeStep)
+    // Валидация формы
+    const validate = () => {
+        const newErrors = {};
+        
+        // Базовые обязательные поля для всех
+        const baseRequiredFields = ['fullName', 'phone', 'type'];
+        
+        baseRequiredFields.forEach(field => {
+            if (!formData[field]?.toString().trim()) {
+                newErrors[field] = 'Обязательное поле';
+            }
+        });
+        
+        // Валидация роли в зависимости от типа
+        if (formData.type === 'adult') {
+            if (!formData.role || formData.role === 'child') {
+                newErrors.role = 'Выберите роль для сотрудника';
+            }
+        } else if (formData.type === 'child') {
+            // Для детей роль автоматически 'child'
+            // Проверяем обязательные поля для детей
+            if (!formData.parentName?.trim()) {
+                newErrors.parentName = 'Имя родителя обязательно для детей';
+            }
+            if (!formData.parentPhone?.trim()) {
+                newErrors.parentPhone = 'WhatsApp родителя обязателен для детей';
+            }
+            if (!formData.groupId) {
+                newErrors.groupId = 'Группа обязательна для детей';
+            }
+        }
+        
+        // Валидация формата телефона
+        const phoneRegex = /^[0-9+\s()-]+$/;
+        if (formData.phone) {
+            if (!phoneRegex.test(formData.phone)) {
+                newErrors.phone = 'Неверный формат WhatsApp номера. Допустимы цифры, пробелы, +, - и скобки';
+            } else if (formData.phone.replace(/[^0-9+]/g, '').length < 10) {
+                newErrors.phone = 'WhatsApp номер слишком короткий';
+            }
+        }
+        
+        // Валидация WhatsApp родителя для детей
+        if (formData.type === 'child' && formData.parentPhone) {
+            if (!phoneRegex.test(formData.parentPhone)) {
+                newErrors.parentPhone = 'Неверный формат WhatsApp номера родителя';
+            } else if (formData.parentPhone.replace(/[^0-9+]/g, '').length < 10) {
+                newErrors.parentPhone = 'WhatsApp номер родителя слишком короткий';
+            }
+        }
+        
+        // Валидация зарплаты для сотрудников
+        if (formData.type === 'adult' && formData.salary && isNaN(Number(formData.salary))) {
+            newErrors.salary = 'Зарплата должна быть числом';
+        }
+        
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    // Отправка формы
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!validate()) {
+            toast.error('Пожалуйста, проверьте правильность заполнения всех полей');
+            return;
         }
 
-        setActiveStep(prevActiveStep => prevActiveStep + 1)
-        setSkipped(newSkipped)
+        setLoading(true);
+        
+        try {
+            // Проверяем наличие всех обязательных полей перед отправкой
+            if (!formData.phone || !formData.fullName || !formData.type) {
+                throw new Error('Не все обязательные поля заполнены');
+            }
 
-        if (activeStep === 3) {
-          doSubmit(null, newUser, history)
-          sendNotification()
+            // Подготавливаем данные для отправки
+            const userData = {
+                // Базовые обязательные поля
+                fullName: formData.fullName.trim(),
+                phone: formData.phone.replace(/[^0-9+]/g, ''), // WhatsApp номер
+                type: formData.type, // 'adult' или 'child'
+                
+                // Общие поля
+                birthday: formData.birthday || null,
+                notes: formData.notes?.trim() || null,
+                active: formData.active !== undefined ? formData.active : true,
+            };
+            
+            // Поля в зависимости от типа пользователя
+            if (formData.type === 'adult') {
+                // Для сотрудников
+                userData.role = formData.role;
+                userData.salary = formData.salary ? Number(formData.salary) : 0;
+            } else if (formData.type === 'child') {
+                // Для детей
+                userData.role = 'child';
+                userData.parentName = formData.parentName.trim();
+                userData.parentPhone = formData.parentPhone.replace(/[^0-9+]/g, '');
+                userData.groupId = formData.groupId;
+            }
+            
+            // Удаляем пустые строки, заменяем на null
+            Object.keys(userData).forEach(key => {
+                if (userData[key] === '') {
+                    userData[key] = null;
+                }
+            });
+            
+            console.log('Отправка данных пользователя:', JSON.stringify(userData, null, 2));
+            console.log('URL запроса:', `${config.baseURLApi}/users`);
+
+            // Отправляем запрос с таймаутом
+            const response = await Axios.post(`${config.baseURLApi}/users`, userData, {
+                timeout: 10000, // 10 секунд таймаут
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            console.log('Ответ сервера:', response.data);
+            
+            toast.success('Пользователь успешно создан!');
+            // Перенаправляем на страницу списка пользователей
+            history.push('/app/users');
+            
+        } catch (error) {
+            console.error('Ошибка при создании пользователя:', error);
+            
+            if (error.response) {
+                if (error.response.status === 409) {
+                    toast.error('Пользователь с такими данными уже существует');
+                } else if (error.response.status === 400 && error.response.data.missingFields) {
+                    const missingFields = error.response.data.missingFields;
+                    const fieldNames = {
+                        password: 'Пароль',
+                        fullName: 'Полное имя',
+                        phone: 'Телефон'
+                    };
+                    const errorMessage = `Не заполнены обязательные поля: ${missingFields.map(field => fieldNames[field] || field).join(', ')}`;
+                    toast.error(errorMessage);
+                } else {
+                    toast.error(error.response.data.error || 'Произошла ошибка при создании пользователя');
+                }
+            } else {
+                toast.error('Не удалось подключиться к серверу');
+            }
+        } finally {
+            setLoading(false);
         }
-    }
+    };
 
-    const handleBack = () => {
-        setActiveStep(prevActiveStep => prevActiveStep - 1)
-    }
-
-    const deleteOneImage = (id) => {
-      setNewUser({
-        ...newUser,
-        avatars: newUser.avatars.filter(avatar => avatar.id !== id)
-      })
-    }
-
-    function sendNotification() {
-      const componentProps = {
-        type: "feedback",
-        message: "User added!",
-        variant: "contained",
-        color: "success"
-      };
-      const options = {
-        type: "info",
-        position: toast.POSITION.TOP_RIGHT,
-        progressClassName: classes.progress,
-        className: classes.notification,
-        timeOut: 1000
-      };
-      return toast(
-        <Notification
-          {...componentProps}
-          className={classes.notificationComponent}
-        />,
-        options
-      );
-    }
+    // Функция для отображения уведомлений
+    const showNotification = (message, type = 'info') => {
+        const componentProps = {
+            type,
+            message,
+            variant: 'contained',
+            color: type === 'error' ? 'secondary' : 'success'
+        };
+        const options = {
+            type,
+            position: toast.POSITION.TOP_RIGHT,
+            progressClassName: classes.progress,
+            className: classes.notification,
+            timeOut: 3000
+        };
+        
+        toast(
+            <Notification {...componentProps} className={classes.notificationComponent} />,
+            options
+        );
+    };
     return (
         <Grid container spacing={3}>
             <Grid item xs={12}>
-                <Widget>
+                <Widget title="Добавление сотрудника" disableWidgetMenu>
+                    <form onSubmit={handleSubmit}>
+                        <Grid container spacing={3}>
+                            {/* Тип пользователя */}
+                            <Grid item xs={12}>
+                                <FormControl fullWidth variant="outlined" margin="normal" error={!!errors.type}>
+                                    <InputLabel id="type-label">Тип пользователя *</InputLabel>
+                                    <Select
+                                        labelId="type-label"
+                                        name="type"
+                                        value={formData.type}
+                                        onChange={handleChange}
+                                        label="Тип пользователя *"
+                                        required
+                                    >
+                                        <MenuItem value="adult">Сотрудник</MenuItem>
+                                        <MenuItem value="child">Ребенок</MenuItem>
+                                    </Select>
+                                    {errors.type && (
+                                        <FormHelperText error>{errors.type}</FormHelperText>
+                                    )}
+                                    <FormHelperText>
+                                        Выберите тип: сотрудник для взрослых или ребенок для детей
+                                    </FormHelperText>
+                                </FormControl>
+                            </Grid>
+
+                            {/* Основная информация */}
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Полное имя *"
+                                    name="fullName"
+                                    value={formData.fullName || ''}
+                                    onChange={handleChange}
+                                    variant="outlined"
+                                    error={!!errors.fullName}
+                                    helperText={errors.fullName || (
+                                        formData.type === 'adult' ? 'Полное имя сотрудника' : 'Полное имя ребенка'
+                                    )}
+                                    margin="normal"
+                                    required
+                                />
+                            </Grid>
+                            
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    label="WhatsApp номер *"
+                                    name="phone"
+                                    value={formData.phone || ''}
+                                    onChange={handleChange}
+                                    variant="outlined"
+                                    error={!!errors.phone}
+                                    helperText={errors.phone || (
+                                        formData.type === 'adult' ? 'Номер для входа в систему (+7XXXXXXXXXX)' : 'Номер ребенка (+7XXXXXXXXXX)'
+                                    )}
+                                    margin="normal"
+                                    required
+                                    inputProps={{
+                                        inputMode: 'tel'
+                                    }}
+                                />
+                            </Grid>
+
+                            {/* Поля для сотрудников */}
+                            {formData.type === 'adult' && (
+                                <>
+                                    <Grid item xs={12} md={6}>
+                                        <FormControl fullWidth variant="outlined" margin="normal" error={!!errors.role}>
+                                            <InputLabel id="role-label">Роль *</InputLabel>
+                                            <Select
+                                                labelId="role-label"
+                                                name="role"
+                                                value={formData.role}
+                                                onChange={handleChange}
+                                                label="Роль *"
+                                                required
+                                            >
+                                                <MenuItem value="admin">Администратор</MenuItem>
+                                                <MenuItem value="manager">Заведующий</MenuItem>
+                                                <MenuItem value="teacher">Воспитатель</MenuItem>
+                                                <MenuItem value="assistant">Помощник воспитателя</MenuItem>
+                                                <MenuItem value="cook">Повар</MenuItem>
+                                                <MenuItem value="cleaner">Уборщик</MenuItem>
+                                                <MenuItem value="security">Охранник</MenuItem>
+                                                <MenuItem value="nurse">Медсестра</MenuItem>
+                                            </Select>
+                                            {errors.role && (
+                                                <FormHelperText error>{errors.role}</FormHelperText>
+                                            )}
+                                        </FormControl>
+                                    </Grid>
+                                    
+                                    <Grid item xs={12} md={6}>
+                                        <TextField
+                                            fullWidth
+                                            label="Зарплата"
+                                            name="salary"
+                                            type="number"
+                                            value={formData.salary || ''}
+                                            onChange={handleChange}
+                                            variant="outlined"
+                                            error={!!errors.salary}
+                                            helperText={errors.salary || 'Месячная зарплата в тенге'}
+                                            margin="normal"
+                                            inputProps={{
+                                                min: 0,
+                                                step: 1000
+                                            }}
+                                        />
+                                    </Grid>
+                                </>
+                            )}
+
+                            {/* Поля для детей */}
+                            {formData.type === 'child' && (
+                                <>
+                                    <Grid item xs={12} md={6}>
+                                        <TextField
+                                            fullWidth
+                                            label="Имя родителя *"
+                                            name="parentName"
+                                            value={formData.parentName || ''}
+                                            onChange={handleChange}
+                                            variant="outlined"
+                                            error={!!errors.parentName}
+                                            helperText={errors.parentName || 'Полное имя родителя или опекуна'}
+                                            margin="normal"
+                                            required
+                                        />
+                                    </Grid>
+                                    
+                                    <Grid item xs={12} md={6}>
+                                        <TextField
+                                            fullWidth
+                                            label="WhatsApp родителя *"
+                                            name="parentPhone"
+                                            value={formData.parentPhone || ''}
+                                            onChange={handleChange}
+                                            variant="outlined"
+                                            error={!!errors.parentPhone}
+                                            helperText={errors.parentPhone || 'WhatsApp номер для связи с родителем (+7XXXXXXXXXX)'}
+                                            margin="normal"
+                                            required
+                                            inputProps={{
+                                                inputMode: 'tel'
+                                            }}
+                                        />
+                                    </Grid>
+                                    
+                                    <Grid item xs={12} md={6}>
+                                        <FormControl fullWidth variant="outlined" margin="normal" error={!!errors.groupId}>
+                                            <InputLabel id="group-label">Группа *</InputLabel>
+                                            <Select
+                                                labelId="group-label"
+                                                name="groupId"
+                                                value={formData.groupId || ''}
+                                                onChange={handleChange}
+                                                label="Группа *"
+                                                displayEmpty
+                                                required
+                                                disabled={groups.length === 0}
+                                            >
+                                                <MenuItem value="">
+                                                    <em>Не выбрана</em>
+                                                </MenuItem>
+                                                {groups.length > 0 ? (
+                                                    groups.map((group) => (
+                                                        <MenuItem key={group._id} value={group._id}>
+                                                            {group.name} {group.teacher ? `(Воспитатель: ${group.teacher.fullName || 'Не назначен'})` : ''}
+                                                        </MenuItem>
+                                                    ))
+                                                ) : (
+                                                    <MenuItem disabled>Нет доступных групп</MenuItem>
+                                                )}
+                                            </Select>
+                                            {errors.groupId ? (
+                                                <FormHelperText error>{errors.groupId}</FormHelperText>
+                                            ) : (
+                                                <FormHelperText>
+                                                    {groups.length === 0 ? (
+                                                        <span>
+                                                            Нет доступных групп. Пожалуйста, создайте группу в разделе 
+                                                            <Link to="/app/groups" style={{ marginLeft: '4px', fontWeight: 'bold' }}>
+                                                                Группы
+                                                            </Link>
+                                                        </span>
+                                                    ) : (
+                                                        'Выберите группу для ребенка'
+                                                    )}
+                                                </FormHelperText>
+                                            )}
+                                        </FormControl>
+                                    </Grid>
+                                </>
+                            )}
+                           
+
+                            {/* Дата рождения и телефон */}
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Дата рождения"
+                                    name="birthday"
+                                    type="date"
+                                    value={formData.birthday || ''}
+                                    onChange={handleChange}
+                                    variant="outlined"
+                                    InputLabelProps={{
+                                        shrink: true,
+                                    }}
+                                    margin="normal"
+                                />
+                            </Grid>
+
+                            {/* Телефон и WhatsApp */}
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Телефон *"
+                                    name="phone"
+                                    value={formData.phone || ''}
+                                    onChange={handleChange}
+                                    variant="outlined"
+                                    error={!!errors.phone}
+                                    helperText={errors.phone || 'Формат: +7XXXXXXXXXX'}
+                                    margin="normal"
+                                    required
+                                    inputProps={{
+                                        inputMode: 'tel'
+                                    }}
+                                />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    label="WhatsApp"
+                                    name="whatsapp"
+                                    value={formData.whatsapp}
+                                    onChange={handleChange}
+                                    variant="outlined"
+                                    helperText="Если не указан, будет использован номер телефона"
+                                    margin="normal"
+                                />
+                            </Grid>
+
+                            {/* Роль и группа */}
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth variant="outlined" margin="normal" error={!!errors.role}>
+                                    <InputLabel id="role-label">Роль *</InputLabel>
+                                    <Select
+                                        labelId="role-label"
+                                        name="role"
+                                        value={formData.role}
+                                        onChange={handleChange}
+                                        label="Роль *"
+                                        required
+                                    >
+                                        {roles.length > 0 ? (
+                                            roles.map((role) => (
+                                                <MenuItem key={role.id} value={role.id}>
+                                                    {role.name}
+                                                </MenuItem>
+                                            ))
+                                        ) : (
+                                            <MenuItem disabled>Загрузка ролей...</MenuItem>
+                                        )}
+                                    </Select>
+                                    {errors.role && (
+                                        <FormHelperText error>{errors.role}</FormHelperText>
+                                    )}
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth variant="outlined" margin="normal" error={!!errors.groupId}>
+                                    <InputLabel id="group-label">Группа</InputLabel>
+                                    <Select
+                                        labelId="group-label"
+                                        name="groupId"
+                                        value={formData.groupId || ''}
+                                        onChange={handleChange}
+                                        label="Группа"
+                                        displayEmpty
+                                        disabled={groups.length === 0}
+                                    >
+                                        <MenuItem value="">
+                                            <em>Не выбрана</em>
+                                        </MenuItem>
+                                        {groups.length > 0 ? (
+                                            groups.map((group) => (
+                                                <MenuItem key={group._id} value={group._id}>
+                                                    {group.name} {group.teacher ? `(Воспитатель: ${group.teacher.fullName || 'Не назначен'})` : ''}
+                                                </MenuItem>
+                                            ))
+                                        ) : (
+                                            <MenuItem disabled>Нет доступных групп</MenuItem>
+                                        )}
+                                    </Select>
+                                    {errors.groupId ? (
+                                        <FormHelperText error>{errors.groupId}</FormHelperText>
+                                    ) : (
+                                        <FormHelperText>
+                                            {groups.length === 0 ? (
+                                                <span>
+                                                    Нет доступных групп. Пожалуйста, создайте группу в разделе 
+                                                    <Link to="/app/groups" style={{ marginLeft: '4px', fontWeight: 'bold' }}>
+                                                        Группы
+                                                    </Link>
+                                                </span>
+                                            ) : (
+                                                'Выберите группу для сотрудника (необязательно)'
+                                            )}
+                                        </FormHelperText>
+                                    )}
+                                </FormControl>
+                            </Grid>
+
+                            {/* Примечания */}
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    label="Примечания"
+                                    name="notes"
+                                    value={formData.notes}
+                                    onChange={handleChange}
+                                    variant="outlined"
+                                    multiline
+                                    rows={4}
+                                    margin="normal"
+                                />
+                            </Grid>
+
+                            {/* Активность */}
+                            <Grid item xs={12}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={formData.active}
+                                            onChange={(e) => 
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    active: e.target.checked
+                                                }))
+                                            }
+                                            name="active"
+                                            color="primary"
+                                        />
+                                    }
+                                    label="Активный аккаунт"
+                                />
+                            </Grid>
+
+                            {/* Кнопки */}
+                            <Grid item xs={12} className={classes.buttonsContainer}>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    type="submit"
+                                    disabled={loading}
+                                >
+                                    {loading ? 'Сохранение...' : 'Сохранить'}
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    color="secondary"
+                                    onClick={() => history.push('/app/users')}
+                                    disabled={loading}
+                                    style={{ marginLeft: '16px' }}
+                                >
+                                    Отмена
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </form>
                     <Stepper activeStep={activeStep}>
                         {steps.map((label, index) => {
                             const stepProps = {}
@@ -241,19 +671,7 @@ const AddUser = () => {
                                         style={{ marginBottom: 35 }}
                                         helperText="Please enter your username"
                                     />
-                                    <TextField
-                                        id="outlined-basic"
-                                        label="Email Address"
-                                        onChange={handleChange}
-                                        value={newUser.email || ''}
-                                        name="email"
-                                        variant="outlined"
-                                        style={{ marginBottom: 35 }}
-                                        helperText={
-                                            'We’ll never share your email with anyone else'
-                                        }
-                                        type={'email'}
-                                    />
+                                 
                                     <TextField
                                         id="outlined-basic"
                                         label="Password"
@@ -358,15 +776,7 @@ const AddUser = () => {
                                             'Enter your contact number '
                                         }
                                     />
-                                    <TextField
-                                        id="outlined-basic"
-                                        label="Email"
-                                        variant="outlined"
-                                        value={newUser.email || ''}
-                                        style={{ marginBottom: 35 }}
-                                        helperText={'Enter your email'}
-                                        type={'email'}
-                                    />
+                    
                                     <FormControl
                                         variant="outlined"
                                         style={{ marginBottom: 35 }}
@@ -479,14 +889,7 @@ const AddUser = () => {
                                             'Enter your company registered ID'
                                         }
                                     />
-                                    <TextField
-                                        id="outlined-basic"
-                                        label="Cmpany Email"
-                                        onChange={handleChange}
-                                        variant="outlined"
-                                        style={{ marginBottom: 35 }}
-                                        helperText={'Enter your company email'}
-                                    />
+                          
                                     <TextField
                                         id="outlined-basic"
                                         value={''}

@@ -9,7 +9,7 @@ const info = '#9013FE';
 const lightenRate = 7.5;
 const darkenRate = 15;
 
-export default {
+const defaultTheme = {
   palette: {
     primary: {
       main: primary,
@@ -37,10 +37,11 @@ export default {
       light: tinycolor(info).lighten(lightenRate).toHexString(),
       dark: tinycolor(info).darken(darkenRate).toHexString(),
     },
+    // Using primary color as the base for inherit
     inherit: {
-      main: 'inherit',
-      light: tinycolor('inherit').lighten('inherit').toHexString(),
-      dark: tinycolor('inherit').darken('inherit').toHexString(),
+      main: '#536DFE',
+      light: '#e0e0e0',
+      dark: '#616161',
     },
     text: {
       primary: '#4A4A4A',
@@ -55,5 +56,7 @@ export default {
   customShadows: {
     widget:
       '0px 12px 33px 0px #E8EAFC, 0 3px 3px -2px #B2B2B21A, 0 1px 8px 0 #9A9A9A1A',
-  },
+  }
 };
+
+export { defaultTheme as default };

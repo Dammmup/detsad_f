@@ -47,7 +47,10 @@ export default makeStyles((theme) => ({
   },
   buttonsContainer: {
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'row',
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    gap: theme.spacing(2),
     alignItems: 'flex-start',
     marginTop: theme.spacing(2),
   },

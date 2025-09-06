@@ -5,7 +5,7 @@ const portApi = process.env.NODE_ENV === "development" ? 8080 : "";
 const baseURLApi = `${hostApi}${portApi ? `:${portApi}` : ``}/api`;
 const redirectUrl = process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://flatlogic.github.io/react-material-admin-full";
 
-export default {
+const config = {
   hostApi,
   portApi,
   baseURLApi,
@@ -18,15 +18,21 @@ export default {
   },
   app: {
     colors: {
-      dark: '#002B49',
-      light: '#FFFFFF',
-      sea: '#004472',
-      sky: '#E9EBEF',
-      wave: '#D1E7F6',
-      rain: '#CCDDE9',
-      middle: '#D7DFE6',
-      black: '#13191D',
-      salat: '#21AE8C',
+      dark: "#002B49",
+      light: "#FFFFFF",
+      sea: "#004472",
+      sky: "#E9FAFF",
+      wave: "#D1EBF1",
+      rain: "#CCDDE3",
+      medium: "#7A8D97",
     },
-  },
+    themeColors: {
+      warning: '#FEBE69',
+      danger: '#FF7070',
+      success: '#6EFFB4',
+      info: '#00C2FF'
+    }
+  }
 };
+
+export default config;

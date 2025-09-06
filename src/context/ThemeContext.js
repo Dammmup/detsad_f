@@ -1,5 +1,5 @@
 import React from 'react';
-import Themes from '../themes';
+import { themes as Themes } from '../themes';
 
 const ThemeStateContext = React.createContext();
 const ThemeDispatchContext = React.createContext();
