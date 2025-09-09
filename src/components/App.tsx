@@ -1,93 +1,50 @@
 import React from 'react';
-import { Router, Route, Switch, Redirect } from 'react-router-dom';
-import { ConnectedRouter } from 'connected-react-router';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { SnackbarProvider } from './Snackbar';
+import SimpleLayout from './SimpleLayout';
+import Login from '../pages/Login';
+import Staff from '../pages/Staff';
+import Groups from '../pages/Groups';
+import Children from '../pages/Children';
 
-// components
-import Layout from './Layout';
+import { AuthProvider, ProtectedRoute } from './context/AuthContext';
+import { GroupsProvider } from './context/GroupsContext';
+import { StaffProvider } from './context/StaffContext';
 
-// pages
-import Error from '../pages/error';
-import Login from '../pages/login';
-import Verify from '../pages/verify';
+interface PrivateRouteProps {
+  children: React.ReactNode;
+}
 
-// context
-import { useUserState } from '../context/UserContext';
-import { GroupsProvider } from '../context/GroupsContext';
-import { StaffProvider } from '../context/StaffContext';
-import { getHistory } from '../index';
+interface PublicRouteProps {
+  children: React.ReactNode;
+}
 
-export default function App() {
-  // global
-  let { isAuthenticated } = useUserState();
-  const isAuth = isAuthenticated();
-
+export const App = () => {
   return (
-    <>
+    <AuthProvider>
       <SnackbarProvider>
         <GroupsProvider>
           <StaffProvider>
-          <ConnectedRouter history={getHistory()}>
-            <Router history={getHistory()}>
-              <Switch>
-                <Route
-                  exact
-                  path='/'
-                  render={() => <Redirect to='/app/profile' />}
-                />
-
-                <Route
-                  exact
-                  path='/app'
-                  render={() => <Redirect to='/app/dashboard' />}
-                />
-
-                <PrivateRoute path='/app' component={Layout} />
-                <PublicRoute path='/login' component={Login} />
-                <Redirect from='*' to='/app/dashboard' />
-                <Route component={Error} />
-              </Switch>
-            </Router>
-          </ConnectedRouter>
+            <Routes>
+              {/* Публичные маршруты */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/groups" element={<Groups />} />
+              <Route path="/children" element={<Children />} />
+              
+              {/* Защищенные маршруты */}
+              <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
+              <Route path="/app/*" element={
+                <ProtectedRoute>
+                  <SimpleLayout />
+                </ProtectedRoute>
+              } />
+              
+              {/* Fallback для неизвестных маршрутов */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
           </StaffProvider>
         </GroupsProvider>
       </SnackbarProvider>
-    </>
+    </AuthProvider>
   );
-
-  // #######################################################################
-
-  function PrivateRoute({ component, ...rest }) {
-    return (
-      <Route
-        {...rest}
-        render={(props) =>
-          isAuth ? (
-            React.createElement(component, props)
-          ) : (
-            <Redirect to={'/login'} />
-          )
-        }
-      />
-    );
-  }
-
-  function PublicRoute({ component, ...rest }) {
-    return (
-      <Route
-        {...rest}
-        render={(props) =>
-          isAuth ? (
-            <Redirect
-              to={{
-                pathname: '/',
-              }}
-            />
-          ) : (
-            React.createElement(component, props)
-          )
-        }
-      />
-    );
-  }
-}
+};

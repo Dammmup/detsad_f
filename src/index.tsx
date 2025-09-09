@@ -1,29 +1,82 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import axios from 'axios';
-import { createStore, applyMiddleware, compose } from 'redux';
-import ReduxThunk from 'redux-thunk';
-import { Provider } from 'react-redux';
-import { routerMiddleware } from 'connected-react-router';
-import { ThemeProvider as ThemeProviderV5 } from '@mui/material/styles';
-import { StyledEngineProvider } from '@mui/material/styles';
-import App from './components/App';
+import { BrowserRouter as Router } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+// Стили удалены для упрощения структуры
+import {App} from './components/App';
 import * as serviceWorker from './serviceWorker';
-import { LayoutProvider } from './context/LayoutContext';
-import { UserProvider } from './context/UserContext';
-import { ManagementProvider } from './context/ManagementContext';
-import { TimeTrackingProvider } from './context/TimeTrackingContext';
+import { LayoutProvider } from './components/context/LayoutContext';
+import { UserProvider } from './components/context/UserContext';
+import { TimeTrackingProvider } from './components/context/TimeTrackingContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import createRootReducer from './reducers';
-import {
-  ThemeProvider as ThemeChangeProvider,
-  ThemeStateContext,
-} from './context/ThemeContext';
-import CssBaseline from '@mui/material/CssBaseline';
 import config from '../src/config';
 
 import { createHashHistory, createMemoryHistory } from 'history';
+
+// Простая тема MUI для детского сада
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1890ff', // Antd синий
+    },
+    secondary: {
+      main: '#52c41a', // Antd зеленый
+    },
+    success: {
+      main: '#52c41a', // Зеленый
+    },
+    warning: {
+      main: '#faad14', // Желтый
+    },
+    error: {
+      main: '#ff4d4f', // Красный
+    },
+    background: {
+      default: '#f0f2f5', // Antd фон
+      paper: '#ffffff',
+    },
+    text: {
+      primary: 'rgba(0, 0, 0, 0.85)',
+      secondary: 'rgba(0, 0, 0, 0.45)',
+    },
+  },
+  typography: {
+    h4: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 500,
+    },
+  },
+  components: {
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none', // Убираем CAPS
+          borderRadius: 8,
+        },
+      },
+    },
+  },
+});
+
 
 const history =
   typeof window !== 'undefined'
@@ -43,51 +96,35 @@ if (token) {
   axios.defaults.headers.common['Authorization'] = 'Bearer ' + token;
 }
 
-export const store = createStore(
-  createRootReducer(history),
-  compose(applyMiddleware(routerMiddleware(history), ReduxThunk)),
-);
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <Router>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <LayoutProvider>
+          <UserProvider>
+            <TimeTrackingProvider>
+              <App />
+              <ToastContainer
+                position="top-right"
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+              />
+            </TimeTrackingProvider>
+          </UserProvider>
+        </LayoutProvider>
+      </ThemeProvider>
+    </Router>
+    );
+}
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-
-root.render(
-  <Provider store={store}>
-    <LayoutProvider>
-      <UserProvider>
-        <StyledEngineProvider injectFirst>
-          <ThemeChangeProvider>
-            <ThemeStateContext.Consumer>
-              {(theme) => (
-                <ThemeProviderV5 theme={theme}>
-                  <ManagementProvider>
-                    <TimeTrackingProvider>
-                      <CssBaseline />
-                      <App />
-                      <ToastContainer
-                        position="top-right"
-                        autoClose={5000}
-                        hideProgressBar={false}
-                        newestOnTop={false}
-                        closeOnClick
-                        rtl={false}
-                        pauseOnFocusLoss
-                        draggable
-                        pauseOnHover
-                        theme="light"
-                      />
-                    </TimeTrackingProvider>
-                  </ManagementProvider>
-                </ThemeProviderV5>
-              )}
-            </ThemeStateContext.Consumer>
-          </ThemeChangeProvider>
-        </StyledEngineProvider>
-      </UserProvider>
-    </LayoutProvider>
-  </Provider>,
-);
-
-// If you want your app to work offline and load faster, you can change
-// unregister() to register() below. Note this comes with some pitfalls.
-// Learn more about service workers: http://bit.ly/CRA-PWA
 serviceWorker.unregister();
