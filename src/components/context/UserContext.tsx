@@ -102,16 +102,8 @@ function userReducer(state: any, action: { type: any; payload?: any; }) {
 function UserProvider({ children }: { children: React.ReactNode; }) {
   let [state, dispatch] = React.useReducer(userReducer, {
     isAuthenticated: () => {
-      const token = localStorage.getItem('token');
-      if (config.isBackend && token) {
-        const date = new Date().getTime() / 1000;
-        const data = decodeJWT(token);
-        if (!data) return false;
-        return date < data.exp;
-      } else if (token) {
-        return true;
-      }
-      return false;
+      // Авторизован, если в localStorage есть объект user
+      return !!localStorage.getItem('user');
     },
     isFetching: false,
     errorMessage: '',
