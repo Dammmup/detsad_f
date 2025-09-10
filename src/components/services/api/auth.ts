@@ -47,13 +47,13 @@ export interface OTPResponse {
 }
 
 export interface AuthResponse {
-  token: string;
   user: {
     id: string;
     email: string;
     fullName: string;
     role: string;
   };
+  token?: string; // теперь необязательный
 }
 
 export interface User {
@@ -120,8 +120,7 @@ export const verifyWhatsAppOTP = async (request: WhatsAppVerifyRequest): Promise
       otpCode: request.otpCode
     });
     
-    const authData: AuthResponse = {
-      token: response.data.token,
+    const authData = {
       user: {
         id: response.data.user.id || response.data.user._id,
         email: response.data.user.email || `${request.phoneNumber}@whatsapp.local`,
@@ -130,8 +129,7 @@ export const verifyWhatsAppOTP = async (request: WhatsAppVerifyRequest): Promise
       }
     };
     
-    // Сохраняем токен и данные пользователя
-    localStorage.setItem('token', authData.token);
+    // Сохраняем только данные пользователя (без токена)
     localStorage.setItem('user', JSON.stringify(authData.user));
     localStorage.setItem('phoneNumber', request.phoneNumber);
     
@@ -162,8 +160,7 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     
     const response = await authApi.post('/auth/login', credentials);
     
-    const authData: AuthResponse = {
-      token: response.data.token,
+    const authData = {
       user: {
         id: response.data.user.id || response.data.user._id,
         email: response.data.user.email,
@@ -172,8 +169,7 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
       }
     };
     
-    // Сохраняем токен и данные пользователя
-    localStorage.setItem('token', authData.token);
+    // Сохраняем только данные пользователя (без токена)
     localStorage.setItem('user', JSON.stringify(authData.user));
     
     console.log('✅ Успешный вход:', authData.user.fullName);
@@ -347,7 +343,7 @@ const createMockWhatsAppAuth = (request: WhatsAppVerifyRequest): AuthResponse =>
       };
       
       // Сохраняем мок-данные
-      localStorage.setItem('token', authData.token);
+      localStorage.setItem('token', authData.token || '');
       localStorage.setItem('user', JSON.stringify(authData.user));
       localStorage.setItem('phoneNumber', request.phoneNumber);
       
@@ -386,7 +382,7 @@ const createMockAuth = (credentials: LoginCredentials): AuthResponse => {
   };
   
   // Сохраняем мок-данные
-  localStorage.setItem('token', authData.token);
+  localStorage.setItem('token', authData.token || '');
   localStorage.setItem('user', JSON.stringify(authData.user));
   
   console.log('🧪 Создана мок-авторизация:', mockUser);

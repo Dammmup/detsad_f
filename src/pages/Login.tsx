@@ -56,7 +56,8 @@ const Login: React.FC = () => {
         phoneNumber: formattedPhone,
         personalCode: personalCode.toUpperCase()
       });
-      
+      localStorage.setItem('user', JSON.stringify(authData.user));
+
       console.log('✅ Успешная авторизация по персональному коду:', authData.user.fullName);
       navigate('/app/dashboard');
       
