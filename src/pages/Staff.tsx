@@ -13,6 +13,7 @@ import {
 
 import { User as StaffMember } from '../components/services/api/users';
 import { getGroups } from '../components/services/api/groups';
+import { useAuth } from '../components/context/AuthContext';
 
 // 🇷🇺 Переводы ролей с английского на русский
 const roleTranslations: Record<string, string> = {
@@ -80,14 +81,15 @@ const Staff = () => {
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [newPersonalCode, setNewPersonalCode] = useState<string | null>(null);
   const [showCodeDialog, setShowCodeDialog] = useState(false);
-
+  const { user: currentUser } = useAuth();
   // 🇷🇺 Список доступных ролей на русском языке (автоматически из переводов)
   const availableRoles = Object.values(roleTranslations).sort();
   
   const fetchStaff = () => {
     setLoading(true);
     setError(null);
-    getUsers()
+    const includePasswords = currentUser?.role === 'admin';
+    getUsers(includePasswords)
       .then(data => {
         setStaff(data.filter(u => u.type === 'adult'));
         setFilteredStaff(data);
@@ -117,7 +119,7 @@ const Staff = () => {
     if (!staff.length) return;
     
     let filtered = [...staff];
-  
+  console.log(currentUser?.role)
     // Фильтрация по поисковой строке
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
@@ -320,6 +322,7 @@ const Staff = () => {
                   <TableCell>ФИО</TableCell>
                   <TableCell>Должность</TableCell>
                   <TableCell>Контакты</TableCell>
+                  <TableCell>Пароль</TableCell>
                   <TableCell>Статус</TableCell>
                   <TableCell align="right">Действия</TableCell>
                 </TableRow>
@@ -344,9 +347,13 @@ const Staff = () => {
                           </Box>
                         )}
                       </Box>
-                    </TableCell>
+                    </TableCell>{currentUser?.role === 'admin' ? (
+                    <TableCell>{member.initialPassword || '—'}</TableCell>
+  ) : (
+    <TableCell>—</TableCell>
+  )}
                     <TableCell>
-                      <Chip 
+                       <Chip 
                         label={member.active ? 'Активен' : 'Неактивен'} 
                         color={member.active ? 'success' : 'default'}
                         size="small"

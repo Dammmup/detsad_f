@@ -16,7 +16,7 @@ import {
 const Login: React.FC = () => {
   const navigate = useNavigate();
   
-  // Состояния UI
+  // Local state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loginMethod, setLoginMethod] = useState<'whatsapp' | 'personalCode'>('personalCode'); // По умолчанию персональный код

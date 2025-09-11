@@ -76,7 +76,6 @@ const Groups = () => {
             name: group.name,
             description: group.description || '',
             ageGroup: Object(group.ageGroup || ''),
-            maxCapacity: group.maxCapacity || group.maxStudents || 0,
             isActive: group.isActive ?? true,
             teacher: typeof group.teacher === 'object' ? (group.teacher.id as any || group.teacher._id as any) : String(group.teacher || ''),
             // isActive: group.isActive, // убрано, если не используется в UI
@@ -104,7 +103,7 @@ const Groups = () => {
         id: group.id,
         name: group.name,
         description: group.description || '',
-        maxCapacity: group.maxCapacity || 20,
+        maxCapacity: group.maxStudents || 20,
         ageGroup: Array.isArray(group.ageGroup) ? group.ageGroup : typeof group.ageGroup === 'string' ? [group.ageGroup] : [],
         teacher: group.teacher
       });
@@ -226,7 +225,7 @@ const Groups = () => {
                     <TableCell>{group.name}</TableCell>
                     <TableCell>{group.description}</TableCell>
                     <TableCell>{group.ageGroup.join(', ')}</TableCell>
-                    <TableCell>{group.maxCapacity}</TableCell>
+                    <TableCell>{group.maxStudents}</TableCell>
                     <TableCell>{teacherList.find(t => t.id === group.teacher)?.fullName || '—'}</TableCell>
                     <TableCell align="right">
                       <IconButton onClick={() => handleOpenModal(group)}>

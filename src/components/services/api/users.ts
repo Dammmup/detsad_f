@@ -37,6 +37,7 @@ export interface User {
   salary?: number;
   fines?: IFine[];
   totalFines?: number;
+  initialPassword?: string;
 }
 
 // Интерфейс для API ошибки
@@ -93,11 +94,12 @@ const handleApiError = (error: any, context = '') => {
  * Get all users (staff members)
  * @returns {Promise<User[]>} List of users
  */
-export const getUsers = async () => {
+export const getUsers = async (includePasswords = false) => {
   try {
     console.log('Fetching users from API...');
     
-    const response = await api.get('/users');
+    const url = includePasswords ? '/users?includePasswords=true' : '/users';
+    const response = await api.get(url);
     const users: User[] = response.data.map((user: any) => ({
       id: user._id,
       fullName: user.fullName,
@@ -117,6 +119,7 @@ export const getUsers = async () => {
       birthday: user.birthday,
       notes: user.notes,
       salary: user.salary,
+      initialPassword: user.initialPassword,
       fines: user.fines,
       totalFines: user.totalFines,
     }));

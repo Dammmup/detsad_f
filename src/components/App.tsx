@@ -2,7 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { SnackbarProvider } from './Snackbar';
 import SimpleLayout from './SimpleLayout';
-import Login from '../pages/Login';
+import Login from '../pages/LoginSimple';
 import Staff from '../pages/Staff';
 import Groups from '../pages/Groups';
 import Children from '../pages/Children';
