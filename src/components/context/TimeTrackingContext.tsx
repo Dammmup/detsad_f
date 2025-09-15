@@ -39,7 +39,7 @@ interface TimeTrackingProviderProps {
 
 export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) => {
 
-const [timeStatus, setTimeStatus] = useState<string | null>(null);
+ const [timeStatus, setTimeStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [location, setLocation] = useState<GeolocationPosition | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -263,7 +263,7 @@ const [timeStatus, setTimeStatus] = useState<string | null>(null);
         // Error is already handled in fetchTimeStatus
       });
     }, 30000); // 30 seconds
-
+fetchTimeStatus();
       return () => clearInterval(interval);
     }, []);
 

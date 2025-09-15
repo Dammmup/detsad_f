@@ -14,25 +14,28 @@ import {
 import Dashboard from '../pages/Dashboard';
 import Staff from '../pages/Staff';
 import Groups from '../pages/Groups';
-import Schedule from '../pages/Schedule';
 import Attendance from '../pages/Attendance';
-import Reports from '../pages/Reports';
 import Settings from '../pages/Settings';
 import Cyclogram from '../pages/Cyclogram';
 import Children from '../pages/Children';
-import ChildrenAttendance from '../pages/ChildrenAttendance';
+// ChildrenAttendance removed during refactoring
 import DocumentsTemplates from '../pages/DocumentsTemplates';
-import ReportsUnified from '../pages/ReportsUnified';
-import DocumentsUnified from '../pages/DocumentsUnified';
+// ReportsUnified and DocumentsUnified removed during refactoring
 
 // Импорт Sidebar и структуры меню
 import { Sidebar } from './Sidebar/Sidebar';
 import sidebarStructure from './Sidebar/SidebarStructure';
 import { useLocation } from 'react-router-dom';
 import ChildrenReports from '../pages/ChildrenReports';
-import StaffReports from '../pages/StaffReports';
+import StaffSchedule from '../pages/StaffSchedule';
+import StaffAttendance from '../pages/StaffAttendance';
+import ChildrenAttendanceImproved from '../pages/ChildrenAttendanceImproved';
+import StaffTimeTracking from '../pages/StaffTimeTracking';
+import AttendanceGrid from '../pages/AttendanceGrid';
+import PayrollPage from '../pages/PayrollPage';
 import { logout } from './services/api/auth';
 import { useNavigate } from 'react-router-dom';
+import Reports from '../pages/Reports';
 
 interface SimpleLayoutProps {
   children?: React.ReactNode;
@@ -97,22 +100,26 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
 
             {/* Дети */}
             <Route path="children" element={<Children />} />
-            <Route path="children/attendance" element={<ChildrenAttendance />} />
+            <Route path="children/attendance" element={<ChildrenAttendanceImproved />} />
+            <Route path="children/attendance-grid" element={<AttendanceGrid />} />
+            {/* ChildrenAttendance removed during refactoring */}
             <Route path="children/reports" element={<ChildrenReports />} />
 
             {/* Сотрудники */}
-            <Route path="staff" element={<Staff/> } />
-            <Route path="staff/schedule" element={<Schedule />} />
+            <Route path="staff" element={<Staff />} />
+            <Route path="staff/schedule" element={<StaffSchedule />} />
+            <Route path="staff/attendance" element={<StaffAttendance />} />
+            <Route path="staff/timetracking" element={<StaffTimeTracking />} />
             <Route path="staff/attendance" element={<Attendance />} />
-            <Route path="staff/reports" element={<StaffReports />} />
+            <Route path="staff/reports" element={<Reports />} />
 
             {/* Документы */}
-            <Route path="documents" element={<DocumentsUnified />} />
+            <Route path="documents" element={<div>Документы (реализовать)</div>} />
             <Route path="documents/templates" element={<DocumentsTemplates />} />
 
             {/* Отчеты */}
-            <Route path="reports" element={<ReportsUnified />} />
-            <Route path="reports/payroll" element={<div>Зарплаты (реализовать)</div>} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="reports/payroll" element={<PayrollPage isInReports={true} />} />
             <Route path="reports/analytics" element={<div>Аналитика (реализовать)</div>} />
 
             {/* Организация/Настройки */}

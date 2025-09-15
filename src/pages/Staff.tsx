@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getUsers, createUser, updateUser, deleteUser } from '../components/services/api/users';
+import { getUsers, createUser, updateUser, deleteUser, User as StaffMember,  } from '../components/services/api/users';
 import {
   Table, TableHead, TableRow, TableCell, TableBody, Paper, CircularProgress, Alert, Button, Dialog, 
   DialogTitle, DialogContent, DialogActions, TextField, IconButton, InputAdornment, FormControl,
@@ -11,9 +11,11 @@ import {
  Person
 } from '@mui/icons-material';
 
-import { User as StaffMember } from '../components/services/api/users';
 import { getGroups } from '../components/services/api/groups';
 import { useAuth } from '../components/context/AuthContext';
+import ExportMenuButton from '../components/ExportMenuButton';
+import { exportStaffList } from '../components/services/api/excelExport';
+import axios from 'axios';
 
 // 🇷🇺 Переводы ролей с английского на русский
 const roleTranslations: Record<string, string> = {
@@ -246,12 +248,32 @@ const Staff = () => {
     }
   };
 
+  const handleExportDownload = () => {
+    exportStaffList(staff);
+  };
+
+  const handleExportEmail = async () => {
+    try {
+      await axios.post('/exports/staff', { action: 'email' });
+      alert('Документ отправлен на почту администратора');
+    } catch (e) {
+      alert('Ошибка отправки на почту');
+    }
+  };
+
   return (
     <Paper style={{ margin: 24, padding: 24 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h5" style={{ color: '#1890ff', display: 'flex', alignItems: 'center' }}>
           <Person style={{ marginRight: 8 }} /> Сотрудники
         </Typography>
+        <Box mb={2}>
+          <ExportMenuButton
+            onDownload={handleExportDownload}
+            onSendEmail={handleExportEmail}
+            label="Экспортировать"
+          />
+        </Box>
         <Button 
           variant="contained" 
           color="primary" 
@@ -561,3 +583,4 @@ const Staff = () => {
 };
 
 export default Staff;
+

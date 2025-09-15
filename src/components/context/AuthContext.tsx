@@ -23,13 +23,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  // Проверка авторизации при загрузке
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  // Проверка статуса авторизации
   const checkAuthStatus = async () => {
     setLoading(true);
     
@@ -38,18 +31,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const authenticated = isAuthenticated();
       
       if (currentUser && authenticated) {
-        // Дополнительно проверяем токен на backend (опционально)
-        const tokenValid = await validateToken();
+        // Если есть пользователь и токен в localStorage, считаем авторизованным
+        setUser(currentUser);
+        setIsLoggedIn(true);
+        console.log('✅ Пользователь авторизован:', currentUser.fullName);
         
-        if (tokenValid) {
-          setUser(currentUser);
-          setIsLoggedIn(true);
-          console.log('✅ Пользователь авторизован:', currentUser.fullName);
-        } else {
-          // Токен недействителен, очищаем данные
-          await handleLogout();
-        }
+        // Проверяем токен на backend в фоне (не блокируем UI)
+        validateToken().catch(() => {
+          console.warn('⚠️ Токен недействителен на backend, но продолжаем работу');
+        });
       } else {
+        console.log('❌ Пользователь не авторизован');
         setUser(null);
         setIsLoggedIn(false);
       }
@@ -61,6 +53,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
     }
   };
+  // Проверка авторизации при загрузке
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  // Проверка статуса авторизации
+
 
   // Вход в систему
   const handleLogin = (userData: User, token: string) => {

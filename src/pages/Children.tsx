@@ -5,9 +5,12 @@ import {
   FormControl, InputLabel, Select, MenuItem,
   SelectChangeEvent
 } from '@mui/material';
-import { Edit, Delete, Add } from '@mui/icons-material';
+import { Add, Edit, Delete, Visibility, Person, Group as GroupIcon, Download } from '@mui/icons-material';
 import { getUsers, createUser, updateUser, deleteUser, User } from '../components/services/api/users';
 import { getGroups, Group } from '../components/services/api/groups';
+import { exportChildrenList } from '../components/services/api/excelExport';
+import ExportMenuButton from '../components/ExportMenuButton';
+import axios from 'axios';
 
 const defaultForm: Partial<User> = {
   fullName: '',
@@ -32,6 +35,21 @@ const Children: React.FC = () => {
   const [form, setForm] = useState<Partial<User>>(defaultForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Экспорт: скачать файл
+  const handleExportDownload = () => {
+    exportChildrenList(children, undefined);
+  };
+
+  // Экспорт: отправить на email
+  const handleExportEmail = async () => {
+    try {
+      await axios.post('/exports/children', { action: 'email' });
+      alert('Документ отправлен на почту администратора');
+    } catch (e) {
+      alert('Ошибка отправки на почту');
+    }
+  };
 
   // Загрузка детей
   const fetchChildren = async () => {
@@ -154,7 +172,16 @@ const Children: React.FC = () => {
   return (
     <Box>
       <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-        <Typography variant="h5">Список детей</Typography>
+        <Typography variant="h4" gutterBottom>
+        Список детей
+      </Typography>
+      <Box mb={2}>
+        <ExportMenuButton
+          onDownload={handleExportDownload}
+          onSendEmail={handleExportEmail}
+          label="Экспортировать"
+        />
+      </Box>
         <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenModal()}>
           Добавить ребёнка
         </Button>

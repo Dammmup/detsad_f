@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import * as groupsApi from '../services/api/groups';
 import { Group } from '../services/api/groups';
 
-// Используем тип Group из api/groups.ts
 
 interface GroupsContextType {
   groups: Group[];
@@ -55,19 +54,19 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
       setGroups(data as Group[]);
       setError(null);
       return data;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch groups:', err);
-      setError('Не удалось загрузить список групп. Пожалуйста, попробуйте позже.');
+      if (err.response?.status === 401) {
+        console.warn('Groups API: Authentication required, user may need to re-login');
+        setError('Требуется повторная авторизация');
+      } else {
+        setError('Не удалось загрузить список групп. Пожалуйста, попробуйте позже.');
+      }
       throw err;
     } finally {
       setLoading(false);
     }
   }, []);
-
-  // Load groups on mount or when fetchGroups changes
-  useEffect(() => {
-    fetchGroups();
-  }, [fetchGroups]);
 
   // Create a new group
   const createGroup = async (groupData: Partial<Group>) => {

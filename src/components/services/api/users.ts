@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = `${process.env.REACT_APP_API_URL}/api` || 'http://localhost:8080/api';
+const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api`;
 
 interface IFine {
   amount: number;
@@ -212,7 +212,6 @@ export const updateUser = async (id: string, user: User) => {
 };
 
 /**
- * Delete a user
  * @param {string} id - User ID
  * @returns {Promise<void>}
  */

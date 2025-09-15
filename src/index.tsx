@@ -8,7 +8,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import {App} from './components/App';
 import * as serviceWorker from './serviceWorker';
 import { LayoutProvider } from './components/context/LayoutContext';
-import { UserProvider } from './components/context/UserContext';
+// UserProvider removed during refactoring
 import { TimeTrackingProvider } from './components/context/TimeTrackingContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -104,23 +104,21 @@ if (rootElement) {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <LayoutProvider>
-          <UserProvider>
-            <TimeTrackingProvider>
-              <App />
-              <ToastContainer
-                position="top-right"
-                autoClose={5000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme="light"
-              />
-            </TimeTrackingProvider>
-          </UserProvider>
+          <TimeTrackingProvider>
+            <App />
+            <ToastContainer
+              position="top-right"
+              autoClose={5000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="light"
+            />
+          </TimeTrackingProvider>
         </LayoutProvider>
       </ThemeProvider>
     </Router>

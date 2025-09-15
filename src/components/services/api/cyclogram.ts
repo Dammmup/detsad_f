@@ -327,36 +327,36 @@ export const createCyclogramFromTemplate = async (
 /**
  * Generate mock cyclograms for testing
  */
-const generateMockCyclograms = (): WeeklyCyclogram[] => {
-  return [
-    {
-      id: '1',
-      title: 'Циклограмма для средней группы (4-5 лет) - Неделя 1',
-      description: 'Стандартная циклограмма для детей 4-5 лет согласно требованиям МОН РК',
-      ageGroup: '4-5',
-      groupId: '1',
-      teacherId: '2',
-      weekStartDate: '2025-09-08',
-      timeSlots: generateMockTimeSlots(),
-      status: 'active',
-      createdAt: '2025-09-01T00:00:00',
-      updatedAt: '2025-09-07T00:00:00'
-    },
-    {
-      id: '2',
-      title: 'Циклограмма для старшей группы (5-6 лет) - Неделя 1',
-      description: 'Циклограмма для подготовительной группы',
-      ageGroup: '5-6',
-      groupId: '2',
-      teacherId: '3',
-      weekStartDate: '2025-09-08',
-      timeSlots: generateMockTimeSlots(),
-      status: 'active',
-      createdAt: '2025-09-01T00:00:00',
-      updatedAt: '2025-09-07T00:00:00'
-    }
-  ];
-};
+// const generateMockCyclograms = (): WeeklyCyclogram[] => {
+//   return [
+//     {
+//       id: '1',
+//       title: 'Циклограмма для средней группы (4-5 лет) - Неделя 1',
+//       description: 'Стандартная циклограмма для детей 4-5 лет согласно требованиям МОН РК',
+//       ageGroup: '4-5',
+//       groupId: '1',
+//       teacherId: '2',
+//       weekStartDate: '2025-09-08',
+//       timeSlots: generateMockTimeSlots(),
+//       status: 'active',
+//       createdAt: '2025-09-01T00:00:00',
+//       updatedAt: '2025-09-07T00:00:00'
+//     },
+//     {
+//       id: '2',
+//       title: 'Циклограмма для старшей группы (5-6 лет) - Неделя 1',
+//       description: 'Циклограмма для подготовительной группы',
+//       ageGroup: '5-6',
+//       groupId: '2',
+//       teacherId: '3',
+//       weekStartDate: '2025-09-08',
+//       timeSlots: generateMockTimeSlots(),
+//       status: 'active',
+//       createdAt: '2025-09-01T00:00:00',
+//       updatedAt: '2025-09-07T00:00:00'
+//     }
+//   ];
+// };
 
 /**
  * Generate mock time slots for testing

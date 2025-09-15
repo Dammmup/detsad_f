@@ -11,6 +11,7 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import TableChartIcon from '@mui/icons-material/TableChart';
 
 export interface SidebarItem {
+  id: string;
   label: string;
   link?: string;
   icon?: React.ReactNode;
@@ -19,52 +20,59 @@ export interface SidebarItem {
 
 const sidebarStructure: SidebarItem[] = [
   {
+    id: 'dashboard',
     label: 'Главная',
     link: '/app',
     icon: <DashboardIcon />,
   },
   {
+    id: 'children',
     label: 'Дети',
     icon: <ChildCareIcon />,
     children: [
-      { label: 'Список детей', link: '/app/children', icon: <PeopleIcon /> },
-      { label: 'Группы', link: '/app/groups', icon: <GroupIcon /> },
-      { label: 'Посещаемость', link: '/app/children/attendance', icon: <AssignmentIndIcon /> },
+      { id: 'children-list', label: 'Список детей', link: '/app/children', icon: <PeopleIcon /> },
+      { id: 'children-groups', label: 'Группы', link: '/app/groups', icon: <GroupIcon /> },
+      { id: 'children-attendance', label: 'Посещаемость', link: '/app/children/attendance', icon: <AssignmentIndIcon /> },
     ],
   },
   {
+    id: 'staff',
     label: 'Сотрудники',
     icon: <PeopleIcon />,
     children: [
-      { label: 'Список сотрудников', link: '/app/staff', icon: <PeopleIcon /> },
-      { label: 'Расписание/Смены', link: '/app/staff/schedule', icon: <ScheduleIcon /> },
-      { label: 'Табель', link: '/app/staff/attendance', icon: <AssignmentIndIcon /> },
+      { id: 'staff-list', label: 'Список сотрудников', link: '/app/staff', icon: <PeopleIcon /> },
+      { id: 'staff-schedule', label: 'Расписание/Смены', link: '/app/staff/schedule', icon: <ScheduleIcon /> },
+      { id: 'staff-attendance', label: 'Табель', link: '/app/staff/attendance', icon: <AssignmentIndIcon /> },
+      { id: 'staff-timetracking', label: 'Учет времени', link: '/app/staff/timetracking', icon: <AssignmentIndIcon /> },
     ],
   },
   {
+    id: 'documents',
     label: 'Документы',
     icon: <InsertDriveFileIcon />,
     children: [
-      { label: 'Все документы', link: '/app/documents', icon: <InsertDriveFileIcon /> },
-      { label: 'Шаблоны', link: '/app/documents/templates', icon: <TableChartIcon /> },
+      { id: 'documents-all', label: 'Все документы', link: '/app/documents', icon: <InsertDriveFileIcon /> },
+      { id: 'documents-templates', label: 'Шаблоны', link: '/app/documents/templates', icon: <TableChartIcon /> },
     ],
   },
   {
+    id: 'reports',
     label: 'Отчеты',
     icon: <AssessmentIcon />,
     children: [
-      { label: 'Все отчеты', link: '/app/reports', icon: <AssessmentIcon /> },
-      { label: 'Зарплаты', link: '/app/reports/payroll', icon: <AssessmentIcon /> },
-      { label: 'Аналитика', link: '/app/reports/analytics', icon: <AssessmentIcon /> },
+      { id: 'reports-all', label: 'Все отчеты', link: '/app/reports', icon: <AssessmentIcon /> },
+      { id: 'reports-payroll', label: 'Зарплаты', link: '/app/reports/payroll', icon: <AssessmentIcon /> },
+      { id: 'reports-analytics', label: 'Аналитика', link: '/app/reports/analytics', icon: <AssessmentIcon /> },
     ],
   },
   {
+    id: 'organization',
     label: 'Организация',
     icon: <SettingsIcon />,
     children: [
-      { label: 'Группы', link: '/app/groups', icon: <GroupIcon /> },
-      { label: 'Циклограммы', link: '/app/cyclogram', icon: <ScheduleIcon /> },
-      { label: 'Настройки', link: '/app/settings', icon: <SettingsIcon /> },
+      { id: 'organization-groups', label: 'Группы', link: '/app/groups', icon: <GroupIcon /> },
+      { id: 'organization-cyclogram', label: 'Циклограммы', link: '/app/cyclogram', icon: <ScheduleIcon /> },
+      { id: 'organization-settings', label: 'Настройки', link: '/app/settings', icon: <SettingsIcon /> },
     ],
   },
 

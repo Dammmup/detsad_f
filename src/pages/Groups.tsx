@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { useGroups } from '../components/context/GroupsContext';
 import {
-  Table, TableHead, TableRow, TableCell, TableBody, Paper, CircularProgress, Alert, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton, MenuItem, Select, FormControl, InputLabel, FormHelperText, SelectChangeEvent
+  Paper, Button, Table, TableHead, TableRow, TableCell, TableBody,
+   Chip, IconButton, Dialog, DialogTitle, DialogContent,
+  DialogActions, TextField, Select, MenuItem, FormControl, InputLabel,
+  Alert, CircularProgress
 } from '@mui/material';
-import { Edit, Delete, Add, Group, Check, CheckBox } from '@mui/icons-material';
-
-import { Group as GroupData } from '../components/services/api/groups';
+import { Add, Edit, Delete, Group as GroupIcon, Group } from '@mui/icons-material';
+import { useGroups } from '../components/context/GroupsContext';
 import { getUsers, User } from '../components/services/api/users';
+import { useAuth } from '../components/context/AuthContext';
+import { Group as GroupData } from '../components/services/api/groups';
+import { SelectChangeEvent } from '@mui/material/Select';
 
 interface TeacherOption {
   id: string;
@@ -41,11 +45,16 @@ const Groups = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Загрузка групп при монтировании компонента
+  const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
+
+  // Загрузка групп только после успешной авторизации
   useEffect(() => {
-    fetchGroups();
-    fetchTeachers();
-  }, []);
+    if (isLoggedIn && currentUser && !authLoading) {
+      console.log('User authenticated, loading groups and teachers...');
+      fetchGroups();
+      fetchTeachers();
+    }
+  }, [isLoggedIn, currentUser, authLoading]);
 
   // Получение списка воспитателей
   const fetchTeachers = async () => {
@@ -70,7 +79,7 @@ const Groups = () => {
       
       // Преобразуем данные, если нужно
       // Приводим к типу Group
-      const formattedData: GroupData[] = Array.isArray(data)
+      const formattedData: any[] = Array.isArray(data)
         ? data.map(group => ({
             id: group.id || group._id,
             name: group.name,
