@@ -9,6 +9,7 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import TableChartIcon from '@mui/icons-material/TableChart';
+import CalendarViewWeekIcon from '@mui/icons-material/CalendarViewWeek';
 
 export interface SidebarItem {
   id: string;
@@ -32,7 +33,7 @@ const sidebarStructure: SidebarItem[] = [
     children: [
       { id: 'children-list', label: 'Список детей', link: '/app/children', icon: <PeopleIcon /> },
       { id: 'children-groups', label: 'Группы', link: '/app/groups', icon: <GroupIcon /> },
-      { id: 'children-attendance', label: 'Посещаемость', link: '/app/children/attendance-grid', icon: <AssignmentIndIcon /> },
+      { id: 'children-attendance', label: 'Посещаемость', link: '/app/children/attendance', icon: <CalendarViewWeekIcon /> },
     ],
   },
   {

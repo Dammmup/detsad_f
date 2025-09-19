@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
+import UploadIcon from '@mui/icons-material/Upload';
 import EmailIcon from '@mui/icons-material/Email';
 
 interface ExportMenuButtonProps {
@@ -36,7 +37,7 @@ const ExportMenuButton: React.FC<ExportMenuButtonProps> = ({ onDownload, onSendE
         variant="outlined"
         color="primary"
         onClick={handleClick}
-        startIcon={<DownloadIcon />}
+        startIcon={<UploadIcon />}
       >
         {label || 'Экспорт'}
       </Button>

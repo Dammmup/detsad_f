@@ -267,3 +267,41 @@ export const getUserRoles = async () => {
     return [];
   }
 };
+
+/**
+ * Get children by group ID
+ * @param {string} groupId - Group ID
+ * @returns {Promise<User[]>} List of children in the group
+ */
+export const getChildrenByGroup = async (groupId: string): Promise<User[]> => {
+  try {
+    console.log('Fetching children for group:', groupId);
+    
+    const response = await api.get(`/users/group/${groupId}/children`);
+    const children: User[] = response.data.map((child: any) => ({
+      id: child._id,
+      fullName: child.fullName,
+      role: child.role,
+      phone: child.phone,
+      email: child.email || '',
+      active: child.active,
+      type: child.type,
+      isVerified: child.isVerified,
+      lastLogin: child.lastLogin,
+      createdAt: child.createdAt,
+      updatedAt: child.updatedAt,
+      iin: child.iin,
+      groupId: child.groupId,
+      parentPhone: child.parentPhone,
+      parentName: child.parentName,
+      birthday: child.birthday,
+      notes: child.notes,
+    }));
+    
+    console.log('Children data:', children);
+    return children;
+  } catch (error) {
+    console.error('Error in getChildrenByGroup:', error);
+    return handleApiError(error, 'fetching children by group');
+  }
+};

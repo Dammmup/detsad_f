@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { getUsers, createUser, updateUser, deleteUser, User as StaffMember} from '../../components/services/api/users';
 import {
-  Table, TableHead, TableRow, TableCell, TableBody, Paper, CircularProgress, Alert, Button, Dialog, 
+  Table, TableHead, TableRow, TableCell, TableBody, Paper, CircularProgress, Alert, Button, Dialog,
   DialogTitle, DialogContent, DialogActions, TextField, IconButton, InputAdornment, FormControl,
   InputLabel, Select, MenuItem, FormHelperText, Grid, Tooltip, Chip, Divider, Box, Typography,
-  OutlinedInput, SelectChangeEvent, Checkbox, ListItemText, 
+  OutlinedInput, SelectChangeEvent, Checkbox, ListItemText, FormControlLabel
 } from '@mui/material';
 import { 
   Edit, Delete, Add, Search, Email, Phone, Badge, 
@@ -59,14 +59,15 @@ const getRoleByTranslation = (translation: string): string => {
   return entry ? entry[0] : translation;
 };
 
-const defaultForm: StaffMember = { 
+const defaultForm: StaffMember = {
   id: '',
   fullName: '',
   role: '',
   phone: '',
   email: '',
   active: true,
-  type: 'adult'
+  type: 'adult',
+  iin: ''
 };
 
 const Staff = () => {
@@ -177,12 +178,7 @@ const Staff = () => {
     }
   };
   
-  // Обработчик для чекбоксов
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setForm({ ...form, [name]: checked });
-  };
-  
+
   // Обработчик для фильтра ролей
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
     const { value } = event.target;
@@ -347,6 +343,7 @@ const Staff = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>ФИО</TableCell>
+                  <TableCell>ИИН</TableCell>
                   <TableCell>Должность</TableCell>
                   <TableCell>Контакты</TableCell>
                   <TableCell>Пароль</TableCell>
@@ -358,6 +355,7 @@ const Staff = () => {
                 {filteredStaff.map((member) => (
                   <TableRow key={member.id}>
                     <TableCell>{member.fullName}</TableCell>
+                    <TableCell>{member.iin || '—'}</TableCell>
                     <TableCell>{translateRole(member.role || '')}</TableCell>
                     <TableCell>
                       <Box display="flex" flexDirection="column">
@@ -380,8 +378,8 @@ const Staff = () => {
     <TableCell>—</TableCell>
   )}
                     <TableCell>
-                       <Chip 
-                        label={member.active ? 'Активен' : 'Неактивен'} 
+                       <Chip
+                        label={member.active ? 'Активен' : 'Неактивен'}
                         color={member.active ? 'success' : 'default'}
                         size="small"
                       />
@@ -409,7 +407,7 @@ const Staff = () => {
       {/* Модальное окно для добавления/редактирования */}
       <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="md" fullWidth>
         <DialogTitle>
-          <Box display="flex" alignItems="center">
+          <Box display="flex" alignItems="center" flexDirection='row'>
             {editId ? (
               <>
                 <Edit style={{ marginRight: 8 }} /> Редактирование сотрудника
@@ -465,25 +463,7 @@ const Staff = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Email"
-                name="email"
-                type="email"
-                value={form.email || ''}
-                onChange={handleChange}
-                fullWidth
-                error={!!formErrors.email}
-                helperText={formErrors.email}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Email />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
+          
             
             <Grid item xs={12} md={6}>
               <TextField
@@ -499,6 +479,28 @@ const Staff = () => {
                     </InputAdornment>
                   ),
                 }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="ИИН"
+                name="iin"
+                value={form.iin || ''}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={form.active}
+                    onChange={(e) => setForm({...form, active: e.target.checked})}
+                  />
+                }
+                label="Активен"
               />
             </Grid>
           </Grid>

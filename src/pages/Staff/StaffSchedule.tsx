@@ -173,7 +173,7 @@ const StaffSchedule: React.FC = () => {
         const adultStaff = staffData.filter(user => user.type === 'adult');
         setStaff(adultStaff);
         setShifts(shiftsData);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error loading data:', err);
         setError('Не удалось загрузить данные');
         enqueueSnackbar('Ошибка при загрузке данных', { variant: 'error' });
@@ -304,7 +304,7 @@ const StaffSchedule: React.FC = () => {
 
   const handleEditShift = (shift: Shift) => {
     setFormData({
-      staffId: shift.staffId,
+      staffId: (shift.staffId as any)?._id || shift.staffId || '',
       staffName: shift.staffName,
       date: shift.date,
       startTime: shift.startTime,
@@ -355,10 +355,17 @@ const StaffSchedule: React.FC = () => {
 
   // Get shifts for a specific day and staff
   const getShiftsForDay = (staffId: string, date: Date) => {
-    return shifts.filter(shift =>
-      shift.staffId === staffId &&
-      isSameDay(parseISO(shift.date), date)
-    );
+    return shifts.filter(shift => {
+      // Проверяем, что staffId не null и не undefined
+      if (!shift.staffId) return false;
+      // Проверяем тип и сравниваем
+      if (typeof shift.staffId === 'string') {
+        return shift.staffId === staffId && isSameDay(parseISO(shift.date), date);
+      } else {
+        // Для объекта проверяем наличие _id и сравниваем
+        return (shift.staffId as any)._id === staffId && isSameDay(parseISO(shift.date), date);
+      }
+    });
   };
 
   // Render loading state

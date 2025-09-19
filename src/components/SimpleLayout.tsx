@@ -27,7 +27,7 @@ import ChildrenReports from '../pages/Children/ChildrenReports';
 import StaffSchedule from '../pages/Staff/StaffSchedule';
 import StaffAttendance from '../pages/Staff/StaffAttendance';
 import StaffTimeTracking from '../pages/Staff/StaffTimeTracking';
-import AttendanceGrid from '../pages/Children/AttendanceGrid';
+import WeeklyAttendance from '../pages/Children/WeeklyAttendance';
 import PayrollPage from '../pages/Staff/PayrollPage';
 import { logout } from './services/api/auth';
 import { useNavigate } from 'react-router-dom';
@@ -96,8 +96,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
 
             {/* Дети */}
             <Route path="children" element={<Children />} />
-            <Route path="children/attendance-grid" element={<AttendanceGrid />} />
-            {/* ChildrenAttendance removed during refactoring */}
+            <Route path="children/attendance" element={<WeeklyAttendance />} />
             <Route path="children/reports" element={<ChildrenReports />} />
 
             {/* Сотрудники */}

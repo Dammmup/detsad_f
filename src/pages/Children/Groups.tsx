@@ -3,11 +3,11 @@ import {
   Paper, Button, Table, TableHead, TableRow, TableCell, TableBody,
    Chip, IconButton, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Select, MenuItem, FormControl, InputLabel,
-  Alert, CircularProgress
+  Alert, CircularProgress, Popover, List, ListItem, ListItemText, Typography, Box
 } from '@mui/material';
-import { Add, Edit, Delete, Group as GroupIcon, Group } from '@mui/icons-material';
+import { Add, Edit, Delete, Group as GroupIcon, Group, Visibility, ExpandMore, ExpandLess } from '@mui/icons-material';
 import { useGroups } from '../../components/context/GroupsContext';
-import { getUsers,User } from '../../components/services/api/users';
+import { getUsers, User, getChildrenByGroup } from '../../components/services/api/users';
 import { useAuth } from '../../components/context/AuthContext';
 import { SelectChangeEvent } from '@mui/material/Select';
 interface TeacherOption {
@@ -19,7 +19,7 @@ interface GroupFormData {
   id?: string;
   name: string;
   description: string;
-  maxCapacity: number;
+  maxStudents: number;
   ageGroup: string[];
   teacher?: string;
 }
@@ -27,7 +27,7 @@ interface GroupFormData {
 const defaultForm: GroupFormData = { 
   name: '', 
   description: '', 
-  maxCapacity: 20, 
+  maxStudents: 20, 
   ageGroup: [], // по умолчанию пустой массив
   teacher: '' // Обязательное поле для backend
 };
@@ -42,6 +42,15 @@ const Groups = () => {
   const [form, setForm] = useState<GroupFormData>(defaultForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Состояние для разворачивания групп с детьми
+  const [expandedGroups, setExpandedGroups] = useState<{
+    [groupId: string]: {
+      expanded: boolean;
+      children: User[];
+      loading: boolean;
+    };
+  }>({});
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
 
@@ -110,7 +119,7 @@ const Groups = () => {
         id: group.id,
         name: group.name,
         description: group.description || '',
-        maxCapacity: group.maxStudents || 20,
+        maxStudents: group.maxStudents || 20,
         ageGroup: Array.isArray(group.ageGroup) ? group.ageGroup : typeof group.ageGroup === 'string' ? [group.ageGroup] : [],
         teacher: group.teacher
       });
@@ -153,7 +162,7 @@ const Groups = () => {
       const groupData = {
         name: form.name,
         description: form.description,
-        maxStudents: form.maxCapacity, // backend ожидает maxStudents, а не maxCapacity
+        maxStudents: form.maxStudents, // backend ожидает maxStudents, а не maxStudents
         ageGroup: form.ageGroup, // теперь массив строк
         teacher: form.teacher, // теперь это id выбранного воспитателя
         isActive: true
@@ -188,6 +197,60 @@ const Groups = () => {
       alert(e?.message || 'Ошибка удаления');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Обработка клика на "глазок" для разворачивания/сворачивания группы
+  const handleToggleGroupChildren = async (event: React.MouseEvent<HTMLElement>, groupId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const currentState = expandedGroups[groupId];
+    
+    if (currentState?.expanded) {
+      // Сворачиваем группу
+      setExpandedGroups(prev => ({
+        ...prev,
+        [groupId]: {
+          ...prev[groupId],
+          expanded: false
+        }
+      }));
+    } else {
+      // Разворачиваем группу
+      setExpandedGroups(prev => ({
+        ...prev,
+        [groupId]: {
+          expanded: true,
+          children: currentState?.children || [],
+          loading: !currentState?.children?.length
+        }
+      }));
+
+      // Загружаем детей, если они еще не загружены
+      if (!currentState?.children?.length) {
+        try {
+          const children = await getChildrenByGroup(groupId);
+          setExpandedGroups(prev => ({
+            ...prev,
+            [groupId]: {
+              expanded: true,
+              children,
+              loading: false
+            }
+          }));
+        } catch (error) {
+          console.error('Ошибка при загрузке детей группы:', error);
+          setExpandedGroups(prev => ({
+            ...prev,
+            [groupId]: {
+              expanded: true,
+              children: [],
+              loading: false
+            }
+          }));
+        }
+      }
     }
   };
 
@@ -228,21 +291,79 @@ const Groups = () => {
               </TableHead>
               <TableBody>
                 {groups.map((group) => (
-                  <TableRow key={group.id}>
-                    <TableCell>{group.name}</TableCell>
-                    <TableCell>{group.description}</TableCell>
-                    <TableCell>{group.ageGroup.join(', ')}</TableCell>
-                    <TableCell>{group.maxStudents}</TableCell>
-                    <TableCell>{teacherList.find(t => t.id === group.teacher)?.fullName || '—'}</TableCell>
-                    <TableCell align="right">
-                      <IconButton onClick={() => handleOpenModal(group)}>
-                        <Edit />
-                      </IconButton>
-                      <IconButton onClick={() => handleDelete(group.id)}>
-                        <Delete color="error" />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
+                  <React.Fragment key={group.id}>
+                    <TableRow>
+                      <TableCell>{group.name}</TableCell>
+                      <TableCell>{group.description}</TableCell>
+                      <TableCell>{group.ageGroup.join(', ')}</TableCell>
+                      <TableCell>{group.maxStudents}</TableCell>
+                      <TableCell>{teacherList.find(t => t.id === group.teacher)?.fullName || '—'}</TableCell>
+                      <TableCell align="right">
+                        <IconButton
+                          onClick={(e) => handleToggleGroupChildren(e, group.id)}
+                          title="Просмотреть детей группы"
+                        >
+                          {expandedGroups[group.id]?.expanded ? <ExpandLess color="primary" /> : <Visibility color="primary" />}
+                        </IconButton>
+                        <IconButton onClick={() => handleOpenModal(group)}>
+                          <Edit />
+                        </IconButton>
+                        <IconButton onClick={() => handleDelete(group.id)}>
+                          <Delete color="error" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                    {/* Разворачивающаяся строка с детьми */}
+                    {expandedGroups[group.id]?.expanded && (
+                      <TableRow>
+                        <TableCell colSpan={6} sx={{ paddingTop: 0, paddingBottom: 0 }}>
+                          <Box sx={{ margin: 1 }}>
+                            <Typography variant="h6" gutterBottom component="div" sx={{ color: '#1890ff' }}>
+                              Дети группы "{group.name}"
+                            </Typography>
+                            {expandedGroups[group.id]?.loading ? (
+                              <Box display="flex" justifyContent="center" alignItems="center" py={2}>
+                                <CircularProgress size={24} />
+                                <Typography variant="body2" sx={{ ml: 2 }}>
+                                  Загрузка детей...
+                                </Typography>
+                              </Box>
+                            ) : expandedGroups[group.id]?.children?.length === 0 ? (
+                              <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                                В группе нет детей
+                              </Typography>
+                            ) : (
+                              <Table size="small" sx={{ backgroundColor: '#f8f9fa' }}>
+                                <TableHead>
+                                  <TableRow>
+                                    <TableCell><strong>Имя ребенка</strong></TableCell>
+                                    <TableCell><strong>Родитель</strong></TableCell>
+                                    <TableCell><strong>Телефон</strong></TableCell>
+                                    <TableCell><strong>Дата рождения</strong></TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {expandedGroups[group.id]?.children?.map((child, index) => (
+                                    <TableRow key={child.id || index}>
+                                      <TableCell>{child.fullName}</TableCell>
+                                      <TableCell>{child.parentName || '—'}</TableCell>
+                                      <TableCell>{child.parentPhone || '—'}</TableCell>
+                                      <TableCell>
+                                        {child.birthday
+                                          ? new Date(child.birthday).toLocaleDateString('ru-RU')
+                                          : '—'
+                                        }
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
                 ))}
               </TableBody>
             </Table>
@@ -295,9 +416,9 @@ const Groups = () => {
             margin="normal"
             label="Вместимость"
             type="number"
-            name="maxCapacity"
+            name="maxStudents"
             fullWidth
-            value={form.maxCapacity}
+            value={form.maxStudents}
             onChange={handleChange}
           />
           {teachers.length > 0 && (
@@ -328,6 +449,7 @@ const Groups = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
     </Paper>
   );
 };

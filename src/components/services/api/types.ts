@@ -44,12 +44,11 @@ export interface Group {
   description?: string;
   teacher: {id?: string, _id?: string} | string;
   isActive: boolean;
-  maxCapacity?: number;
+  maxStudents?: number;
   ageGroup: string[];
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
-  maxStudents?: number;
 }
 
 // Интерфейсы для смен

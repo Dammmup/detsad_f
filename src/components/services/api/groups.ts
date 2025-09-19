@@ -107,7 +107,7 @@ export const getGroups = async () => {
       description: group.description,
       teacher: group.teacher,
       isActive: group.isActive,
-      maxCapacity: group.maxCapacity,
+      maxStudents: group.maxStudents,
       ageGroup: group.ageGroup,
       createdBy: group.createdBy,
       createdAt: group.createdAt,
@@ -150,7 +150,7 @@ export const createGroup = async (group: Group) => {
       description: group.description,
       teacher: group.teacher,
       isActive: group.isActive,
-      maxStudents: group.maxCapacity,
+      maxStudents: group.maxStudents,
       ageGroup: group.ageGroup // Добавляем отсутствующее поле
     });
     console.log('Ответ сервера:', response.data);
@@ -161,12 +161,11 @@ export const createGroup = async (group: Group) => {
       description: response.data.description,
       teacher: response.data.teacher,
       isActive: response.data.isActive,
-      maxCapacity: response.data.maxCapacity,
       ageGroup: response.data.ageGroup,
       createdBy: response.data.createdBy,
       createdAt: response.data.createdAt,
       updatedAt: response.data.updatedAt,
-      maxStudents: 0
+      maxStudents: response.data.maxStudents
     };
     
     return createdGroup;
