@@ -52,6 +52,7 @@
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
     "mui-datatables": "^4.2.2",
+    "notistack": "^3.0.2",
     "os-browserify": "^0.3.0",
     "postcss": "^8.4.21",
     "postcss-flexbugs-fixes": "^5.0.2",

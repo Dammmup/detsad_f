@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Group } from './types';
 
 const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:8080'}/api`;
 
@@ -76,21 +77,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// Интерфейс для группы
-export interface Group {
-  maxStudents: number;
-  _id?: string;
-  id?: string;
-  name: string;
-  description?: string;
-  teacher: {id?: string, _id?: string} | string;  isActive: boolean;
-  maxCapacity?: number; // максимальная вместимость
-  ageGroup: string[]; // например, "младшая", "средняя", "старшая", "подготовительная"
-  createdBy?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 // Helper function to handle API errors
 const handleApiError = (error: any, context = '') => {
@@ -263,3 +249,4 @@ export const getTeachers = async () => {
     return cachedTeachers;
   }
 };
+

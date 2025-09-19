@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-
+import { getGroups } from './groups';
+import { any } from 'prop-types';
 // Интерфейсы для экспорта
 export interface ExportConfig {
   filename: string;
@@ -122,26 +123,26 @@ export const exportToExcel = (config: ExportConfig): void => {
 
 // 1. Экспорт списка детей
 export const exportChildrenList = async (children: any[], groupName?: string): Promise<void> => {
+  const groups = await getGroups();
+
   const headers = [
     'ФИО ребенка',
     'Дата рождения',
     'Группа',
     'ФИО родителя',
-    'Телефон',
-    'Адрес',
+    'Телефон родителя',
     'Дата поступления',
-    'Статус'
+    'ИИН'
   ];
   
   const data = children.map(child => [
     child.fullName || '',
-    child.birthDate ? formatDate(new Date(child.birthDate)) : '',
-    child.groupName || '',
+    child.birthday ? formatDate(new Date(child.birthday)) : '',
+    groups.find(g => g.id === child.groupId)?.name || '',
     child.parentName || '',
     child.parentPhone || '',
-    child.address || '',
-    child.enrollmentDate ? formatDate(new Date(child.enrollmentDate)) : '',
-    child.status || 'Активный'
+    child.createdAt ? formatDate(new Date(child.createdAt)) : '',
+    child.iin || '',
   ]);
   
   const config: ExportConfig = {
@@ -158,6 +159,8 @@ export const exportChildrenList = async (children: any[], groupName?: string): P
 
 // 2. Экспорт списка сотрудников
 export const exportStaffList = async (staff: any[]): Promise<void> => {
+  const groups = await getGroups();
+
   const headers = [
     'ФИО сотрудника',
     'Должность',
@@ -172,10 +175,10 @@ export const exportStaffList = async (staff: any[]): Promise<void> => {
   const data = staff.map(member => [
     member.fullName || '',
     member.position || member.role || '',
-    member.groupName || '',
+    groups.find(g => g.id === member.groupId)?.name || '',
     member.phone || '',
     member.email || '',
-    member.hireDate ? formatDate(new Date(member.hireDate)) : '',
+    member.createdAt ? formatDate(new Date(member.createdAt)) : '',
     member.status || 'Активный',
     member.salary ? `${member.salary} тенге` : ''
   ]);
@@ -231,47 +234,67 @@ export const exportSchedule = async (scheduleData: any[], period?: string): Prom
 };
 
 // 4. Экспорт табеля посещаемости детей
+
 export const exportChildrenAttendance = async (
-  attendanceData: any[], 
-  groupName: string, 
-  period: string
+  attendanceData: any[],
+  groupName: string,
+  period: string,
+  filteredChildren: any[]// <- добавляем параметр
 ): Promise<void> => {
+  // 1. Достаём имена детей из filteredChildren
+
+  // 2. Уникальные даты из attendanceData
+  const allDates = Array.from(
+    new Set(attendanceData.map(r => r.date))
+  ).sort();
+
+  // 3. Заголовки
   const headers = [
-    'ФИО ребенка',
-    'Дата',
-    'Статус',
-    'Время прихода',
-    'Время ухода',
-    'Примечания'
+    "ФИО ребенка",
+    ...allDates.map(dateStr => {
+      const date = new Date(dateStr);
+      const weekday = date.toLocaleDateString("ru-RU", { weekday: "short" });
+      return `${date.getDate()}.${date.getMonth() + 1} (${weekday})`;
+    }),
   ];
-  
-  const data = attendanceData.map(record => [
-    record.childName || '',
-    record.date || '',
-    record.status === 'present' ? 'Присутствовал' :
-    record.status === 'absent' ? 'Отсутствовал' :
-    record.status === 'late' ? 'Опоздал' :
-    record.status === 'sick' ? 'Болел' :
-    record.status === 'vacation' ? 'Отпуск' : record.status || '',
-    record.checkInTime || '',
-    record.checkOutTime || '',
-    record.notes || ''
-  ]);
-  
+
+  // 4. Формируем строки только для детей из filteredChildren
+  const data= filteredChildren.map(child => {
+    const childId = child._id || child.id;
+    const row: (string | null)[] = [child.fullName];
+
+    allDates.forEach(date => {
+      const record = attendanceData.find(r => r.childId === childId && r.date === date);
+      if (record) {
+        if (record.status === "present") row.push("+");
+        else if (record.status === "absent") row.push("-");
+        else if (record.status === "late") row.push("О");
+        else if (record.status === "sick") row.push("Б");
+        else if (record.status === "vacation") row.push("ОТ");
+        else row.push("");
+      } else {
+        row.push("");
+      }
+    });
+
+    return row;
+  });
+
+  // 5. Конфиг
   const config: ExportConfig = {
     filename: `Табель_посещаемости_${groupName}_${period}`,
-    sheetName: 'Табель посещаемости',
+    sheetName: "Табель посещаемости",
     title: `Табель посещаемости группы "${groupName}"`,
     subtitle: `Период: ${period}`,
     headers,
     data,
-    includeDate: true,
-    includeWeekdays: true,
-    dateColumn: 1
+    includeDate: false,
+    includeWeekdays: false,
   };
-  
+
   exportToExcel(config);
 };
+
 
 // 5. Экспорт табеля рабочего времени сотрудников
 export const exportStaffAttendance = async (
@@ -294,7 +317,7 @@ export const exportStaffAttendance = async (
     record.staffName || '',
     record.date || '',
     record.shiftType || '',
-    `${record.scheduledStart || ''} - ${record.scheduledEnd || ''}`,
+    `${record.startTime || ''} - ${record.endTime || ''}`,
     `${record.actualStart || ''} - ${record.actualEnd || ''}`,
     record.lateMinutes || 0,
     record.overtimeMinutes || 0,

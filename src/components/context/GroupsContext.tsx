@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import * as groupsApi from '../services/api/groups';
-import { Group } from '../services/api/groups';
+import { Group } from '../services/api/types';
 
 
 interface GroupsContextType {

@@ -1,11 +1,11 @@
 import axios from 'axios';
 
-const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api`;
+const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:8080'}/api`;
 
 interface IFine {
   amount: number;
   reason: string;
-  date: Date;
+  date: string;
   type: 'late' | 'other';
   approved: boolean;
   createdBy: string;
@@ -18,7 +18,7 @@ export interface User {
   _id?: string;
   fullName: string;
   role: string;
-  phone: string;
+  phone?: string;
   email?: string;
   active: boolean;
   type: 'adult' | 'child';

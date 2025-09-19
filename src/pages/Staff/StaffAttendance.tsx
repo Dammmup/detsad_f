@@ -3,21 +3,37 @@ import {
   Paper, Typography, Box, Button, Table, TableHead, TableRow, TableCell, TableBody,
   Card, CardContent, Grid, Chip, IconButton, TextField, FormControl, InputLabel,
   Select, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress,
-  Fab, Tooltip, Alert
+  Fab, Tooltip, Alert, Avatar
 } from '@mui/material';
-import { 
-  AccessTime, Download, PlayArrow, Stop, Add, Schedule, TrendingUp, Warning
+import {
+  AccessTime, Download, PlayArrow, Stop, Add, Schedule, TrendingUp, Warning, Person
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { getUsers } from '../components/services/api/users';
-import { getGroups } from '../components/services/api/groups';
-import { useAuth } from '../components/context/AuthContext';
-import { getStaffAttendance, saveStaffAttendance, checkIn, checkOut, getStaffAttendanceStats, StaffAttendanceRecord, getStatusColor, getStatusText, getShiftTypeText, formatTime, canCheckIn, canCheckOut, getCurrentTime } from '../components/services/api/staffAttendance';
-import ExportMenuButton from '../components/ExportMenuButton';
-import { exportStaffAttendance, getCurrentPeriod } from '../components/services/api/excelExport';
+import { getUsers } from '../../components/services/api/users';
+import { getGroups } from '../../components/services/api/groups';
+import { useAuth } from '../../components/context/AuthContext';
+import {
+  getStaffAttendance,
+  saveStaffAttendance,
+  checkIn,
+  checkOut,
+  getStaffAttendanceStats,
+  StaffAttendanceRecord,
+  getStatusColor,
+  getStatusText,
+  getShiftTypeText,
+  formatTime,
+  canCheckIn,
+  canCheckOut,
+  getCurrentTime
+} from '../../components/services/api/staffAttendance';
+import ExportMenuButton from '../../components/ExportMenuButton';
+import { exportStaffAttendance, getCurrentPeriod } from '../../components/services/api/excelExport';
 import axios from 'axios';
+import { User } from '../../components/services/api/types';
+import { Group } from '../../components/services/api/types';
 
 interface AttendanceStats {
   totalDays: number;
@@ -48,8 +64,8 @@ const StaffAttendanceNew: React.FC = () => {
     groupId: '',
     date: new Date().toISOString().split('T')[0],
     shiftType: 'full' as const,
-    scheduledStart: '08:00',
-    scheduledEnd: '17:00',
+    startTime: '08:00',
+    endTime: '17:00',
     notes: ''
   });
 
@@ -76,7 +92,7 @@ const StaffAttendanceNew: React.FC = () => {
         await fetchAttendanceRecords();
         
         // Загружаем сегодняшнюю запись для текущего пользователя
-        if (!isAdmin) {
+        if (!isAdmin && currentUser?.id) {
           await fetchTodayRecord();
         }
         
@@ -129,18 +145,19 @@ const StaffAttendanceNew: React.FC = () => {
       setTodayRecord(records[0] || null);
     } catch (error: any) {
       console.error('Error fetching today record:', error);
+      setTodayRecord(null);
     }
   };
   
   const handleCheckIn = async () => {
     setCheckingIn(true);
     try {
-      const result = await checkIn();
-      alert(result.message);
+      const result = await checkIn(currentUser?.id);
+      console.log(result.message);
       await fetchTodayRecord();
       await fetchAttendanceRecords();
     } catch (error: any) {
-      alert(error.message);
+      console.error(error.message);
     } finally {
       setCheckingIn(false);
     }
@@ -149,12 +166,12 @@ const StaffAttendanceNew: React.FC = () => {
   const handleCheckOut = async () => {
     setCheckingOut(true);
     try {
-      const result = await checkOut();
-      alert(result.message);
+      const result = await checkOut(currentUser?.id);
+      console.log(result.message);
       await fetchTodayRecord();
       await fetchAttendanceRecords();
     } catch (error: any) {
-      alert(error.message);
+      console.error(error.message);
     } finally {
       setCheckingOut(false);
     }
@@ -169,27 +186,32 @@ const StaffAttendanceNew: React.FC = () => {
         groupId: '',
         date: new Date().toISOString().split('T')[0],
         shiftType: 'full',
-        scheduledStart: '08:00',
-        scheduledEnd: '17:00',
+        startTime: '08:00',
+        endTime: '17:00',
         notes: ''
       });
       await fetchAttendanceRecords();
-      alert('Смена создана успешно!');
+      console.log('Смена создана успешно!');
     } catch (error: any) {
-      alert(error.message);
+      console.error(error.message);
     }
   };
   
   // Обновляем данные при изменении фильтров
   useEffect(() => {
-    if (isLoggedIn && !authLoading) {
+    if (isLoggedIn && !authLoading && currentUser) {
       fetchAttendanceRecords();
     }
-  }, [selectedDate, selectedStaff, selectedGroup]);
+  }, [selectedDate, selectedStaff, selectedGroup, isLoggedIn, authLoading, currentUser]);
 
   const getStaffName = (staffId: string) => {
-    const staffMember = staff.find(s => (s.id || s._id) === staffId);
+    const staffMember = staff.find(s => s.id === staffId || s._id === staffId);
     return staffMember?.fullName || 'Неизвестно';
+  };
+  
+  const getStaffAvatar = (staffId: string) => {
+    const staffMember = staff.find(s => s.id === staffId || s._id === staffId);
+    return staffMember?.avatarUrl || '';
   };
 
   const getGroupName = (groupId?: string) => {
@@ -220,9 +242,9 @@ const StaffAttendanceNew: React.FC = () => {
   const handleExportEmail = async () => {
     try {
       await axios.post('exports/staff-attendance', { action: 'email' });
-      alert('Документ отправлен на почту администратора');
+      console.log('Документ отправлен на почту администратора');
     } catch (e) {
-      alert('Ошибка отправки на почту');
+      console.error('Ошибка отправки на почту');
     }
   };
 
@@ -410,7 +432,7 @@ const StaffAttendanceNew: React.FC = () => {
                 variant="outlined"
                 startIcon={<Download />}
                 fullWidth
-                onClick={() => alert('Экспорт в разработке')}
+                onClick={() => console.log('Экспорт в разработке')}
               >
                 Экспорт
               </Button>
@@ -432,26 +454,35 @@ const StaffAttendanceNew: React.FC = () => {
                 <TableCell>Статус</TableCell>
                 <TableCell>Опоздание</TableCell>
                 <TableCell>Сверхурочные</TableCell>
+                <TableCell>Учет времени</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {records.map((record) => (
                 <TableRow key={record._id}>
-                  <TableCell>{getStaffName(record.staffId)}</TableCell>
+                  <TableCell>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Avatar
+                        src={getStaffAvatar(record.staffId)}
+                        sx={{ width: 32, height: 32 }}
+                      />
+                      <span>{getStaffName(record.staffId)}</span>
+                    </Box>
+                  </TableCell>
                   <TableCell>{getGroupName(record.groupId)}</TableCell>
                   <TableCell>{getShiftTypeText(record.shiftType)}</TableCell>
                   <TableCell>
-                    {record.scheduledStart} - {record.scheduledEnd}
+                    {record.startTime} - {record.endTime}
                   </TableCell>
                   <TableCell>
                     {record.actualStart || '-'} - {record.actualEnd || '-'}
                   </TableCell>
                   <TableCell>{calculateWorkHours(record)}ч</TableCell>
                   <TableCell>
-                    <Chip 
-                      label={getStatusText(record.status)} 
-                      color={getStatusColor(record.status)} 
-                      size="small" 
+                    <Chip
+                      label={getStatusText(record.status)}
+                      color={getStatusColor(record.status)}
+                      size="small"
                     />
                   </TableCell>
                   <TableCell>
@@ -460,11 +491,21 @@ const StaffAttendanceNew: React.FC = () => {
                   <TableCell>
                     {record.overtimeMinutes ? formatTime(record.overtimeMinutes) : '-'}
                   </TableCell>
+                  <TableCell>
+                    <Box display="flex" flexDirection="column" gap={0.5}>
+                      <Typography variant="caption" color="textSecondary">
+                        Приход: {record.actualStart || '-'}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Уход: {record.actualEnd || '-'}
+                      </Typography>
+                    </Box>
+                  </TableCell>
                 </TableRow>
               ))}
               {records.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} align="center">
+                  <TableCell colSpan={10} align="center">
                     Нет данных для отображения
                   </TableCell>
                 </TableRow>
@@ -541,9 +582,7 @@ const StaffAttendanceNew: React.FC = () => {
                     onChange={(e) => setNewShift({ ...newShift, shiftType: e.target.value as any })}
                     label="Тип смены"
                   >
-                    <MenuItem value="morning">Утренняя</MenuItem>
-                    <MenuItem value="evening">Вечерняя</MenuItem>
-                    <MenuItem value="night">Ночная</MenuItem>
+                  
                     <MenuItem value="full">Полная</MenuItem>
                     <MenuItem value="overtime">Сверхурочная</MenuItem>
                   </Select>
@@ -554,8 +593,8 @@ const StaffAttendanceNew: React.FC = () => {
                   fullWidth
                   label="Начало смены"
                   type="time"
-                  value={newShift.scheduledStart}
-                  onChange={(e) => setNewShift({ ...newShift, scheduledStart: e.target.value })}
+                  value={newShift.startTime}
+                  onChange={(e) => setNewShift({ ...newShift, startTime: e.target.value })}
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
@@ -564,8 +603,8 @@ const StaffAttendanceNew: React.FC = () => {
                   fullWidth
                   label="Конец смены"
                   type="time"
-                  value={newShift.scheduledEnd}
-                  onChange={(e) => setNewShift({ ...newShift, scheduledEnd: e.target.value })}
+                  value={newShift.endTime}
+                  onChange={(e) => setNewShift({ ...newShift, endTime: e.target.value })}
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>

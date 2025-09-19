@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getUsers, createUser, updateUser, deleteUser, User as StaffMember,  } from '../components/services/api/users';
+import { getUsers, createUser, updateUser, deleteUser, User as StaffMember} from '../../components/services/api/users';
 import {
   Table, TableHead, TableRow, TableCell, TableBody, Paper, CircularProgress, Alert, Button, Dialog, 
   DialogTitle, DialogContent, DialogActions, TextField, IconButton, InputAdornment, FormControl,
@@ -10,11 +10,10 @@ import {
   Edit, Delete, Add, Search, Email, Phone, Badge, 
  Person
 } from '@mui/icons-material';
-
-import { getGroups } from '../components/services/api/groups';
-import { useAuth } from '../components/context/AuthContext';
-import ExportMenuButton from '../components/ExportMenuButton';
-import { exportStaffList } from '../components/services/api/excelExport';
+import { getGroups } from '../../components/services/api/groups';
+import { useAuth } from '../../components/context/AuthContext';
+import ExportMenuButton from '../../components/ExportMenuButton';
+import { exportStaffList } from '../../components/services/api/excelExport';
 import axios from 'axios';
 
 // 🇷🇺 Переводы ролей с английского на русский
@@ -61,6 +60,7 @@ const getRoleByTranslation = (translation: string): string => {
 };
 
 const defaultForm: StaffMember = { 
+  id: '',
   fullName: '',
   role: '',
   phone: '',
@@ -234,14 +234,19 @@ const Staff = () => {
     }
   };
 
-  const handleDelete = async (id: string | undefined) => {
-    if (!id) return;
+  const handleDelete = async (member: StaffMember) => {
+    if (!member.id) {
+      console.error('ID is undefined for deletion');
+      return;
+    }
     if (!window.confirm('Удалить сотрудника?')) return;
     setSaving(true);
     try {
-      await deleteUser(id);
+      console.log('Attempting to delete user with ID:', member.id);
+      await deleteUser(member.id);
       fetchStaff();
     } catch (e: any) {
+      console.error('Error during deletion:', e);
       alert(e?.response?.data?.message || 'Ошибка удаления');
     } finally {
       setSaving(false);
@@ -388,7 +393,7 @@ const Staff = () => {
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Удалить">
-                        <IconButton onClick={() => handleDelete(member.id)}>
+                        <IconButton onClick={() => handleDelete(member)}>
                           <Delete color="error" />
                         </IconButton>
                       </Tooltip>

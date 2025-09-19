@@ -79,7 +79,7 @@ const Reports: React.FC = () => {
       
       // Получение списка сотрудников
       const staffData = await getUsers();
-      setStaff(staffData);
+      setStaff(staffData as any);
       
       // Получение статистики
       await fetchStatistics();

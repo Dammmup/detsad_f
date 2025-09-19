@@ -32,7 +32,7 @@ const sidebarStructure: SidebarItem[] = [
     children: [
       { id: 'children-list', label: 'Список детей', link: '/app/children', icon: <PeopleIcon /> },
       { id: 'children-groups', label: 'Группы', link: '/app/groups', icon: <GroupIcon /> },
-      { id: 'children-attendance', label: 'Посещаемость', link: '/app/children/attendance', icon: <AssignmentIndIcon /> },
+      { id: 'children-attendance', label: 'Посещаемость', link: '/app/children/attendance-grid', icon: <AssignmentIndIcon /> },
     ],
   },
   {
@@ -41,7 +41,7 @@ const sidebarStructure: SidebarItem[] = [
     icon: <PeopleIcon />,
     children: [
       { id: 'staff-list', label: 'Список сотрудников', link: '/app/staff', icon: <PeopleIcon /> },
-      { id: 'staff-schedule', label: 'Расписание/Смены', link: '/app/staff/schedule', icon: <ScheduleIcon /> },
+      { id: 'staff-schedule', label: 'Смены', link: '/app/staff/schedule', icon: <ScheduleIcon /> },
       { id: 'staff-attendance', label: 'Табель', link: '/app/staff/attendance', icon: <AssignmentIndIcon /> },
       { id: 'staff-timetracking', label: 'Учет времени', link: '/app/staff/timetracking', icon: <AssignmentIndIcon /> },
     ],

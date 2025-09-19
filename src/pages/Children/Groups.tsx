@@ -6,12 +6,10 @@ import {
   Alert, CircularProgress
 } from '@mui/material';
 import { Add, Edit, Delete, Group as GroupIcon, Group } from '@mui/icons-material';
-import { useGroups } from '../components/context/GroupsContext';
-import { getUsers, User } from '../components/services/api/users';
-import { useAuth } from '../components/context/AuthContext';
-import { Group as GroupData } from '../components/services/api/groups';
+import { useGroups } from '../../components/context/GroupsContext';
+import { getUsers,User } from '../../components/services/api/users';
+import { useAuth } from '../../components/context/AuthContext';
 import { SelectChangeEvent } from '@mui/material/Select';
-
 interface TeacherOption {
   id: string;
   fullName: string;
@@ -60,7 +58,7 @@ const Groups = () => {
   const fetchTeachers = async () => {
     try {
       const users: User[] = await getUsers();
-      const filtered = users.filter((u) => ['teacher', 'assistant'].includes(u.role));
+      const filtered = users.filter((u) => ['teacher', 'assistant'].includes(u.role as any));
       setTeacherList(filtered.map((u) => ({ id: u.id || (u as any)._id, fullName: u.fullName })));
     } catch (e) {
       setTeacherList([]);

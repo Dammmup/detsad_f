@@ -7,9 +7,9 @@ export interface StaffAttendanceRecord {
   staffId: string;
   groupId?: string;
   date: string;
-  shiftType: 'morning' | 'evening' | 'night' | 'full' | 'overtime';
-  scheduledStart: string;
-  scheduledEnd: string;
+  shiftType:  'full' | 'overtime';
+  startTime: string;
+  endTime: string;
   actualStart?: string;
   actualEnd?: string;
   breakTime?: number;
@@ -221,9 +221,8 @@ export const getStatusText = (status: string): string => {
 // Helper to get shift type text in Russian
 export const getShiftTypeText = (shiftType: string): string => {
   const shiftMap: { [key: string]: string } = {
-    'morning': 'Утренняя',
-    'evening': 'Вечерняя',
-    'night': 'Ночная',
+    '': 'Утренняя',
+  
     'full': 'Полная',
     'overtime': 'Сверхурочная'
   };

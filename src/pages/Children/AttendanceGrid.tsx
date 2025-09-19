@@ -9,17 +9,17 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Save, Download, Person, CheckCircle, Cancel, CalendarToday } from '@mui/icons-material';
 import ruLocale from 'date-fns/locale/ru';
 import * as XLSX from 'xlsx';
-import { getGroups } from '../components/services/api/groups';
-import { getUsers, User } from '../components/services/api/users';
-import { useAuth } from '../components/context/AuthContext';
+import { getGroups } from '../../components/services/api/groups';
+import { getUsers,User } from '../../components/services/api/users';
+import { useAuth } from '../../components/context/AuthContext';
 import { 
   bulkSaveChildAttendance, 
   getChildAttendance, 
   convertGridToBulkRecords,
   ChildAttendanceRecord 
-} from '../components/services/api/childAttendance';
-import { exportChildrenAttendance, getCurrentPeriod } from '../components/services/api/excelExport';
-import ExportMenuButton from '../components/ExportMenuButton';
+} from '../../components/services/api/childAttendance';
+import { exportChildrenAttendance, getCurrentPeriod } from '../../components/services/api/excelExport';
+import ExportMenuButton from '../../components/ExportMenuButton';
 import axios from 'axios';
 
 interface AttendanceGridi {
@@ -31,11 +31,11 @@ interface AttendanceGridi {
 const AttendanceGrid: React.FC = () => {
   // Экспорт: скачать файл
   const handleExportDownload = () => {
-    // records — массив ChildAttendanceRecord, который нужно получить из convertGridToBulkRecords
     const records = convertGridToBulkRecords(attendance, comments);
     const groupLabel = groups.find(g => (g.id || g._id) === selectedGroup)?.name || 'Неизвестная группа';
-    exportChildrenAttendance(records, groupLabel, getCurrentPeriod());
+    exportChildrenAttendance(records, groupLabel, getCurrentPeriod(), filteredChildren);
   };
+  
 
 
 

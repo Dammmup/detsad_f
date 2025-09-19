@@ -17,8 +17,9 @@ import {
   getCyclogramTemplates, createCyclogramFromTemplate,
   WeeklyCyclogram, CyclogramTemplate
 } from '../components/services/api/cyclogram';
-import { getUsers, User as StaffMember } from '../components/services/api/users';
-import { Group, getGroups } from '../components/services/api/groups';
+import { getUsers, User as StaffMember, } from '../components/services/api/users';
+import {   Group } from '../components/services/api/types';
+import { getGroups } from '../components/services/api/groups';
 
 const Cyclogram: React.FC = () => {
   // Состояния для данных

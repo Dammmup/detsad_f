@@ -10,16 +10,16 @@ import {
   AccessTime, Edit, Visibility, LocationOn, AttachMoney, Warning, 
   CheckCircle, Schedule, Person, TrendingUp 
 } from '@mui/icons-material';
-import { getUsers } from '../components/services/api/users';
+import { getUsers } from '../../components/services/api/users';
 
 interface TimeRecord {
   id: string;
   staffId: string;
   staffName: string;
   date: string;
-  shiftType: 'morning' | 'evening' | 'night' | 'full';
-  scheduledStart: string;
-  scheduledEnd: string;
+  shiftType:  'full';
+  startTime: string;
+  endTime: string;
   actualStart?: string;
   actualEnd?: string;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
@@ -44,7 +44,7 @@ interface TimeRecord {
 }
 
 
-const StaffTimeTracking: React.FC = () => {
+const StaffTimeTracking:React.FC = () => {
   const [staffList, setStaffList] = useState<any[]>([]);
 
   useEffect(() => {
@@ -68,9 +68,6 @@ const StaffTimeTracking: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<TimeRecord | null>(null);
 
   const shiftTypes = {
-    morning: 'Утренняя смена',
-    evening: 'Вечерняя смена',
-    night: 'Ночная смена',
     full: 'Полный день'
   };
 
@@ -348,7 +345,7 @@ const StaffTimeTracking: React.FC = () => {
                   <Box>
                     <Typography variant="body2">{shiftTypes[record.shiftType]}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {record.scheduledStart} - {record.scheduledEnd}
+                      {record.startTime} - {record.endTime}
                     </Typography>
                   </Box>
                 </TableCell>

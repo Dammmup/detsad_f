@@ -6,10 +6,11 @@ import {
   SelectChangeEvent
 } from '@mui/material';
 import { Add, Edit, Delete, Visibility, Person, Group as GroupIcon, Download } from '@mui/icons-material';
-import { getUsers, createUser, updateUser, deleteUser, User } from '../components/services/api/users';
-import { getGroups, Group } from '../components/services/api/groups';
-import { exportChildrenList } from '../components/services/api/excelExport';
-import ExportMenuButton from '../components/ExportMenuButton';
+import { getUsers, createUser, updateUser, deleteUser, User } from '../../components/services/api/users';
+import { getGroups } from '../../components/services/api/groups';
+import { Group } from '../../components/services/api/types';
+import { exportChildrenList } from '../../components/services/api/excelExport';
+import ExportMenuButton from '../../components/ExportMenuButton';
 import axios from 'axios';
 
 const defaultForm: Partial<User> = {
@@ -119,27 +120,52 @@ const Children: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const data: User = {
-        ...form,
-        type: 'child',
-        fullName: form.fullName || '',
-        phone: form.parentPhone || '', // Для детей phone = parentPhone!
-        parentPhone: form.parentPhone || '',
-        birthday: form.birthday || '',
-        iin: form.iin || '',
-        groupId: form.groupId || '',
-        parentName: form.parentName || '',
-        notes: form.notes || '',
-        role: 'null', // для детей
-        active: form.active !== false,
-
-      };
-      console.log('Данные для отправки ребенка:', data);
       if (editId) {
+        // Редактирование существующего пользователя
+        const data: User = {
+          ...form,
+          id: editId,
+          type: 'child',
+          fullName: form.fullName || '',
+          parentPhone: form.parentPhone || '',
+          birthday: form.birthday || '',
+          iin: form.iin || '',
+          groupId: form.groupId || '',
+          parentName: form.parentName || '',
+          notes: form.notes || '',
+          role: 'null', // для детей
+          active: form.active !== false,
+        };
         await updateUser(editId, data);
       } else {
-        await createUser(data);
+        // Создание нового пользователя - убираем id, так как оно будет сгенерировано на сервере
+        const data: Omit<User, 'id'> = {
+          ...form,
+          type: 'child',
+          fullName: form.fullName || '',
+          phone: form.parentPhone || '', // Для детей phone = parentPhone!
+          parentPhone: form.parentPhone || '',
+          birthday: form.birthday || '',
+          iin: form.iin || '',
+          groupId: form.groupId || '',
+          parentName: form.parentName || '',
+          notes: form.notes || '',
+          role: 'null', // для детей
+          active: form.active !== false,
+          email: form.email || '',
+          isVerified: form.isVerified || false,
+          lastLogin: form.lastLogin || '',
+          createdAt: form.createdAt || '',
+          updatedAt: form.updatedAt || '',
+          salary: form.salary || 0,
+          initialPassword: form.initialPassword || '',
+          fines: form.fines || [],
+          totalFines: form.totalFines || 0,
+          personalCode: form.personalCode || '',
+        };
+        await createUser(data as any);
       }
+      
       handleCloseModal();
       fetchChildren();
     } catch (e: any) {
