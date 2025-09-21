@@ -18,8 +18,16 @@ export interface StaffAttendanceRecord {
   overtimeMinutes?: number;
   earlyLeaveMinutes?: number;
   location?: {
-    checkIn?: string;
-    checkOut?: string;
+    checkIn?: {
+      latitude: number;
+      longitude: number;
+      address?: string;
+    };
+    checkOut?: {
+      latitude: number;
+      longitude: number;
+      address?: string;
+    };
   };
   notes?: string;
   markedBy: string;
@@ -93,7 +101,7 @@ export const bulkSaveStaffAttendance = async (records: Partial<StaffAttendanceRe
 };
 
 // Check-in
-export const checkIn = async (location?: string): Promise<{ message: string; attendance: StaffAttendanceRecord; lateMinutes: number }> => {
+export const checkIn = async (location?: { latitude: number; longitude: number; address?: string }): Promise<{ message: string; attendance: StaffAttendanceRecord; lateMinutes: number }> => {
   try {
     const response = await axios.post(`${API_URL}/api/staff-attendance/check-in`, { location });
     return response.data;
@@ -104,9 +112,9 @@ export const checkIn = async (location?: string): Promise<{ message: string; att
 };
 
 // Check-out
-export const checkOut = async (location?: string): Promise<{ 
-  message: string; 
-  attendance: StaffAttendanceRecord; 
+export const checkOut = async (location?: { latitude: number; longitude: number; address?: string }): Promise<{
+  message: string;
+  attendance: StaffAttendanceRecord;
   overtimeMinutes: number;
   earlyLeaveMinutes: number;
   workHours: number;
@@ -181,10 +189,12 @@ export const getCurrentTime = (): string => {
 
 // Helper to check if user can check in/out today
 export const canCheckIn = (record?: StaffAttendanceRecord): boolean => {
-  return record ? !record.actualStart : false;
+  // Разрешаем отметку прихода, если нет записи или если запись существует, но еще не отмечен приход
+  return !record || !record.actualStart;
 };
 
 export const canCheckOut = (record?: StaffAttendanceRecord): boolean => {
+  // Разрешаем отметку ухода, если есть запись и отмечен приход, но еще не отмечен уход
   return record ? !!record.actualStart && !record.actualEnd : false;
 };
 

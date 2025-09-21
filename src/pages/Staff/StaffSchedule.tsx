@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, startOfWeek, addDays, isSameDay, isSameWeek, parseISO } from 'date-fns';
+import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useSnackbar } from 'notistack';
 import {
@@ -35,8 +35,6 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
   ArrowBackIos as ArrowBackIosIcon,
   ArrowForwardIos as ArrowForwardIosIcon,
   Today as TodayIcon
@@ -45,18 +43,12 @@ import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Types and Services
-import { Shift, ShiftStatus, ShiftType } from '../../types/shift';
-import { getShifts, createShift, updateShift, deleteShift } from '../../components/services/api/shiftService';
-import { getUsers,User } from '../../components/services/api/users';
+import { Shift, ShiftStatus, ShiftType } from '../../types/common';
+import { getShifts, createShift, updateShift, deleteShift } from '../../services/api/shifts';
+import { getUsers } from '../../services/api/users';
 import { useAuth } from '../../components/context/AuthContext';
-
-// Constants
-const SHIFT_TYPES: Record<ShiftType, string> = {
-  day_off: 'Выходной',
-  vacation: 'Отпуск',
-  sick_leave: 'Больничный',
-  full: 'Полный день'
-};
+import {User} from '../../types/common';
+import { SHIFT_TYPES } from '../../types/common';
 
 const SHIFT_STATUSES: Record<ShiftStatus, string> = {
   scheduled: 'Запланирована',
@@ -136,12 +128,6 @@ const StaffSchedule: React.FC = () => {
   // Data
   const [staff, setStaff] = useState<User[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
-  
-  // Фильтрация по дате для отображения
-  const [filters, setFilters] = useState({
-    startDate: format(startOfWeek(selectedWeek), 'yyyy-MM-dd'),
-    endDate: format(addDays(startOfWeek(selectedWeek), 6), 'yyyy-MM-dd')
-  });
   
   // Form state
   const [formData, setFormData] = useState<ShiftFormData>({
@@ -461,14 +447,14 @@ const StaffSchedule: React.FC = () => {
                               width: 12,
                               height: 12,
                               borderRadius: '50%',
-                              bgcolor: ROLE_COLORS[staffMember.role] || '#9e9e9e',
+                              bgcolor: ROLE_COLORS[staffMember.role as string] || '#9e9e9e',
                               mr: 1
                             }}
                           />
                           <Box>
                             {staffMember.fullName}
                             <Box sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
-                              {ROLE_LABELS[staffMember.role] || staffMember.role}
+                              {ROLE_LABELS[staffMember.role as string] || staffMember.role}
                             </Box>
                           </Box>
                         </Box>
@@ -567,14 +553,14 @@ const StaffSchedule: React.FC = () => {
                                 width: 10,
                                 height: 10,
                                 borderRadius: '50%',
-                                bgcolor: ROLE_COLORS[staffMember.role] || '#9e9e9e',
+                                bgcolor: ROLE_COLORS[staffMember.role as string] || '#9e9e9e',
                                 mr: 1
                               }}
                             />
                             <Box>
                               {staffMember.fullName}
                               <Box sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
-                                {ROLE_LABELS[staffMember.role] || staffMember.role}
+                                {ROLE_LABELS[staffMember.role as string] || staffMember.role}
                               </Box>
                             </Box>
                           </Box>

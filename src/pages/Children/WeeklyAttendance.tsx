@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
+import { format, startOfWeek, addDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useSnackbar } from 'notistack';
 import {
@@ -47,15 +47,16 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Types and Services
-import { getUsers, User } from '../../components/services/api/users';
-import { getGroups } from '../../components/services/api/groups';
+import { getUsers } from '../../services/api/users';
+import { STATUS_COLORS, User } from '../../types/common';
+import { getGroups } from '../../services/api/groups';
 import { 
   getChildAttendance, 
   bulkSaveChildAttendance, 
   ChildAttendanceRecord 
-} from '../../components/services/api/childAttendance';
+} from '../../services/api/childAttendance';
 import { useAuth } from '../../components/context/AuthContext';
-import { exportChildrenAttendance, getCurrentMonthRange, getCurrentPeriod } from '../../components/services/api/excelExport';
+import { exportChildrenAttendance, getCurrentMonthRange, getCurrentPeriod } from '../../utils/excelExport';
 
 // Constants
 const ATTENDANCE_STATUSES = {
@@ -66,13 +67,7 @@ const ATTENDANCE_STATUSES = {
   late: 'Опоздание'
 } as const;
 
-const STATUS_COLORS = {
-  present: 'success',
-  absent: 'error',
-  sick: 'warning',
-  vacation: 'info',
-  late: 'warning'
-} as const;
+
 
 const STATUS_ICONS = {
   present: CheckCircle,
@@ -239,7 +234,12 @@ const WeeklyAttendance: React.FC = () => {
     const nextStatus = statusCycle[(currentIndex + 1) % statusCycle.length];
 
     try {
-      const record = {
+      const record: {
+        childId: string;
+        date: string;
+        status: 'present' | 'absent' | 'late' | 'sick' | 'vacation';
+        notes?: string;
+      } = {
         childId: child.id!,
         date: dateString,
         status: nextStatus,

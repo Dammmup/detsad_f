@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, getCurrentUser, isAuthenticated, logout, validateToken } from '../services/api/auth';
-
+import {  getCurrentUser, isAuthenticated, logout, validateToken } from '../../services/api/auth';
+import { User } from '../../types/common';
 // Интерфейс контекста авторизации
 interface AuthContextType {
   user: User | null;

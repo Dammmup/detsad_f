@@ -17,10 +17,10 @@ import {
   getReports, deleteReport, getAttendanceStatistics,
   getScheduleStatistics, exportReport, generateCustomReport,
   exportSalaryReport, exportChildrenReport, exportAttendanceReport,
-  sendReportByEmail, scheduleReport, downloadReport,
+  sendReportByEmail,
   Report, AttendanceStats, ScheduleStats
-} from '../components/services/api/reports';
-import { getUsers } from '../components/services/api/users';
+} from '../services/api/reports';
+import { getUsers } from '../services/api/users';
 
 // Интерфейс для сотрудника
 interface StaffMember {
@@ -58,7 +58,33 @@ const Reports: React.FC = () => {
   const [reportType, setReportType] = useState<string>('attendance');
   const [reportFormat, setReportFormat] = useState<'pdf' | 'excel' | 'csv'>('pdf');
   const [reportTitle, setReportTitle] = useState<string>('');
-  
+    
+  // Получение статистики
+  const fetchStatistics = async () => {
+    try {
+      // Форматируем даты для API
+      const formattedStartDate = startDate.toISOString().split('T')[0];
+      const formattedEndDate = endDate.toISOString().split('T')[0];
+      
+      // Получаем статистику посещаемости
+      const attendanceStatsData = await getAttendanceStatistics(
+        formattedStartDate, 
+        formattedEndDate, 
+        selectedUserId || undefined
+      );
+      setAttendanceStats(attendanceStatsData);
+      
+      // Получаем статистику расписания
+      const scheduleStatsData = await getScheduleStatistics(
+        formattedStartDate, 
+        formattedEndDate, 
+        selectedUserId || undefined
+      );
+      setScheduleStats(scheduleStatsData);
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка загрузки статистики');
+    }
+  };
   // Загрузка данных при монтировании компонента
   useEffect(() => {
     fetchData();
@@ -89,33 +115,7 @@ const Reports: React.FC = () => {
       setLoading(false);
     }
   };
-  
-  // Получение статистики
-  const fetchStatistics = async () => {
-    try {
-      // Форматируем даты для API
-      const formattedStartDate = startDate.toISOString().split('T')[0];
-      const formattedEndDate = endDate.toISOString().split('T')[0];
-      
-      // Получаем статистику посещаемости
-      const attendanceStatsData = await getAttendanceStatistics(
-        formattedStartDate, 
-        formattedEndDate, 
-        selectedUserId || undefined
-      );
-      setAttendanceStats(attendanceStatsData);
-      
-      // Получаем статистику расписания
-      const scheduleStatsData = await getScheduleStatistics(
-        formattedStartDate, 
-        formattedEndDate, 
-        selectedUserId || undefined
-      );
-      setScheduleStats(scheduleStatsData);
-    } catch (err: any) {
-      setError(err?.message || 'Ошибка загрузки статистики');
-    }
-  };
+
   
   // Обработчик изменения вкладки
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {

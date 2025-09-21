@@ -4,13 +4,13 @@ import {
   Paper, Typography, Box, Button, Table, TableHead, TableRow, TableCell, TableBody,
   Card, CardContent, Grid, Chip, IconButton, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Select, MenuItem, FormControl, InputLabel, Alert,
-  Tabs, Tab, Divider, Avatar, Stack, Slider
+  Tabs, Tab, Avatar, Slider, Switch, FormGroup, FormControlLabel, Typography as MuiTypography
 } from '@mui/material';
-import { 
-  AccessTime, Edit, Visibility, LocationOn, AttachMoney, Warning, 
-  CheckCircle, Schedule, Person, TrendingUp 
+import {
+  AccessTime, Edit, Visibility, Warning,
+   Schedule, Person, AddLocation, Settings,
 } from '@mui/icons-material';
-import { getUsers } from '../../components/services/api/users';
+import { getUsers } from '../../services/api/users';
 
 interface TimeRecord {
   id: string;

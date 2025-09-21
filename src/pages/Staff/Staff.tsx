@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getUsers, createUser, updateUser, deleteUser, User as StaffMember} from '../../components/services/api/users';
+import { getUsers, updateUser, deleteUser} from '../../services/api/users';
 import {
   Table, TableHead, TableRow, TableCell, TableBody, Paper, CircularProgress, Alert, Button, Dialog,
   DialogTitle, DialogContent, DialogActions, TextField, IconButton, InputAdornment, FormControl,
@@ -10,10 +10,11 @@ import {
   Edit, Delete, Add, Search, Email, Phone, Badge, 
  Person
 } from '@mui/icons-material';
-import { getGroups } from '../../components/services/api/groups';
+import { User as StaffMember } from '../../types/common';
+import { getGroups } from '../../services/api/groups';
 import { useAuth } from '../../components/context/AuthContext';
 import ExportMenuButton from '../../components/ExportMenuButton';
-import { exportStaffList } from '../../components/services/api/excelExport';
+import { exportStaffList } from '../../utils/excelExport';
 import axios from 'axios';
 
 // 🇷🇺 Переводы ролей с английского на русский
@@ -62,7 +63,7 @@ const getRoleByTranslation = (translation: string): string => {
 const defaultForm: StaffMember = {
   id: '',
   fullName: '',
-  role: '',
+  role: 'staff',
   phone: '',
   email: '',
   active: true,
@@ -82,7 +83,6 @@ const Staff = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
-  const [newPersonalCode, setNewPersonalCode] = useState<string | null>(null);
   const [showCodeDialog, setShowCodeDialog] = useState(false);
   const { user: currentUser } = useAuth();
   // 🇷🇺 Список доступных ролей на русском языке (автоматически из переводов)
@@ -212,13 +212,6 @@ const Staff = () => {
         handleCloseModal();
       } else {
         // Создание нового сотрудника
-        const newUser = await createUser(form);
-        
-        // Показываем персональный код для сотрудников
-        if (newUser.personalCode) {
-          setNewPersonalCode(newUser.personalCode);
-          setShowCodeDialog(true);
-        }
         
         handleCloseModal();
       }
@@ -451,7 +444,7 @@ const Staff = () => {
                   onChange={(e) => {
                     const russianRole = e.target.value as string;
                     const englishRole = getRoleByTranslation(russianRole);
-                    setForm({ ...form, role: englishRole });
+                    setForm({ ...form, role: englishRole as StaffMember['role'] });
                   }}
                   label="Должность"
                 >
@@ -515,76 +508,6 @@ const Staff = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Диалог отображения персонального кода */}
-      <Dialog 
-        open={showCodeDialog} 
-        onClose={() => setShowCodeDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
-          🔑 Персональный код сотрудника
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Сотрудник успешно создан!
-            </Typography>
-            <Typography variant="body1" color="text.secondary" gutterBottom>
-              Персональный код для входа в систему:
-            </Typography>
-            
-            <Box 
-              sx={{ 
-                p: 3, 
-                bgcolor: 'grey.100', 
-                borderRadius: 2, 
-                border: '2px dashed #1976d2',
-                my: 2
-              }}
-            >
-              <Typography 
-                variant="h4" 
-                sx={{ 
-                  fontFamily: 'monospace',
-                  fontWeight: 'bold',
-                  letterSpacing: '0.5rem',
-                  color: 'primary.main'
-                }}
-              >
-                {newPersonalCode}
-              </Typography>
-            </Box>
-            
-            <Alert severity="info" sx={{ mt: 2, textAlign: 'left' }}>
-              <Typography variant="body2">
-                📝 <strong>Важно:</strong><br/>
-                • Передайте этот код сотруднику<br/>
-                • Код используется для входа вместе с номером телефона<br/>
-                • Сохраните код в безопасном месте
-              </Typography>
-            </Alert>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => {
-              navigator.clipboard.writeText(newPersonalCode || '');
-              alert('Код скопирован в буфер обмена!');
-            }}
-            variant="outlined"
-          >
-            📋 Копировать код
-          </Button>
-          <Button 
-            onClick={() => setShowCodeDialog(false)} 
-            variant="contained" 
-            color="primary"
-          >
-            Понятно
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Paper>
   );
 };

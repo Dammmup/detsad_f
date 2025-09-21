@@ -6,10 +6,11 @@ import {
   Table, TableHead, TableRow, TableCell, TableBody, Switch, FormControlLabel,
   Card, CardContent, Divider
 } from '@mui/material';
-import { 
-  Add, Edit, Delete, Settings as SettingsIcon, 
+import {
+  Add, Edit, Delete, Settings as SettingsIcon,
   Save
 } from '@mui/icons-material';
+import YandexMap from '../components/YandexMap';
 import {
   getKindergartenSettings, updateKindergartenSettings,
   getNotificationSettings, updateNotificationSettings,
@@ -18,7 +19,7 @@ import {
   getAllUsers, createUser, updateUser, deleteUser,
   KindergartenSettings, NotificationSettings, SecuritySettings,
   GeolocationSettings, User
-} from '../components/services/api/settings';
+} from '../services/api/settings';
 
 const Settings: React.FC = () => {
   // Состояния для данных
@@ -683,63 +684,109 @@ const Settings: React.FC = () => {
                 />
               </Grid>
               
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Широта"
-                  type="number"
-                  fullWidth
-                  value={geolocationSettings.coordinates.latitude}
-                  onChange={(e) => setGeolocationSettings({
-                    ...geolocationSettings,
-                    coordinates: {
-                      ...geolocationSettings.coordinates,
-                      latitude: parseFloat(e.target.value)
-                    }
-                  })}
-                />
-              </Grid>
+             <Grid item xs={12}>
+               <TextField
+                 label="API ключ Яндекса"
+                 fullWidth
+                 value={geolocationSettings.yandexApiKey || ''}
+                 onChange={(e) => setGeolocationSettings({
+                   ...geolocationSettings,
+                   yandexApiKey: e.target.value
+                 })}
+               />
+             </Grid>
+             
+             {geolocationSettings.yandexApiKey && (
+               <Grid item xs={12}>
+                 <YandexMap
+                   center={{
+                     lat: geolocationSettings.coordinates.latitude,
+                     lng: geolocationSettings.coordinates.longitude
+                   }}
+                   radius={geolocationSettings.radius}
+                   onRadiusChange={(radius) => setGeolocationSettings({
+                     ...geolocationSettings,
+                     radius
+                   })}
+                   onCenterChange={(center) => setGeolocationSettings({
+                     ...geolocationSettings,
+                     coordinates: {
+                       latitude: center.lat,
+                       longitude: center.lng
+                     }
+                   })}
+                   apiKey={geolocationSettings.yandexApiKey}
+                 />
+               </Grid>
+             )}
+             
+             {!geolocationSettings.yandexApiKey && (
+               <Grid item xs={12}>
+                 <Alert severity="info">
+                   Для отображения карты введите API ключ Яндекса
+                 </Alert>
+                 
+                 <Grid container spacing={2} sx={{ mt: 2 }}>
+                   <Grid item xs={12} md={6}>
+                     <TextField
+                       label="Широта"
+                       type="number"
+                       fullWidth
+                       value={geolocationSettings.coordinates.latitude}
+                       onChange={(e) => setGeolocationSettings({
+                         ...geolocationSettings,
+                         coordinates: {
+                           ...geolocationSettings.coordinates,
+                           latitude: parseFloat(e.target.value)
+                         }
+                       })}
+                     />
+                   </Grid>
+                   
+                   <Grid item xs={12} md={6}>
+                     <TextField
+                       label="Долгота"
+                       type="number"
+                       fullWidth
+                       value={geolocationSettings.coordinates.longitude}
+                       onChange={(e) => setGeolocationSettings({
+                         ...geolocationSettings,
+                         coordinates: {
+                           ...geolocationSettings.coordinates,
+                           longitude: parseFloat(e.target.value)
+                         }
+                       })}
+                     />
+                   </Grid>
+                 </Grid>
+               </Grid>
+             )}
+             
+             <Grid item xs={12}>
+               <FormControlLabel
+                 control={
+                   <Switch
+                     checked={geolocationSettings.strictMode}
+                     onChange={(e) => setGeolocationSettings({
+                       ...geolocationSettings,
+                       strictMode: e.target.checked
+                     })}
+                   />
+                 }
+                 label="Строгий режим"
+               />
+             </Grid>
               
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Долгота"
-                  type="number"
-                  fullWidth
-                  value={geolocationSettings.coordinates.longitude}
-                  onChange={(e) => setGeolocationSettings({
-                    ...geolocationSettings,
-                    coordinates: {
-                      ...geolocationSettings.coordinates,
-                      longitude: parseFloat(e.target.value)
-                    }
-                  })}
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={geolocationSettings.strictMode}
-                      onChange={(e) => setGeolocationSettings({
-                        ...geolocationSettings,
-                        strictMode: e.target.checked
-                      })}
-                    />
-                  }
-                  label="Строгий режим"
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<Save />}
-                  onClick={handleSaveGeolocationSettings}
-                >
-                  Сохранить настройки
-                </Button>
-              </Grid>
+             <Grid item xs={12}>
+               <Button
+                 variant="contained"
+                 color="primary"
+                 startIcon={<Save />}
+                 onClick={handleSaveGeolocationSettings}
+               >
+                 Сохранить настройки
+               </Button>
+             </Grid>
             </Grid>
           </CardContent>
         </Card>

@@ -29,7 +29,7 @@ import StaffAttendance from '../pages/Staff/StaffAttendance';
 import StaffTimeTracking from '../pages/Staff/StaffTimeTracking';
 import WeeklyAttendance from '../pages/Children/WeeklyAttendance';
 import PayrollPage from '../pages/Staff/PayrollPage';
-import { logout } from './services/api/auth';
+import { logout } from '../services/api/auth';
 import { useNavigate } from 'react-router-dom';
 import Reports from '../pages/Reports';
 

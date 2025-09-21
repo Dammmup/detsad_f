@@ -1,7 +1,6 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import { getGroups } from './groups';
-import { any } from 'prop-types';
+import { getGroups } from '../services/api/groups';
 // Интерфейсы для экспорта
 export interface ExportConfig {
   filename: string;

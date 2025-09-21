@@ -5,15 +5,15 @@ import {
   FormControl, InputLabel, Select, MenuItem,
   SelectChangeEvent
 } from '@mui/material';
-import { Add, Edit, Delete, Visibility, Person, Group as GroupIcon, Download } from '@mui/icons-material';
-import { getUsers, createUser, updateUser, deleteUser, User } from '../../components/services/api/users';
-import { getGroups } from '../../components/services/api/groups';
-import { Group } from '../../components/services/api/types';
-import { exportChildrenList } from '../../components/services/api/excelExport';
+import { Add, Edit, Delete} from '@mui/icons-material';
+import { getUsers, createUser, updateUser, deleteUser,  } from '../../services/api/users';
+import { getGroups } from '../../services/api/groups';
+import { Group,User } from '../../types/common';
+import { exportChildrenList } from '../../utils/excelExport';
 import ExportMenuButton from '../../components/ExportMenuButton';
 import axios from 'axios';
 
-const defaultForm: Partial<User> = {
+const defaultForm: Omit<Partial<User>, 'role'> = {
   fullName: '',
   birthday: '',
   parentPhone: '',
@@ -24,7 +24,6 @@ const defaultForm: Partial<User> = {
   type: 'child',
   active: true,
   phone: '', // для совместимости с API
-  role: '', // для совместимости с API
 };
 
 const Children: React.FC = () => {
@@ -88,7 +87,6 @@ const Children: React.FC = () => {
         ...child,
         fullName: child.fullName || '',
         phone: child.phone || '',
-        role: '',
         iin: child.iin || '',
         groupId: child.groupId || '',
         parentName: child.parentName || '',
@@ -111,7 +109,9 @@ const Children: React.FC = () => {
   };
   const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name!]: value });
+    if (name) {
+      setForm({ ...form, [name]: value });
+    }
   };
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -122,26 +122,25 @@ const Children: React.FC = () => {
     try {
       if (editId) {
         // Редактирование существующего пользователя
-        const data: User = {
-          ...form,
+        const userData: Partial<User> = {
           id: editId,
           type: 'child',
           fullName: form.fullName || '',
+          phone: form.phone || '',
           parentPhone: form.parentPhone || '',
           birthday: form.birthday || '',
           iin: form.iin || '',
           groupId: form.groupId || '',
           parentName: form.parentName || '',
           notes: form.notes || '',
-          role: 'null', // для детей
           active: form.active !== false,
         };
-        await updateUser(editId, data);
+        await updateUser(editId, userData);
       } else {
         // Создание нового пользователя - убираем id, так как оно будет сгенерировано на сервере
-        const data: Omit<User, 'id'> = {
-          ...form,
-          type: 'child',
+        // Создаем объект с теми полями, которые нужны для детей
+        const userData = {
+          type: 'child' as const,
           fullName: form.fullName || '',
           phone: form.parentPhone || '', // Для детей phone = parentPhone!
           parentPhone: form.parentPhone || '',
@@ -150,20 +149,9 @@ const Children: React.FC = () => {
           groupId: form.groupId || '',
           parentName: form.parentName || '',
           notes: form.notes || '',
-          role: 'null', // для детей
           active: form.active !== false,
-          email: form.email || '',
-          isVerified: form.isVerified || false,
-          lastLogin: form.lastLogin || '',
-          createdAt: form.createdAt || '',
-          updatedAt: form.updatedAt || '',
-          salary: form.salary || 0,
-          initialPassword: form.initialPassword || '',
-          fines: form.fines || [],
-          totalFines: form.totalFines || 0,
-          personalCode: form.personalCode || '',
         };
-        await createUser(data as any);
+        await createUser(userData);
       }
       
       handleCloseModal();

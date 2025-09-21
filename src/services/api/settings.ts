@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = `${process.env.REACT_APP_API_URL}` || 'http://localhost:8080/api';
+const API_URL = `${process.env.REACT_APP_API_URL}/api` || 'http://localhost:8080/api';
 
 // Интерфейс для API ошибки
 interface ApiError extends Error {
@@ -59,10 +59,11 @@ export interface GeolocationSettings {
   id?: string;
   enabled: boolean;
   radius: number; // в метрах
-  coordinates: {
+ coordinates: {
     latitude: number;
     longitude: number;
   };
+  yandexApiKey?: string; // API key for Yandex services
   strictMode: boolean;
   allowedDevices: string[];
 }
@@ -141,8 +142,6 @@ const handleApiError = (error: any, context = '') => {
   throw apiError;
 };
 
-// Add delay between requests to prevent rate limiting
-const delay = (ms: number | undefined) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Get kindergarten settings
@@ -273,25 +272,18 @@ export const updateNotificationSettings = async (settings: NotificationSettings)
  */
 export const getSecuritySettings = async () => {
   try {
-    await delay(300);
+    const response = await api.get('/settings/security');
     
-    // Моковые данные для тестирования
-    const mockSettings: SecuritySettings = {
-      id: '1',
-      passwordPolicy: {
-        minLength: 8,
-        requireUppercase: true,
-        requireLowercase: true,
-        requireNumbers: true,
-        requireSpecialChars: false
-      },
-      sessionTimeout: 60, // 1 час
-      twoFactorAuth: false,
-      ipWhitelist: [],
-      maxLoginAttempts: 5
+    const settings: SecuritySettings = {
+      id: response.data._id,
+      passwordPolicy: response.data.passwordPolicy,
+      sessionTimeout: response.data.sessionTimeout,
+      twoFactorAuth: response.data.twoFactorAuth,
+      ipWhitelist: response.data.ipWhitelist,
+      maxLoginAttempts: response.data.maxLoginAttempts
     };
     
-    return mockSettings;
+    return settings;
   } catch (error) {
     return handleApiError(error, 'fetching security settings');
   }
@@ -304,18 +296,18 @@ export const getSecuritySettings = async () => {
  */
 export const updateSecuritySettings = async (settings: SecuritySettings) => {
   try {
-    await delay(500);
+    const response = await api.put('/settings/security', settings);
     
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.put('/settings/security', settings);
-    
-    // Моковые данные для тестирования
-    const mockSettings: SecuritySettings = {
-      ...settings,
-      id: settings.id || '1'
+    const updatedSettings: SecuritySettings = {
+      id: response.data._id,
+      passwordPolicy: response.data.passwordPolicy,
+      sessionTimeout: response.data.sessionTimeout,
+      twoFactorAuth: response.data.twoFactorAuth,
+      ipWhitelist: response.data.ipWhitelist,
+      maxLoginAttempts: response.data.maxLoginAttempts
     };
     
-    return mockSettings;
+    return updatedSettings;
   } catch (error) {
     return handleApiError(error, 'updating security settings');
   }
@@ -327,22 +319,19 @@ export const updateSecuritySettings = async (settings: SecuritySettings) => {
  */
 export const getGeolocationSettings = async () => {
   try {
-    await delay(300);
+    const response = await api.get('/settings/geolocation');
     
-    // Моковые данные для тестирования
-    const mockSettings: GeolocationSettings = {
-      id: '1',
-      enabled: true,
-      radius: 100, // 100 метров
-      coordinates: {
-        latitude: 51.1605,
-        longitude: 71.4704
-      },
-      strictMode: false,
-      allowedDevices: []
+    const settings: GeolocationSettings = {
+      id: response.data._id,
+      enabled: response.data.enabled,
+      radius: response.data.radius,
+      coordinates: response.data.coordinates,
+      yandexApiKey: response.data.yandexApiKey,
+      strictMode: response.data.strictMode,
+      allowedDevices: response.data.allowedDevices
     };
     
-    return mockSettings;
+    return settings;
   } catch (error) {
     return handleApiError(error, 'fetching geolocation settings');
   }
@@ -355,18 +344,22 @@ export const getGeolocationSettings = async () => {
  */
 export const updateGeolocationSettings = async (settings: GeolocationSettings) => {
   try {
-    await delay(500);
-    
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.put('/settings/geolocation', settings);
-    
-    // Моковые данные для тестирования
-    const mockSettings: GeolocationSettings = {
+    const response = await api.put('/settings/geolocation', {
       ...settings,
-      id: settings.id || '1'
+      yandexApiKey: settings.yandexApiKey
+    });
+    
+    const updatedSettings: GeolocationSettings = {
+      id: response.data._id,
+      enabled: response.data.enabled,
+      radius: response.data.radius,
+      coordinates: response.data.coordinates,
+      yandexApiKey: response.data.yandexApiKey,
+      strictMode: response.data.strictMode,
+      allowedDevices: response.data.allowedDevices
     };
     
-    return mockSettings;
+    return updatedSettings;
   } catch (error) {
     return handleApiError(error, 'updating geolocation settings');
   }
@@ -378,46 +371,21 @@ export const updateGeolocationSettings = async (settings: GeolocationSettings) =
  */
 export const getAllUsers = async () => {
   try {
-    await delay(300);
+    const response = await api.get('/users');
     
-    // Моковые данные для тестирования
-    const mockUsers: User[] = [
-      {
-        id: '1',
-        username: 'admin',
-        email: 'admin@solnyshko.kz',
-        fullName: 'Администратор Системы',
-        role: 'admin',
-        isActive: true,
-        lastLogin: '2025-09-07T10:30:00',
-        createdAt: '2025-01-01T00:00:00',
-        permissions: ['all']
-      },
-      {
-        id: '2',
-        username: 'manager1',
-        email: 'manager@solnyshko.kz',
-        fullName: 'Иванова Анна Петровна',
-        role: 'manager',
-        isActive: true,
-        lastLogin: '2025-09-07T09:15:00',
-        createdAt: '2025-01-15T00:00:00',
-        permissions: ['staff_management', 'reports', 'schedule']
-      },
-      {
-        id: '3',
-        username: 'staff1',
-        email: 'staff1@solnyshko.kz',
-        fullName: 'Петрова Мария Ивановна',
-        role: 'staff',
-        isActive: true,
-        lastLogin: '2025-09-07T08:00:00',
-        createdAt: '2025-02-01T00:00:00',
-        permissions: ['attendance', 'schedule_view']
-      }
-    ];
+    const users: User[] = response.data.map((user: any) => ({
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      isActive: user.active,
+      lastLogin: user.lastLogin,
+      createdAt: user.createdAt,
+      permissions: [] // В реальном приложении здесь будут реальные разрешения
+    }));
     
-    return mockUsers;
+    return users;
   } catch (error) {
     return handleApiError(error, 'fetching users');
   }
@@ -430,19 +398,21 @@ export const getAllUsers = async () => {
  */
 export const createUser = async (user: User) => {
   try {
-    await delay(500);
+    const response = await api.post('/users', user);
     
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.post('/settings/users', user);
-    
-    // Моковые данные для тестирования
-    const mockUser: User = {
-      ...user,
-      id: Math.random().toString(36).substring(2, 15),
-      createdAt: new Date().toISOString()
+    const newUser: User = {
+      id: response.data._id,
+      username: response.data.username,
+      email: response.data.email,
+      fullName: response.data.fullName,
+      role: response.data.role,
+      isActive: response.data.active,
+      lastLogin: response.data.lastLogin,
+      createdAt: response.data.createdAt,
+      permissions: []
     };
     
-    return mockUser;
+    return newUser;
   } catch (error) {
     return handleApiError(error, 'creating user');
   }
@@ -456,18 +426,21 @@ export const createUser = async (user: User) => {
  */
 export const updateUser = async (id: string, user: User) => {
   try {
-    await delay(500);
+    const response = await api.put(`/users/${id}`, user);
     
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.put(`/settings/users/${id}`, user);
-    
-    // Моковые данные для тестирования
-    const mockUser: User = {
-      ...user,
-      id
+    const updatedUser: User = {
+      id: response.data._id,
+      username: response.data.username,
+      email: response.data.email,
+      fullName: response.data.fullName,
+      role: response.data.role,
+      isActive: response.data.active,
+      lastLogin: response.data.lastLogin,
+      createdAt: response.data.createdAt,
+      permissions: []
     };
     
-    return mockUser;
+    return updatedUser;
   } catch (error) {
     return handleApiError(error, `updating user ${id}`);
   }
@@ -480,11 +453,7 @@ export const updateUser = async (id: string, user: User) => {
  */
 export const deleteUser = async (id: string) => {
   try {
-    await delay(500);
-    
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.delete(`/settings/users/${id}`);
-    
+    await api.delete(`/users/${id}`);
     return { success: true };
   } catch (error) {
     return handleApiError(error, `deleting user ${id}`);

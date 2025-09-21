@@ -4,6 +4,7 @@ import { Phone, Lock } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../components/context/AuthContext';
+import { User } from '../types/common';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
@@ -24,12 +25,16 @@ const Login: React.FC = () => {
     setError(null);
     try {
       const res = await axios.post(`${API_URL}/api/auth/login`, { phone, password });
-      const userData = {
+      const userData: User = {
         id: res.data.user.id,
         fullName: res.data.user.fullName,
         role: res.data.user.role,
+        phone: phone,
         email: res.data.user.phone || phone,
-        phone: phone
+        active: true,
+        type: 'adult',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
       
       // Use AuthContext login method to properly update context

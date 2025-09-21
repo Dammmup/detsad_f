@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
   Paper, Button, Table, TableHead, TableRow, TableCell, TableBody,
-   Chip, IconButton, Dialog, DialogTitle, DialogContent,
+    IconButton, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Select, MenuItem, FormControl, InputLabel,
-  Alert, CircularProgress, Popover, List, ListItem, ListItemText, Typography, Box
+  Alert, CircularProgress, Typography, Box
 } from '@mui/material';
-import { Add, Edit, Delete, Group as GroupIcon, Group, Visibility, ExpandMore, ExpandLess } from '@mui/icons-material';
+import { Add, Edit, Delete, Group, Visibility, ExpandLess } from '@mui/icons-material';
 import { useGroups } from '../../components/context/GroupsContext';
-import { getUsers, User, getChildrenByGroup } from '../../components/services/api/users';
+import { getUsers, getChildrenByGroup } from '../../services/api/users';
+import { User } from '../../types/common';
 import { useAuth } from '../../components/context/AuthContext';
 import { SelectChangeEvent } from '@mui/material/Select';
 interface TeacherOption {
@@ -53,17 +54,6 @@ const Groups = () => {
   }>({});
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
-
-  // Загрузка групп только после успешной авторизации
-  useEffect(() => {
-    if (isLoggedIn && currentUser && !authLoading) {
-      console.log('User authenticated, loading groups and teachers...');
-      fetchGroups();
-      fetchTeachers();
-    }
-  }, [isLoggedIn, currentUser, authLoading]);
-
-  // Получение списка воспитателей
   const fetchTeachers = async () => {
     try {
       const users: User[] = await getUsers();
@@ -73,9 +63,7 @@ const Groups = () => {
       setTeacherList([]);
     }
   };
-  const teachers = teacherList.map((t) => t.fullName);
-
-  // Получение списка групп
+    // Получение списка групп
   const fetchGroups = async () => {
     setLoading(true);
     setError(null);
@@ -111,6 +99,20 @@ const Groups = () => {
       setLoading(false);
     }
   };
+  // Загрузка групп только после успешной авторизации
+  useEffect(() => {
+    if (isLoggedIn && currentUser && !authLoading) {
+      console.log('User authenticated, loading groups and teachers...');
+      fetchGroups();
+      fetchTeachers();
+    }
+  }, [isLoggedIn, currentUser, authLoading]);
+
+  // Получение списка воспитателей
+
+  const teachers = teacherList.map((t) => t.fullName);
+
+
 
   // Открытие модального окна для добавления/редактирования
   const handleOpenModal = (group?: any) => {

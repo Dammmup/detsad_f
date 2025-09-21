@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
   Paper, Typography, Box, Button, Table, TableHead, TableRow, TableCell, TableBody,
-  Card, CardContent, Grid, Chip, IconButton, TextField, FormControl, InputLabel,
+  Card, CardContent, Grid, Chip, TextField, FormControl, InputLabel,
   Select, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress,
-  Fab, Tooltip, Alert, Avatar
+  Fab, Alert, Avatar
 } from '@mui/material';
 import {
-  AccessTime, Download, PlayArrow, Stop, Add, Schedule, TrendingUp, Warning, Person
+   Download, PlayArrow, Stop, Add
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { getUsers } from '../../components/services/api/users';
-import { getGroups } from '../../components/services/api/groups';
+import { getUsers } from '../../services/api/users';
+import { getGroups } from '../../services/api/groups';
 import { useAuth } from '../../components/context/AuthContext';
 import {
   getStaffAttendance,
@@ -26,14 +26,12 @@ import {
   getShiftTypeText,
   formatTime,
   canCheckIn,
-  canCheckOut,
-  getCurrentTime
-} from '../../components/services/api/staffAttendance';
+  canCheckOut
+} from '../../services/api/staffAttendance';
 import ExportMenuButton from '../../components/ExportMenuButton';
-import { exportStaffAttendance, getCurrentPeriod } from '../../components/services/api/excelExport';
+import { exportStaffAttendance, getCurrentPeriod } from '../../utils/excelExport';
 import axios from 'axios';
-import { User } from '../../components/services/api/types';
-import { Group } from '../../components/services/api/types';
+
 
 interface AttendanceStats {
   totalDays: number;
@@ -152,10 +150,29 @@ const StaffAttendanceNew: React.FC = () => {
   const handleCheckIn = async () => {
     setCheckingIn(true);
     try {
-      const result = await checkIn(currentUser?.id);
-      console.log(result.message);
-      await fetchTodayRecord();
-      await fetchAttendanceRecords();
+      // Получаем текущую геолокацию пользователя
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          // Здесь можно добавить геокодирование для получения адреса
+          const location = { latitude, longitude };
+          const result = await checkIn(location);
+          console.log(result.message);
+          await fetchTodayRecord();
+          await fetchAttendanceRecords();
+        },
+        (error) => {
+          console.error('Ошибка получения геолокации:', error);
+          // Если не удалось получить геолокацию, все равно выполняем отметку
+          checkIn(undefined).then(async (result) => {
+            console.log(result.message);
+            await fetchTodayRecord();
+            await fetchAttendanceRecords();
+          }).catch((error) => {
+            console.error(error.message);
+          });
+        }
+      );
     } catch (error: any) {
       console.error(error.message);
     } finally {
@@ -166,10 +183,29 @@ const StaffAttendanceNew: React.FC = () => {
   const handleCheckOut = async () => {
     setCheckingOut(true);
     try {
-      const result = await checkOut(currentUser?.id);
-      console.log(result.message);
-      await fetchTodayRecord();
-      await fetchAttendanceRecords();
+      // Получаем текущую геолокацию пользователя
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          // Здесь можно добавить геокодирование для получения адреса
+          const location = { latitude, longitude };
+          const result = await checkOut(location);
+          console.log(result.message);
+          await fetchTodayRecord();
+          await fetchAttendanceRecords();
+        },
+        (error) => {
+          console.error('Ошибка получения геолокации:', error);
+          // Если не удалось получить геолокацию, все равно выполняем отметку
+          checkOut(undefined).then(async (result) => {
+            console.log(result.message);
+            await fetchTodayRecord();
+            await fetchAttendanceRecords();
+          }).catch((error) => {
+            console.error(error.message);
+          });
+        }
+      );
     } catch (error: any) {
       console.error(error.message);
     } finally {
@@ -343,7 +379,7 @@ const StaffAttendanceNew: React.FC = () => {
                   color="primary"
                   startIcon={<PlayArrow />}
                   onClick={handleCheckIn}
-                  disabled={checkingIn || !canCheckIn(todayRecord || undefined)}
+                  disabled={checkingIn}
                 >
                   Отметить приход
                 </Button>
@@ -352,11 +388,18 @@ const StaffAttendanceNew: React.FC = () => {
                   color="secondary"
                   startIcon={<Stop />}
                   onClick={handleCheckOut}
-                  disabled={checkingOut || !canCheckOut(todayRecord || undefined)}
+                  disabled={checkingOut}
                 >
                   Отметить уход
                 </Button>
               </Box>
+              {!todayRecord && (
+                <Box sx={{ mt: 2 }}>
+                  <Alert severity="info">
+                    Для отметки прихода и ухода необходимо, чтобы администратор создал для вас смену на сегодняшний день.
+                  </Alert>
+                </Box>
+              )}
               {todayRecord && (
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="body2">
@@ -454,6 +497,8 @@ const StaffAttendanceNew: React.FC = () => {
                 <TableCell>Статус</TableCell>
                 <TableCell>Опоздание</TableCell>
                 <TableCell>Сверхурочные</TableCell>
+                <TableCell>Локация прихода</TableCell>
+                <TableCell>Локация ухода</TableCell>
                 <TableCell>Учет времени</TableCell>
               </TableRow>
             </TableHead>
@@ -492,6 +537,18 @@ const StaffAttendanceNew: React.FC = () => {
                     {record.overtimeMinutes ? formatTime(record.overtimeMinutes) : '-'}
                   </TableCell>
                   <TableCell>
+                    {record.location?.checkIn ?
+                      `${record.location.checkIn.latitude.toFixed(6)}, ${record.location.checkIn.longitude.toFixed(6)}` :
+                      '-'
+                    }
+                  </TableCell>
+                  <TableCell>
+                    {record.location?.checkOut ?
+                      `${record.location.checkOut.latitude.toFixed(6)}, ${record.location.checkOut.longitude.toFixed(6)}` :
+                      '-'
+                    }
+                  </TableCell>
+                  <TableCell>
                     <Box display="flex" flexDirection="column" gap={0.5}>
                       <Typography variant="caption" color="textSecondary">
                         Приход: {record.actualStart || '-'}
@@ -505,7 +562,7 @@ const StaffAttendanceNew: React.FC = () => {
               ))}
               {records.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={10} align="center">
+                  <TableCell colSpan={12} align="center">
                     Нет данных для отображения
                   </TableCell>
                 </TableRow>
