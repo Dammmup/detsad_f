@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = `${process.env.REACT_APP_API_URL}` || 'http://localhost:8080/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
 // Интерфейсы для отчетов
 export interface Report {
@@ -151,14 +151,14 @@ export const getReports = async () => {
       },
       filters: report.filters,
       data: report.data,
-      format: report.format, // format, // убрано, не определено
+      format: report.format,
       status: report.status,
       filePath: report.filePath,
       fileSize: report.fileSize,
       generatedAt: report.generatedAt,
       scheduledFor: report.scheduledFor,
       emailRecipients: report.emailRecipients,
-      createdBy: report.createdBy, // createdBy, // убрано, не определено
+      createdBy: report.createdBy,
       createdAt: report.createdAt,
       updatedAt: report.updatedAt
     }));
@@ -178,33 +178,32 @@ export const getReports = async () => {
  */
 export const getReport = async (id: string) => {
   try {
-    await delay(300);
+    const response = await api.get(`/reports/${id}`);
     
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.get(`/reports/${id}`);
-    
-    // Моковые данные для тестирования
-    const mockReport: Report = {
-      id,
-      title: 'Отчет по посещаемости за сентябрь 2025',
-      type: 'attendance',
+    const report: Report = {
+      id: response.data._id,
+      title: response.data.title,
+      type: response.data.type,
+      description: response.data.description,
       dateRange: {
-        startDate: '2025-09-01',
-        endDate: '2025-09-30'
+        startDate: response.data.dateRange.startDate,
+        endDate: response.data.dateRange.endDate
       },
-      filters: {
-        userId: '',
-        status: ''
-      },
-      createdAt: '2025-09-05T10:30:00',
-      createdBy: 'admin',
-      format: 'pdf',
-      data: {
-        // Данные отчета будут здесь
-      }
+      filters: response.data.filters,
+      data: response.data.data,
+      format: response.data.format,
+      status: response.data.status,
+      filePath: response.data.filePath,
+      fileSize: response.data.fileSize,
+      generatedAt: response.data.generatedAt,
+      scheduledFor: response.data.scheduledFor,
+      emailRecipients: response.data.emailRecipients,
+      createdBy: response.data.createdBy,
+      createdAt: response.data.createdAt,
+      updatedAt: response.data.updatedAt
     };
     
-    return mockReport;
+    return report;
   } catch (error) {
     return handleApiError(error, `fetching report ${id}`);
   }
@@ -217,20 +216,32 @@ export const getReport = async (id: string) => {
  */
 export const createReport = async (report: Report) => {
   try {
-    await delay(500);
+    const response = await api.post('/reports', report);
     
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.post('/reports', report);
-    
-    // Моковые данные для тестирования
-    const mockReport: Report = {
-      ...report,
-      id: Math.random().toString(36).substring(2, 15),
-      createdAt: new Date().toISOString(),
-      createdBy: 'admin'
+    const createdReport: Report = {
+      id: response.data._id,
+      title: response.data.title,
+      type: response.data.type,
+      description: response.data.description,
+      dateRange: {
+        startDate: response.data.dateRange.startDate,
+        endDate: response.data.dateRange.endDate
+      },
+      filters: response.data.filters,
+      data: response.data.data,
+      format: response.data.format,
+      status: response.data.status,
+      filePath: response.data.filePath,
+      fileSize: response.data.fileSize,
+      generatedAt: response.data.generatedAt,
+      scheduledFor: response.data.scheduledFor,
+      emailRecipients: response.data.emailRecipients,
+      createdBy: response.data.createdBy,
+      createdAt: response.data.createdAt,
+      updatedAt: response.data.updatedAt
     };
     
-    return mockReport;
+    return createdReport;
   } catch (error) {
     return handleApiError(error, 'creating report');
   }
@@ -243,11 +254,7 @@ export const createReport = async (report: Report) => {
  */
 export const deleteReport = async (id: string) => {
   try {
-    await delay(500);
-    
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.delete(`/reports/${id}`);
-    
+    await api.delete(`/reports/${id}`);
     return { success: true };
   } catch (error) {
     return handleApiError(error, `deleting report ${id}`);
@@ -266,24 +273,9 @@ export const getAttendanceStatistics = async (startDate: string, endDate: string
     await delay(500);
     
     // В реальном приложении здесь будет запрос к API
-    // const response = await api.get('/reports/attendance-statistics', { params: { startDate, endDate, userId } });
+    const response = await api.get('/reports/attendance-statistics', { params: { startDate, endDate, userId } });
     
-    // Моковые данные для тестирования
-    const mockStats: AttendanceStats = {
-      totalDays: 22,
-      presentDays: 18,
-      lateDays: 2,
-      absentDays: 1,
-      earlyLeaveDays: 1,
-      sickDays: 1,
-      vacationDays: 2,
-      totalWorkHours: 144,
-      attendanceRate: 81.8, // (18/22) * 100
-      punctualityRate: 72.7, // ((18-2)/22) * 100
-      averageWorkHoursPerDay: 8
-    };
-    
-    return mockStats;
+    return response.data;
   } catch (error) {
     return handleApiError(error, 'fetching attendance statistics');
   }
@@ -298,12 +290,10 @@ export const getAttendanceStatistics = async (startDate: string, endDate: string
  */
 export const getScheduleStatistics = async (startDate: string, endDate: string, userId?: string) => {
   try {
-   
+    await delay(500);
     
     // В реальном приложении здесь будет запрос к API
     const response = await api.get('/reports/schedule-statistics', { params: { startDate, endDate, userId } });
-    
-    
     
     return response.data;
   } catch (error) {
@@ -319,21 +309,20 @@ export const getScheduleStatistics = async (startDate: string, endDate: string, 
  */
 export const exportReport = async (reportId: string, format: 'pdf' | 'excel' | 'csv') => {
   try {
-    await delay(1000);
+    const response = await api.get(`/reports/${reportId}/export`, {
+      params: { format },
+      responseType: 'blob'
+    });
     
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.get(`/reports/${reportId}/export`, { 
-    //   params: { format },
-    //   responseType: 'blob'
-    // });
+    // Создаем blob для скачивания
+    const blob = new Blob([response.data], {
+      type: format === 'pdf' ? 'application/pdf' :
+           format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
+           'text/csv'
+    });
     
-    // Моковые данные для тестирования
-    // В реальном приложении здесь будет возвращаться blob файла
-    console.log(`Exporting report ${reportId} to ${format}...`);
-    
-    // Симуляция успешного экспорта
-    return { success: true, message: `Отчет успешно экспортирован в формате ${format}` };
-  } catch (error) {
+    return blob;
+ } catch (error) {
     return handleApiError(error, `exporting report ${reportId}`);
   }
 };
@@ -437,7 +426,6 @@ export const exportAttendanceReport = async (params: {
  * @returns {Promise<any>} Success response
  */
 export const sendReportByEmail = async (params: {
-  reportId?: string;
   reportType: 'salary' | 'children' | 'attendance' | 'schedule';
   recipients: string[];
   subject?: string;
@@ -523,34 +511,61 @@ export const generateCustomReport = async (params: {
   format?: 'pdf' | 'excel' | 'csv';
 }) => {
   try {
-    await delay(1000);
+    const response = await api.post('/reports/generate', params);
     
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.post('/reports/generate', params);
-    
-    // Моковые данные для тестирования
-    const mockReport = {
-      id: Math.random().toString(36).substring(2, 15),
-      title: `Отчет по ${params.type} за период ${params.startDate} - ${params.endDate}`,
-      type: params.type,
+    const report: Report = {
+      id: response.data._id,
+      title: response.data.title,
+      type: response.data.type,
+      description: response.data.description,
       dateRange: {
-        startDate: params.startDate,
-        endDate: params.endDate
+        startDate: response.data.dateRange.startDate,
+        endDate: response.data.dateRange.endDate
       },
-      filters: {
-        userId: params.userId,
-        groupId: params.groupId
-      },
-      createdAt: new Date().toISOString(),
-      createdBy: 'admin',
-      format: params.format || 'pdf',
-      data: {
-        // Данные отчета будут здесь
-      }
+      filters: response.data.filters,
+      data: response.data.data,
+      format: response.data.format,
+      status: response.data.status,
+      filePath: response.data.filePath,
+      fileSize: response.data.fileSize,
+      generatedAt: response.data.generatedAt,
+      scheduledFor: response.data.scheduledFor,
+      emailRecipients: response.data.emailRecipients,
+      createdBy: response.data.createdBy,
+      createdAt: response.data.createdAt,
+      updatedAt: response.data.updatedAt
     };
     
-    return mockReport;
+    return report;
   } catch (error) {
     return handleApiError(error, 'generating custom report');
   }
+};
+
+export default {
+  // Reports
+  getReports,
+  getReport,
+  createReport,
+  deleteReport,
+  downloadReport,
+  
+  // Stats
+  getAttendanceStatistics,
+  getScheduleStatistics,
+  
+  // Export
+  exportReport,
+  exportSalaryReport,
+  exportChildrenReport,
+  exportAttendanceReport,
+  
+  // Email
+  sendReportByEmail,
+  
+  // Schedule
+  scheduleReport,
+  
+  // Generate
+  generateCustomReport
 };

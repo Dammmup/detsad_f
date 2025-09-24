@@ -3,7 +3,8 @@ import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TablePagination, Button, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, MenuItem, Grid, IconButton,
-  Tooltip, Chip, Divider, FormControl, InputLabel, Select, SelectChangeEvent
+  Tooltip, Chip, Divider, FormControl, InputLabel, Select, SelectChangeEvent,
+  Alert, CircularProgress, Tabs, Tab
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -14,22 +15,24 @@ import {
   Email as EmailIcon,
   AttachMoney as MoneyIcon,
   PictureAsPdf,
-  TableChart
+  TableChart,
+  Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Alert, CircularProgress } from '@mui/material';
+import { usersApi } from '../../services/api/users';
+import { getStaffAttendance } from '../../services/api/staffAttendance';
 
-interface PayrollPageProps {
+interface PayrollReportPageProps {
   isInReports?: boolean;
 }
 
 interface Payroll {
   _id: string;
-  staffId: {
+ staffId: string | {
     _id: string;
     fullName: string;
-  };
+ };
   month: string;
   accruals: number;
   deductions: number;
@@ -43,10 +46,47 @@ interface Payroll {
     amount: number;
     comment: string;
   }>;
+  // Добавим поля для детализации штрафов
+  latePenalties?: number;
+  absencePenalties?: number;
 }
 
-const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
+interface StaffAttendanceRecord {
+  _id?: string;
+  staffId: string;
+  groupId?: string;
+  date: string;
+  shiftType: 'full' | 'overtime';
+  startTime: string;
+  endTime: string;
+  actualStart?: string;
+  actualEnd?: string;
+  breakTime?: number;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'late';
+  lateMinutes?: number;
+  overtimeMinutes?: number;
+  earlyLeaveMinutes?: number;
+  location?: {
+    checkIn?: {
+      latitude: number;
+      longitude: number;
+      address?: string;
+    };
+    checkOut?: {
+      latitude: number;
+      longitude: number;
+      address?: string;
+    };
+  };
+  notes?: string;
+  markedBy: string;
+  createdAt?: string;
+ updatedAt?: string;
+}
+
+const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = false }) => {
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<StaffAttendanceRecord[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [openDialog, setOpenDialog] = useState(false);
@@ -55,52 +95,85 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
   const [selectedMonth, setSelectedMonth] = useState<string>(
     format(new Date(), 'yyyy-MM')
   );
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+ const [loading, setLoading] = useState(true);
+ const [error, setError] = useState<string | null>(null);
+ const [tabValue, setTabValue] = useState(0);
+ const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+ const [selectedPayrollDetails, setSelectedPayrollDetails] = useState<Payroll | null>(null);
 
   // Загрузка данных
-  useEffect(() => {
-    console.log('Загрузка данных для месяца:', selectedMonth);
+ useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       setError(null);
       try {
-        console.log('Начало загрузки данных...');
         await Promise.all([
           fetchPayrolls(),
-          fetchStaff()
+          fetchStaff(),
+          fetchAttendance()
         ]);
-        console.log('Данные успешно загружены');
       } catch (err) {
-        console.error('Ошибка загрузки данных:', err);
         setError('Не удалось загрузить данные. Пожалуйста, обновите страницу.');
+        console.error('Ошибка загрузки данных:', err);
       } finally {
         setLoading(false);
-        console.log('Загрузка завершена, состояние loading:', false);
       }
     };
 
     loadData();
   }, [selectedMonth]);
 
+  // Пересчет штрафов для всех сотрудников
+  useEffect(() => {
+    if (payrolls.length > 0 && attendanceRecords.length > 0 && staffList.length > 0) {
+      // Обновляем штрафы в расчетных листах на основе посещаемости
+      const updatedPayrolls = payrolls.map(payroll => {
+        // Определяем ID сотрудника в зависимости от типа
+        const staffId = typeof payroll.staffId === 'string' ? payroll.staffId : payroll.staffId._id;
+        
+        // Рассчитываем штрафы на основе посещаемости
+        const staffAttendance = attendanceRecords.filter(record =>
+          record.staffId === staffId && record.date.startsWith(selectedMonth)
+        );
+        
+        // Штрафы за опоздания
+        const latePenalty = staffAttendance.reduce((sum, record) => {
+          if (record.lateMinutes && record.lateMinutes > 0) {
+            // 100 тг за каждые 5 минут опоздания
+            return sum + Math.ceil(record.lateMinutes / 5) * 100;
+          }
+          return sum;
+        }, 0);
+        
+        // Штрафы за неявку: 60*10,5 = 630 тг за смену
+        const absencePenalty = staffAttendance.filter(record =>
+          record.status === 'no_show'
+        ).length * 630;
+        
+        const totalPenalties = latePenalty + absencePenalty;
+        
+        return {
+          ...payroll,
+          penalties: totalPenalties,
+          latePenalties: latePenalty,
+          absencePenalties: absencePenalty,
+          total: payroll.accruals + payroll.bonuses - totalPenalties
+        };
+      });
+      setPayrolls(updatedPayrolls);
+    }
+  }, [attendanceRecords, staffList]);
+
   const fetchPayrolls = async () => {
     try {
-      console.log('Запрос расчетных листов за месяц:', selectedMonth);
       const response = await fetch(`/api/payroll?month=${selectedMonth}`);
-      console.log('Ответ от сервера для /api/payroll:', response.status);
-      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log('Получены данные расчетных листов:', data);
-      
       if (data.success) {
-        console.log('Расчетные листы успешно загружены:', data.data);
         setPayrolls(data.data || []);
       } else {
-        console.error('Ошибка при загрузке расчетных листов:', data.message);
         throw new Error(data.message || 'Ошибка при загрузке данных');
       }
     } catch (error) {
@@ -111,45 +184,36 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
 
   const fetchStaff = async () => {
     try {
-      console.log('Запрос сотрудников с типом adult...');
-      const response = await fetch('/api/users?type=adult');
+      const staff = await usersApi.getAll({ type: 'adult' });
+      console.log('Получены данные сотрудников:', staff);
       
-      console.log('Ответ от сервера для /api/users:', response.status);
+      // Фильтруем только активных сотрудников
+      const activeStaff = staff.filter((user: any) => user.status !== 'inactive');
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Ошибка ответа сервера:', response.status, errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      console.log('Активные сотрудники:', activeStaff);
+      setStaffList(activeStaff);
       
-      const data = await response.json();
-      console.log('Получены данные сотрудников:', data);
-      
-      if (data.success) {
-        console.log('Все полученные сотрудники:', data.data);
-        // Фильтруем только активных сотрудников
-        const activeStaff = Array.isArray(data.data)
-          ? data.data.filter((user: any) => {
-              const isActive = user.active === true;
-              console.log(`Сотрудник ${user.fullName} active: ${user.active}, включен в список: ${isActive}`);
-              return isActive;
-            })
-          : [];
-          
-        console.log('Активные сотрудники после фильтрации:', activeStaff);
-        setStaffList(activeStaff);
-        
-        if (activeStaff.length === 0) {
-          console.warn('Не найдено активных сотрудников с типом adult');
-        } else {
-          console.log(`Найдено ${activeStaff.length} активных сотрудников`);
-        }
-      } else {
-        console.error('Ошибка в данных ответа:', data.message);
-        throw new Error(data.message || 'Ошибка при загрузке сотрудников');
+      if (activeStaff.length === 0) {
+        console.warn('Не найдено активных сотрудников с типом adult');
       }
     } catch (error) {
       console.error('Ошибка загрузки сотрудников:', error);
+      throw error;
+    }
+  };
+
+  const fetchAttendance = async () => {
+    try {
+      const startDate = new Date(selectedMonth + '-01');
+      const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+      
+      const attendance = await getStaffAttendance({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      });
+      setAttendanceRecords(attendance);
+    } catch (error) {
+      console.error('Ошибка загрузки посещаемости:', error);
       throw error;
     }
   };
@@ -165,7 +229,7 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
 
   const handleOpenDialog = (payroll?: Payroll) => {
     setCurrentPayroll(payroll || {
-      staffId: { _id: '', fullName: '' },
+      staffId: '', // теперь staffId - это строка при создании нового
       month: selectedMonth,
       accruals: 0,
       deductions: 0,
@@ -187,15 +251,28 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
     if (!currentPayroll) return;
 
     try {
+      // Подготовим данные для отправки, убедившись, что staffId - это строка
+      let staffIdToSend = '';
+      if (typeof currentPayroll.staffId === 'string') {
+        staffIdToSend = currentPayroll.staffId;
+      } else if (currentPayroll.staffId && typeof currentPayroll.staffId === 'object') {
+        staffIdToSend = currentPayroll.staffId._id;
+      }
+
+      const payrollToSend = {
+        ...currentPayroll,
+        staffId: staffIdToSend
+      };
+
       const method = currentPayroll._id ? 'PUT' : 'POST';
-      const url = currentPayroll._id 
-        ? `/api/payroll/${currentPayroll._id}` 
+      const url = currentPayroll._id
+        ? `/api/payroll/${currentPayroll._id}`
         : '/api/payroll';
       
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentPayroll)
+        body: JSON.stringify(payrollToSend)
       });
 
       if (response.ok) {
@@ -205,7 +282,7 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
     } catch (error) {
       console.error('Ошибка сохранения расчетного листа:', error);
     }
-  };
+ };
 
   const handleDeletePayroll = async (id: string) => {
     if (window.confirm('Удалить расчетный лист?')) {
@@ -240,7 +317,7 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
       console.error('Ошибка экспорта расчетного листа:', error);
       setError('Не удалось экспортировать расчетный лист');
     }
-  };
+ };
   
   // Обработчик отправки расчетного листа по email
   const handleSendByEmail = async (id: string) => {
@@ -251,10 +328,10 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
       console.error('Ошибка отправки расчетного листа по email:', error);
       setError('Не удалось отправить расчетный лист по email');
     }
-  };
+ };
   
   // Обработчик печати расчетного листа
-  const handlePrintPayroll = async (id: string) => {
+ const handlePrintPayroll = async (id: string) => {
     try {
       // В реальном приложении здесь будет запрос к API для получения данных для печати
       alert('Печать расчетного листа');
@@ -262,7 +339,12 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
       console.error('Ошибка печати расчетного листа:', error);
       setError('Не удалось напечатать расчетный лист');
     }
-  };
+ };
+ 
+ const handleViewDetails = (payroll: Payroll) => {
+   setSelectedPayrollDetails(payroll);
+   setDetailsDialogOpen(true);
+ };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -279,6 +361,36 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
       default: return 'default';
     }
   };
+
+  const calculatePenalties = (staffId: string) => {
+    // Рассчитываем штрафы на основе посещаемости
+    const staffAttendance = attendanceRecords.filter(record =>
+      record.staffId === staffId && record.date.startsWith(selectedMonth)
+    );
+    
+    let totalPenalty = 0;
+    
+    // Штрафы за опоздания
+    // В задании не указано, сколько конкретно списывать за опоздание,
+    // но упоминается "60*10,5 минут", что, по всей видимости, относится к штрафу за неявку
+    // Пока реализуем условный штраф за опоздание: 100 тг за каждые 5 минут опоздания
+    const latePenalty = staffAttendance.reduce((sum, record) => {
+      if (record.lateMinutes && record.lateMinutes > 0) {
+        // 100 тг за каждые 5 минут опоздания
+        return sum + Math.ceil(record.lateMinutes / 5) * 100;
+      }
+      return sum;
+    }, 0);
+    
+    // Штрафы за неявку: 60*10,5 = 630 тг за смену
+    const absencePenalty = staffAttendance.filter(record =>
+      record.status === 'no_show'
+    ).length * 630;
+    
+    totalPenalty = latePenalty + absencePenalty;
+    
+    return totalPenalty;
+ };
 
   if (loading) {
     return (
@@ -362,10 +474,12 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
             <TableHead>
               <TableRow>
                 <TableCell>Сотрудник</TableCell>
-                <TableCell align="right">Начисления</TableCell>
+                <TableCell align="right">Оклад</TableCell>
                 <TableCell align="right">Премии</TableCell>
-                <TableCell align="right">Штрафы</TableCell>
-                <TableCell align="right">Итого</TableCell>
+                <TableCell align="right">Штрафы за опоздания</TableCell>
+                <TableCell align="right">Штрафы за неявки</TableCell>
+                <TableCell align="right">Всего штрафов</TableCell>
+                <TableCell align="right">К выплате</TableCell>
                 <TableCell>Статус</TableCell>
                 <TableCell align="center">Действия</TableCell>
               </TableRow>
@@ -375,16 +489,22 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((payroll) => (
                   <TableRow key={payroll._id}>
-                    <TableCell>{payroll.staffId?.fullName || 'Неизвестно'}</TableCell>
+                    <TableCell>
+                      {typeof payroll.staffId === 'string'
+                        ? staffList.find(s => s._id === payroll.staffId)?.fullName || 'Неизвестно'
+                        : payroll.staffId.fullName || 'Неизвестно'}
+                    </TableCell>
                     <TableCell align="right">{formatCurrency(payroll.accruals)}</TableCell>
                     <TableCell align="right">{formatCurrency(payroll.bonuses)}</TableCell>
+                    <TableCell align="right">-{formatCurrency(payroll.latePenalties || 0)}</TableCell>
+                    <TableCell align="right">-{formatCurrency(payroll.absencePenalties || 0)}</TableCell>
                     <TableCell align="right">-{formatCurrency(payroll.penalties)}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>
                       {formatCurrency(payroll.total)}
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={payroll.status === 'draft' ? 'Черновик' : 
+                      <Chip
+                        label={payroll.status === 'draft' ? 'Черновик' :
                                payroll.status === 'approved' ? 'Подтвержден' : 'Оплачен'}
                         color={getStatusColor(payroll.status)}
                         variant={payroll.status === 'draft' ? 'outlined' : 'filled'}
@@ -397,12 +517,20 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Удалить">
-                        <IconButton 
-                          onClick={() => handleDeletePayroll(payroll._id)} 
+                        <IconButton
+                          onClick={() => handleDeletePayroll(payroll._id)}
                           color="error"
                           size="small"
                         >
                           <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Детали расчета">
+                        <IconButton
+                          onClick={() => handleViewDetails(payroll)}
+                          size="small"
+                        >
+                          <VisibilityIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Печать">
@@ -461,7 +589,9 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
                 <FormControl fullWidth margin="normal">
                   <InputLabel>Сотрудник</InputLabel>
                   <Select
-                    value={currentPayroll.staffId?._id || ''}
+                    value={typeof currentPayroll.staffId === 'string'
+                      ? currentPayroll.staffId
+                      : currentPayroll.staffId?._id || ''}
                     onChange={(e) => setCurrentPayroll({
                       ...currentPayroll,
                       staffId: {
@@ -556,8 +686,102 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Диалог с деталями расчета */}
+      <Dialog open={detailsDialogOpen} onClose={() => setDetailsDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Детали расчета зарплаты</DialogTitle>
+        <DialogContent dividers>
+          {selectedPayrollDetails && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                {typeof selectedPayrollDetails.staffId === 'string'
+                  ? staffList.find(s => s._id === selectedPayrollDetails.staffId)?.fullName || 'Неизвестно'
+                  : selectedPayrollDetails.staffId.fullName || 'Неизвестно'}
+                {' - '}
+                {selectedPayrollDetails.month}
+              </Typography>
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">Оклад:</Typography>
+                  <Typography variant="h6">{formatCurrency(selectedPayrollDetails.accruals)}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">Премии:</Typography>
+                  <Typography variant="h6">{formatCurrency(selectedPayrollDetails.bonuses)}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">Штрафы за опоздания:</Typography>
+                  <Typography variant="h6">-{formatCurrency(selectedPayrollDetails.latePenalties || 0)}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">Штрафы за неявки:</Typography>
+                  <Typography variant="h6">-{formatCurrency(selectedPayrollDetails.absencePenalties || 0)}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">Всего штрафов:</Typography>
+                  <Typography variant="h6">-{formatCurrency(selectedPayrollDetails.penalties)}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">Итого к выплате:</Typography>
+                  <Typography variant="h5" color="primary" fontWeight="bold">
+                    {formatCurrency(selectedPayrollDetails.total)}
+                  </Typography>
+                </Grid>
+              </Grid>
+              
+              {/* Детали посещаемости */}
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="h6" gutterBottom>Детали посещаемости</Typography>
+                {(() => {
+                  const staffId = typeof selectedPayrollDetails.staffId === 'string'
+                    ? selectedPayrollDetails.staffId
+                    : selectedPayrollDetails.staffId._id;
+                  
+                  const staffAttendance = attendanceRecords.filter(record =>
+                    record.staffId === staffId && record.date.startsWith(selectedMonth)
+                  );
+                  
+                  if (staffAttendance.length === 0) {
+                    return <Typography variant="body2">Нет данных о посещаемости</Typography>;
+                  }
+                  
+                  return (
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Дата</TableCell>
+                          <TableCell>Время смены</TableCell>
+                          <TableCell>Факт. приход</TableCell>
+                          <TableCell>Факт. уход</TableCell>
+                          <TableCell>Статус</TableCell>
+                          <TableCell>Опоздание</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {staffAttendance.map((record, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{new Date(record.date).toLocaleDateString('ru-RU')}</TableCell>
+                            <TableCell>{record.startTime} - {record.endTime}</TableCell>
+                            <TableCell>{record.actualStart || '-'}</TableCell>
+                            <TableCell>{record.actualEnd || '-'}</TableCell>
+                            <TableCell>{record.status}</TableCell>
+                            <TableCell>{record.lateMinutes ? `${record.lateMinutes} мин` : '-'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  );
+                })()}
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsDialogOpen(false)}>Закрыть</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
 
-export default PayrollPage;
+export default PayrollReportPage;

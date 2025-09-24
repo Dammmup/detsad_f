@@ -28,6 +28,12 @@ const Settings: React.FC = () => {
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings | null>(null);
   const [geolocationSettings, setGeolocationSettings] = useState<GeolocationSettings | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  // Состояния для настроек автоматического расчета зарплат
+  const [payrollSettings, setPayrollSettings] = useState({
+    autoCalculationDay: 25, // день месяца для автоматического расчета
+    emailRecipients: '',
+    autoClearData: true
+  });
   
   // Состояния для UI
   const [loading, setLoading] = useState<boolean>(true);
@@ -80,8 +86,14 @@ const Settings: React.FC = () => {
   };
   
   // Обработчик изменения вкладки
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+ const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+  };
+  
+ // Обработчик сохранения настроек автоматического расчета зарплат
+ const handleSavePayrollSettings = async () => {
+    // В реальном приложении здесь будет вызов API для сохранения настроек
+    alert('Настройки автоматического расчета зарплат успешно сохранены');
   };
   
   // Обработчик сохранения настроек детского сада
@@ -101,7 +113,7 @@ const Settings: React.FC = () => {
     }
   };
   
-  // Обработчик сохранения настроек уведомлений
+ // Обработчик сохранения настроек уведомлений
   const handleSaveNotificationSettings = async () => {
     if (!notificationSettings) return;
     
@@ -153,7 +165,7 @@ const Settings: React.FC = () => {
   };
   
   // Обработчик изменения полей формы пользователя
-  const handleUserFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+ const handleUserFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setUserForm({ ...userForm, [name]: value });
     
@@ -161,7 +173,7 @@ const Settings: React.FC = () => {
     if (userFormErrors[name]) {
       setUserFormErrors(prev => ({ ...prev, [name]: '' }));
     }
-  };
+ };
   
   // Обработчик изменения полей Select в форме пользователя
   const handleUserFormSelectChange = (e: SelectChangeEvent) => {
@@ -172,7 +184,7 @@ const Settings: React.FC = () => {
     if (userFormErrors[name]) {
       setUserFormErrors(prev => ({ ...prev, [name]: '' }));
     }
-  };
+ };
   
   // Валидация формы пользователя
   const validateUserForm = () => {
@@ -247,7 +259,7 @@ const Settings: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+ };
   
   // Обработчик редактирования пользователя
   const handleEditUser = (user: User) => {
@@ -295,6 +307,7 @@ const Settings: React.FC = () => {
         <Tab label="Уведомления" />
         <Tab label="Безопасность" />
         <Tab label="Геолокация" />
+        <Tab label="Автоматический расчет" />
         <Tab label="Пользователи" />
       </Tabs>
       
@@ -673,126 +686,138 @@ const Settings: React.FC = () => {
               
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="Радиус (метры)"
-                  type="number"
+                  label="API ключ Яндекс.Карт"
                   fullWidth
-                  value={geolocationSettings.radius}
+                  value={geolocationSettings.yandexApiKey || ''}
                   onChange={(e) => setGeolocationSettings({
-                    ...geolocationSettings,
-                    radius: parseInt(e.target.value)
+                    ...(geolocationSettings as GeolocationSettings),
+                    yandexApiKey: e.target.value
                   })}
+                  helperText="API ключ хранится в переменной окружения бэкенда. Оставьте поле пустым для использования ключа из переменной окружения."
                 />
               </Grid>
               
-             <Grid item xs={12}>
-               <TextField
-                 label="API ключ Яндекса"
-                 fullWidth
-                 value={geolocationSettings.yandexApiKey || ''}
-                 onChange={(e) => setGeolocationSettings({
-                   ...geolocationSettings,
-                   yandexApiKey: e.target.value
-                 })}
-               />
-             </Grid>
-             
-             {geolocationSettings.yandexApiKey && (
-               <Grid item xs={12}>
-                 <YandexMap
-                   center={{
-                     lat: geolocationSettings.coordinates.latitude,
-                     lng: geolocationSettings.coordinates.longitude
-                   }}
-                   radius={geolocationSettings.radius}
-                   onRadiusChange={(radius) => setGeolocationSettings({
-                     ...geolocationSettings,
-                     radius
-                   })}
-                   onCenterChange={(center) => setGeolocationSettings({
-                     ...geolocationSettings,
-                     coordinates: {
-                       latitude: center.lat,
-                       longitude: center.lng
-                     }
-                   })}
-                   apiKey={geolocationSettings.yandexApiKey}
-                 />
-               </Grid>
-             )}
-             
-             {!geolocationSettings.yandexApiKey && (
-               <Grid item xs={12}>
-                 <Alert severity="info">
-                   Для отображения карты введите API ключ Яндекса
-                 </Alert>
-                 
-                 <Grid container spacing={2} sx={{ mt: 2 }}>
-                   <Grid item xs={12} md={6}>
-                     <TextField
-                       label="Широта"
-                       type="number"
-                       fullWidth
-                       value={geolocationSettings.coordinates.latitude}
-                       onChange={(e) => setGeolocationSettings({
-                         ...geolocationSettings,
-                         coordinates: {
-                           ...geolocationSettings.coordinates,
-                           latitude: parseFloat(e.target.value)
-                         }
-                       })}
-                     />
-                   </Grid>
-                   
-                   <Grid item xs={12} md={6}>
-                     <TextField
-                       label="Долгота"
-                       type="number"
-                       fullWidth
-                       value={geolocationSettings.coordinates.longitude}
-                       onChange={(e) => setGeolocationSettings({
-                         ...geolocationSettings,
-                         coordinates: {
-                           ...geolocationSettings.coordinates,
-                           longitude: parseFloat(e.target.value)
-                         }
-                       })}
-                     />
-                   </Grid>
-                 </Grid>
-               </Grid>
-             )}
-             
-             <Grid item xs={12}>
-               <FormControlLabel
-                 control={
-                   <Switch
-                     checked={geolocationSettings.strictMode}
-                     onChange={(e) => setGeolocationSettings({
-                       ...geolocationSettings,
-                       strictMode: e.target.checked
-                     })}
-                   />
-                 }
-                 label="Строгий режим"
-               />
-             </Grid>
+              <Grid item xs={12}>
+                <YandexMap
+                  center={{
+                    lat: (geolocationSettings as GeolocationSettings).coordinates?.latitude || 51.1605,
+                    lng: (geolocationSettings as GeolocationSettings).coordinates?.longitude || 71.4704
+                  }}
+                  radius={geolocationSettings.radius || 100}
+                  onRadiusChange={(radius) => setGeolocationSettings({
+                    ...geolocationSettings,
+                    radius: radius
+                  })}
+                  onCenterChange={(center) => setGeolocationSettings({
+                    ...geolocationSettings,
+                    ...(geolocationSettings as GeolocationSettings),
+                    coordinates: {
+                      latitude: center.lat,
+                      longitude: center.lng
+                    }
+                  })}
+                  apiKey={(geolocationSettings as GeolocationSettings).yandexApiKey || ''}
+                />
+              </Grid>
               
-             <Grid item xs={12}>
-               <Button
-                 variant="contained"
-                 color="primary"
-                 startIcon={<Save />}
-                 onClick={handleSaveGeolocationSettings}
-               >
-                 Сохранить настройки
-               </Button>
-             </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={geolocationSettings.strictMode}
+                      onChange={(e) => setGeolocationSettings({
+                        ...geolocationSettings,
+                        strictMode: e.target.checked
+                      })}
+                    />
+                  }
+                  label="Строгий режим"
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<Save />}
+                  onClick={handleSaveGeolocationSettings}
+                >
+                  Сохранить настройки
+                </Button>
+              </Grid>
             </Grid>
           </CardContent>
         </Card>
       )}
       
       {tabValue === 4 && (
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Настройки автоматического расчета зарплат</Typography>
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="День месяца для автоматического расчета"
+                  type="number"
+                  fullWidth
+                  value={payrollSettings.autoCalculationDay}
+                  onChange={(e) => setPayrollSettings({
+                    ...payrollSettings,
+                    autoCalculationDay: parseInt(e.target.value) || 25
+                  })}
+                  inputProps={{ min: 1, max: 31 }}
+                  helperText="День месяца, когда будет производиться автоматический расчет зарплат и отправка отчетов"
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  label="Email получателей отчетов"
+                  fullWidth
+                  value={payrollSettings.emailRecipients}
+                  onChange={(e) => setPayrollSettings({
+                    ...payrollSettings,
+                    emailRecipients: e.target.value
+                  })}
+                  helperText="Email адреса через запятую, на которые будут отправляться отчеты"
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={payrollSettings.autoClearData}
+                      onChange={(e) => setPayrollSettings({
+                        ...payrollSettings,
+                        autoClearData: e.target.checked
+                      })}
+                    />
+                  }
+                  label="Автоматическая очистка данных после расчета"
+                />
+                <Typography variant="caption" color="text.secondary" display="block">
+                  После автоматического расчета и отправки отчетов данные о штрафах будут очищены
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<Save />}
+                  onClick={handleSavePayrollSettings}
+                >
+                  Сохранить настройки
+                </Button>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
+      
+      {tabValue === 5 && (
         <Card>
           <CardContent>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>

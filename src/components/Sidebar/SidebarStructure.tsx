@@ -43,8 +43,7 @@ const sidebarStructure: SidebarItem[] = [
     children: [
       { id: 'staff-list', label: 'Список сотрудников', link: '/app/staff', icon: <PeopleIcon /> },
       { id: 'staff-schedule', label: 'Смены', link: '/app/staff/schedule', icon: <ScheduleIcon /> },
-      { id: 'staff-attendance', label: 'Табель', link: '/app/staff/attendance', icon: <AssignmentIndIcon /> },
-      { id: 'staff-timetracking', label: 'Учет времени', link: '/app/staff/timetracking', icon: <AssignmentIndIcon /> },
+      { id: 'staff-attendance-tracking', label: 'Учет рабочего времени', link: '/app/staff/attendance', icon: <AssignmentIndIcon /> },
     ],
   },
   {
@@ -64,6 +63,7 @@ const sidebarStructure: SidebarItem[] = [
       { id: 'reports-all', label: 'Все отчеты', link: '/app/reports', icon: <AssessmentIcon /> },
       { id: 'reports-payroll', label: 'Зарплаты', link: '/app/reports/payroll', icon: <AssessmentIcon /> },
       { id: 'reports-analytics', label: 'Аналитика', link: '/app/reports/analytics', icon: <AssessmentIcon /> },
+     
     ],
   },
   {
@@ -76,7 +76,6 @@ const sidebarStructure: SidebarItem[] = [
       { id: 'organization-settings', label: 'Настройки', link: '/app/settings', icon: <SettingsIcon /> },
     ],
   },
-
 ];
 
 export default sidebarStructure;

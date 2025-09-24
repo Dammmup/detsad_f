@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Paper, Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, FormControl, InputLabel, Select, MenuItem, Grid, IconButton,
@@ -8,83 +9,93 @@ import {
 import { 
   Add, Delete, Assessment, PictureAsPdf, TableChart, 
   InsertDriveFile, FilterList, Email, Schedule,
-  GetApp, AttachMoney, People, ChildCare
+  GetApp, AttachMoney, People, ChildCare, BarChart, PieChart, TrendingUp, 
+  Download, Refresh, Search, Sort
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import {
-  getReports, deleteReport, getAttendanceStatistics,
-  getScheduleStatistics, exportReport, generateCustomReport,
-  exportSalaryReport, exportChildrenReport, exportAttendanceReport,
-  sendReportByEmail,
-  Report, AttendanceStats, ScheduleStats
+import { 
+  getReports, deleteReport, exportReport, generateCustomReport,
+  exportSalaryReport, exportChildrenReport, exportAttendanceReport, sendReportByEmail, scheduleReport,
+  Report
 } from '../services/api/reports';
+import ReportsAnalytics from '../components/reports/ReportsAnalytics';
+import ReportsSalary from '../components/reports/ReportsSalary';
 import { getUsers } from '../services/api/users';
+import { getGroups } from '../services/api/groups';
+import { ID, UserRole } from '../types/common';
+import Analytics from './Analytics';
 
 // Интерфейс для сотрудника
 interface StaffMember {
-  id?: string;
+  id?: ID;
   fullName: string;
-  role: string;
+ role?: UserRole;
+}
+
+// Интерфейс для фильтрации отчетов
+interface ReportFilters {
+  type?: string;
+  status?: string;
+  dateRange?: {
+    startDate?: string;
+    endDate?: string;
+  };
+  userId?: string;
+  groupId?: string;
+  search?: string;
 }
 
 const Reports: React.FC = () => {
   // Состояния для данных
-  const [reports, setReports] = useState<Report[]>([]);
-  const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
-  const [scheduleStats, setScheduleStats] = useState<ScheduleStats | null>(null);
+ const [reports, setReports] = useState<Report[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
   
   // Состояния для UI
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   
   // Новые состояния для расширенного экспорта
-  const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
-  const [exportType, setExportType] = useState<'salary' | 'children' | 'attendance'>('salary');
-  const [exportFormat, setExportFormat] = useState<'pdf' | 'excel' | 'csv'>('pdf');
+  const [exportType, setExportType] = useState<'salary' | 'children' | 'attendance' | 'schedule'>('salary');
+  const [exportFormat, setExportFormat] = useState<'pdf' | 'excel' | 'csv'>('excel');
   const [emailRecipients, setEmailRecipients] = useState<string>('');
   const [emailSubject, setEmailSubject] = useState<string>('');
   const [emailMessage, setEmailMessage] = useState<string>('');
+  const [scheduleFrequency, setScheduleFrequency] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [scheduleRecipients, setScheduleRecipients] = useState<string>('');
   
   // Состояния для фильтров
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [reportType, setReportType] = useState<string>('attendance');
   const [reportFormat, setReportFormat] = useState<'pdf' | 'excel' | 'csv'>('pdf');
   const [reportTitle, setReportTitle] = useState<string>('');
-    
-  // Получение статистики
-  const fetchStatistics = async () => {
-    try {
-      // Форматируем даты для API
-      const formattedStartDate = startDate.toISOString().split('T')[0];
-      const formattedEndDate = endDate.toISOString().split('T')[0];
-      
-      // Получаем статистику посещаемости
-      const attendanceStatsData = await getAttendanceStatistics(
-        formattedStartDate, 
-        formattedEndDate, 
-        selectedUserId || undefined
-      );
-      setAttendanceStats(attendanceStatsData);
-      
-      // Получаем статистику расписания
-      const scheduleStatsData = await getScheduleStatistics(
-        formattedStartDate, 
-        formattedEndDate, 
-        selectedUserId || undefined
-      );
-      setScheduleStats(scheduleStatsData);
-    } catch (err: any) {
-      setError(err?.message || 'Ошибка загрузки статистики');
-    }
-  };
+  const [filters, setFilters] = useState<ReportFilters>({
+    type: '',
+    status: '',
+    dateRange: {
+      startDate: '',
+      endDate: ''
+    },
+    userId: '',
+    groupId: '',
+    search: ''
+  });
+  
+  // Состояния для сортировки и поиска
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [sortField, setSortField] = useState<string>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
   // Загрузка данных при монтировании компонента
   useEffect(() => {
     fetchData();
@@ -92,7 +103,7 @@ const Reports: React.FC = () => {
     // Устанавливаем начальное название отчета
     setReportTitle(`Отчет за ${startDate.toLocaleDateString('ru-RU')} - ${endDate.toLocaleDateString('ru-RU')}`);
   }, []);
-  
+
   // Загрузка всех необходимых данных
   const fetchData = async () => {
     setLoading(true);
@@ -105,10 +116,15 @@ const Reports: React.FC = () => {
       
       // Получение списка сотрудников
       const staffData = await getUsers();
-      setStaff(staffData as any);
+      setStaff(staffData.map(user => ({
+        id: user._id || user.id,
+        fullName: user.fullName,
+        role: user.role
+      })));
       
-      // Получение статистики
-      await fetchStatistics();
+      // Получение списка групп
+      const groupsData = await getGroups();
+      setGroups(groupsData);
     } catch (err: any) {
       setError(err?.message || 'Ошибка загрузки данных');
     } finally {
@@ -116,12 +132,17 @@ const Reports: React.FC = () => {
     }
   };
 
+  const navigate = useNavigate();
   
   // Обработчик изменения вкладки
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+    // Если переключаемся на вкладку "Аналитика", переходим на отдельную страницу аналитики
+    if (newValue === 2) {
+      navigate('/reports/analytics');
+    }
   };
-  
+
   // Обработчик экспорта отчета
   const handleExport = async (reportId: string, format: 'pdf' | 'excel' | 'csv') => {
     setLoading(true);
@@ -136,7 +157,7 @@ const Reports: React.FC = () => {
       setLoading(false);
     }
   };
-  
+
   // Обработчик создания отчета
   const handleCreateReport = async () => {
     setLoading(true);
@@ -167,7 +188,7 @@ const Reports: React.FC = () => {
       setLoading(false);
     }
   };
-  
+
   // Обработчик удаления отчета
   const handleDeleteReport = async (id: string) => {
     if (!window.confirm('Вы уверены, что хотите удалить этот отчет?')) {
@@ -187,20 +208,21 @@ const Reports: React.FC = () => {
       setLoading(false);
     }
   };
-  
+
   // Обработчик изменения типа отчета
   const handleReportTypeChange = (e: SelectChangeEvent) => {
     setReportType(e.target.value);
     
     // Обновляем название отчета в зависимости от типа
-    const typeText = 
+    const typeText =
       e.target.value === 'attendance' ? 'посещаемости' :
       e.target.value === 'schedule' ? 'расписанию' :
       e.target.value === 'staff' ? 'персоналу' : 'пользовательский';
     
     setReportTitle(`Отчет по ${typeText} за ${startDate.toLocaleDateString('ru-RU')} - ${endDate.toLocaleDateString('ru-RU')}`);
   };
-  
+
+
   // ===== НОВЫЕ ОБРАБОТЧИКИ ДЛЯ РАСШИРЕННОГО ЭКСПОРТА =====
   
   // Обработчик экспорта зарплат
@@ -234,69 +256,33 @@ const Reports: React.FC = () => {
       setLoading(false);
     }
   };
-  
-  // Обработчик экспорта списков детей
-  const handleExportChildren = async () => {
+
+  // Обработчик планирования отчета
+  const handleScheduleReport = async () => {
     setLoading(true);
     try {
-      const blob = await exportChildrenReport({
-        groupId: selectedUserId || undefined, // Используем как groupId
+      // В реальном приложении здесь будет запрос к API
+      const response = await scheduleReport({
+        reportType: exportType,
+        frequency: scheduleFrequency,
+        recipients: scheduleRecipients.split(',').map(email => email.trim()),
         format: exportFormat,
-        includeParentInfo: true,
-        includeHealthInfo: true
+        reportParams: {
+          startDate: startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0],
+          userId: selectedUserId || undefined
+        }
       });
       
-      // Скачиваем файл
-      const url = window.URL.createObjectURL(blob as Blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `children_report.${exportFormat === 'excel' ? 'xlsx' : exportFormat}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      setExportDialogOpen(false);
-      alert('Отчет по детям успешно экспортирован!');
+      alert(`Отчет по ${exportType} успешно запланирован!`);
+      setScheduleDialogOpen(false);
     } catch (err: any) {
-      setError(err?.message || 'Ошибка экспорта отчета по детям');
+      setError(err?.message || 'Ошибка планирования отчета');
     } finally {
       setLoading(false);
     }
   };
-  
-  // Обработчик экспорта посещаемости
-  const handleExportAttendance = async () => {
-    setLoading(true);
-    try {
-      const blob = await exportAttendanceReport({
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
-        userId: selectedUserId || undefined,
-        format: exportFormat,
-        includeStatistics: true,
-        includeCharts: true
-      });
-      
-      // Скачиваем файл
-      const url = window.URL.createObjectURL(blob as Blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `attendance_report_${startDate.toISOString().split('T')[0]}.${exportFormat === 'excel' ? 'xlsx' : exportFormat}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      setExportDialogOpen(false);
-      alert('Отчет по посещаемости успешно экспортирован!');
-    } catch (err: any) {
-      setError(err?.message || 'Ошибка экспорта отчета по посещаемости');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
+
   // Обработчик отправки отчета на почту
   const handleSendByEmail = async () => {
     if (!emailRecipients.trim()) {
@@ -330,9 +316,9 @@ const Reports: React.FC = () => {
       setLoading(false);
     }
   };
-  
+
   // Универсальный обработчик расширенного экспорта
-  const handleAdvancedExport = () => {
+  const handleAdvancedExport = async () => {
     switch (exportType) {
       case 'salary':
         return handleExportSalary();
@@ -340,22 +326,188 @@ const Reports: React.FC = () => {
         return handleExportChildren();
       case 'attendance':
         return handleExportAttendance();
+      case 'schedule':
+        return handleExportSchedule();
       default:
         setError('Неизвестный тип отчета');
     }
   };
-  
+
+  // Обработчик экспорта отчета по детям
+  const handleExportChildren = async () => {
+    setLoading(true);
+    try {
+      const blob = await exportChildrenReport({
+        groupId: selectedGroupId || undefined,
+        format: exportFormat,
+        includeParentInfo: true,
+        includeHealthInfo: true
+      });
+      
+      // Скачиваем файл
+      const url = window.URL.createObjectURL(blob as Blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `children_report_${new Date().toISOString().split('T')[0]}.${exportFormat === 'excel' ? 'xlsx' : exportFormat}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      setExportDialogOpen(false);
+      alert('Отчет по детям успешно экспортирован!');
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка экспорта отчета по детям');
+    } finally {
+      setLoading(false);
+    }
+ };
+
+  // Обработчик экспорта отчета посещаемости
+ const handleExportAttendance = async () => {
+    setLoading(true);
+    try {
+      const blob = await exportAttendanceReport({
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+        userId: selectedUserId || undefined,
+        groupId: selectedGroupId || undefined,
+        format: exportFormat,
+        includeStatistics: true,
+        includeCharts: true
+      });
+      
+      // Скачиваем файл
+      const url = window.URL.createObjectURL(blob as Blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `attendance_report_${startDate.toISOString().split('T')[0]}.${exportFormat === 'excel' ? 'xlsx' : exportFormat}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      setExportDialogOpen(false);
+      alert('Отчет по посещаемости успешно экспортирован!');
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка экспорта отчета по посещаемости');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Обработчик экспорта отчета по расписанию
+  const handleExportSchedule = async () => {
+    setLoading(true);
+    try {
+      // В реальном приложении здесь будет вызов соответствующей функции экспорта
+      // Для моковой реализации используем alert
+      alert(`Экспорт отчета по расписанию в формате ${exportFormat} запущен!`);
+      setExportDialogOpen(false);
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка экспорта отчета по расписанию');
+    } finally {
+      setLoading(false);
+    }
+ };
+
   // Получение текста для типа отчета
   const getReportTypeText = (type: 'attendance' | 'schedule' | 'staff' | 'salary' | 'children' | 'custom') => {
     switch (type) {
       case 'attendance': return 'Посещаемость';
       case 'schedule': return 'Расписание';
       case 'staff': return 'Персонал';
+      case 'salary': return 'Зарплаты';
+      case 'children': return 'Дети';
       case 'custom': return 'Пользовательский';
       default: return type;
     }
   };
-  
+
+  // Фильтрация отчетов
+  const filteredReports = reports.filter(report => {
+    // Фильтрация по типу
+    if (filters.type && report.type !== filters.type) return false;
+    
+    // Фильтрация по статусу
+    if (filters.status && report.status !== filters.status) return false;
+    
+    // Фильтрация по пользователю
+    if (filters.userId && report.filters?.userId !== filters.userId) return false;
+    
+    // Фильтрация по группе
+    if (filters.groupId && report.filters?.groupId !== filters.groupId) return false;
+    
+    // Фильтрация по дате
+    if (filters.dateRange?.startDate && report.dateRange.startDate < filters.dateRange.startDate) return false;
+    if (filters.dateRange?.endDate && report.dateRange.endDate > filters.dateRange.endDate) return false;
+    
+    // Фильтрация по поиску
+    if (searchTerm && 
+        !report.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        !report.description?.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
+    }
+    
+    return true;
+  });
+
+  // Сортировка отчетов
+  const sortedReports = [...filteredReports].sort((a, b) => {
+    if (sortField === 'createdAt') {
+      const dateA = new Date(a.createdAt || 0);
+      const dateB = new Date(b.createdAt || 0);
+      return sortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+    } else if (sortField === 'title') {
+      return sortOrder === 'asc' 
+        ? a.title.localeCompare(b.title) 
+        : b.title.localeCompare(a.title);
+    } else if (sortField === 'type') {
+      return sortOrder === 'asc' 
+        ? a.type.localeCompare(b.type) 
+        : b.type.localeCompare(a.type);
+    } else if (sortField === 'status') {
+      return sortOrder === 'asc' 
+        ? (a.status || '').localeCompare(b.status || '') 
+        : (b.status || '').localeCompare(a.status || '');
+    }
+    return 0;
+  });
+
+  // Обработчик изменения фильтров
+  const handleFilterChange = (field: keyof ReportFilters, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Обработчик сброса фильтров
+  const resetFilters = () => {
+    setFilters({
+      type: '',
+      status: '',
+      dateRange: {
+        startDate: '',
+        endDate: ''
+      },
+      userId: '',
+      groupId: '',
+      search: ''
+    });
+    setSearchTerm('');
+  };
+
+  // Обработчик сортировки
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
   return (
     <Paper sx={{ p: 3, m: 2 }}>
       {/* Заголовок и кнопки управления */}
@@ -364,39 +516,78 @@ const Reports: React.FC = () => {
           <Assessment sx={{ mr: 1 }} /> Отчеты и аналитика
         </Typography>
         
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<Add />}
-          onClick={() => setDialogOpen(true)}
-        >
-          Создать отчет
-        </Button>
+        <Box>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<Add />}
+            onClick={() => setDialogOpen(true)}
+            sx={{ mr: 1 }}
+          >
+            Создать отчет
+          </Button>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<Download />}
+            onClick={() => setExportDialogOpen(true)}
+          >
+            Экспорт
+          </Button>
+        </Box>
       </Box>
-      
+
       {/* Фильтры */}
-      <Box mb={3} display="flex" flexWrap="wrap" gap={2}>
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <DatePicker
-            label="Начальная дата"
-            value={startDate}
-            onChange={(newValue) => newValue && setStartDate(newValue)}
-            renderInput={(params) => <TextField {...params} />}
-          />
-          
-          <DatePicker
-            label="Конечная дата"
-            value={endDate}
-            onChange={(newValue) => newValue && setEndDate(newValue)}
-            renderInput={(params) => <TextField {...params} />}
-          />
-        </LocalizationProvider>
+      <Box mb={3} display="flex" flexWrap="wrap" gap={2} alignItems="center">
+        <TextField
+          label="Поиск"
+          variant="outlined"
+          size="small"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ minWidth: 200 }}
+          InputProps={{
+            startAdornment: <Search sx={{ mr: 1 }} />
+          }}
+        />
         
-        <FormControl size="small" sx={{ minWidth: 200 }}>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Тип отчета</InputLabel>
+          <Select
+            value={filters.type || ''}
+            onChange={(e) => handleFilterChange('type', e.target.value)}
+            label="Тип отчета"
+          >
+            <MenuItem value="">Все типы</MenuItem>
+            <MenuItem value="attendance">Посещаемость</MenuItem>
+            <MenuItem value="schedule">Расписание</MenuItem>
+            <MenuItem value="staff">Персонал</MenuItem>
+            <MenuItem value="salary">Зарплаты</MenuItem>
+            <MenuItem value="children">Дети</MenuItem>
+            <MenuItem value="custom">Пользовательский</MenuItem>
+          </Select>
+        </FormControl>
+        
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Статус</InputLabel>
+          <Select
+            value={filters.status || ''}
+            onChange={(e) => handleFilterChange('status', e.target.value)}
+            label="Статус"
+          >
+            <MenuItem value="">Все статусы</MenuItem>
+            <MenuItem value="completed">Завершен</MenuItem>
+            <MenuItem value="scheduled">Запланирован</MenuItem>
+            <MenuItem value="generating">Генерируется</MenuItem>
+            <MenuItem value="failed">Ошибка</MenuItem>
+          </Select>
+        </FormControl>
+        
+        <FormControl size="small" sx={{ minWidth: 150 }}>
           <InputLabel>Сотрудник</InputLabel>
           <Select
-            value={selectedUserId}
-            onChange={(e) => setSelectedUserId(e.target.value)}
+            value={filters.userId || ''}
+            onChange={(e) => handleFilterChange('userId', e.target.value)}
             label="Сотрудник"
           >
             <MenuItem value="">Все сотрудники</MenuItem>
@@ -408,13 +599,21 @@ const Reports: React.FC = () => {
         
         <Button
           variant="outlined"
-          startIcon={<FilterList />}
-          onClick={fetchStatistics}
+          startIcon={<Refresh />}
+          onClick={resetFilters}
         >
-          Применить фильтры
+          Сбросить
+        </Button>
+        
+        <Button
+          variant="outlined"
+          startIcon={<Sort />}
+          onClick={() => {}}
+        >
+          Сортировка
         </Button>
       </Box>
-      
+
       {/* Расширенные кнопки экспорта */}
       <Card sx={{ mb: 3, p: 2, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
@@ -426,8 +625,8 @@ const Reports: React.FC = () => {
             startIcon={<AttachMoney />}
             onClick={() => { setExportType('salary'); setExportDialogOpen(true); }}
             sx={{ 
-              bgcolor: 'rgba(255,255,255,0.2)', 
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+              bgcolor: 'rgba(255,255,0.2)', 
+              '&:hover': { bgcolor: 'rgba(255,255,0.3)' },
               backdropFilter: 'blur(10px)'
             }}
           >
@@ -439,8 +638,8 @@ const Reports: React.FC = () => {
             startIcon={<ChildCare />}
             onClick={() => { setExportType('children'); setExportDialogOpen(true); }}
             sx={{ 
-              bgcolor: 'rgba(255,255,255,0.2)', 
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+              bgcolor: 'rgba(255,0.2)', 
+              '&:hover': { bgcolor: 'rgba(255,0.3)' },
               backdropFilter: 'blur(10px)'
             }}
           >
@@ -452,8 +651,8 @@ const Reports: React.FC = () => {
             startIcon={<People />}
             onClick={() => { setExportType('attendance'); setExportDialogOpen(true); }}
             sx={{ 
-              bgcolor: 'rgba(255,255,255,0.2)', 
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+              bgcolor: 'rgba(255,0.2)', 
+              '&:hover': { bgcolor: 'rgba(255,0.3)' },
               backdropFilter: 'blur(10px)'
             }}
           >
@@ -462,11 +661,24 @@ const Reports: React.FC = () => {
           
           <Button
             variant="contained"
+            startIcon={<BarChart />}
+            onClick={() => { setExportType('schedule'); setExportDialogOpen(true); }}
+            sx={{ 
+              bgcolor: 'rgba(255,255,0.2)', 
+              '&:hover': { bgcolor: 'rgba(255,255,0.3)' },
+              backdropFilter: 'blur(10px)'
+            }}
+          >
+            Расписание
+          </Button>
+          
+          <Button
+            variant="contained"
             startIcon={<Email />}
             onClick={() => setEmailDialogOpen(true)}
             sx={{ 
-              bgcolor: 'rgba(255,255,255,0.2)', 
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+              bgcolor: 'rgba(255,0.2)', 
+              '&:hover': { bgcolor: 'rgba(255,0.3)' },
               backdropFilter: 'blur(10px)'
             }}
           >
@@ -476,10 +688,10 @@ const Reports: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<Schedule />}
-            onClick={() => alert('Функция планирования отчетов будет доступна в следующей версии!')}
-            sx={{ 
-              bgcolor: 'rgba(255,255,255,0.2)', 
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+            onClick={() => setScheduleDialogOpen(true)}
+            sx={{
+              bgcolor: 'rgba(255,255,0.2)',
+              '&:hover': { bgcolor: 'rgba(255,0.3)' },
               backdropFilter: 'blur(10px)'
             }}
           >
@@ -487,254 +699,20 @@ const Reports: React.FC = () => {
           </Button>
         </Box>
       </Card>
-      
+
       {/* Индикатор загрузки и ошибки */}
       {loading && <CircularProgress />}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
       {/* Вкладки с отчетами */}
       <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 2 }}>
-        <Tab label="Сводная статистика" />
-        <Tab label="Посещаемость" />
-        <Tab label="Расписание" />
-        <Tab label="Персонал" />
-        <Tab label="Мои отчеты" />
+        <Tab label="Отчеты" />
+        <Tab label="Зарплаты" />
+        <Tab label="Аналитика" />
       </Tabs>
-      
+
       {/* Содержимое вкладок */}
       {tabValue === 0 && (
-        <Grid container spacing={3}>
-          {/* Карточки со статистикой */}
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>Посещаемость</Typography>
-                {attendanceStats && (
-                  <>
-                    <Typography>Всего дней: {attendanceStats.totalDays}</Typography>
-                    <Typography>Присутствие: {attendanceStats.presentDays} дней ({attendanceStats.attendanceRate.toFixed(1)}%)</Typography>
-                    <Typography>Опоздания: {attendanceStats.lateDays} дней</Typography>
-                    <Typography>Отсутствия: {attendanceStats.absentDays} дней</Typography>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>Рабочее время</Typography>
-                {attendanceStats && (
-                  <>
-                    <Typography>Всего часов: {attendanceStats.totalWorkHours}</Typography>
-                    <Typography>Среднее в день: {attendanceStats.averageWorkHoursPerDay.toFixed(1)} ч</Typography>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>Смены</Typography>
-                {scheduleStats && (
-                  <>
-                    <Typography>Всего смен: {scheduleStats.totalShifts}</Typography>
-                    <Typography>Обычные: {scheduleStats.regularShifts}</Typography>
-                    <Typography>Сверхурочные: {scheduleStats.overtimeShifts}</Typography>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          {/* Графики и диаграммы */}
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>Графики и диаграммы</Typography>
-                <Typography color="text.secondary">
-                  Здесь будут графики и диаграммы с визуализацией данных.
-                </Typography>
-                <Box 
-                  sx={{ 
-                    height: 300, 
-                    bgcolor: 'rgba(0, 0, 0, 0.04)', 
-                    borderRadius: 1, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    mt: 2
-                  }}
-                >
-                  <Typography color="text.secondary">
-                    Графики посещаемости и рабочего времени
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
-      
-      {tabValue === 1 && (
-        <Box>
-          <Typography variant="h6" gutterBottom>Отчет по посещаемости</Typography>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Сотрудник</TableCell>
-                <TableCell>Всего дней</TableCell>
-                <TableCell>Присутствие</TableCell>
-                <TableCell>Опоздания</TableCell>
-                <TableCell>Отсутствия</TableCell>
-                <TableCell>Ранний уход</TableCell>
-                <TableCell>Больничный</TableCell>
-                <TableCell>Отпуск</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {staff.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>{member.fullName}</TableCell>
-                  <TableCell>22</TableCell>
-                  <TableCell>18</TableCell>
-                  <TableCell>2</TableCell>
-                  <TableCell>1</TableCell>
-                  <TableCell>1</TableCell>
-                  <TableCell>1</TableCell>
-                  <TableCell>2</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          
-          <Box mt={2} display="flex" gap={1}>
-            <Button
-              variant="outlined"
-              startIcon={<PictureAsPdf />}
-              onClick={() => handleExport('attendance', 'pdf')}
-            >
-              Экспорт в PDF
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<TableChart />}
-              onClick={() => handleExport('attendance', 'excel')}
-            >
-              Экспорт в Excel
-            </Button>
-          </Box>
-        </Box>
-      )}
-      
-      {tabValue === 2 && (
-        <Box>
-          <Typography variant="h6" gutterBottom>Отчет по расписанию</Typography>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Сотрудник</TableCell>
-                <TableCell>Всего смен</TableCell>
-                <TableCell>Обычные смены</TableCell>
-                <TableCell>Сверхурочные</TableCell>
-                <TableCell>Больничный</TableCell>
-                <TableCell>Отпуск</TableCell>
-                <TableCell>Всего часов</TableCell>
-                <TableCell>Сверхурочные часы</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {staff.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>{member.fullName}</TableCell>
-                  <TableCell>22</TableCell>
-                  <TableCell>18</TableCell>
-                  <TableCell>2</TableCell>
-                  <TableCell>1</TableCell>
-                  <TableCell>1</TableCell>
-                  <TableCell>176</TableCell>
-                  <TableCell>8</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          
-          <Box mt={2} display="flex" gap={1}>
-            <Button
-              variant="outlined"
-              startIcon={<PictureAsPdf />}
-              onClick={() => handleExport('schedule', 'pdf')}
-            >
-              Экспорт в PDF
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<TableChart />}
-              onClick={() => handleExport('schedule', 'excel')}
-            >
-              Экспорт в Excel
-            </Button>
-          </Box>
-        </Box>
-      )}
-      
-      {tabValue === 3 && (
-        <Box>
-          <Typography variant="h6" gutterBottom>Отчет по персоналу</Typography>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Сотрудник</TableCell>
-                <TableCell>Должность</TableCell>
-                <TableCell>Группа</TableCell>
-                <TableCell>Дата приема</TableCell>
-                <TableCell>Стаж</TableCell>
-                <TableCell>Статус</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {staff.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>{member.fullName}</TableCell>
-                  <TableCell>{member.role}</TableCell>
-                  <TableCell>Группа 1</TableCell>
-                  <TableCell>01.01.2023</TableCell>
-                  <TableCell>1 год 8 месяцев</TableCell>
-                  <TableCell>
-                    <Chip 
-                      label="Активен" 
-                      size="small"
-                      color="success"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          
-          <Box mt={2} display="flex" gap={1}>
-            <Button
-              variant="outlined"
-              startIcon={<PictureAsPdf />}
-              onClick={() => handleExport('staff', 'pdf')}
-            >
-              Экспорт в PDF
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<TableChart />}
-              onClick={() => handleExport('staff', 'excel')}
-            >
-              Экспорт в Excel
-            </Button>
-          </Box>
-        </Box>
-      )}
-      
-      {tabValue === 4 && (
         <Box>
           <Typography variant="h6" gutterBottom>Мои отчеты</Typography>
           
@@ -753,7 +731,7 @@ const Reports: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {reports.map((report) => (
+                {sortedReports.map((report) => (
                   <TableRow key={report.id}>
                     <TableCell>{report.title}</TableCell>
                     <TableCell>
@@ -800,7 +778,27 @@ const Reports: React.FC = () => {
           )}
         </Box>
       )}
-      
+
+      {tabValue === 1 && (
+        <Box>
+          <Typography variant="h6" gutterBottom>Отчеты по зарплатам</Typography>
+          <ReportsSalary 
+            startDate={startDate.toISOString().split('T')[0]} 
+            endDate={endDate.toISOString().split('T')[0]} 
+            userId={selectedUserId || undefined}
+          />
+        </Box>
+      )}
+
+      {tabValue === 2 && (
+        <Box>
+          <Typography variant="h6" gutterBottom>Аналитика</Typography>
+          <Analytics 
+           
+          />
+        </Box>
+      )}
+
       {/* Диалог создания отчета */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Создать новый отчет</DialogTitle>
@@ -860,7 +858,7 @@ const Reports: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* ===== ДИАЛОГ НАСТРОЙКИ ЭКСПОРТА ===== */}
       <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ 
@@ -868,7 +866,7 @@ const Reports: React.FC = () => {
           color: 'white',
           textAlign: 'center'
         }}>
-          🚀 Экспорт отчета: {exportType === 'salary' ? 'Зарплаты' : exportType === 'children' ? 'Списки детей' : 'Посещаемость'}
+          🚀 Экспорт отчета: {exportType === 'salary' ? 'Зарплаты' : exportType === 'children' ? 'Списки детей' : exportType === 'attendance' ? 'Посещаемость' : 'Расписание'}
         </DialogTitle>
         
         <DialogContent sx={{ pt: 3 }}>
@@ -941,21 +939,48 @@ const Reports: React.FC = () => {
                 </Grid>
               </>
             )}
+            
+            {exportType === 'schedule' && (
+              <>
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ mb: 1, color: '#667eea' }}>
+                    📅 Настройки отчета расписания
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Отчет будет включать расписание смен, количество часов и эффективность работы
+                  </Typography>
+                </Grid>
+              </>
+            )}
           </Grid>
         </DialogContent>
         
         <DialogActions sx={{ p: 3, gap: 1 }}>
-          <Button 
+          <Button
             onClick={() => setExportDialogOpen(false)}
             variant="outlined"
           >
             Отмена
           </Button>
-          <Button 
+          <Button
+            onClick={() => {
+              setScheduleDialogOpen(true);
+              setExportDialogOpen(false);
+            }}
+            variant="contained"
+            startIcon={<Schedule />}
+            sx={{
+              background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+              '&:hover': { background: 'linear-gradient(135deg, #43A047 0%, #1B5E20 100%)' }
+            }}
+          >
+            Планировать
+          </Button>
+          <Button
             onClick={handleAdvancedExport}
             variant="contained"
             startIcon={<GetApp />}
-            sx={{ 
+            sx={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               '&:hover': { background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)' }
             }}
@@ -964,25 +989,25 @@ const Reports: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
-      {/* ===== ДИАЛОГ ОТПРАВКИ НА ПОЧТУ ===== */}
-      <Dialog open={emailDialogOpen} onClose={() => setEmailDialogOpen(false)} maxWidth="md" fullWidth>
+
+      {/* ===== ДИАЛОГ ПЛАНИРОВАНИЯ ===== */}
+      <Dialog open={scheduleDialogOpen} onClose={() => setScheduleDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ 
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
           color: 'white',
           textAlign: 'center'
         }}>
-          📧 Отправка отчета на почту
+          📅 Планирование автоматического отчета
         </DialogTitle>
         
         <DialogContent sx={{ pt: 3 }}>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12}>
               <FormControl fullWidth>
                 <InputLabel>Тип отчета</InputLabel>
                 <Select
                   value={exportType}
-                  onChange={(e) => setExportType(e.target.value as 'salary' | 'children' | 'attendance')}
+                  onChange={(e) => setExportType(e.target.value as any)}
                   label="Тип отчета"
                 >
                   <MenuItem value="salary">
@@ -1001,6 +1026,125 @@ const Reports: React.FC = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <People />
                       Отчет посещаемости
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="schedule">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Schedule />
+                      Отчет расписания
+                    </Box>
+                  </MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Частота</InputLabel>
+                <Select
+                  value={scheduleFrequency}
+                  onChange={(e) => setScheduleFrequency(e.target.value as any)}
+                  label="Частота"
+                >
+                  <MenuItem value="daily">Ежедневно</MenuItem>
+                  <MenuItem value="weekly">Еженедельно</MenuItem>
+                  <MenuItem value="monthly">Ежемесячно</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Email получателей"
+                placeholder="email1@example.com, email2@example.com"
+                value={scheduleRecipients}
+                onChange={(e) => setScheduleRecipients(e.target.value)}
+                helperText="Введите email адреса через запятую"
+                required
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Формат файла</InputLabel>
+                <Select
+                  value={exportFormat}
+                  onChange={(e) => setExportFormat(e.target.value as 'pdf' | 'excel' | 'csv')}
+                  label="Формат файла"
+                >
+                  <MenuItem value="pdf">PDF</MenuItem>
+                  <MenuItem value="excel">Excel</MenuItem>
+                  <MenuItem value="csv">CSV</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        
+        <DialogActions sx={{ p: 3, gap: 1 }}>
+          <Button
+            onClick={() => setScheduleDialogOpen(false)}
+            variant="outlined"
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={handleScheduleReport}
+            variant="contained"
+            startIcon={<Schedule />}
+            sx={{
+              background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+              '&:hover': { background: 'linear-gradient(135deg, #43A047 0%, #1B5E20 100%)' }
+            }}
+          >
+            Запланировать
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ===== ДИАЛОГ ОТПРАВКИ НА ПОЧТУ ===== */}
+      <Dialog open={emailDialogOpen} onClose={() => setEmailDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+          color: 'white',
+          textAlign: 'center'
+        }}>
+          📧 Отправка отчета на почту
+        </DialogTitle>
+        
+        <DialogContent sx={{ pt: 3 }}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Тип отчета</InputLabel>
+                <Select
+                  value={exportType}
+                  onChange={(e) => setExportType(e.target.value as 'salary' | 'children' | 'attendance' | 'schedule')}
+                  label="Тип отчета"
+                >
+                  <MenuItem value="salary">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <AttachMoney />
+                      Отчет по зарплатам
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="children">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ChildCare />
+                      Списки детей
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="attendance">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <People />
+                      Отчет посещаемости
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="schedule">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Schedule />
+                      Отчет расписания
                     </Box>
                   </MenuItem>
                 </Select>

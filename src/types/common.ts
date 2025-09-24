@@ -13,6 +13,83 @@ export type ShiftStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled
 export type ShiftType = 'full' | 'day_off' | 'vacation' | 'sick_leave' | 'overtime';
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'early-leave' | 'sick' | 'vacation';
 export type ExportFormat = 'pdf' | 'excel' | 'csv';
+export type DocumentType = 'contract' | 'certificate' | 'report' | 'policy' | 'other';
+export type DocumentCategory = 'staff' | 'children' | 'financial' | 'administrative' | 'other';
+export type DocumentStatus = 'active' | 'archived';
+export type TemplateType = 'contract' | 'certificate' | 'report' | 'policy' | 'other';
+export type TemplateCategory = 'staff' | 'children' | 'financial' | 'administrative' | 'other';
+
+// ===== ДОКУМЕНТЫ =====
+
+export interface Document {
+  id: ID;
+  _id?: ID; // для совместимости с MongoDB
+  title: string;
+  description?: string;
+  type: DocumentType;
+  category: DocumentCategory;
+  fileName: string;
+  fileSize: number;
+  filePath: string;
+  uploadDate: DateString;
+  uploader: {
+    id: ID;
+    fullName: string;
+    email: string;
+  };
+  relatedId?: ID;
+  relatedType?: 'staff' | 'child' | 'group';
+  status: DocumentStatus;
+  tags: string[];
+  version: string;
+  expiryDate?: DateString;
+  createdAt: DateString;
+  updatedAt: DateString;
+}
+
+export interface DocumentTemplate {
+  id: ID;
+  _id?: ID; // для совместимости с MongoDB
+  name: string;
+  description?: string;
+  type: TemplateType;
+  category: TemplateCategory;
+  fileName: string;
+  fileSize: number;
+  filePath: string;
+  version: string;
+  isActive: boolean;
+  tags: string[];
+  usageCount: number;
+  createdAt: DateString;
+  updatedAt: DateString;
+}
+
+// ===== ПАРАМЕТРЫ API =====
+
+// Параметры для получения списка документов
+export type GetDocumentsParams = any;
+
+// Параметры для получения списка шаблонов
+export type GetTemplatesParams = any;
+
+// Параметры для создания документа
+export type CreateDocumentData = any;
+
+// Параметры для создания шаблона
+export type CreateTemplateData = any;
+
+// Параметры для обновления документа
+export type UpdateDocumentData = any;
+
+// Параметры для обновления шаблона
+export type UpdateTemplateData = any;
+
+// Параметры для экспорта документов
+export type ExportDocumentsParams = any;
+
+// Параметры для экспорта шаблонов
+export type ExportTemplatesParams = any;
 
 // ===== API ИНТЕРФЕЙСЫ =====
 
@@ -141,8 +218,6 @@ export interface ShiftFormData {
 // ===== ПОСЕЩАЕМОСТЬ =====
 
 export interface Location {
-  latitude?: number;
-  longitude?: number;
   address?: string;
   checkIn?: string;
   checkOut?: string;
@@ -448,10 +523,6 @@ export interface GeolocationSettings {
   id?: ID;
   enabled: boolean;
   radius: number; // в метрах
-  coordinates: {
-    latitude: number;
-    longitude: number;
-  };
   strictMode: boolean;
   allowedDevices: string[];
 }

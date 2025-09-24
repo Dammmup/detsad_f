@@ -24,7 +24,7 @@ const Login: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.post(`${API_URL}/api/auth/login`, { phone, password });
+      const res = await axios.post(`${API_URL}/auth/login`, { phone, password });
       const userData: User = {
         id: res.data.user.id,
         fullName: res.data.user.fullName,

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = `${process.env.REACT_APP_API_URL}/api` || 'http://localhost:8080/api';
+const API_URL = `${process.env.REACT_APP_API_URL}` || 'http://localhost:8080';
 
 // Интерфейс для API ошибки
 interface ApiError extends Error {
@@ -59,7 +59,7 @@ export interface GeolocationSettings {
   id?: string;
   enabled: boolean;
   radius: number; // в метрах
- coordinates: {
+  coordinates: {
     latitude: number;
     longitude: number;
   };
@@ -345,8 +345,7 @@ export const getGeolocationSettings = async () => {
 export const updateGeolocationSettings = async (settings: GeolocationSettings) => {
   try {
     const response = await api.put('/settings/geolocation', {
-      ...settings,
-      yandexApiKey: settings.yandexApiKey
+      ...settings
     });
     
     const updatedSettings: GeolocationSettings = {

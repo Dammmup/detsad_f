@@ -255,16 +255,21 @@ export const deleteCyclogram = async (id: string) => {
  */
 export const getCyclogramTemplates = async (ageGroup?: string) => {
   try {
-    await delay(300);
+    const params: any = {};
+    if (ageGroup) params.ageGroup = ageGroup;
     
-    // Моковые данные для тестирования
-    const mockTemplates: CyclogramTemplate[] = generateMockTemplates();
+    const response = await api.get('/cyclogram/templates', { params });
+    const templates: CyclogramTemplate[] = response.data.map((item: any) => ({
+      id: item._id,
+      name: item.name,
+      description: item.description,
+      ageGroup: item.ageGroup,
+      timeSlots: item.timeSlots,
+      isDefault: item.isDefault,
+      createdAt: item.createdAt
+    }));
     
-    const filteredTemplates = ageGroup 
-      ? mockTemplates.filter(t => t.ageGroup === ageGroup)
-      : mockTemplates;
-    
-    return filteredTemplates;
+    return templates;
   } catch (error) {
     return handleApiError(error, 'fetching cyclogram templates');
   }
@@ -277,7 +282,7 @@ export const getCyclogramTemplates = async (ageGroup?: string) => {
  * @returns {Promise<WeeklyCyclogram>} Created cyclogram
  */
 export const createCyclogramFromTemplate = async (
-  templateId: string, 
+ templateId: string,
   params: {
     title: string;
     groupId: string;
@@ -285,40 +290,24 @@ export const createCyclogramFromTemplate = async (
     weekStartDate: string;
   }
 ) => {
-  try {
-    await delay(500);
+ try {
+    const response = await api.post(`/cyclogram/templates/${templateId}/create`, params);
     
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.post(`/cyclograms/from-template/${templateId}`, params);
-    
-    // Моковые данные для тестирования
-    const templates = generateMockTemplates();
-    const template = templates.find(t => t.id === templateId);
-    
-    if (!template) {
-      throw new Error('Шаблон не найден');
-    }
-    
-    const mockCyclogram: WeeklyCyclogram = {
-      id: Math.random().toString(36).substring(2, 15),
-      title: params.title,
-      description: `Создано из шаблона: ${template.name}`,
-      ageGroup: template.ageGroup,
-      groupId: params.groupId,
-      teacherId: params.teacherId,
-      weekStartDate: params.weekStartDate,
-      timeSlots: template.timeSlots.map(slot => ({
-        ...slot,
-        id: Math.random().toString(36).substring(2, 15),
-        groupId: params.groupId,
-        teacherId: params.teacherId
-      })),
-      status: 'draft',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    const createdCyclogram: WeeklyCyclogram = {
+      id: response.data._id,
+      title: response.data.title,
+      description: response.data.description,
+      ageGroup: response.data.ageGroup,
+      groupId: response.data.groupId,
+      teacherId: response.data.teacherId,
+      weekStartDate: response.data.weekStartDate,
+      timeSlots: response.data.timeSlots,
+      status: response.data.status,
+      createdAt: response.data.createdAt,
+      updatedAt: response.data.updatedAt
     };
     
-    return mockCyclogram;
+    return createdCyclogram;
   } catch (error) {
     return handleApiError(error, 'creating cyclogram from template');
   }
@@ -358,130 +347,4 @@ export const createCyclogramFromTemplate = async (
 //   ];
 // };
 
-/**
- * Generate mock time slots for testing
- */
-const generateMockTimeSlots = (): CyclogramTimeSlot[] => {
-  const activities: CyclogramActivity[] = [
-    {
-      id: '1',
-      name: 'Утренняя гимнастика',
-      description: 'Комплекс упражнений для пробуждения организма',
-      duration: 15,
-      type: 'physical',
-      ageGroup: '4-5',
-      materials: ['коврики', 'музыкальное сопровождение'],
-      goals: ['развитие координации', 'укрепление здоровья'],
-      methods: ['показ', 'объяснение', 'совместное выполнение']
-    },
-    {
-      id: '2',
-      name: 'Завтрак',
-      description: 'Прием пищи с соблюдением культуры питания',
-      duration: 30,
-      type: 'meal',
-      ageGroup: '4-5',
-      goals: ['формирование культуры питания', 'получение энергии']
-    },
-    {
-      id: '3',
-      name: 'Развитие речи',
-      description: 'Занятие по развитию речевых навыков',
-      duration: 25,
-      type: 'educational',
-      ageGroup: '4-5',
-      materials: ['картинки', 'книги', 'дидактические игры'],
-      goals: ['развитие словарного запаса', 'формирование связной речи'],
-      methods: ['беседа', 'игра', 'рассказывание']
-    },
-    {
-      id: '4',
-      name: 'Прогулка',
-      description: 'Активный отдых на свежем воздухе',
-      duration: 60,
-      type: 'outdoor',
-      ageGroup: '4-5',
-      goals: ['укрепление здоровья', 'наблюдение за природой'],
-      methods: ['наблюдение', 'подвижные игры', 'труд в природе']
-    },
-    {
-      id: '5',
-      name: 'Обед',
-      description: 'Основной прием пищи',
-      duration: 40,
-      type: 'meal',
-      ageGroup: '4-5'
-    },
-    {
-      id: '6',
-      name: 'Дневной сон',
-      description: 'Отдых для восстановления сил',
-      duration: 120,
-      type: 'rest',
-      ageGroup: '4-5'
-    }
-  ];
-
-  const timeSlots: CyclogramTimeSlot[] = [];
-  
-  // Генерируем расписание для понедельника (dayOfWeek = 1)
-  const mondaySchedule = [
-    { startTime: '08:00', endTime: '08:15', activityIndex: 0 }, // Утренняя гимнастика
-    { startTime: '08:15', endTime: '08:45', activityIndex: 1 }, // Завтрак
-    { startTime: '09:00', endTime: '09:25', activityIndex: 2 }, // Развитие речи
-    { startTime: '09:30', endTime: '10:30', activityIndex: 3 }, // Прогулка
-    { startTime: '12:00', endTime: '12:40', activityIndex: 4 }, // Обед
-    { startTime: '13:00', endTime: '15:00', activityIndex: 5 }, // Дневной сон
-  ];
-
-  mondaySchedule.forEach((slot, index) => {
-    timeSlots.push({
-      id: `slot_${index + 1}`,
-      startTime: slot.startTime,
-      endTime: slot.endTime,
-      activity: activities[slot.activityIndex],
-      dayOfWeek: 1, // Понедельник
-      notes: ''
-    });
-  });
-
-  return timeSlots;
-};
-
-/**
- * Generate mock templates for testing
- */
-const generateMockTemplates = (): CyclogramTemplate[] => {
-  return [
-    {
-      id: 'template_1',
-      name: 'Стандартная циклограмма для средней группы (4-5 лет)',
-      description: 'Базовый шаблон согласно требованиям МОН РК для детей 4-5 лет',
-      ageGroup: '4-5',
-      timeSlots: generateMockTimeSlots().map(slot => ({
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-        activity: slot.activity,
-        dayOfWeek: slot.dayOfWeek,
-        notes: slot.notes
-      })),
-      isDefault: true,
-      createdAt: '2025-09-01T00:00:00'
-    },
-    {
-      id: 'template_2',
-      name: 'Стандартная циклограмма для старшей группы (5-6 лет)',
-      description: 'Базовый шаблон для подготовительной группы',
-      ageGroup: '5-6',
-      timeSlots: generateMockTimeSlots().map(slot => ({
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-        activity: slot.activity,
-        dayOfWeek: slot.dayOfWeek,
-        notes: slot.notes
-      })),
-      isDefault: true,
-      createdAt: '2025-09-01T00:00:00'
-    }
-  ];
-};
+// Удалены функции генерации моковых данных, так как теперь используются реальные API вызовы

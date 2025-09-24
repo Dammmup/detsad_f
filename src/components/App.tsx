@@ -4,14 +4,18 @@ import { SnackbarProvider } from './Snackbar';
 import SimpleLayout from './SimpleLayout';
 import Login from '../pages/LoginSimple';
 import Groups from '../pages/Children/Groups';
-import StaffTimeTracking from '../pages/Staff/StaffTimeTracking';
-import PayrollPage from '../pages/Staff/PayrollPage';
+import StaffAttendanceTracking from '../pages/Staff/StaffAttendanceTracking';
 import Children from '../pages/Children/Children';
 import Reports from '../pages/Reports';
 import { AuthProvider, ProtectedRoute } from './context/AuthContext';
 import { GroupsProvider } from './context/GroupsContext';
+import ReportsSalary from './reports/ReportsSalary';
 
 export const App = () => {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
   return (
     <AuthProvider>
       <SnackbarProvider>
@@ -28,8 +32,8 @@ export const App = () => {
               <ProtectedRoute>
                 <SimpleLayout>
                   <Routes>
-                    <Route path="staff/timetracking" element={<StaffTimeTracking />} />
-                    <Route path="reports/payroll" element={<PayrollPage isInReports={true} />} />
+                    <Route path="staff/attendance" element={<StaffAttendanceTracking />} />
+                    <Route path="reports/payroll" element={<ReportsSalary startDate={monthStart} endDate={monthEnd} />} />
                     <Route path="*" element={<Navigate to="dashboard" replace />} />
                     <Route path="reports" element={<Reports />} />
                   </Routes>

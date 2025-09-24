@@ -33,7 +33,7 @@ export const handleApiError: ErrorHandler = (error: any, context = '') => {
 /**
  * Создание экземпляра axios с базовой конфигурацией
  */
-export const createApiInstance = (baseURL: string = `${API_BASE_URL}/api`): AxiosInstance => {
+export const createApiInstance = (baseURL: string = API_BASE_URL): AxiosInstance => {
   const api = axios.create({
     baseURL,
     timeout: API_TIMEOUT,

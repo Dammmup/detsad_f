@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:8080'}/api`;
+const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:8080'}`;
 
 // Интерфейс для API ошибки
 interface ApiError extends Error {
@@ -233,42 +233,25 @@ export const deleteAttendanceRecord = async (userId: string, date?: string) => {
  */
 export const checkIn = async (userId: string, location?: { latitude: number, longitude: number }) => {
   try {
-    await delay(300);
-    
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.post('/attendance/check-in', { userId, location });
-    
-    // Получаем текущую дату и время
-    const now = new Date();
-    const date = now.toISOString().split('T')[0];
-    const time = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
-    
-    // Определяем статус (вовремя или опоздание)
-    const hour = now.getHours();
-    const minutes = now.getMinutes();
-    const status = (hour > 8 || (hour === 8 && minutes > 15)) ? 'late' : 'present';
-    
-    // Моковый адрес на основе координат
-    let address = 'Неизвестное местоположение';
-    if (location) {
-      address = 'ул. Достык 13, Астана'; // В реальном приложении здесь будет геокодирование
-    }
-    
-    // Моковые данные для тестирования
-    const mockRecord: AttendanceRecord = {
-      id: Math.random().toString(36).substring(2, 15),
+    const response = await api.post('/attendance/check-in', {
       userId,
-      userName: 'Сотрудник', // В реальном приложении здесь будет имя пользователя
-      date,
-      checkIn: time,
-      status,
-      location: location ? {
-        ...location,
-        address
-      } : undefined
+      location,
+      checkInTime: new Date().toISOString()
+    });
+    
+    const record: AttendanceRecord = {
+      id: response.data._id,
+      userId: response.data.userId,
+      userName: response.data.userName || 'Unknown User',
+      date: response.data.date,
+      checkIn: response.data.checkIn,
+      status: response.data.status,
+      workHours: response.data.workHours,
+      notes: response.data.notes,
+      location: response.data.location
     };
     
-    return mockRecord;
+    return record;
   } catch (error) {
     return handleApiError(error, 'checking in');
   }
@@ -283,43 +266,27 @@ export const checkIn = async (userId: string, location?: { latitude: number, lon
  */
 export const checkOut = async (userId: string, date: string, location?: { latitude: number, longitude: number }) => {
   try {
-    await delay(300);
-    
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.post('/attendance/check-out', { userId, date, location });
-    
-    // Получаем текущее время
-    const now = new Date();
-    const time = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
-    
-    // Определяем статус (ранний уход или нормальный)
-    const hour = now.getHours();
-    const status = (hour < 17) ? 'early-leave' : 'present';
-    
-    // Моковый адрес на основе координат
-    let address = 'Неизвестное местоположение';
-    if (location) {
-      address = 'ул. Достык 13, Астана'; // В реальном приложении здесь будет геокодирование
-    }
-    
-    // Моковые данные для тестирования
-    // В реальном приложении здесь будет обновление существующей записи
-    const mockRecord: AttendanceRecord = {
-      id: Math.random().toString(36).substring(2, 15),
+    const response = await api.post('/attendance/check-out', {
       userId,
-      userName: 'Сотрудник', // В реальном приложении здесь будет имя пользователя
       date,
-      checkIn: '08:00', // Предполагаем, что сотрудник уже отметился утром
-      checkOut: time,
-      status,
-      workHours: 8, // Примерное количество часов
-      location: location ? {
-        ...location,
-        address
-      } : undefined
+      location,
+      checkOutTime: new Date().toISOString()
+    });
+    
+    const record: AttendanceRecord = {
+      id: response.data._id,
+      userId: response.data.userId,
+      userName: response.data.userName || 'Unknown User',
+      date: response.data.date,
+      checkIn: response.data.checkIn,
+      checkOut: response.data.checkOut,
+      status: response.data.status,
+      workHours: response.data.workHours,
+      notes: response.data.notes,
+      location: response.data.location
     };
     
-    return mockRecord;
+    return record;
   } catch (error) {
     return handleApiError(error, 'checking out');
   }
@@ -334,43 +301,12 @@ export const checkOut = async (userId: string, date: string, location?: { latitu
  */
 export const getAttendanceStatistics = async (startDate: string, endDate: string, userId?: string) => {
   try {
-    await delay(500);
+    const params: any = { startDate, endDate };
+    if (userId) params.userId = userId;
     
-    // В реальном приложении здесь будет запрос к API
-    // const response = await api.get('/attendance/statistics', { params: { startDate, endDate, userId } });
+    const response = await api.get('/attendance/statistics', { params });
     
-    // Получаем записи посещаемости
-    const records = await getAttendanceRecords(startDate, endDate, userId);
-    
-    // Вычисляем статистику
-    const totalDays = records.length;
-    const presentDays = records.filter(r => r.status === 'present').length;
-    const lateDays = records.filter(r => r.status === 'late').length;
-    const absentDays = records.filter(r => r.status === 'absent').length;
-    const earlyLeaveDays = records.filter(r => r.status === 'early-leave').length;
-    const sickDays = records.filter(r => r.status === 'sick').length;
-    const vacationDays = records.filter(r => r.status === 'vacation').length;
-    
-    // Вычисляем общее количество рабочих часов
-    const totalWorkHours = records.reduce((sum, record) => {
-      return sum + (record.workHours || 0);
-    }, 0);
-    
-    // Моковые данные для тестирования
-    const statistics = {
-      totalDays,
-      presentDays,
-      lateDays,
-      absentDays,
-      earlyLeaveDays,
-      sickDays,
-      vacationDays,
-      totalWorkHours,
-      attendanceRate: totalDays > 0 ? (presentDays / totalDays) * 100 : 0,
-      punctualityRate: totalDays > 0 ? ((presentDays - lateDays) / totalDays) * 100 : 0
-    };
-    
-    return statistics;
+    return response.data;
   } catch (error) {
     return handleApiError(error, 'fetching attendance statistics');
   }

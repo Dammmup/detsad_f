@@ -25,13 +25,14 @@ import sidebarStructure from './Sidebar/SidebarStructure';
 import { useLocation } from 'react-router-dom';
 import ChildrenReports from '../pages/Children/ChildrenReports';
 import StaffSchedule from '../pages/Staff/StaffSchedule';
-import StaffAttendance from '../pages/Staff/StaffAttendance';
-import StaffTimeTracking from '../pages/Staff/StaffTimeTracking';
+
 import WeeklyAttendance from '../pages/Children/WeeklyAttendance';
-import PayrollPage from '../pages/Staff/PayrollPage';
+import ReportsSalary from '../components/reports/ReportsSalary';
 import { logout } from '../services/api/auth';
 import { useNavigate } from 'react-router-dom';
 import Reports from '../pages/Reports';
+import Analytics from '../pages/Analytics';
+import StaffAttendanceTracking from '../pages/Staff/StaffAttendanceTracking';
 
 interface SimpleLayoutProps {
   children?: React.ReactNode;
@@ -50,6 +51,10 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
     await logout();
     navigate('/login');
   };
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -102,8 +107,8 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             {/* Сотрудники */}
             <Route path="staff" element={<Staff />} />
             <Route path="staff/schedule" element={<StaffSchedule />} />
-            <Route path="staff/attendance" element={<StaffAttendance />} />
-            <Route path="staff/timetracking" element={<StaffTimeTracking />} />
+            <Route path="staff/attendance" element={<StaffAttendanceTracking />} />
+         
             <Route path="staff/reports" element={<Reports />} />
 
             {/* Документы */}
@@ -112,8 +117,8 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
 
             {/* Отчеты */}
             <Route path="reports" element={<Reports />} />
-            <Route path="reports/payroll" element={<PayrollPage isInReports={true} />} />
-            <Route path="reports/analytics" element={<div>Аналитика (реализовать)</div>} />
+            <Route path="reports/payroll" element={<ReportsSalary startDate={monthStart} endDate={monthEnd} />} />
+            <Route path="reports/analytics" element={<Analytics />} />
 
             {/* Организация/Настройки */}
             <Route path="groups" element={<Groups />} />

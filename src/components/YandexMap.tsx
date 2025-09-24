@@ -23,11 +23,18 @@ const YandexMap: React.FC<YandexMapProps> = ({
 
   // Загрузка API Яндекс.Карт
   useEffect(() => {
-    if (!apiKey) return;
+    // Если API ключ не предоставлен, не загружаем карту
+    if (!apiKey) {
+      return;
+    }
 
     const scriptId = 'yandex-map-script';
+    // Удаляем существующий скрипт, если он есть
     if (document.getElementById(scriptId)) {
-      return;
+      const existingScript = document.getElementById(scriptId);
+      if (existingScript && existingScript.parentNode) {
+        existingScript.parentNode.removeChild(existingScript);
+      }
     }
 
     const script = document.createElement('script');
@@ -40,17 +47,31 @@ const YandexMap: React.FC<YandexMapProps> = ({
     document.head.appendChild(script);
 
     return () => {
+      // Очищаем карту при размонтировании компонента
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.destroy();
+        mapInstanceRef.current = null;
+      }
+      circleRef.current = null;
+      setYmaps(null);
+      // Удаляем скрипт при размонтировании компонента
       if (document.getElementById(scriptId)) {
-        document.head.removeChild(script);
+        const scriptElement = document.getElementById(scriptId);
+        if (scriptElement && scriptElement.parentNode) {
+          scriptElement.parentNode.removeChild(scriptElement);
+        }
       }
     };
   }, [apiKey]);
 
   // Инициализация карты
   useEffect(() => {
-    if (!ymaps || !mapContainerRef.current) return;
+    if (!ymaps || !mapContainerRef.current || mapInstanceRef.current) return;
 
     ymaps.ready(() => {
+      // Проверяем, что контейнер еще существует
+      if (!mapContainerRef.current) return;
+      
       // @ts-ignore
       const map = new window.ymaps.Map(mapContainerRef.current, {
         center: [center.lat, center.lng],
@@ -67,7 +88,7 @@ const YandexMap: React.FC<YandexMapProps> = ({
           draggable: true,
           fillColor: '#00FF00',
           fillOpacity: 0.3,
-          strokeColor: '#0000FF',
+          strokeColor: '#00FF',
           strokeOpacity: 0.8,
           strokeWidth: 2
         }
@@ -97,20 +118,12 @@ const YandexMap: React.FC<YandexMapProps> = ({
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.destroy();
+        mapInstanceRef.current = null;
       }
     };
-  }, [ymaps, center, radius, onCenterChange, onRadiusChange]);
+  }, [ymaps, center, radius, onCenterChange]);
 
-  // Обновление радиуса круга
-  useEffect(() => {
-    if (circleRef.current) {
-      const geometry = circleRef.current.geometry;
-      const center = geometry.getCoordinates();
-      geometry.setCoordinates([center, radius]);
-    }
-  }, [radius]);
-
-  // Обновление центра круга
+  // Обновление радиуса и центра круга
   useEffect(() => {
     if (circleRef.current) {
       circleRef.current.geometry.setCoordinates([[center.lat, center.lng], radius]);
@@ -126,8 +139,15 @@ const YandexMap: React.FC<YandexMapProps> = ({
 
   return (
     <Box>
-      <Box 
-        ref={mapContainerRef} 
+      {!apiKey && (
+        <Box sx={{ mb: 2, p: 2, bgcolor: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: 1 }}>
+          <Typography color="warning.main">
+            Для отображения карты необходимо ввести API ключ Яндекс.Карт в настройках геолокации.
+          </Typography>
+        </Box>
+      )}
+      <Box
+        ref={mapContainerRef}
         sx={{ width: '100%', height: 400, mb: 2, border: '1px solid #ccc' }}
       />
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

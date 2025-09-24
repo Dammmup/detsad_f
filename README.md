@@ -1,120 +1,217 @@
-# 🚀 React Material Admin - A Free Material-UI Dashboard Template!
+# Frontend Documentation
 
-[View Demo](https://flatlogic.com/templates/react-material-admin-full/demo) | [Download](https://github.com/flatlogic/react-material-admin/archive/refs/heads/master.zip) | [More Templates](https://flatlogic.com/templates) | [Discord Community](https://discord.gg/flatlogic-community) | [Support Forum](https://flatlogic.com/forum)
+## Overview
 
-**Originally a premium product priced at $99+, now available for free!** 🎉
+This is the frontend application for the Kindergarten Management System. It's built with React and Material-UI, providing a comprehensive interface for managing all aspects of a kindergarten.
 
-[![image](https://user-images.githubusercontent.com/24964748/55800639-df780300-5adc-11e9-84b7-7c2437088516.png)](https://flatlogic.com/templates/react-material-admin-full/demo)
+## Technologies Used
 
-Looking for a perfect codebase generator for your Startup? Try [Flatlogic AI Web App Generator](https://flatlogic.com/generator) - our new tool, sort of a template++.
+- **React** - JavaScript library for building user interfaces
+- **Material-UI** - React components for faster and easier web development
+- **TypeScript** - Typed superset of JavaScript
+- **Axios** - Promise based HTTP client
+- **React Router** - Declarative routing for React
+- **XLSX** - Library for reading and writing Excel files
+- **FileSaver** - Client-side solution for saving files
 
----
+## Project Structure
 
-## 🎯 Why React Material Admin?
-- **Ex-Premium**: This template was previously paid. Enjoy it for free now. 😉
-- **Material-UI Based**: Built with Material-UI for a modern and sleek UI.
-- **Join the Community**: [Flatlogic Discord](https://discord.gg/flatlogic-community) is where the action happens.
-- **Free Node.js Backend**: Pair it up with [this backend](https://github.com/flatlogic/nodejs-backend) to go full-stack.
+```
+src/
+├── components/          # Reusable UI components
+│   ├── App.tsx         # Main application component
+│   ├── Sidebar/        # Sidebar navigation
+│   └── context/        # React context providers
+├── hooks/              # Custom React hooks
+├── pages/              # Page components
+│   ├── Children/       # Children management pages
+│   ├── Staff/          # Staff management pages
+│   ├── Documents/      # Document management pages
+│   ├── Reports/       # Reporting pages
+│   └── Settings/       # Settings pages
+├── services/          # API service clients
+│   └── api/            # Individual API modules
+├── types/              # TypeScript type definitions
+└── utils/              # Utility functions
+    ├── api.ts          # API client utilities
+    ├── excelExport.ts  # Excel export utilities
+    ├── format.ts       # Data formatting utilities
+    └── validation.ts   # Data validation utilities
+```
 
----
+## Key Features
 
-## 🚀 Quick Start
+### 1. User Management
+- User authentication (login/logout)
+- Role-based access control
+- User profile management
+- Password reset functionality
 
-1. **Clone the repo**
-   ```bash
-   git clone https://github.com/flatlogic/react-material-admin.git
-   cd react-material-admin
-   ```
-2. **Install dependencies**
-   ```bash
-   yarn install
-   ```
-3. **Run the app**
-   ```bash
-   yarn start
-   ```
-4. **Runs the app in the development mode without backend**
-    ```bash 
-    yarn dev
-    ```
+### 2. Children Management
+- Child registration and profile management
+- Group assignment
+- Parent information management
+- Medical information tracking
 
-5. **Build for production**
-   ```bash
-   yarn build
-   ```
+### 3. Staff Management
+- Employee profile management
+- Role and permission assignment
+- Contact information
+- Employment details
 
----
+### 4. Attendance Tracking
+- Daily attendance marking for children
+- Staff time tracking
+- Absence reporting
+- Late arrival tracking
 
-## 🧩 Features
+### 5. Scheduling
+- Staff shift scheduling
+- Group activity scheduling
+- Calendar view
+- Schedule notifications
 
-- Three Color Themes
-- Fully Responsive
-- React 16.14.0 + Hooks
-- Material-UI v4
-- Authentication System
-- Modular Architecture
-- Charts Libraries
-- Dashboard Pages
-- CSS-in-JS Styling
-- Create-React-App Under the Hood
+### 6. Documents
+- Document upload and management
+- Document templates
+- Document categorization
+- Document search and filtering
+- Document download and sharing
 
----
+#### Document Types
+- Contracts
+- Certificates
+- Reports
+- Policies
+- Other custom documents
 
-## 🛠 Built With
+#### Document Categories
+- Staff-related documents
+- Children-related documents
+- Financial documents
+- Administrative documents
+- Other custom categories
 
-- React 16.14.0
-- Material-UI v4
-- React Hooks & Context API
-- React Router v5
-- Webpack
-- Node.js (for backend)
+### 7. Reporting
+- Attendance reports
+- Financial reports
+- Staff performance reports
+- Child progress reports
+- Custom report generation
+- Report export (PDF, Excel, CSV)
 
----
+### 8. Payroll
+- Salary calculation
+- Bonus and deduction tracking
+- Payroll reports
+- Payment history
 
-## 📦 Components
+### 9. Settings
+- System configuration
+- User preferences
+- Notification settings
+- Data backup and restore
 
-- UI Elements (Buttons, Modals, Forms)
-- Charts (Line, Bar, Pie)
-- Authentication (Login, Signup)
-- Tables (Static, Dynamic)
-- Profile Page
-- Notifications
+## API Integration
 
----
+The frontend communicates with the backend API through service modules located in `src/services/api/`. Each module handles specific API endpoints:
 
-## 🌍 Available Variants
+- `auth.ts` - Authentication endpoints
+- `users.ts` - User management endpoints
+- `groups.ts` - Group management endpoints
+- `attendance.ts` - Attendance tracking endpoints
+- `shifts.ts` - Staff shift endpoints
+- `documents.ts` - Document management endpoints
+- `reports.ts` - Reporting endpoints
+- `payroll.ts` - Payroll endpoints
+- `settings.ts` - Settings endpoints
 
-|               | **Material**                                              | **Transparent**                                         | **Classic**                                          | **Sofia**                                          | **Flatlogic**                                      |
-|---------------|-----------------------------------------------------------|---------------------------------------------------------|-------------------------------------------------------|-----------------------------------------------------|----------------------------------------------------|
-| **React**     | [React Material Admin](https://github.com/flatlogic/react-material-admin) | [Light Blue React](https://github.com/flatlogic/light-blue-react) | [Sing App React](https://github.com/flatlogic/sing-app-react) | [Sofia React](https://github.com/flatlogic/sofia-react) | [One React](https://github.com/flatlogic/one-react) |
-| **Angular**   | [Angular Material Admin](https://github.com/flatlogic/angular-material-admin-full) | [Light Blue Angular](https://github.com/flatlogic/light-blue-angular) | [Sing App Angular](https://github.com/flatlogic/sing-app-angular) | - | - |
-| **Vue**       | [Material Vue](https://github.com/flatlogic/material-vue-full) | [Light Blue Vue](https://github.com/flatlogic/light-blue-vue) | [Sing App Vue](https://github.com/flatlogic/sing-app-vue-dashboard) | - | - |
-| **Bootstrap** | - | [Light Blue HTML5](https://github.com/flatlogic/light-blue-html5) | [Sing App HTML5](https://github.com/flatlogic/sing-app-html5) | - | [One Bootstrap](https://github.com/flatlogic/one-bootstrap-template-full) |
+## State Management
 
+The application uses React Context API for state management:
 
-Additionally, these templates are tailored for specific business needs:
-- [E-Commerce Frontend (React)](https://github.com/flatlogic/ecommerce-frontend) - A complete e-commerce solution.
-- [Bookkeeper UI (React)](https://github.com/flatlogic/bookkeeper-ui) - Accounting dashboard for finance management.
-- [User Management Template (React)](https://github.com/flatlogic/user-management-template) - User authentication and management.
+- `AuthContext` - Authentication state
+- `GroupsContext` - Group data
+- `TimeTrackingContext` - Time tracking data
 
----
+## Routing
 
-## 👨‍💻 How to Contribute
+The application uses React Router for navigation with the following main routes:
 
-- **Star this repo ⭐** - show some love.
-- **Report bugs** - but be nice.
-- **Join the [Discord](https://discord.gg/flatlogic-community)** - meet fellow devs.
+- `/login` - Login page
+- `/app` - Main application layout
+- `/app/dashboard` - Dashboard
+- `/app/children` - Children management
+- `/app/staff` - Staff management
+- `/app/documents` - Document management
+- `/app/reports` - Reporting
+- `/app/settings` - Settings
 
----
+## Styling
 
-## 🔥 About Flatlogic
+The application uses Material-UI for styling with a consistent theme. Custom styles are implemented using:
 
-[Flatlogic](https://flatlogic.com/ai-software-development-agent) builds modern business software so you don't have to. Our AI Software Development Agent helps you generate, deploy, and maintain enterprise applications with minimal effort.
+- Material-UI's `sx` prop
+- Styled components
+- CSS modules where needed
 
----
+## Data Export
 
-> **Questions or feedback?**  
-> Join our [Flatlogic Community Discord](https://discord.gg/flatlogic-community) or visit our [support forum](https://flatlogic.com/forum). We might even reply!
+The application supports exporting data in multiple formats:
 
----
+- **Excel** - Detailed reports with formatting
+- **PDF** - Printable reports
+- **CSV** - Simple data exports
 
+Export functionality is implemented in `src/utils/excelExport.ts`.
+
+## Validation
+
+Form validation is implemented using custom validation utilities in `src/utils/validation.ts`. The validation includes:
+
+- Required field validation
+- Email format validation
+- Phone number validation
+- Date validation
+- Numeric value validation
+- Custom business rule validation
+
+## Error Handling
+
+The application implements comprehensive error handling:
+
+- API error handling
+- Form validation errors
+- User-friendly error messages
+- Error logging
+
+## Testing
+
+The application includes unit tests and integration tests for critical components and services.
+
+## Deployment
+
+To build and deploy the application:
+
+1. Install dependencies: `npm install`
+2. Build the application: `npm run build`
+3. Serve the built files from the `build/` directory
+
+## Environment Variables
+
+The application uses environment variables for configuration:
+
+- `REACT_APP_API_URL` - Backend API URL
+- `REACT_APP_NAME` - Application name
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a pull request
+
+## License
+
+This project is licensed under the MIT License.

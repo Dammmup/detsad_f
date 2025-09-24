@@ -363,3 +363,93 @@ export const getCurrentMonthRange = (): { startDate: string; endDate: string } =
     endDate: endDate.toISOString().split('T')[0]
   };
 };
+
+// 6. Экспорт списка документов
+export const exportDocumentsList = async (documents: any[]): Promise<void> => {
+  const headers = [
+    'Название документа',
+    'Тип',
+    'Категория',
+    'Связанный объект',
+    'Статус',
+    'Дата загрузки',
+    'Загрузчик',
+    'Размер файла',
+    'Теги'
+  ];
+  
+  const data = documents.map(doc => [
+    doc.title || '',
+    doc.type === 'contract' ? 'Договор' :
+    doc.type === 'certificate' ? 'Справка' :
+    doc.type === 'report' ? 'Отчет' :
+    doc.type === 'policy' ? 'Политика' : 'Другое',
+    doc.category === 'staff' ? 'Сотрудники' :
+    doc.category === 'children' ? 'Дети' :
+    doc.category === 'financial' ? 'Финансы' :
+    doc.category === 'administrative' ? 'Администрация' : 'Другое',
+    doc.relatedType === 'staff' ? `Сотрудник: ${doc.relatedId?.fullName || ''}` :
+    doc.relatedType === 'child' ? `Ребенок: ${doc.relatedId?.fullName || ''}` :
+    doc.relatedType === 'group' ? `Группа: ${doc.relatedId?.name || ''}` : '',
+    doc.status === 'active' ? 'Активен' : 'Архивирован',
+    doc.uploadDate ? formatDate(new Date(doc.uploadDate)) : '',
+    doc.uploader?.fullName || '',
+    doc.fileSize ? `${(doc.fileSize / 1024).toFixed(2)} KB` : '',
+    doc.tags?.join(', ') || ''
+  ]);
+  
+  const config: ExportConfig = {
+    filename: 'Список_документов',
+    sheetName: 'Документы',
+    title: 'Список документов',
+    headers,
+    data,
+    includeDate: true
+  };
+  
+  exportToExcel(config);
+};
+
+// 7. Экспорт списка шаблонов документов
+export const exportDocumentTemplatesList = async (templates: any[]): Promise<void> => {
+  const headers = [
+    'Название шаблона',
+    'Тип',
+    'Категория',
+    'Версия',
+    'Статус',
+    'Дата создания',
+    'Использован раз',
+    'Размер файла',
+    'Теги'
+  ];
+  
+  const data = templates.map(template => [
+    template.name || '',
+    template.type === 'contract' ? 'Договор' :
+    template.type === 'certificate' ? 'Справка' :
+    template.type === 'report' ? 'Отчет' :
+    template.type === 'policy' ? 'Политика' : 'Другое',
+    template.category === 'staff' ? 'Сотрудники' :
+    template.category === 'children' ? 'Дети' :
+    template.category === 'financial' ? 'Финансы' :
+    template.category === 'administrative' ? 'Администрация' : 'Другое',
+    template.version || '1.0',
+    template.isActive ? 'Активен' : 'Неактивен',
+    template.createdAt ? formatDate(new Date(template.createdAt)) : '',
+    template.usageCount || 0,
+    template.fileSize ? `${(template.fileSize / 1024).toFixed(2)} KB` : '',
+    template.tags?.join(', ') || ''
+  ]);
+  
+  const config: ExportConfig = {
+    filename: 'Список_шаблонов_документов',
+    sheetName: 'Шаблоны документов',
+    title: 'Список шаблонов документов',
+    headers,
+    data,
+    includeDate: true
+  };
+  
+  exportToExcel(config);
+};
