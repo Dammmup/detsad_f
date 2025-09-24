@@ -22,6 +22,8 @@ import {
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { getDocuments, createDocument, updateDocument, deleteDocument, downloadDocument } from '../../services/api/documents';
+import ExportAutoTemplatesButton from '../../components/ExportAutoTemplatesButton';
+import { staffTemplates } from '../../utils/documentTemplates';
 import { usersApi } from '../../services/api/users';
 
 interface StaffMember {
@@ -47,6 +49,7 @@ interface StaffDocument {
 }
 
 const StaffDocuments: React.FC = () => {
+
   const [documents, setDocuments] = useState<StaffDocument[]>([]);
   const [filteredDocuments, setFilteredDocuments] = useState<StaffDocument[]>([]);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
@@ -367,6 +370,8 @@ const StaffDocuments: React.FC = () => {
           Добавить документ
         </Button>
       </Box>
+      {/* Кнопки экспорта автодокументов */}
+      <ExportAutoTemplatesButton templates={staffTemplates} />
 
       {/* Статистика */}
       <Grid container spacing={3} mb={3}>

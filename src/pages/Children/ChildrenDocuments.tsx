@@ -22,6 +22,8 @@ import {
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { getDocuments, createDocument, updateDocument, deleteDocument, downloadDocument } from '../../services/api/documents';
+import ExportAutoTemplatesButton from '../../components/ExportAutoTemplatesButton';
+import { childrenTemplates } from '../../utils/documentTemplates';
 import { usersApi } from '../../services/api/users';
 
 interface Child {
@@ -48,6 +50,7 @@ interface ChildDocument {
 }
 
 const ChildrenDocuments: React.FC = () => {
+
   const [documents, setDocuments] = useState<ChildDocument[]>([]);
   const [filteredDocuments, setFilteredDocuments] = useState<ChildDocument[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
@@ -383,6 +386,8 @@ const ChildrenDocuments: React.FC = () => {
           Добавить документ
         </Button>
       </Box>
+      {/* Кнопки экспорта автодокументов */}
+      <ExportAutoTemplatesButton templates={childrenTemplates} />
 
       {/* Статистика */}
       <Grid container spacing={3} mb={3}>

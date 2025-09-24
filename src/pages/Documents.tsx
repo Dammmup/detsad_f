@@ -20,6 +20,7 @@ import {
   LibraryBooks as TemplateIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
+import { formatFileSize, getFileIcon, getTypeText, getCategoryText } from '../utils/documentUtils';
 import { ru } from 'date-fns/locale';
 import { 
   getDocuments, 
@@ -29,8 +30,11 @@ import {
   downloadDocument 
 } from '../services/api/documents';
 import { Document as DocumentType } from '../types/documents';
+import ExportAutoTemplatesButton from '../components/ExportAutoTemplatesButton';
+import { generalTemplates } from '../utils/documentTemplates';
+import { getStatusColor } from '../utils/format';
 
-const Documents: React.FC = () => {
+export const Documents= () => {
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [filteredDocuments, setFilteredDocuments] = useState<DocumentType[]>([]);
   const [page, setPage] = useState(0);
@@ -90,7 +94,7 @@ const Documents: React.FC = () => {
       tags: ['политика', 'конфиденциальность', 'администрация']
     }
   ];
-  
+
   // Загрузка данных
   useEffect(() => {
     const loadData = async () => {
@@ -143,14 +147,7 @@ const Documents: React.FC = () => {
     setPage(0); // Сброс на первую страницу при изменении фильтров
   }, [documents, searchTerm, filterType, filterCategory, filterStatus]);
   
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-  
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+
   
   const handleOpenDialog = (document?: DocumentType) => {
     setCurrentDocument(document || {
@@ -255,53 +252,15 @@ const Documents: React.FC = () => {
     }
   };
   
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
   };
   
-  const getTypeText = (type: string): string => {
-    switch (type) {
-      case 'contract': return 'Договор';
-      case 'report': return 'Отчет';
-      case 'certificate': return 'Справка';
-      case 'policy': return 'Политика';
-      default: return 'Другое';
-    }
-  };
-  
-  const getCategoryText = (category: string): string => {
-    switch (category) {
-      case 'staff': return 'Сотрудники';
-      case 'children': return 'Дети';
-      case 'financial': return 'Финансы';
-      case 'administrative': return 'Администрация';
-      default: return 'Другое';
-    }
- };
-  
-  const getStatusColor = (status: string): 'success' | 'default' | 'error' => {
-    switch (status) {
-      case 'active': return 'success';
-      case 'archived': return 'default';
-      default: return 'default';
-    }
-  };
-  
-  const getFileIcon = (fileName: string) => {
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    switch (ext) {
-      case 'pdf': return <PdfIcon color="error" />;
-      case 'xlsx':
-      case 'xls': return <ExcelIcon color="success" />;
-      case 'doc':
-      case 'docx': return <FileIcon color="primary" />;
-      default: return <FileIcon />;
-    }
-  };
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  setRowsPerPage(parseInt(event.target.value, 10));
+  setPage(0);
+};
   
   if (loading) {
     return (
@@ -325,9 +284,10 @@ const Documents: React.FC = () => {
   return (
     <Box p={3}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Все документы
+        <Typography variant="h5" gutterBottom>
+          Документы
         </Typography>
+        <ExportAutoTemplatesButton templates={generalTemplates} />
         <Box>
           <Button 
             variant="outlined" 
@@ -774,6 +734,5 @@ const Documents: React.FC = () => {
       </Dialog>
     </Box>
   );
-};
+}
 
-export default Documents;
