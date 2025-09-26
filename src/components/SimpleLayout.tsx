@@ -33,6 +33,7 @@ import { useNavigate } from 'react-router-dom';
 import Reports from '../pages/Reports';
 import Analytics from '../pages/Analytics';
 import StaffAttendanceTracking from '../pages/Staff/StaffAttendanceTracking';
+import { Documents } from '../pages/Documents';
 
 interface SimpleLayoutProps {
   children?: React.ReactNode;
@@ -112,7 +113,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path="staff/reports" element={<Reports />} />
 
             {/* Документы */}
-            <Route path="documents" element={<div>Документы (реализовать)</div>} />
+            <Route path="documents" element={<Documents/>} />
             <Route path="documents/templates" element={<DocumentsTemplates />} />
 
             {/* Отчеты */}

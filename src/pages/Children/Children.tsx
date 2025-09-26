@@ -1,30 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, Alert,
-  FormControl, InputLabel, Select, MenuItem,
+  Paper, IconButton, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem,
   SelectChangeEvent
 } from '@mui/material';
 import { Add, Edit, Delete} from '@mui/icons-material';
-import { getUsers, createUser, updateUser, deleteUser,  } from '../../services/api/users';
+import { getUsers, createUser, updateUser, deleteUser } from '../../services/api/users';
 import { getGroups } from '../../services/api/groups';
 import { Group,User } from '../../types/common';
 import { exportChildrenList } from '../../utils/excelExport';
 import ExportMenuButton from '../../components/ExportMenuButton';
 import axios from 'axios';
-
-const defaultForm: Omit<Partial<User>, 'role'> = {
-  fullName: '',
-  birthday: '',
-  parentPhone: '',
-  notes: '',
-  iin: '',
-  groupId: '',
-  parentName: '',
-  type: 'child',
-  active: true,
-  phone: '', // для совместимости с API
-};
+import ChildrenModal from '../../components/ChildrenModal';
 
 const Children: React.FC = () => {
   const [children, setChildren] = useState<User[]>([]);
@@ -32,9 +19,7 @@ const Children: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState<Partial<User>>(defaultForm);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [editingChild, setEditingChild] = useState<User | null>(null);
 
   // Экспорт: скачать файл
   const handleExportDownload = () => {
@@ -81,86 +66,13 @@ const Children: React.FC = () => {
   }, []);
 
   const handleOpenModal = (child?: User) => {
-    if (child) {
-      setForm({
-        ...defaultForm,
-        ...child,
-        fullName: child.fullName || '',
-        phone: child.phone || '',
-        iin: child.iin || '',
-        groupId: child.groupId || '',
-        parentName: child.parentName || '',
-        parentPhone: child.parentPhone || '',
-        birthday: child.birthday || '',
-        notes: child.notes || '',
-      });
-      setEditId(child.id || child._id || null);
-    } else {
-      setForm(defaultForm);
-      setEditId(null);
-    }
+    setEditingChild(child || null);
     setModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setModalOpen(false);
-    setForm(defaultForm);
-    setEditId(null);
-  };
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
-    const { name, value } = e.target;
-    if (name) {
-      setForm({ ...form, [name]: value });
-    }
-  };
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      if (editId) {
-        // Редактирование существующего пользователя
-        const userData: Partial<User> = {
-          id: editId,
-          type: 'child',
-          fullName: form.fullName || '',
-          phone: form.phone || '',
-          parentPhone: form.parentPhone || '',
-          birthday: form.birthday || '',
-          iin: form.iin || '',
-          groupId: form.groupId || '',
-          parentName: form.parentName || '',
-          notes: form.notes || '',
-          active: form.active !== false,
-        };
-        await updateUser(editId, userData);
-      } else {
-        // Создание нового пользователя - убираем id, так как оно будет сгенерировано на сервере
-        // Создаем объект с теми полями, которые нужны для детей
-        const userData = {
-          type: 'child' as const,
-          fullName: form.fullName || '',
-          phone: form.parentPhone || '', // Для детей phone = parentPhone!
-          parentPhone: form.parentPhone || '',
-          birthday: form.birthday || '',
-          iin: form.iin || '',
-          groupId: form.groupId || '',
-          parentName: form.parentName || '',
-          notes: form.notes || '',
-          active: form.active !== false,
-        };
-        await createUser(userData);
-      }
-      
-      handleCloseModal();
-      fetchChildren();
-    } catch (e: any) {
-      setError(e?.message || 'Ошибка сохранения');
-    } finally {
-      setSaving(false);
-    }
+    setEditingChild(null);
   };
 
   const handleDelete = async (id?: string) => {
@@ -239,84 +151,12 @@ const Children: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
-        <DialogTitle>{editId ? 'Редактировать ребёнка' : 'Добавить ребёнка'}</DialogTitle>
-        <DialogContent>
-          <TextField
-            margin="dense"
-            name="fullName"
-            label="ФИО"
-            value={form.fullName}
-            onChange={handleChange}
-            fullWidth
-            required
-          />
-          <TextField
-            margin="dense"
-            name="birthday"
-            label="Дата рождения"
-            type="date"
-            value={form.birthday ? String(form.birthday).slice(0, 10) : ''}
-            onChange={handleChange}
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-          />
-          <TextField
-            margin="dense"
-            name="parentPhone"
-            label="Телефон родителя"
-            value={form.parentPhone}
-            onChange={handleChange}
-            fullWidth
-          />
-          <TextField
-            margin="dense"
-            name="iin"
-            label="ИИН"
-            value={form.iin}
-            onChange={handleChange}
-            fullWidth
-          />
-          <FormControl fullWidth margin="dense">
-            <InputLabel>Группа</InputLabel>
-            <Select
-  name="groupId"
-  value={form.groupId || ''}
-  onChange={handleSelectChange}
-  label="Группа"
->
-  <MenuItem value="">Не выбрано</MenuItem>
-  {groups.map((g) => (
-    <MenuItem key={g.id || g._id} value={g.id || g._id}>{g.name}</MenuItem>
-  ))}
-</Select>
-          </FormControl>
-          <TextField
-            margin="dense"
-            name="parentName"
-            label="ФИО родителя"
-            value={form.parentName}
-            onChange={handleChange}
-            fullWidth
-          />
-          <TextField
-            margin="dense"
-            name="notes"
-            label="Заметки"
-            value={form.notes}
-            onChange={handleChange}
-            fullWidth
-            multiline
-            rows={2}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModal}>Отмена</Button>
-          <Button onClick={handleSave} variant="contained" disabled={saving}>
-            {editId ? 'Сохранить' : 'Добавить'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ChildrenModal
+        open={modalOpen}
+        onClose={handleCloseModal}
+        onSaved={fetchChildren}
+        child={editingChild}
+      />
     </Box>
   );
 };
