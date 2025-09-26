@@ -113,7 +113,6 @@ const ReportsSalary: React.FC<Props> = ({ startDate, endDate, userId }) => {
                 <TableCell>Сотрудник</TableCell>
                 <TableCell>Месяц</TableCell>
                 <TableCell align="right">Начисления</TableCell>
-                <TableCell align="right">Премии</TableCell>
                 <TableCell align="right">Штрафы</TableCell>
                 <TableCell align="right">Итого</TableCell>
               </TableRow>

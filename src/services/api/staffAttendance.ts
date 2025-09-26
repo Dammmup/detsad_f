@@ -68,7 +68,7 @@ export interface BulkSaveResult {
 // Get staff attendance records
 export const getStaffAttendance = async (filters: StaffAttendanceFilters = {}): Promise<StaffAttendanceRecord[]> => {
   try {
-    const response = await axios.get(`${API_URL}/staff-attendance`, {
+  const response = await axios.get(`${API_URL}/api/staff-attendance`, {
       params: filters
     });
     return response.data;
@@ -81,7 +81,7 @@ export const getStaffAttendance = async (filters: StaffAttendanceFilters = {}): 
 // Save single staff attendance record
 export const saveStaffAttendance = async (record: Partial<StaffAttendanceRecord>): Promise<StaffAttendanceRecord> => {
   try {
-    const response = await axios.post(`${API_URL}/staff-attendance`, record);
+  const response = await axios.post(`${API_URL}/api/staff-attendance`, record);
     return response.data;
   } catch (error: any) {
     console.error('Error saving staff attendance:', error);
@@ -92,7 +92,7 @@ export const saveStaffAttendance = async (record: Partial<StaffAttendanceRecord>
 // Bulk save staff attendance records
 export const bulkSaveStaffAttendance = async (records: Partial<StaffAttendanceRecord>[]): Promise<BulkSaveResult> => {
   try {
-    const response = await axios.post(`${API_URL}/staff-attendance/bulk`, { records });
+  const response = await axios.post(`${API_URL}/api/staff-attendance/bulk`, { records });
     return response.data;
   } catch (error: any) {
     console.error('Error bulk saving staff attendance:', error);
@@ -103,7 +103,7 @@ export const bulkSaveStaffAttendance = async (records: Partial<StaffAttendanceRe
 // Check-in
 export const checkIn = async (location?: { latitude: number; longitude: number; address?: string }): Promise<{ message: string; attendance: StaffAttendanceRecord; lateMinutes: number }> => {
   try {
-    const response = await axios.post(`${API_URL}/staff-attendance/check-in`, { location });
+  const response = await axios.post(`${API_URL}/api/staff-attendance/check-in`, { location });
     return response.data;
   } catch (error: any) {
     console.error('Error during check-in:', error);
@@ -120,7 +120,7 @@ export const checkOut = async (location?: { latitude: number; longitude: number;
   workHours: number;
 }> => {
   try {
-    const response = await axios.post(`${API_URL}/staff-attendance/check-out`, { location });
+  const response = await axios.post(`${API_URL}/api/staff-attendance/check-out`, { location });
     return response.data;
   } catch (error: any) {
     console.error('Error during check-out:', error);
@@ -131,7 +131,7 @@ export const checkOut = async (location?: { latitude: number; longitude: number;
 // Get attendance statistics
 export const getStaffAttendanceStats = async (filters: StaffAttendanceFilters = {}): Promise<StaffAttendanceStats> => {
   try {
-    const response = await axios.get(`${API_URL}/staff-attendance/stats`, {
+  const response = await axios.get(`${API_URL}/api/staff-attendance/stats`, {
       params: filters
     });
     return response.data;
@@ -144,7 +144,7 @@ export const getStaffAttendanceStats = async (filters: StaffAttendanceFilters = 
 // Delete attendance record
 export const deleteStaffAttendance = async (id: string): Promise<void> => {
   try {
-    await axios.delete(`${API_URL}/staff-attendance/${id}`);
+  await axios.delete(`${API_URL}/api/staff-attendance/${id}`);
   } catch (error: any) {
     console.error('Error deleting staff attendance:', error);
     throw new Error(error.response?.data?.error || 'Ошибка удаления записи');
@@ -154,7 +154,7 @@ export const deleteStaffAttendance = async (id: string): Promise<void> => {
 // Debug function to check database status
 export const debugStaffAttendance = async (): Promise<any> => {
   try {
-    const response = await axios.get(`${API_URL}/staff-attendance/debug`);
+  const response = await axios.get(`${API_URL}/api/staff-attendance/debug`);
     console.log('🔍 Staff attendance debug info:', response.data);
     return response.data;
   } catch (error: any) {

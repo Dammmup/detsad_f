@@ -28,7 +28,7 @@ export interface AttendanceRecord {
 
 // Create axios instance with base config
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: `${API_URL}/api`,
   timeout: 10000, // 10 seconds
   headers: {
     'Content-Type': 'application/json',
@@ -104,7 +104,7 @@ export const getAttendanceRecords = async (startDate: string, endDate: string, u
     const params: any = { startDate, endDate };
     if (userId) params.userId = userId;
     
-    const response = await api.get('/attendance', { params });
+  const response = await api.get('/api/attendance', { params });
     
     const records: AttendanceRecord[] = response.data.map((record: any) => ({
       id: record._id,
@@ -134,7 +134,7 @@ export const getAttendanceRecords = async (startDate: string, endDate: string, u
  */
 export const getAttendanceRecord = async (id: string) => {
   try {
-    const response = await api.get(`/time-tracking/${id}`);
+  const response = await api.get(`/api/time-tracking/${id}`);
     
     const record: AttendanceRecord = {
       id: response.data._id,
@@ -162,7 +162,7 @@ export const getAttendanceRecord = async (id: string) => {
  */
 export const createAttendanceRecord = async (record: AttendanceRecord) => {
   try {
-    const response = await api.post('/attendance', {
+  const response = await api.post('/api/attendance', {
       userId: record.userId,
       date: record.date,
       status: record.status,
@@ -182,7 +182,7 @@ export const createAttendanceRecord = async (record: AttendanceRecord) => {
  */
 export const updateAttendanceRecord = async (id: string, record: AttendanceRecord) => {
   try {
-    const response = await api.put(`/time-tracking/${id}`, {
+  const response = await api.put(`/api/time-tracking/${id}`, {
       userId: record.userId,
       date: record.date,
       checkIn: record.checkIn,
@@ -218,7 +218,7 @@ export const updateAttendanceRecord = async (id: string, record: AttendanceRecor
  */
 export const deleteAttendanceRecord = async (userId: string, date?: string) => {
   try {
-    await api.delete('/attendance', { data: { userId, date } });
+  await api.delete('/api/attendance', { data: { userId, date } });
     return { success: true };
   } catch (error) {
     return handleApiError(error, `deleting attendance record for user ${userId} on ${date}`);
@@ -233,7 +233,7 @@ export const deleteAttendanceRecord = async (userId: string, date?: string) => {
  */
 export const checkIn = async (userId: string, location?: { latitude: number, longitude: number }) => {
   try {
-    const response = await api.post('/attendance/check-in', {
+  const response = await api.post('/api/attendance/check-in', {
       userId,
       location,
       checkInTime: new Date().toISOString()
@@ -266,7 +266,7 @@ export const checkIn = async (userId: string, location?: { latitude: number, lon
  */
 export const checkOut = async (userId: string, date: string, location?: { latitude: number, longitude: number }) => {
   try {
-    const response = await api.post('/attendance/check-out', {
+  const response = await api.post('/api/attendance/check-out', {
       userId,
       date,
       location,
@@ -304,7 +304,7 @@ export const getAttendanceStatistics = async (startDate: string, endDate: string
     const params: any = { startDate, endDate };
     if (userId) params.userId = userId;
     
-    const response = await api.get('/attendance/statistics', { params });
+  const response = await api.get('/api/attendance/statistics', { params });
     
     return response.data;
   } catch (error) {

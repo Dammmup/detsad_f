@@ -363,7 +363,6 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
               <TableRow>
                 <TableCell>Сотрудник</TableCell>
                 <TableCell align="right">Начисления</TableCell>
-                <TableCell align="right">Премии</TableCell>
                 <TableCell align="right">Штрафы</TableCell>
                 <TableCell align="right">Итого</TableCell>
                 <TableCell>Статус</TableCell>
@@ -505,19 +504,7 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
                   })}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  margin="normal"
-                  label="Премии"
-                  type="number"
-                  value={currentPayroll.bonuses || 0}
-                  onChange={(e) => setCurrentPayroll({
-                    ...currentPayroll,
-                    bonuses: Number(e.target.value)
-                  })}
-                />
-              </Grid>
+         
               <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth

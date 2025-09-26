@@ -132,7 +132,7 @@ export const getCyclograms = async (groupId?: string) => {
   try {
     const params: any = {};
     if (groupId) params.groupId = groupId;
-    const response = await api.get('/cyclogram', { params });
+  const response = await api.get('/api/cyclogram', { params });
     const cyclograms: WeeklyCyclogram[] = response.data.map((item: any) => ({
       id: item._id,
       title: item.title,
@@ -159,7 +159,7 @@ export const getCyclograms = async (groupId?: string) => {
  */
 export const getCyclogram = async (id: string) => {
   try {
-    const response = await api.get(`/cyclogram/${id}`);
+  const response = await api.get(`/api/cyclogram/${id}`);
     const cyclogram: WeeklyCyclogram = {
       id: response.data._id,
       title: response.data.title,
@@ -186,7 +186,7 @@ export const getCyclogram = async (id: string) => {
  */
 export const createCyclogram = async (cyclogram: WeeklyCyclogram) => {
   try {
-    const response = await api.post('/cyclogram', cyclogram);
+  const response = await api.post('/api/cyclogram', cyclogram);
     const created: WeeklyCyclogram = {
       id: response.data._id,
       title: response.data.title,
@@ -214,7 +214,7 @@ export const createCyclogram = async (cyclogram: WeeklyCyclogram) => {
  */
 export const updateCyclogram = async (id: string, cyclogram: WeeklyCyclogram) => {
   try {
-    const response = await api.put(`/cyclogram/${id}`, cyclogram);
+  const response = await api.put(`/api/cyclogram/${id}`, cyclogram);
     const updated: WeeklyCyclogram = {
       id: response.data._id,
       title: response.data.title,
@@ -241,7 +241,7 @@ export const updateCyclogram = async (id: string, cyclogram: WeeklyCyclogram) =>
  */
 export const deleteCyclogram = async (id: string) => {
   try {
-    await api.delete(`/cyclogram/${id}`);
+  await api.delete(`/api/cyclogram/${id}`);
     return { success: true };
   } catch (error) {
     return handleApiError(error, `deleting cyclogram ${id}`);
@@ -258,7 +258,7 @@ export const getCyclogramTemplates = async (ageGroup?: string) => {
     const params: any = {};
     if (ageGroup) params.ageGroup = ageGroup;
     
-    const response = await api.get('/cyclogram/templates', { params });
+  const response = await api.get('/api/cyclogram/templates', { params });
     const templates: CyclogramTemplate[] = response.data.map((item: any) => ({
       id: item._id,
       name: item.name,
@@ -291,7 +291,7 @@ export const createCyclogramFromTemplate = async (
   }
 ) => {
  try {
-    const response = await api.post(`/cyclogram/templates/${templateId}/create`, params);
+  const response = await api.post(`/api/cyclogram/templates/${templateId}/create`, params);
     
     const createdCyclogram: WeeklyCyclogram = {
       id: response.data._id,

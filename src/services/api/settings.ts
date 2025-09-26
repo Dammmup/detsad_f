@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const API_URL = `${process.env.REACT_APP_API_URL}` || 'http://localhost:8080';
+let baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+// Добавляем '/api' к базовому URL, если его нет
+if (!baseUrl.endsWith('/api')) {
+  baseUrl = baseUrl.replace(/\/$/, '') + '/api';
+}
+const API_URL = baseUrl;
 
 // Интерфейс для API ошибки
 interface ApiError extends Error {
@@ -151,7 +156,7 @@ export const getKindergartenSettings = async () => {
   try {
     console.log('Fetching kindergarten settings from API...');
     
-    const response = await api.get('/settings/kindergarten');
+  const response = await api.get('/api/settings/kindergarten');
     
     const settings: KindergartenSettings = {
       id: response.data._id,
@@ -182,7 +187,7 @@ export const getKindergartenSettings = async () => {
  */
 export const updateKindergartenSettings = async (settings: KindergartenSettings) => {
   try {
-    const response = await api.put('/settings/kindergarten', {
+  const response = await api.put('/api/settings/kindergarten', {
       name: settings.name,
       address: settings.address,
       phone: settings.phone,
@@ -221,7 +226,7 @@ export const updateKindergartenSettings = async (settings: KindergartenSettings)
  */
 export const getNotificationSettings = async () => {
   try {
-    const response = await api.get('/settings/notifications');
+  const response = await api.get('/api/settings/notifications');
     
     const settings: NotificationSettings = {
       id: response.data._id,
@@ -247,7 +252,7 @@ export const getNotificationSettings = async () => {
  */
 export const updateNotificationSettings = async (settings: NotificationSettings) => {
   try {
-    const response = await api.put('/settings/notifications', settings);
+  const response = await api.put('/api/settings/notifications', settings);
     
     const updatedSettings: NotificationSettings = {
       id: response.data._id,
@@ -272,7 +277,7 @@ export const updateNotificationSettings = async (settings: NotificationSettings)
  */
 export const getSecuritySettings = async () => {
   try {
-    const response = await api.get('/settings/security');
+  const response = await api.get('/api/settings/security');
     
     const settings: SecuritySettings = {
       id: response.data._id,
@@ -296,7 +301,7 @@ export const getSecuritySettings = async () => {
  */
 export const updateSecuritySettings = async (settings: SecuritySettings) => {
   try {
-    const response = await api.put('/settings/security', settings);
+  const response = await api.put('/api/settings/security', settings);
     
     const updatedSettings: SecuritySettings = {
       id: response.data._id,
@@ -319,7 +324,7 @@ export const updateSecuritySettings = async (settings: SecuritySettings) => {
  */
 export const getGeolocationSettings = async () => {
   try {
-    const response = await api.get('/settings/geolocation');
+  const response = await api.get('/api/settings/geolocation');
     
     const settings: GeolocationSettings = {
       id: response.data._id,
@@ -344,7 +349,7 @@ export const getGeolocationSettings = async () => {
  */
 export const updateGeolocationSettings = async (settings: GeolocationSettings) => {
   try {
-    const response = await api.put('/settings/geolocation', {
+  const response = await api.put('/api/settings/geolocation', {
       ...settings
     });
     
@@ -370,7 +375,7 @@ export const updateGeolocationSettings = async (settings: GeolocationSettings) =
  */
 export const getAllUsers = async () => {
   try {
-    const response = await api.get('/users');
+  const response = await api.get('/api/users');
     
     const users: User[] = response.data.map((user: any) => ({
       id: user._id,
@@ -397,7 +402,7 @@ export const getAllUsers = async () => {
  */
 export const createUser = async (user: User) => {
   try {
-    const response = await api.post('/users', user);
+  const response = await api.post('/api/users', user);
     
     const newUser: User = {
       id: response.data._id,
@@ -425,7 +430,7 @@ export const createUser = async (user: User) => {
  */
 export const updateUser = async (id: string, user: User) => {
   try {
-    const response = await api.put(`/users/${id}`, user);
+  const response = await api.put(`/api/users/${id}`, user);
     
     const updatedUser: User = {
       id: response.data._id,
@@ -452,7 +457,7 @@ export const updateUser = async (id: string, user: User) => {
  */
 export const deleteUser = async (id: string) => {
   try {
-    await api.delete(`/users/${id}`);
+  await api.delete(`/api/users/${id}`);
     return { success: true };
   } catch (error) {
     return handleApiError(error, `deleting user ${id}`);

@@ -475,7 +475,6 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
               <TableRow>
                 <TableCell>Сотрудник</TableCell>
                 <TableCell align="right">Оклад</TableCell>
-                <TableCell align="right">Премии</TableCell>
                 <TableCell align="right">Штрафы за опоздания</TableCell>
                 <TableCell align="right">Штрафы за неявки</TableCell>
                 <TableCell align="right">Всего штрафов</TableCell>
@@ -635,19 +634,7 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
                   })}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  margin="normal"
-                  label="Премии"
-                  type="number"
-                  value={currentPayroll.bonuses || 0}
-                  onChange={(e) => setCurrentPayroll({
-                    ...currentPayroll,
-                    bonuses: Number(e.target.value)
-                  })}
-                />
-              </Grid>
+            
               <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth
@@ -705,10 +692,7 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
                   <Typography variant="body2" color="text.secondary">Оклад:</Typography>
                   <Typography variant="h6">{formatCurrency(selectedPayrollDetails.accruals)}</Typography>
                 </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">Премии:</Typography>
-                  <Typography variant="h6">{formatCurrency(selectedPayrollDetails.bonuses)}</Typography>
-                </Grid>
+               
                 <Grid item xs={6}>
                   <Typography variant="body2" color="text.secondary">Штрафы за опоздания:</Typography>
                   <Typography variant="h6">-{formatCurrency(selectedPayrollDetails.latePenalties || 0)}</Typography>

@@ -138,7 +138,7 @@ export const getReports = async () => {
   try {
     console.log('Fetching reports from API...');
     
-    const response = await api.get('/reports');
+  const response = await api.get('/api/reports');
     
     const reports: Report[] = response.data.map((report: any) => ({
       id: report._id,
@@ -178,7 +178,7 @@ export const getReports = async () => {
  */
 export const getReport = async (id: string) => {
   try {
-    const response = await api.get(`/reports/${id}`);
+  const response = await api.get(`/api/reports/${id}`);
     
     const report: Report = {
       id: response.data._id,
@@ -216,7 +216,7 @@ export const getReport = async (id: string) => {
  */
 export const createReport = async (report: Report) => {
   try {
-    const response = await api.post('/reports', report);
+  const response = await api.post('/api/reports', report);
     
     const createdReport: Report = {
       id: response.data._id,
@@ -254,7 +254,7 @@ export const createReport = async (report: Report) => {
  */
 export const deleteReport = async (id: string) => {
   try {
-    await api.delete(`/reports/${id}`);
+  await api.delete(`/api/reports/${id}`);
     return { success: true };
   } catch (error) {
     return handleApiError(error, `deleting report ${id}`);
@@ -273,7 +273,7 @@ export const getAttendanceStatistics = async (startDate: string, endDate: string
     await delay(500);
     
     // В реальном приложении здесь будет запрос к API
-    const response = await api.get('/reports/attendance-statistics', { params: { startDate, endDate, userId } });
+  const response = await api.get('/api/reports/attendance-statistics', { params: { startDate, endDate, userId } });
     
     return response.data;
   } catch (error) {
@@ -293,7 +293,7 @@ export const getScheduleStatistics = async (startDate: string, endDate: string, 
     await delay(500);
     
     // В реальном приложении здесь будет запрос к API
-    const response = await api.get('/reports/schedule-statistics', { params: { startDate, endDate, userId } });
+  const response = await api.get('/api/reports/schedule-statistics', { params: { startDate, endDate, userId } });
     
     return response.data;
   } catch (error) {
@@ -309,7 +309,7 @@ export const getScheduleStatistics = async (startDate: string, endDate: string, 
  */
 export const exportReport = async (reportId: string, format: 'pdf' | 'excel' | 'csv') => {
   try {
-    const response = await api.get(`/reports/${reportId}/export`, {
+  const response = await api.get(`/api/reports/${reportId}/export`, {
       params: { format },
       responseType: 'blob'
     });
@@ -343,7 +343,7 @@ export const exportSalaryReport = async (params: {
   includeBonus?: boolean;
 }) => {
   try {
-    const response = await api.post('/reports/salary/export', params, {
+  const response = await api.post('/api/reports/salary/export', params, {
       responseType: 'blob'
     });
     
@@ -373,7 +373,7 @@ export const exportChildrenReport = async (params: {
   includeHealthInfo?: boolean;
 }) => {
   try {
-    const response = await api.post('/reports/children/export', params, {
+  const response = await api.post('/api/reports/children/export', params, {
       responseType: 'blob'
     });
     
@@ -404,7 +404,7 @@ export const exportAttendanceReport = async (params: {
   includeCharts?: boolean;
 }) => {
   try {
-    const response = await api.post('/reports/attendance/export', params, {
+  const response = await api.post('/api/reports/attendance/export', params, {
       responseType: 'blob'
     });
     
@@ -434,7 +434,7 @@ export const sendReportByEmail = async (params: {
   reportParams?: any;
 }) => {
   try {
-    const response = await api.post('/reports/send-email', params);
+  const response = await api.post('/api/reports/send-email', params);
     return response.data;
   } catch (error) {
     return handleApiError(error, 'sending report by email');
@@ -455,7 +455,7 @@ export const scheduleReport = async (params: {
   startDate?: string;
 }) => {
   try {
-    const response = await api.post('/reports/schedule', params);
+  const response = await api.post('/api/reports/schedule', params);
     return response.data;
   } catch (error) {
     return handleApiError(error, 'scheduling report');
@@ -470,7 +470,7 @@ export const scheduleReport = async (params: {
  */
 export const downloadReport = async (reportId: string, format: 'pdf' | 'excel' | 'csv') => {
   try {
-    const response = await api.get(`/reports/${reportId}/download`, {
+  const response = await api.get(`/api/reports/${reportId}/download`, {
       params: { format },
       responseType: 'blob'
     });
@@ -511,7 +511,7 @@ export const generateCustomReport = async (params: {
   format?: 'pdf' | 'excel' | 'csv';
 }) => {
   try {
-    const response = await api.post('/reports/generate', params);
+  const response = await api.post('/api/reports/generate', params);
     
     const report: Report = {
       id: response.data._id,

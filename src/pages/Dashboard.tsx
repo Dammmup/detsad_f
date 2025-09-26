@@ -7,6 +7,11 @@ import { useNavigate } from 'react-router-dom';
 import StaffAttendanceButton from '../components/StaffAttendanceButton';
 import ChildrenModal from '../components/ChildrenModal';
 import TaskListColumn from '../components/TaskListColumn';
+import StaffTasksWidget from '../components/StaffTasksWidget';
+import SystemNotificationsWidget from '../components/SystemNotificationsWidget';
+import FinancialStatsWidget from '../components/FinancialStatsWidget';
+import StaffScheduleWidget from '../components/StaffScheduleWidget';
+import AttendanceStatsWidget from '../components/AttendanceStatsWidget';
 
 const Dashboard = () => {
   const { user: currentUser } = useAuth();
@@ -227,6 +232,161 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
             </Grid>
+          </Grid>
+          
+          {/* Виджет статистики посещаемости */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{
+              height: '100%',
+              backgroundColor: 'white',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.18)',
+              transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.18)'
+              },
+              borderRadius: 2
+            }}>
+              <CardContent>
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 2,
+                  pb: 1,
+                  borderBottom: '1px solid #dee2e6'
+                }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#495057' }}>
+                    📊 Статистика посещаемости
+                  </Typography>
+                </Box>
+                <AttendanceStatsWidget />
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          {/* Виджет задач сотрудников */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{
+              height: '100%',
+              backgroundColor: 'white',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.18)',
+              transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.18)'
+              },
+              borderRadius: 2
+            }}>
+              <CardContent>
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 2,
+                  pb: 1,
+                  borderBottom: '1px solid #dee2e6'
+                }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#495057' }}>
+                    📋 Мои задачи
+                  </Typography>
+                </Box>
+                <StaffTasksWidget />
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          {/* Виджет системных уведомлений */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{
+              height: '100%',
+              backgroundColor: 'white',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.18)',
+              transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.18)'
+              },
+              borderRadius: 2
+            }}>
+              <CardContent>
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 2,
+                  pb: 1,
+                  borderBottom: '1px solid #dee2e6'
+                }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#495057' }}>
+                    🔔 Системные уведомления
+                  </Typography>
+                </Box>
+                <SystemNotificationsWidget />
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          {/* Виджет финансовой статистики */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{
+              height: '100%',
+              backgroundColor: 'white',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.18)',
+              transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.18)'
+              },
+              borderRadius: 2
+            }}>
+              <CardContent>
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 2,
+                  pb: 1,
+                  borderBottom: '1px solid #dee2e6'
+                }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#495057' }}>
+                    💰 Финансовая статистика
+                  </Typography>
+                </Box>
+                <FinancialStatsWidget />
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          {/* Виджет графика работы */}
+          <Grid item xs={12} md={12}>
+            <Card sx={{
+              height: '100%',
+              backgroundColor: 'white',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.18)',
+              transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.18)'
+              },
+              borderRadius: 2
+            }}>
+              <CardContent>
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 2,
+                  pb: 1,
+                  borderBottom: '1px solid #dee2e6'
+                }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#495057' }}>
+                    📅 График работы
+                  </Typography>
+                </Box>
+                <StaffScheduleWidget />
+              </CardContent>
+            </Card>
           </Grid>
           
           {/* Пустое пространство для растягивания */}

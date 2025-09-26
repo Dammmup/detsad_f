@@ -144,7 +144,7 @@ class AuthApiClient extends BaseApiClient {
         return false;
       }
       
-      await this.get('/auth/validate');
+  await this.get('/api/auth/validate');
       return true;
       
     } catch (error) {
