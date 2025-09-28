@@ -11,6 +11,7 @@ import Reports from '../pages/Reports';
 import { AuthProvider, ProtectedRoute } from './context/AuthContext';
 import { GroupsProvider } from './context/GroupsContext';
 import ReportsSalary from './reports/ReportsSalary';
+import Dashboard from '../pages/Dashboard';
 
 export const App = () => {
   const now = new Date();
@@ -35,6 +36,7 @@ export const App = () => {
                   <Routes>
                     <Route path="staff/attendance" element={<StaffAttendanceTracking />} />
                     <Route path="reports/payroll" element={<ReportsSalary startDate={monthStart} endDate={monthEnd} />} />
+                    <Route path="dashboard" element={<Dashboard />} />
                     <Route path="*" element={<Navigate to="dashboard" replace />} />
                     <Route path="reports" element={<Reports />} />
                   </Routes>

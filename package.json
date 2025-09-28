@@ -39,6 +39,7 @@
     "crypto-browserify": "^3.12.1",
     "css-loader": "^6.7.3",
     "date-fns": "^2.30.0",
+    "docx": "^9.5.1",
     "eslint": "^8.38.0",
     "eslint-config-react-app": "^7.0.1",
     "file-loader": "^6.2.0",
