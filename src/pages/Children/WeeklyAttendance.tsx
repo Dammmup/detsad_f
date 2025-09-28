@@ -47,8 +47,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Types and Services
-import { getUsers } from '../../services/api/users';
-import { STATUS_COLORS, User } from '../../types/common';
+import childrenApi, { Child } from '../../services/api/children';
+import { STATUS_COLORS } from '../../types/common';
 import { getGroups } from '../../services/api/groups';
 import { 
   getChildAttendance, 
@@ -101,7 +101,7 @@ const WeeklyAttendance: React.FC = () => {
   
   // Data
   const [groups, setGroups] = useState<any[]>([]);
-  const [children, setChildren] = useState<User[]>([]);
+  const [children, setChildren] = useState<Child[]>([]);
   const [attendanceData, setAttendanceData] = useState<AttendanceData>({});
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
@@ -115,13 +115,11 @@ const WeeklyAttendance: React.FC = () => {
       setError(null);
       
       try {
-        const [groupsData, usersData] = await Promise.all([
+        const [groupsData, childrenList] = await Promise.all([
           getGroups(),
-          getUsers()
+          childrenApi.getAll()
         ]);
-        
         setGroups(groupsData || []);
-        const childrenList = usersData.filter(user => user.type === 'child');
         setChildren(childrenList);
         
         // Auto-select group for teachers
@@ -224,7 +222,7 @@ const WeeklyAttendance: React.FC = () => {
   };
 
   // Cycle through attendance statuses on click
-  const handleAttendanceClick = async (child: User, date: Date) => {
+  const handleAttendanceClick = async (child: Child, date: Date) => {
     const dateString = format(date, 'yyyy-MM-dd');
     const existingAttendance = getAttendanceForDay(child.id!, date);
     

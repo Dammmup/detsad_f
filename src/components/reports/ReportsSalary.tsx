@@ -20,8 +20,8 @@ interface PayrollRow {
 const ReportsSalary: React.FC<Props> = ({ startDate, endDate, userId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<any>(null);
-  const [rows, setRows] = useState<PayrollRow[]>([]);
+   const [summary, setSummary] = useState<any>(null);
+   const [rows, setRows] = useState<PayrollRow[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -30,13 +30,13 @@ const ReportsSalary: React.FC<Props> = ({ startDate, endDate, userId }) => {
       setError(null);
       try {
         const base = process.env.REACT_APP_API_URL || '';
-        const [sumRes, listRes] = await Promise.all([
-          axios.get(`${base}/reports/salary/summary`, { params: { startDate, endDate, userId } }),
-          axios.post(`${base}/payroll/export`, { format: 'json', startDate, endDate, staffId: userId })
-        ]);
+         const [sumRes, payrollsRes] = await Promise.all([
+           axios.get(`${base}/api/reports/salary/summary`, { params: { startDate, endDate, userId } }),
+           axios.get(`${base}/api/payroll`, { params: { startDate, endDate, userId } })
+         ]);
         if (!mounted) return;
         setSummary(sumRes.data);
-        const data = (listRes.data?.data || []) as any[];
+         const data = (payrollsRes.data?.data || []) as any[];
         setRows(data.map((p: any) => ({
           staffName: p.staffId?.fullName || 'Неизвестно',
           month: p.month,

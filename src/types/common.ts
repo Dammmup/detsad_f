@@ -7,7 +7,6 @@ export type TimeString = string; // HH:MM
 export type ISODateString = string; // ISO 8601
 
 // Статусы
-export type UserType = 'adult' | 'child';
 export type UserRole = 'admin' | 'manager' | 'staff' | 'teacher' | 'assistant' | 'cook' | 'cleaner' | 'security' | 'nurse' | 'child';
 export type ShiftStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'confirmed';
 export type ShiftType = 'full' | 'day_off' | 'vacation' | 'sick_leave' | 'overtime';
@@ -125,6 +124,22 @@ export interface PaginatedResponse<T> {
 
 // ===== ПОЛЬЗОВАТЕЛИ =====
 
+// Интерфейс для ребенка (Child)
+export interface Child {
+  id: ID;
+  _id?: ID;
+  fullName: string;
+  birthday?: DateString;
+  groupId?: ID;
+  parentName?: string;
+  parentPhone?: string;
+  iin?: string;
+  notes?: string;
+  active: boolean;
+  createdAt?: ISODateString;
+  updatedAt?: ISODateString;
+}
+
 export interface Fine {
   amount: number;
   reason: string;
@@ -143,7 +158,6 @@ export interface User {
   phone?: string;
   email?: string;
   active: boolean;
-  type: UserType;
   isVerified?: boolean;
   lastLogin?: ISODateString;
   createdAt?: ISODateString;
@@ -159,6 +173,9 @@ export interface User {
   
   // Поля для сотрудников
   salary?: number;
+  salaryType?: 'day' | 'month';
+  penaltyType?: 'fixed' | 'percent';
+  penaltyAmount?: number;
   initialPassword?: string;
   avatarUrl?: string;
   fines?: Fine[];
@@ -368,7 +385,6 @@ export interface ShiftFilters extends BaseFilters {
 
 export interface UserFilters extends BaseFilters {
   role?: UserRole;
-  type?: UserType;
   active?: boolean;
   groupId?: ID;
 }

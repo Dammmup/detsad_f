@@ -1,3 +1,4 @@
+
 import { BaseCrudApiClient, apiCache } from '../../utils/api';
 import { Shift, ShiftFormData, ShiftFilters, ID } from '../../types/common';
 
@@ -345,7 +346,10 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     // В продакшене лучше использовать более точную очистку по тегам
   }
 }
-
+// Получить смены сотрудника по диапазону дат
+export const getStaffShifts = async ({ staffId, startDate, endDate }: { staffId: ID, startDate: string, endDate: string }) => {
+  return shiftsApi.getAll({ staffId, startDate, endDate });
+};
 // Экспортируем экземпляр клиента
 export const shiftsApi = new ShiftsApiClient();
 

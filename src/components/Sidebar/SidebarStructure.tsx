@@ -1,4 +1,5 @@
 import React from 'react';
+import { medicalSidebarSection } from './MedicalSidebarSection';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import GroupIcon from '@mui/icons-material/Group';
 import PeopleIcon from '@mui/icons-material/People';
@@ -69,13 +70,14 @@ const sidebarStructure: SidebarItem[] = [
   {
     id: 'organization',
     label: 'Организация',
-    icon: <SettingsIcon />,
+    icon: <SettingsIcon />, 
     children: [
       { id: 'organization-groups', label: 'Группы', link: '/app/groups', icon: <GroupIcon /> },
       { id: 'organization-cyclogram', label: 'Циклограммы', link: '/app/cyclogram', icon: <ScheduleIcon /> },
       { id: 'organization-settings', label: 'Настройки', link: '/app/settings', icon: <SettingsIcon /> },
     ],
   },
+  medicalSidebarSection,
 ];
 
 export default sidebarStructure;

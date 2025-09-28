@@ -2,24 +2,24 @@ import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, IconButton, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem,
-  SelectChangeEvent
+  useMediaQuery
 } from '@mui/material';
 import { Add, Edit, Delete} from '@mui/icons-material';
-import { getUsers, createUser, updateUser, deleteUser } from '../../services/api/users';
+import childrenApi, { Child } from '../../services/api/children';
 import { getGroups } from '../../services/api/groups';
-import { Group,User } from '../../types/common';
+import { Group } from '../../types/common';
 import { exportChildrenList } from '../../utils/excelExport';
 import ExportMenuButton from '../../components/ExportMenuButton';
 import axios from 'axios';
 import ChildrenModal from '../../components/ChildrenModal';
 
 const Children: React.FC = () => {
-  const [children, setChildren] = useState<User[]>([]);
+  const [children, setChildren] = useState<Child[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingChild, setEditingChild] = useState<User | null>(null);
+  const [editingChild, setEditingChild] = useState<Child | null>(null);
 
   // Экспорт: скачать файл
   const handleExportDownload = () => {
@@ -41,8 +41,8 @@ const Children: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const users = await getUsers();
-      setChildren(users.filter(u => u.type === 'child'));
+      const childrenList = await childrenApi.getAll();
+      setChildren(childrenList);
     } catch (e: any) {
       setError(e?.message || 'Ошибка загрузки');
     } finally {
@@ -65,7 +65,7 @@ const Children: React.FC = () => {
     fetchGroupsList();
   }, []);
 
-  const handleOpenModal = (child?: User) => {
+  const handleOpenModal = (child?: Child) => {
     setEditingChild(child || null);
     setModalOpen(true);
   };
@@ -80,7 +80,7 @@ const Children: React.FC = () => {
     if (!window.confirm('Удалить ребёнка?')) return;
     setLoading(true);
     try {
-      await deleteUser(id);
+      await childrenApi.deleteItem(id);
       fetchChildren();
     } catch (e: any) {
       setError(e?.message || 'Ошибка удаления');
@@ -95,56 +95,78 @@ const Children: React.FC = () => {
     return group ? group.name : 'Неизвестная группа';
   };
 
+  const isMobile = useMediaQuery('(max-width:900px)');
+
   return (
     <Box>
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-        <Typography variant="h4" gutterBottom>
-        Список детей
-      </Typography>
-      <Box mb={2}>
-        <ExportMenuButton
-          onDownload={handleExportDownload}
-          onSendEmail={handleExportEmail}
-          label="Экспортировать"
-        />
-      </Box>
-        <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenModal()}>
+      <Box
+        display="flex"
+        flexDirection={isMobile ? 'column' : 'row'}
+        alignItems={isMobile ? 'stretch' : 'center'}
+        justifyContent="space-between"
+        mb={2}
+        gap={isMobile ? 2 : 0}
+      >
+        <Typography variant={isMobile ? 'h5' : 'h4'} gutterBottom sx={{ mb: isMobile ? 1 : 0 }}>
+          Список детей
+        </Typography>
+        <Box mb={isMobile ? 0 : 2} display={isMobile ? 'flex' : 'block'} flexDirection={isMobile ? 'column' : 'row'} gap={isMobile ? 1 : 0}>
+          <ExportMenuButton
+            onDownload={handleExportDownload}
+            onSendEmail={handleExportEmail}
+            label="Экспортировать"
+          />
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={() => handleOpenModal()}
+          sx={{ width: isMobile ? '100%' : 'auto', mt: isMobile ? 1 : 0 }}
+        >
           Добавить ребёнка
         </Button>
       </Box>
       {loading && <CircularProgress />}
       {error && <Alert severity="error">{error}</Alert>}
-      <TableContainer component={Paper} sx={{ mt: 2 }}>
-        <Table>
+      <TableContainer
+        component={Paper}
+        sx={{
+          mt: 2,
+          width: '100%',
+          overflowX: isMobile ? 'auto' : 'visible',
+          boxShadow: isMobile ? 1 : 3,
+        }}
+      >
+        <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 650 }}>
           <TableHead>
             <TableRow>
-              <TableCell>ФИО</TableCell>
-              <TableCell>Дата рождения</TableCell>
-              <TableCell>Телефон родителя</TableCell>
-              <TableCell>ИИН</TableCell>
-              <TableCell>Группа</TableCell>
-              <TableCell>Заметки</TableCell>
-              <TableCell>Статус</TableCell>
-              <TableCell align="right">Действия</TableCell>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>ФИО</TableCell>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Дата рождения</TableCell>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Телефон родителя</TableCell>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>ИИН</TableCell>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Группа</TableCell>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Заметки</TableCell>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Статус</TableCell>
+              <TableCell align="right" sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Действия</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {children.map(child => (
               <TableRow key={child.id || child._id}>
-                <TableCell>{child.fullName}</TableCell>
-                <TableCell>
+                <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.fullName}</TableCell>
+                <TableCell sx={{ p: isMobile ? 1 : 2 }}>
                   {child.birthday
-                    ? new Date(child.birthday).toISOString().split("T")[0] // YYYY-MM-DD
+                    ? new Date(child.birthday).toISOString().split("T")[0]
                     : ""}
                 </TableCell>
-                <TableCell>{child.phone}</TableCell>
-                <TableCell>{child.iin}</TableCell>
-                <TableCell>{findGroupById(child.groupId)}</TableCell>
-                <TableCell>{child.notes}</TableCell>
-                <TableCell>{child.active ? 'Активен' : 'Неактивен'}</TableCell>
-                <TableCell align="right">
-                  <IconButton onClick={() => handleOpenModal(child)}><Edit /></IconButton>
-                  <IconButton onClick={() => handleDelete(child.id || child._id)}><Delete /></IconButton>
+                <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.parentPhone}</TableCell>
+                <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.iin}</TableCell>
+                <TableCell sx={{ p: isMobile ? 1 : 2 }}>{findGroupById(child.groupId)}</TableCell>
+                <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.notes}</TableCell>
+                <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.active ? 'Активен' : 'Неактивен'}</TableCell>
+                <TableCell align="right" sx={{ p: isMobile ? 1 : 2 }}>
+                  <IconButton size={isMobile ? 'small' : 'medium'} onClick={() => handleOpenModal(child)}><Edit fontSize={isMobile ? 'small' : 'medium'} /></IconButton>
+                  <IconButton size={isMobile ? 'small' : 'medium'} onClick={() => handleDelete(child.id || child._id)}><Delete fontSize={isMobile ? 'small' : 'medium'} /></IconButton>
                 </TableCell>
               </TableRow>
             ))}

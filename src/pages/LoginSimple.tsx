@@ -32,7 +32,6 @@ const Login: React.FC = () => {
         phone: phone,
         email: res.data.user.phone || phone,
         active: true,
-        type: 'adult',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };

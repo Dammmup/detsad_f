@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../components/context/AuthContext';
-import { Button, Typography, Box, Container, Grid, Card, CardContent, Snackbar, Alert } from '@mui/material';
+import { Button, Typography, Box, Container, Grid, Card, CardContent, Snackbar, Alert, useMediaQuery } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
 // Локальный импорт компонентов
@@ -50,15 +50,23 @@ const Dashboard = () => {
     setSnackbarOpen(false);
   };
 
+  const isMobile = useMediaQuery('(max-width:900px)');
+
   return (
     <Container maxWidth="lg" sx={{
       py: 4,
       background: 'linear-gradient(135deg, rgba(245, 247, 250, 1) 0%, rgba(235, 240, 245, 1) 100%)',
       minHeight: '100vh'
     }}>
-     
 
-      <Box sx={{ display: 'flex', gap: 3, height: 'calc(100vh - 200px)' }}>
+      {/* На мобильных список задач всегда сверху и в одну колонку */}
+      {isMobile && (
+        <Box sx={{ mb: 3 }}>
+          <TaskListColumn />
+        </Box>
+      )}
+
+      <Box sx={{ display: isMobile ? 'block' : 'flex', gap: 3, height: isMobile ? 'auto' : 'calc(100vh - 200px)' }}>
         {/* Левая колонка с виджетами */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <Grid container spacing={3}>
@@ -265,36 +273,38 @@ const Dashboard = () => {
             </Card>
           </Grid>
           
-          {/* Виджет задач сотрудников */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{
-              height: '100%',
-              backgroundColor: 'white',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.18)',
-              transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-              '&:hover': {
-                transform: 'translateY(-3px)',
-                boxShadow: '0 6px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.18)'
-              },
-              borderRadius: 2
-            }}>
-              <CardContent>
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 2,
-                  pb: 1,
-                  borderBottom: '1px solid #dee2e6'
-                }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#495057' }}>
-                    📋 Мои задачи
-                  </Typography>
-                </Box>
-                <StaffTasksWidget />
-              </CardContent>
-            </Card>
-          </Grid>
+          {/* Виджет задач сотрудников — только на desktop */}
+          {!isMobile && (
+            <Grid item xs={12} md={6}>
+              <Card sx={{
+                height: '100%',
+                backgroundColor: 'white',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.18)',
+                transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                '&:hover': {
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 6px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.18)'
+                },
+                borderRadius: 2
+              }}>
+                <CardContent>
+                  <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 2,
+                    pb: 1,
+                    borderBottom: '1px solid #dee2e6'
+                  }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#495057' }}>
+                      📋 Мои задачи
+                    </Typography>
+                  </Box>
+                  <StaffTasksWidget />
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
           
           {/* Виджет системных уведомлений */}
           <Grid item xs={12} md={6}>
@@ -408,7 +418,7 @@ const Dashboard = () => {
             transform: 'translateX(-5px)'
           }
         }}>
-          <TaskListColumn />
+          {!isMobile && <TaskListColumn />}
         </Box>
       </Box>
 

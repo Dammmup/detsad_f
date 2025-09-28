@@ -1,0 +1,56 @@
+/* Глобальные медиазапросы для адаптивности */
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', Arial, sans-serif;
+}
+
+/* Контейнеры и основные отступы */
+.MuiContainer-root {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 900px) {
+  .MuiContainer-root {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  .MuiAppBar-root {
+    min-height: 48px !important;
+  }
+  .MuiToolbar-root {
+    min-height: 48px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+  /* .MuiDrawer-paper { width: 64px !important; } — убрано для полноразмерного Sidebar */
+  .MuiTypography-h6 {
+    font-size: 1rem !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .MuiContainer-root {
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+  .MuiAppBar-root {
+    min-height: 40px !important;
+  }
+  .MuiToolbar-root {
+    min-height: 40px !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+  /* .MuiDrawer-paper { width: 48px !important; } — убрано для полноразмерного Sidebar */
+  .MuiTypography-h6 {
+    font-size: 0.9rem !important;
+  }
+  .MuiButton-root {
+    font-size: 0.8rem !important;
+    padding: 4px 8px !important;
+  }
+}

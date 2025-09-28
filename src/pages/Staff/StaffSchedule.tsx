@@ -155,9 +155,7 @@ const StaffSchedule: React.FC = () => {
           getShifts(format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd'))
         ]);
         
-        // Фильтруем сотрудников, оставляя только 'adult'
-        const adultStaff = staffData.filter(user => user.type === 'adult');
-        setStaff(adultStaff);
+        setStaff(staffData);
         setShifts(shiftsData);
       } catch (err: any) {
         console.error('Error loading data:', err);

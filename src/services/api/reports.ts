@@ -343,20 +343,38 @@ export const exportSalaryReport = async (params: {
   includeBonus?: boolean;
 }) => {
   try {
-  const response = await api.post('/api/reports/salary/export', params, {
+    console.log('[exportSalaryReport] Отправка запроса на экспорт зарплат:', params);
+    const response = await api.post('/api/reports/salary/export', params, {
       responseType: 'blob'
     });
-    
-    // Создаем blob для скачивания
     const blob = new Blob([response.data], {
-      type: params.format === 'pdf' ? 'application/pdf' : 
-           params.format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
-           'text/csv'
+      type: params.format === 'pdf' ? 'application/pdf' :
+        params.format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
+        'text/csv'
     });
-    
     return blob;
-  } catch (error) {
+  } catch (error: any) {
+    if (error.response) {
+      // Логируем подробности ответа с ошибкой
+      console.error('[exportSalaryReport] Ошибка:', error.response.status, error.response.data);
+      alert(`Ошибка экспорта зарплат: ${error.response.status} ${JSON.stringify(error.response.data)}`);
+    } else {
+      console.error('[exportSalaryReport] Неизвестная ошибка:', error);
+      alert('Неизвестная ошибка экспорта зарплат');
+    }
     return handleApiError(error, 'exporting salary report');
+  }
+};
+
+// Получение salary summary (GET)
+export const getSalarySummary = async (startDate: string, endDate: string) => {
+  try {
+    const response = await api.get('/api/reports/salary/summary', {
+      params: { startDate, endDate }
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, 'fetching salary summary');
   }
 };
 

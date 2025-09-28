@@ -1,27 +1,21 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+
+import React, { useState } from 'react';
 import { Drawer, Typography, List, ListItem, ListItemText, ListItemIcon, Collapse, Box, Fade } from '@mui/material';
 import { ExpandMore } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 
 
-// styles
-
-// components
-
-// context
-import {
-  useLayoutState,
-  useLayoutDispatch,
-  toggleSidebar,
-} from '../../components/context/LayoutContext';
-import PropTypes from 'prop-types';
-
 interface SidebarProps {
   location: any;
   structure: any[];
+  variant?: 'permanent' | 'temporary';
+  open?: boolean;
+  onClose?: () => void;
 }
 
-export const Sidebar = ({ location, structure = [] }: SidebarProps) => {
+
+export const Sidebar = ({ location, structure = [], variant = 'permanent', open = true, onClose }: SidebarProps) => {
   const [openMenus, setOpenMenus] = useState<{[key: string]: boolean}>({});
 
   const handleToggle = (label: string) => {
@@ -35,7 +29,6 @@ export const Sidebar = ({ location, structure = [] }: SidebarProps) => {
         const hasChildren = Array.isArray(item.children) && item.children.length > 0;
         const isOpen = openMenus[item.label];
         const isActive = location?.pathname?.startsWith(item.link);
-        
         return (
           <React.Fragment key={item.label + idx}>
             <ListItem
@@ -54,14 +47,11 @@ export const Sidebar = ({ location, structure = [] }: SidebarProps) => {
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 position: 'relative',
                 overflow: 'hidden',
-                
-                // Активное состояние
                 ...(isActive && {
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
                   boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
                   transform: 'translateY(-1px)',
-                  
                   '&::before': {
                     content: '""',
                     position: 'absolute',
@@ -73,8 +63,6 @@ export const Sidebar = ({ location, structure = [] }: SidebarProps) => {
                     borderRadius: '0 2px 2px 0'
                   }
                 }),
-                
-                // Hover эффекты
                 '&:hover': {
                   ...(!isActive && {
                     bgcolor: 'rgba(102, 126, 234, 0.08)',
@@ -86,15 +74,11 @@ export const Sidebar = ({ location, structure = [] }: SidebarProps) => {
                     transform: 'translateY(-2px)'
                   })
                 },
-                
-                // Стили для родительских элементов
                 ...(hasChildren && level === 0 && {
                   fontWeight: 600,
                   fontSize: '0.95rem',
                   color: isActive ? 'white' : '#374151'
                 }),
-                
-                // Стили для дочерних элементов
                 ...(level > 0 && {
                   fontSize: '0.875rem',
                   color: isActive ? 'white' : '#6B7280',
@@ -160,42 +144,11 @@ export const Sidebar = ({ location, structure = [] }: SidebarProps) => {
     </List>
   );
 
-  const toggleDrawer = (value: boolean) => (event: any) => {
-    if (
-      event.type === 'keydown' &&
-      (event.key === 'Tab' || event.key === 'Shift')
-    ) {
-      return;
-    }
-
-    if (value && !isPermanent) toggleSidebar(layoutDispatch);
-  };
-
-  // global
-  let { isSidebarOpened  } = useLayoutState() || {};
-  let layoutDispatch = useLayoutDispatch();
-
-  // local
-  let [isPermanent, setPermanent] = useState(true);
-
-  const isSidebarOpenedWrapper = useMemo(
-    () => (!isPermanent ? !isSidebarOpened : isSidebarOpened),
-    [isPermanent, isSidebarOpened],
-  );
-
-  useEffect(function () {
-    window.addEventListener('resize', handleWindowWidthChange);
-    handleWindowWidthChange();
-    return function cleanup() {
-      window.removeEventListener('resize', handleWindowWidthChange);
-    };
-  });
-
   return (
     <Drawer
-      variant={isPermanent ? 'permanent' : 'temporary'}
-      open={isSidebarOpenedWrapper}
-      onClose={toggleDrawer(false)}
+      variant={variant}
+      open={open}
+      onClose={onClose}
       sx={{
         width: 280,
         flexShrink: 0,
@@ -223,7 +176,7 @@ export const Sidebar = ({ location, structure = [] }: SidebarProps) => {
             right: 0,
             bottom: 0,
             left: 0,
-            background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Cpath d="m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+            background: 'url("data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.05\"%3E%3Cpath d=\"m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
             opacity: 0.1
           }
         }}
@@ -251,12 +204,10 @@ export const Sidebar = ({ location, structure = [] }: SidebarProps) => {
           Система управления
         </Typography>
       </Box>
-      
       {/* Навигационное меню */}
       <Box sx={{ flex: 1, py: 2, overflow: 'auto' }}>
         {renderMenuItems(structure)}
       </Box>
-      
       {/* Нижний блок с информацией */}
       <Box
         sx={{
@@ -272,36 +223,5 @@ export const Sidebar = ({ location, structure = [] }: SidebarProps) => {
       </Box>
     </Drawer>
   );
-
-  // ##################################################################
-  function handleWindowWidthChange() {
-    let windowWidth = window.innerWidth;
-    let breakpointWidth = 768;
-    let isSmallScreen = windowWidth < breakpointWidth;
-
-    if (isSmallScreen && isPermanent) {
-      setPermanent(false);
-    } else if (!isSmallScreen && !isPermanent) {
-      setPermanent(true);
-    }
-  }
 }
-
-Sidebar.propTypes = {
-  location: PropTypes.object.isRequired,
-  structure: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
-      label: PropTypes.string,
-      link: PropTypes.string,
-      icon: PropTypes.node,
-      type: PropTypes.string,
-      children: PropTypes.array
-    })
-  ),
-};
-
-Sidebar.defaultProps = {
-  structure: [],
-};
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import '../global-responsive.css';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { SnackbarProvider } from './Snackbar';
 import SimpleLayout from './SimpleLayout';

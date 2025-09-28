@@ -21,7 +21,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { usersApi } from '../../services/api/users';
-import { getStaffAttendance } from '../../services/api/staffAttendance';
+import fineApi, { Fine } from '../../services/api/fine';
 
 interface PayrollReportPageProps {
   isInReports?: boolean;
@@ -86,7 +86,8 @@ interface StaffAttendanceRecord {
 
 const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = false }) => {
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
-  const [attendanceRecords, setAttendanceRecords] = useState<StaffAttendanceRecord[]>([]);
+  // Удаляем attendanceRecords, добавляем finesByStaff
+  const [finesByStaff, setFinesByStaff] = useState<Record<string, Fine[]>>({});
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [openDialog, setOpenDialog] = useState(false);
@@ -110,7 +111,7 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
         await Promise.all([
           fetchPayrolls(),
           fetchStaff(),
-          fetchAttendance()
+          fetchFines()
         ]);
       } catch (err) {
         setError('Не удалось загрузить данные. Пожалуйста, обновите страницу.');
@@ -123,46 +124,22 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
     loadData();
   }, [selectedMonth]);
 
-  // Пересчет штрафов для всех сотрудников
-  useEffect(() => {
-    if (payrolls.length > 0 && attendanceRecords.length > 0 && staffList.length > 0) {
-      // Обновляем штрафы в расчетных листах на основе посещаемости
-      const updatedPayrolls = payrolls.map(payroll => {
-        // Определяем ID сотрудника в зависимости от типа
-        const staffId = typeof payroll.staffId === 'string' ? payroll.staffId : payroll.staffId._id;
-        
-        // Рассчитываем штрафы на основе посещаемости
-        const staffAttendance = attendanceRecords.filter(record =>
-          record.staffId === staffId && record.date.startsWith(selectedMonth)
-        );
-        
-        // Штрафы за опоздания
-        const latePenalty = staffAttendance.reduce((sum, record) => {
-          if (record.lateMinutes && record.lateMinutes > 0) {
-            // 100 тг за каждые 5 минут опоздания
-            return sum + Math.ceil(record.lateMinutes / 5) * 100;
-          }
-          return sum;
-        }, 0);
-        
-        // Штрафы за неявку: 60*10,5 = 630 тг за смену
-        const absencePenalty = staffAttendance.filter(record =>
-          record.status === 'no_show'
-        ).length * 630;
-        
-        const totalPenalties = latePenalty + absencePenalty;
-        
-        return {
-          ...payroll,
-          penalties: totalPenalties,
-          latePenalties: latePenalty,
-          absencePenalties: absencePenalty,
-          total: payroll.accruals + payroll.bonuses - totalPenalties
-        };
+
+  // Загрузка штрафов из Fine для всех сотрудников за выбранный месяц
+  const fetchFines = async () => {
+    try {
+      const fines: Fine[] = await fineApi.getAllByMonth(selectedMonth);
+      // Группируем штрафы по staffId
+      const finesMap: Record<string, Fine[]> = {};
+      fines.forEach(fine => {
+        if (!finesMap[fine.staffId]) finesMap[fine.staffId] = [];
+        finesMap[fine.staffId].push(fine);
       });
-      setPayrolls(updatedPayrolls);
+      setFinesByStaff(finesMap);
+    } catch (error) {
+      console.error('Ошибка загрузки штрафов:', error);
     }
-  }, [attendanceRecords, staffList]);
+  };
 
   const fetchPayrolls = async () => {
     try {
@@ -184,7 +161,7 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
 
   const fetchStaff = async () => {
     try {
-      const staff = await usersApi.getAll({ type: 'adult' });
+      const staff = await usersApi.getAll();
       console.log('Получены данные сотрудников:', staff);
       
       // Фильтруем только активных сотрудников
@@ -202,21 +179,8 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
     }
   };
 
-  const fetchAttendance = async () => {
-    try {
-      const startDate = new Date(selectedMonth + '-01');
-      const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
-      
-      const attendance = await getStaffAttendance({
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
-      });
-      setAttendanceRecords(attendance);
-    } catch (error) {
-      console.error('Ошибка загрузки посещаемости:', error);
-      throw error;
-    }
-  };
+
+  // fetchAttendance больше не нужен, штрафы берём только из Fine
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -362,35 +326,12 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
     }
   };
 
-  const calculatePenalties = (staffId: string) => {
-    // Рассчитываем штрафы на основе посещаемости
-    const staffAttendance = attendanceRecords.filter(record =>
-      record.staffId === staffId && record.date.startsWith(selectedMonth)
-    );
-    
-    let totalPenalty = 0;
-    
-    // Штрафы за опоздания
-    // В задании не указано, сколько конкретно списывать за опоздание,
-    // но упоминается "60*10,5 минут", что, по всей видимости, относится к штрафу за неявку
-    // Пока реализуем условный штраф за опоздание: 100 тг за каждые 5 минут опоздания
-    const latePenalty = staffAttendance.reduce((sum, record) => {
-      if (record.lateMinutes && record.lateMinutes > 0) {
-        // 100 тг за каждые 5 минут опоздания
-        return sum + Math.ceil(record.lateMinutes / 5) * 100;
-      }
-      return sum;
-    }, 0);
-    
-    // Штрафы за неявку: 60*10,5 = 630 тг за смену
-    const absencePenalty = staffAttendance.filter(record =>
-      record.status === 'no_show'
-    ).length * 630;
-    
-    totalPenalty = latePenalty + absencePenalty;
-    
-    return totalPenalty;
- };
+
+  // Получить сумму штрафов для сотрудника за месяц
+  const getPenaltiesForStaff = (staffId: string): number => {
+    const fines = finesByStaff[staffId] || [];
+    return fines.reduce((sum, fine) => sum + fine.amount, 0);
+  };
 
   if (loading) {
     return (
@@ -475,8 +416,6 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
               <TableRow>
                 <TableCell>Сотрудник</TableCell>
                 <TableCell align="right">Оклад</TableCell>
-                <TableCell align="right">Штрафы за опоздания</TableCell>
-                <TableCell align="right">Штрафы за неявки</TableCell>
                 <TableCell align="right">Всего штрафов</TableCell>
                 <TableCell align="right">К выплате</TableCell>
                 <TableCell>Статус</TableCell>
@@ -495,11 +434,15 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
                     </TableCell>
                     <TableCell align="right">{formatCurrency(payroll.accruals)}</TableCell>
                     <TableCell align="right">{formatCurrency(payroll.bonuses)}</TableCell>
-                    <TableCell align="right">-{formatCurrency(payroll.latePenalties || 0)}</TableCell>
-                    <TableCell align="right">-{formatCurrency(payroll.absencePenalties || 0)}</TableCell>
-                    <TableCell align="right">-{formatCurrency(payroll.penalties)}</TableCell>
+                    <TableCell align="right">-{formatCurrency(getPenaltiesForStaff(
+                      typeof payroll.staffId === 'string' ? payroll.staffId : payroll.staffId._id
+                    ))}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                      {formatCurrency(payroll.total)}
+                      {formatCurrency(
+                        payroll.accruals + payroll.bonuses - getPenaltiesForStaff(
+                          typeof payroll.staffId === 'string' ? payroll.staffId : payroll.staffId._id
+                        )
+                      )}
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -694,16 +637,12 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
                 </Grid>
                
                 <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">Штрафы за опоздания:</Typography>
-                  <Typography variant="h6">-{formatCurrency(selectedPayrollDetails.latePenalties || 0)}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">Штрафы за неявки:</Typography>
-                  <Typography variant="h6">-{formatCurrency(selectedPayrollDetails.absencePenalties || 0)}</Typography>
-                </Grid>
-                <Grid item xs={6}>
                   <Typography variant="body2" color="text.secondary">Всего штрафов:</Typography>
-                  <Typography variant="h6">-{formatCurrency(selectedPayrollDetails.penalties)}</Typography>
+                  <Typography variant="h6">-{formatCurrency(getPenaltiesForStaff(
+                    typeof selectedPayrollDetails.staffId === 'string'
+                      ? selectedPayrollDetails.staffId
+                      : selectedPayrollDetails.staffId._id
+                  ))}</Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="body2" color="text.secondary">Итого к выплате:</Typography>
@@ -713,43 +652,32 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
                 </Grid>
               </Grid>
               
-              {/* Детали посещаемости */}
+              {/* Детализация штрафов */}
               <Box sx={{ mt: 3 }}>
-                <Typography variant="h6" gutterBottom>Детали посещаемости</Typography>
+                <Typography variant="h6" gutterBottom>Детализация штрафов</Typography>
                 {(() => {
                   const staffId = typeof selectedPayrollDetails.staffId === 'string'
                     ? selectedPayrollDetails.staffId
                     : selectedPayrollDetails.staffId._id;
-                  
-                  const staffAttendance = attendanceRecords.filter(record =>
-                    record.staffId === staffId && record.date.startsWith(selectedMonth)
-                  );
-                  
-                  if (staffAttendance.length === 0) {
-                    return <Typography variant="body2">Нет данных о посещаемости</Typography>;
+                  const fines = finesByStaff[staffId] || [];
+                  if (fines.length === 0) {
+                    return <Typography variant="body2">Нет штрафов за выбранный месяц</Typography>;
                   }
-                  
                   return (
                     <Table size="small">
                       <TableHead>
                         <TableRow>
                           <TableCell>Дата</TableCell>
-                          <TableCell>Время смены</TableCell>
-                          <TableCell>Факт. приход</TableCell>
-                          <TableCell>Факт. уход</TableCell>
-                          <TableCell>Статус</TableCell>
-                          <TableCell>Опоздание</TableCell>
+                          <TableCell>Сумма</TableCell>
+                          <TableCell>Причина</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {staffAttendance.map((record, index) => (
-                          <TableRow key={index}>
-                            <TableCell>{new Date(record.date).toLocaleDateString('ru-RU')}</TableCell>
-                            <TableCell>{record.startTime} - {record.endTime}</TableCell>
-                            <TableCell>{record.actualStart || '-'}</TableCell>
-                            <TableCell>{record.actualEnd || '-'}</TableCell>
-                            <TableCell>{record.status}</TableCell>
-                            <TableCell>{record.lateMinutes ? `${record.lateMinutes} мин` : '-'}</TableCell>
+                        {fines.map((fine, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{new Date(fine.date).toLocaleDateString('ru-RU')}</TableCell>
+                            <TableCell>-{formatCurrency(fine.amount)}</TableCell>
+                            <TableCell>{fine.reason}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

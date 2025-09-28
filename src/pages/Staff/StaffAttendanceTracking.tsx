@@ -12,13 +12,8 @@ import {
    Schedule, Person, AddLocation, Settings, Check
 } from '@mui/icons-material';
 import { getUsers } from '../../services/api/users';
-import { 
-  getStaffAttendance, 
-  saveStaffAttendance, 
-  checkIn, 
-  checkOut,
-  StaffAttendanceRecord
-} from '../../services/api/staffAttendance';
+import shiftsApi, { getShifts } from '../../services/api/shifts';
+import { Shift } from '../../types/common';
 
 // Интерфейс для записей учета времени
 interface TimeRecord {
@@ -48,25 +43,13 @@ interface TimeRecord {
   notes?: string;
 }
 
-// Интерфейс для записей посещаемости
-interface AttendanceRecord extends StaffAttendanceRecord {
-  staffName: string;
-  workDuration?: number;
-  penalties?: {
-    late: { minutes: number; amount: number; reason?: string };
-    earlyLeave: { minutes: number; amount: number; reason?: string };
-    unauthorized: { amount: number; reason?: string };
-  };
-  bonuses?: {
-    overtime: { minutes: number; amount: number };
-    punctuality: { amount: number; reason?: string };
-  };
-}
+
+// Используем только смены (Shift) для учета посещаемости сотрудников
 
 const StaffAttendanceTracking:React.FC = () => {
   const [staffList, setStaffList] = useState<any[]>([]);
   const [records, setRecords] = useState<TimeRecord[]>([]);
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0],
@@ -108,7 +91,8 @@ const StaffAttendanceTracking:React.FC = () => {
     completed: 'success',
     cancelled: 'error',
     no_show: 'error',
-    late: 'warning'
+    late: 'warning',
+    confirmed: 'success'
   };
 
   const attendanceStatusLabels = {
@@ -117,14 +101,15 @@ const StaffAttendanceTracking:React.FC = () => {
     completed: 'Завершено',
     cancelled: 'Отменено',
     no_show: 'Не явился',
-    late: 'Опоздание'
+    late: 'Опоздание',
+    confirmed: 'Подтверждено'
   };
 
   useEffect(() => {
     const fetchStaff = async () => {
       try {
         const users = await getUsers();
-        setStaffList(users.filter((u: any) => u.type === 'adult'));
+  setStaffList(users);
       } catch {
         setStaffList([]);
       }
@@ -179,44 +164,15 @@ const StaffAttendanceTracking:React.FC = () => {
     fetchRecords();
   }, [selectedStaff, dateRange]);
 
-  // Загрузка данных посещаемости
+  // Загрузка смен сотрудников (учет посещаемости)
   useEffect(() => {
     const fetchAttendanceRecords = async () => {
       try {
-        const filters: any = { date };
-        if (selectedStaff !== 'all') {
-          filters.staffId = selectedStaff;
-        }
-        
-        const attendanceRecords = await getStaffAttendance(filters);
-        
-        // Преобразуем данные для соответствия интерфейсу
-        const transformedRecords = attendanceRecords.map((record: any) => ({
-          ...record,
-          staffName: getStaffName(record.staffId),
-          workDuration: record.actualEnd && record.actualStart ? 
-            calculateWorkDuration(record.actualStart, record.actualEnd, record.breakTime) : 0,
-          penalties: {
-            late: { 
-              minutes: record.lateMinutes || 0, 
-              amount: (record.lateMinutes || 0) * 500 // Пример расчета штрафа
-            },
-            earlyLeave: { 
-              minutes: record.earlyLeaveMinutes || 0, 
-              amount: (record.earlyLeaveMinutes || 0) * 500 // Пример расчета штрафа
-            },
-            unauthorized: { amount: 0 }
-          },
-          bonuses: {
-            overtime: { 
-              minutes: record.overtimeMinutes || 0, 
-              amount: (record.overtimeMinutes || 0) * 700 // Пример расчета премии
-            },
-            punctuality: { amount: 0 }
-          }
-        }));
-        
-        setAttendanceRecords(transformedRecords);
+        let filters: any = {};
+        if (selectedStaff !== 'all') filters.staffId = selectedStaff;
+        if (date) filters.date = date;
+        const records = await shiftsApi.getAll(filters);
+        setAttendanceRecords(records);
       } catch (e) {
         console.error('Error fetching attendance records:', e);
         setAttendanceRecords([]);
@@ -299,40 +255,20 @@ const StaffAttendanceTracking:React.FC = () => {
 
   const handleCheckInSubmit = async (location?: { latitude: number; longitude: number; address?: string }) => {
     try {
-      const result = await checkIn(location);
-      console.log('Check-in successful:', result);
-      setCheckInDialogOpen(false);
-      // Обновляем записи
+      // Найти смену для текущего сотрудника и даты
       const filters: any = { date };
       if (selectedStaff !== 'all') {
         filters.staffId = selectedStaff;
       }
-      const attendanceRecords = await getStaffAttendance(filters);
-      const transformedRecords = attendanceRecords.map((record: any) => ({
-        ...record,
-        staffName: getStaffName(record.staffId),
-        workDuration: record.actualEnd && record.actualStart ? 
-          calculateWorkDuration(record.actualStart, record.actualEnd, record.breakTime) : 0,
-        penalties: {
-          late: { 
-            minutes: record.lateMinutes || 0, 
-            amount: (record.lateMinutes || 0) * 500
-          },
-          earlyLeave: { 
-            minutes: record.earlyLeaveMinutes || 0, 
-            amount: (record.earlyLeaveMinutes || 0) * 500
-          },
-          unauthorized: { amount: 0 }
-        },
-        bonuses: {
-          overtime: { 
-            minutes: record.overtimeMinutes || 0, 
-            amount: (record.overtimeMinutes || 0) * 700
-          },
-          punctuality: { amount: 0 }
-        }
-      }));
-      setAttendanceRecords(transformedRecords);
+      const shifts = await shiftsApi.getAll(filters);
+      const myShift = shifts.find(s => s.staffId === currentStaffId);
+      if (myShift) {
+        await shiftsApi.updateStatus(myShift.id, 'in_progress');
+        setCheckInDialogOpen(false);
+        // Обновить записи
+        const updatedShifts = await shiftsApi.getAll(filters);
+        setAttendanceRecords(updatedShifts);
+      }
     } catch (error) {
       console.error('Error during check-in:', error);
     }
@@ -349,40 +285,19 @@ const StaffAttendanceTracking:React.FC = () => {
 
   const handleCheckOutSubmit = async (location?: { latitude: number; longitude: number; address?: string }) => {
     try {
-      const result = await checkOut(location);
-      console.log('Check-out successful:', result);
-      setCheckOutDialogOpen(false);
-      // Обновляем записи
       const filters: any = { date };
       if (selectedStaff !== 'all') {
         filters.staffId = selectedStaff;
       }
-      const attendanceRecords = await getStaffAttendance(filters);
-      const transformedRecords = attendanceRecords.map((record: any) => ({
-        ...record,
-        staffName: getStaffName(record.staffId),
-        workDuration: record.actualEnd && record.actualStart ? 
-          calculateWorkDuration(record.actualStart, record.actualEnd, record.breakTime) : 0,
-        penalties: {
-          late: { 
-            minutes: record.lateMinutes || 0, 
-            amount: (record.lateMinutes || 0) * 500
-          },
-          earlyLeave: { 
-            minutes: record.earlyLeaveMinutes || 0, 
-            amount: (record.earlyLeaveMinutes || 0) * 500
-          },
-          unauthorized: { amount: 0 }
-        },
-        bonuses: {
-          overtime: { 
-            minutes: record.overtimeMinutes || 0, 
-            amount: (record.overtimeMinutes || 0) * 700
-          },
-          punctuality: { amount: 0 }
-        }
-      }));
-      setAttendanceRecords(transformedRecords);
+      const shifts = await shiftsApi.getAll(filters);
+      const myShift = shifts.find(s => s.staffId === currentStaffId);
+      if (myShift) {
+        await shiftsApi.updateStatus(myShift.id, 'completed');
+        setCheckOutDialogOpen(false);
+        // Обновить записи
+        const updatedShifts = await shiftsApi.getAll(filters);
+        setAttendanceRecords(updatedShifts);
+      }
     } catch (error) {
       console.error('Error during check-out:', error);
     }
@@ -727,7 +642,7 @@ const StaffAttendanceTracking:React.FC = () => {
           </TableHead>
           <TableBody>
             {attendanceRecords.map((record) => (
-              <TableRow key={record._id}>
+              <TableRow key={record.id || record._id}>
                 <TableCell>
                   <Box display="flex" alignItems="center">
                     <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
@@ -743,70 +658,27 @@ const StaffAttendanceTracking:React.FC = () => {
                       {record.startTime} - {record.endTime}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {record.shiftType === 'full' ? 'Полная смена' : 'Сверхурочная'}
+                      {record.type === 'full' ? 'Полная смена' : 'Сверхурочная'}
                     </Typography>
                   </Box>
                 </TableCell>
+                {/* Можно добавить расчет workDuration, если есть поля actualStart/actualEnd */}
                 <TableCell>
                   <Box>
                     <Typography variant="body2">
-                      {record.actualStart || '-'} - {record.actualEnd || '-'}
+                      {record.notes || '-'}
                     </Typography>
-                    {record.workDuration !== undefined && (
-                      <Typography variant="caption" color="text.secondary">
-                        {formatTime(record.workDuration)}
-                      </Typography>
-                    )}
                   </Box>
                 </TableCell>
                 <TableCell>
                   <Chip
-                    label={attendanceStatusLabels[record.status]}
-                    color={attendanceStatusColors[record.status] as any}
+                    label={attendanceStatusLabels[record.status as keyof typeof attendanceStatusLabels]}
+                    color={attendanceStatusColors[record.status as keyof typeof attendanceStatusColors] as any}
                     size="small"
                   />
                 </TableCell>
                 <TableCell align="right">
-                  {record.status === 'scheduled' && (
-                    <Button 
-                      variant="contained" 
-                      size="small" 
-                      onClick={() => handleCheckIn(record.staffId)}
-                      sx={{ mr: 1 }}
-                    >
-                      Приход
-                    </Button>
-                  )}
-                  {record.status === 'in_progress' && (
-                    <Button 
-                      variant="contained" 
-                      color="success"
-                      size="small" 
-                      onClick={() => handleCheckOut(record.staffId)}
-                    >
-                      Уход
-                    </Button>
-                  )}
-                  <IconButton size="small" onClick={() => {
-                    // Преобразуем AttendanceRecord в TimeRecord для редактирования
-                    const timeRecord: TimeRecord = {
-                      id: record._id || '', // Используем _id
-                      staffId: record.staffId,
-                      staffName: record.staffName,
-                      date: record.date,
-                      status: 'checked_in', // Значение по умолчанию
-                      penalties: record.penalties || {
-                        late: { minutes: 0, amount: 0 },
-                        earlyLeave: { minutes: 0, amount: 0 },
-                        unauthorized: { amount: 0 }
-                      },
-                      bonuses: record.bonuses || {
-                        overtime: { minutes: 0, amount: 0 },
-                        punctuality: { amount: 0 }
-                      }
-                    };
-                    handleEditRecord(timeRecord);
-                  }}>
+                  <IconButton size="small" onClick={() => handleEditRecord(record as any)}>
                     <Edit />
                   </IconButton>
                 </TableCell>
@@ -1058,7 +930,7 @@ const StaffAttendanceTracking:React.FC = () => {
             <CardContent>
               <Typography variant="h6" color="warning.main">Опоздания</Typography>
               <Typography variant="h4">
-                {attendanceRecords.filter(r => r.lateMinutes && r.lateMinutes > 0).length}
+                {attendanceRecords.filter(r => (r as any).lateMinutes && (r as any).lateMinutes > 0).length}
               </Typography>
             </CardContent>
           </Card>
@@ -1093,15 +965,15 @@ const StaffAttendanceTracking:React.FC = () => {
                 <TableCell>{record.staffName}</TableCell>
                 <TableCell>
                   <Chip
-                    label={attendanceStatusLabels[record.status]}
-                    color={attendanceStatusColors[record.status] as any}
+                    label={attendanceStatusLabels[record.status as keyof typeof attendanceStatusLabels]}
+                    color={attendanceStatusColors[record.status as keyof typeof attendanceStatusColors] as any}
                     size="small"
                   />
                 </TableCell>
-                <TableCell>{record.actualStart || '-'}</TableCell>
-                <TableCell>{record.actualEnd || '-'}</TableCell>
-                <TableCell>{record.lateMinutes || 0}</TableCell>
-                <TableCell>{record.overtimeMinutes || 0}</TableCell>
+                <TableCell>{(record as any).actualStart || '-'}</TableCell>
+                <TableCell>{(record as any).actualEnd || '-'}</TableCell>
+                <TableCell>{(record as any).lateMinutes || 0}</TableCell>
+                <TableCell>{(record as any).overtimeMinutes || 0}</TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -9,6 +9,21 @@ class UsersApiClient extends BaseCrudApiClient<User> {
   private readonly CACHE_KEY = 'users';
   private readonly ROLES_CACHE_KEY = 'user_roles';
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 минут
+  // ...existing code...
+
+  /**
+   * Получить настройки зарплаты и штрафов сотрудника
+   */
+  async getPayrollSettings(id: ID): Promise<Pick<User, 'salary' | 'salaryType' | 'penaltyType' | 'penaltyAmount'>> {
+    return this.get(`${this.endpoint}/${id}`);
+  }
+
+  /**
+   * Обновить настройки зарплаты и штрафов сотрудника
+   */
+  async updatePayrollSettings(id: ID, data: Partial<Pick<User, 'salary' | 'salaryType' | 'penaltyType' | 'penaltyAmount'>>): Promise<User> {
+    return this.put(`${this.endpoint}/${id}/payroll-settings`, data);
+  }
 
   /**
    * Получение всех пользователей с кэшированием

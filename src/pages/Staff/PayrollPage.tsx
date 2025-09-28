@@ -19,6 +19,53 @@ import {
 import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { Alert, CircularProgress } from '@mui/material';
+import { exportSalaryReport } from '../../services/api/reports';
+import usersApi from '../../services/api/users';
+// Типы для настроек зарплаты и штрафа
+type PayrollSettings = {
+  salary?: number;
+  salaryType?: 'day' | 'month';
+  penaltyType?: 'fixed' | 'percent'; // убираем 'minute' для совместимости с User
+  penaltyAmount?: number;
+};
+  // Диалог и состояние для настроек зарплаты/штрафа
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [settingsUser, setSettingsUser] = useState<any>(null);
+  const [payrollSettings, setPayrollSettings] = useState<PayrollSettings>({});
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  // Открыть диалог настроек
+  const handleOpenSettings = async (user: any) => {
+    setSettingsUser(user);
+    setSettingsLoading(true);
+    setSettingsDialogOpen(true);
+    try {
+      const data = await usersApi.getPayrollSettings(user._id);
+      setPayrollSettings({
+        salary: typeof data.salary === 'number' ? data.salary : undefined,
+        salaryType: data.salaryType ?? 'month',
+        penaltyType: (data.penaltyType === 'fixed' || data.penaltyType === 'percent') ? data.penaltyType : 'fixed',
+        penaltyAmount: typeof data.penaltyAmount === 'number' ? data.penaltyAmount : undefined
+      });
+    } catch {
+      setPayrollSettings({ salary: undefined, salaryType: 'month', penaltyType: 'fixed', penaltyAmount: undefined });
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  // Сохранить настройки
+  const handleSaveSettings = async () => {
+    if (!settingsUser) return;
+    setSettingsLoading(true);
+    try {
+      await usersApi.updatePayrollSettings(settingsUser._id, payrollSettings);
+      setSettingsDialogOpen(false);
+    } catch (e) {
+      alert('Ошибка сохранения настроек');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
 
 interface PayrollPageProps {
   isInReports?: boolean;
@@ -112,7 +159,7 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
   const fetchStaff = async () => {
     try {
       console.log('Запрос сотрудников с типом adult...');
-      const response = await fetch('/api/users?type=adult');
+  const response = await fetch('/api/users');
       
       console.log('Ответ от сервера для /api/users:', response.status);
       
@@ -232,10 +279,29 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
   };
   
   // Обработчик экспорта расчетного листа
+  // Экспорт зарплатного отчета через API
   const handleExportPayroll = async (id: string, format: 'pdf' | 'excel' | 'csv') => {
     try {
-      // В реальном приложении здесь будет запрос к API для экспорта
-      alert(`Экспорт расчетного листа в формате ${format}`);
+      // Формируем параметры для экспорта
+      const params: any = {
+        startDate: selectedMonth + '-01',
+        endDate: selectedMonth + '-28', // для простоты, можно доработать до конца месяца
+        format
+      };
+      if (id) params.userId = id;
+      const blob = await exportSalaryReport(params);
+      if (!blob) throw new Error('Пустой ответ от сервера');
+      // Формируем имя файла
+      const fileName = `payroll_${id ? id + '_' : ''}${selectedMonth}.${format === 'excel' ? 'xlsx' : format}`;
+      // Создаем ссылку для скачивания
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Ошибка экспорта расчетного листа:', error);
       setError('Не удалось экспортировать расчетный лист');
@@ -364,9 +430,11 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
                 <TableCell>Сотрудник</TableCell>
                 <TableCell align="right">Начисления</TableCell>
                 <TableCell align="right">Штрафы</TableCell>
+                
                 <TableCell align="right">Итого</TableCell>
                 <TableCell>Статус</TableCell>
                 <TableCell align="center">Действия</TableCell>
+                <TableCell align="center">Ставка</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -381,6 +449,215 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>
                       {formatCurrency(payroll.total)}
                     </TableCell>
+                    <TableCell align="center">
+                     
+                      <Tooltip title="Удалить">
+                        <IconButton 
+                          onClick={() => handleDeletePayroll(payroll._id)} 
+                          color="error"
+                          size="small"
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Печать">
+                        <IconButton
+                          size="small"
+                          onClick={() => handlePrintPayroll(payroll._id)}
+                        >
+                          <PrintIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Отправить на email">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleSendByEmail(payroll._id)}
+                        >
+                          <EmailIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Экспорт">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleExportPayroll(payroll._id, 'pdf')}
+                        >
+                          <PictureAsPdf fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Tooltip title="Настроить ставку и штраф">
+                        <IconButton size="small" onClick={() => handleOpenSettings(payroll.staffId)}>
+                          <MoneyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+      {/* Диалог настройки ставки и штрафа */}
+      <Dialog open={settingsDialogOpen} onClose={() => setSettingsDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Настройка ставки и штрафа</DialogTitle>
+        <DialogContent dividers>
+          {settingsLoading ? <CircularProgress /> : settingsUser && (
+            <Box>
+              <Typography variant="subtitle1" gutterBottom>{settingsUser.fullName}</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Ставка зарплаты"
+                    type="number"
+                    fullWidth
+                    value={payrollSettings.salary ?? ''}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setPayrollSettings(s => ({ ...s, salary: val === '' ? undefined : Number(val) }));
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Тип</InputLabel>
+                    <Select
+                      value={payrollSettings.salaryType || 'month'}
+                      label="Тип"
+                      onChange={e => setPayrollSettings(s => ({ ...s, salaryType: e.target.value as any }))}
+                    >
+                      <MenuItem value="month">В месяц</MenuItem>
+                      <MenuItem value="day">В день</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Штраф за опоздание"
+                    type="number"
+                    fullWidth
+                    value={payrollSettings.penaltyAmount ?? ''}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setPayrollSettings(s => ({ ...s, penaltyAmount: val === '' ? undefined : Number(val) }));
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Период/Тип</InputLabel>
+                    <Select
+                      value={payrollSettings.penaltyType || 'fixed'}
+                      label="Период/Тип"
+                      onChange={e => setPayrollSettings(s => ({ ...s, penaltyType: e.target.value as any }))}
+                    >
+                      <MenuItem value="fixed">Фиксированная сумма</MenuItem>
+                      <MenuItem value="percent">Процент от ставки</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSettingsDialogOpen(false)}>Отмена</Button>
+          <Button onClick={handleSaveSettings} variant="contained" color="primary" disabled={settingsLoading}>
+            Сохранить
+          </Button>
+        </DialogActions>
+                  <Paper>
+                    <TableContainer>
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Сотрудник</TableCell>
+                            <TableCell align="right">Начисления</TableCell>
+                            <TableCell align="right">Штрафы</TableCell>
+                            <TableCell align="right">Итого</TableCell>
+                            <TableCell>Статус</TableCell>
+                            <TableCell align="center">Действия</TableCell>
+                            <TableCell align="center">Ставка</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {payrolls
+                            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                            .map((payroll) => (
+                              <TableRow key={payroll._id}>
+                                <TableCell>{payroll.staffId?.fullName || 'Неизвестно'}</TableCell>
+                                <TableCell align="right">{formatCurrency(payroll.accruals)}</TableCell>
+                                <TableCell align="right">{formatCurrency(payroll.bonuses)}</TableCell>
+                                <TableCell align="right">-{formatCurrency(payroll.penalties)}</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                                  {formatCurrency(payroll.total)}
+                                </TableCell>
+                                <TableCell>
+                                  <Chip 
+                                    label={payroll.status === 'draft' ? 'Черновик' : 
+                                           payroll.status === 'approved' ? 'Подтвержден' : 'Оплачен'}
+                                    color={getStatusColor(payroll.status)}
+                                    variant={payroll.status === 'draft' ? 'outlined' : 'filled'}
+                                  />
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Tooltip title="Настроить ставку и штраф">
+                                    <IconButton size="small" onClick={() => handleOpenSettings(payroll.staffId)}>
+                                      <MoneyIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Редактировать">
+                                    <IconButton onClick={() => handleOpenDialog(payroll)} size="small">
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Удалить">
+                                    <IconButton 
+                                      onClick={() => handleDeletePayroll(payroll._id)} 
+                                      color="error"
+                                      size="small"
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Печать">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handlePrintPayroll(payroll._id)}
+                                    >
+                                      <PrintIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Отправить на email">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleSendByEmail(payroll._id)}
+                                    >
+                                      <EmailIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Экспорт">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleExportPayroll(payroll._id, 'pdf')}
+                                    >
+                                      <PictureAsPdf fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                    <TablePagination
+                      rowsPerPageOptions={[5, 10, 25]}
+                      component="div"
+                      count={payrolls.length}
+                      rowsPerPage={rowsPerPage}
+                      page={page}
+                      onPageChange={handleChangePage}
+                      onRowsPerPageChange={handleChangeRowsPerPage}
+                      labelRowsPerPage="Строк на странице:"
+                      labelDisplayedRows={({ from, to, count }) => 
+                        `${from}-${to} из ${count !== -1 ? count : `более чем ${to}`}`}
+                    />
+                  </Paper>
+      </Dialog>
                     <TableCell>
                       <Chip 
                         label={payroll.status === 'draft' ? 'Черновик' : 
@@ -545,6 +822,6 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
       </Dialog>
     </Box>
   );
-};
+}
 
 export default PayrollPage;

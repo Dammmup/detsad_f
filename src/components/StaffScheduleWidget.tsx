@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { CalendarToday, AccessTime } from '@mui/icons-material';
 import { useAuth } from './context/AuthContext';
-// import { getStaffShifts } from '../services/api/staffShift';
+import { getStaffShifts, getShifts } from '../services/api/shifts';
 // import { formatTime } from '../utils/format';
 
 interface StaffScheduleWidgetProps {
@@ -39,45 +39,13 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = ({ onScheduleCha
         const endDate = new Date(today);
         endDate.setDate(today.getDate() + 7);
         
-        // const shiftList = await getStaffShifts({
-        //   staffId: currentUser.id,
-        //   startDate: today.toISOString().split('T')[0],
-        //   endDate: endDate.toISOString().split('T')[0]
-        // });
+        const shiftList = await getStaffShifts({
+          staffId: currentUser.id,
+          startDate: today.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0]
+        });
         
-        // Mock данные для демонстрации
-        const shiftList = [
-          {
-            _id: '1',
-            staffId: currentUser.id,
-            date: new Date().toISOString().split('T')[0],
-            shiftType: 'full',
-            startTime: '07:30',
-            endTime: '18:00',
-            status: 'scheduled',
-            notes: 'Основная смена'
-          },
-          {
-            _id: '2',
-            staffId: currentUser.id,
-            date: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0],
-            shiftType: 'full',
-            startTime: '07:30',
-            endTime: '18:00',
-            status: 'scheduled',
-            notes: 'Основная смена'
-          },
-          {
-            _id: '3',
-            staffId: currentUser.id,
-            date: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0],
-            shiftType: 'overtime',
-            startTime: '18:00',
-            endTime: '22:00',
-            status: 'scheduled',
-            notes: 'Сверхурочная смена'
-          }
-        ];
+
         
         // Сортируем по дате
         const sortedShifts = [...shiftList].sort((a, b) => 

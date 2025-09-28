@@ -22,7 +22,6 @@ const defaultForm: Omit<Partial<User>, 'role'> = {
   iin: '',
   groupId: '',
   parentName: '',
-  type: 'child',
   active: true,
   phone: '', // для совместимости с API
 };
@@ -83,7 +82,6 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
         // Редактирование существующего пользователя
         const userData: Partial<User> = {
           id: child.id,
-          type: 'child',
           fullName: form.fullName || '',
           phone: form.phone || '',
           parentPhone: form.parentPhone || '',
@@ -98,7 +96,6 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
       } else {
         // Создание нового пользователя
         const userData = {
-          type: 'child' as const,
           fullName: form.fullName || '',
           phone: form.parentPhone || '', // Для детей phone = parentPhone!
           parentPhone: form.parentPhone || '',

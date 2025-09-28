@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, CircularProgress, Snackbar, Alert } from '@mui/material';
 import { useAuth } from './context/AuthContext';
-import { getStaffAttendance, checkIn, checkOut } from '../services/api/staffAttendance';
+import shiftsApi, { getShifts } from '../services/api/shifts';
 
 interface StaffAttendanceButtonProps {
   onStatusChange?: () => void; // Callback для обновления статуса
@@ -17,42 +17,44 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
 
   // Загрузка статуса посещаемости для текущего пользователя
   useEffect(() => {
-    const fetchAttendanceStatus = async () => {
+    const fetchShiftStatus = async () => {
       if (!currentUser) return;
-
       try {
         const today = new Date().toISOString().split('T')[0];
-        const attendanceRecords = await getStaffAttendance({
-          staffId: currentUser.id,
-          date: today
-        });
-
-        if (attendanceRecords.length > 0) {
-          const record = attendanceRecords[0];
-          setStatus(record.status as 'scheduled' | 'in_progress' | 'completed');
+        const shifts = await getShifts(today, today);
+        const myShift = shifts.find(s => s.staffId === currentUser.id);
+        if (myShift) {
+          setStatus(myShift.status as 'scheduled' | 'in_progress' | 'completed');
         } else {
           setStatus('no_record');
         }
       } catch (error) {
-        console.error('Error fetching attendance status:', error);
+        console.error('Error fetching shift status:', error);
         setStatus('error');
       }
     };
-
-    fetchAttendanceStatus();
+    fetchShiftStatus();
   }, [currentUser]);
 
   const handleCheckIn = async () => {
     if (!currentUser) return;
-
     setLoading(true);
     try {
-      await checkIn();
-      setStatus('in_progress');
-      setSnackbarMessage('Отметка о приходе успешно сохранена');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
-      if (onStatusChange) onStatusChange();
+      const today = new Date().toISOString().split('T')[0];
+      const shifts = await getShifts(today, today);
+      const myShift = shifts.find(s => s.staffId === currentUser.id);
+      if (myShift) {
+        await shiftsApi.updateStatus(myShift.id, 'in_progress');
+        setStatus('in_progress');
+        setSnackbarMessage('Отметка о приходе успешно сохранена');
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+        if (onStatusChange) onStatusChange();
+      } else {
+        setSnackbarMessage('Смена не найдена на сегодня');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+      }
     } catch (error: any) {
       console.error('Error during check-in:', error);
       setSnackbarMessage(error.message || 'Ошибка при отметке прихода');
@@ -65,15 +67,23 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
 
   const handleCheckOut = async () => {
     if (!currentUser) return;
-
     setLoading(true);
     try {
-      await checkOut();
-      setStatus('completed');
-      setSnackbarMessage('Отметка об уходе успешно сохранена');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
-      if (onStatusChange) onStatusChange();
+      const today = new Date().toISOString().split('T')[0];
+      const shifts = await getShifts(today, today);
+      const myShift = shifts.find(s => s.staffId === currentUser.id);
+      if (myShift) {
+        await shiftsApi.updateStatus(myShift.id, 'completed');
+        setStatus('completed');
+        setSnackbarMessage('Отметка об уходе успешно сохранена');
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+        if (onStatusChange) onStatusChange();
+      } else {
+        setSnackbarMessage('Смена не найдена на сегодня');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+      }
     } catch (error: any) {
       console.error('Error during check-out:', error);
       setSnackbarMessage(error.message || 'Ошибка при отметке ухода');

@@ -7,10 +7,11 @@ import {
 } from '@mui/material';
 import { Add, Edit, Delete, Group, Visibility, ExpandLess } from '@mui/icons-material';
 import { useGroups } from '../../components/context/GroupsContext';
-import { getUsers, getChildrenByGroup } from '../../services/api/users';
-import { User } from '../../types/common';
+import childrenApi, { Child } from '../../services/api/children';
+// User импорт не нужен для детей
 import { useAuth } from '../../components/context/AuthContext';
 import { SelectChangeEvent } from '@mui/material/Select';
+import { getChildrenByGroup } from '../../services/api';
 interface TeacherOption {
   id: string;
   fullName: string;
@@ -48,7 +49,7 @@ const Groups = () => {
   const [expandedGroups, setExpandedGroups] = useState<{
     [groupId: string]: {
       expanded: boolean;
-      children: User[];
+  children: Child[];
       loading: boolean;
     };
   }>({});
@@ -56,9 +57,10 @@ const Groups = () => {
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
   const fetchTeachers = async () => {
     try {
-      const users: User[] = await getUsers();
-      const filtered = users.filter((u) => ['teacher', 'assistant'].includes(u.role as any));
-      setTeacherList(filtered.map((u) => ({ id: u.id || (u as any)._id, fullName: u.fullName })));
+  // Для учителей оставляем getUsers, для детей используем Child
+  const users = await import('../../services/api/users').then(m => m.getUsers());
+  const filtered = users.filter((u: any) => ['teacher', 'assistant'].includes(u.role as any));
+  setTeacherList(filtered.map((u: any) => ({ id: u.id || u._id, fullName: u.fullName })));
     } catch (e) {
       setTeacherList([]);
     }

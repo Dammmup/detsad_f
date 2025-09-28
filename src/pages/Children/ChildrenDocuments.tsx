@@ -24,15 +24,10 @@ import { ru } from 'date-fns/locale';
 import { getDocuments, createDocument, updateDocument, deleteDocument, downloadDocument } from '../../services/api/documents';
 import ExportAutoTemplatesButton from '../../components/ExportAutoTemplatesButton';
 import { childrenTemplates } from '../../utils/documentTemplates';
-import { usersApi } from '../../services/api/users';
+import childrenApi, { Child } from '../../services/api/children';
+import groupsApi from '../../services/api/groups';
+import { active } from 'sortablejs';
 
-interface Child {
-  id: string;
-  fullName: string;
- groupId: string;
-  groupName: string;
-  age: number;
-}
 
 interface ChildDocument {
   id: string;
@@ -53,7 +48,8 @@ const ChildrenDocuments: React.FC = () => {
 
   const [documents, setDocuments] = useState<ChildDocument[]>([]);
   const [filteredDocuments, setFilteredDocuments] = useState<ChildDocument[]>([]);
-  const [children, setChildren] = useState<Child[]>([]);
+  const [children, setChildren] = useState<(Child & { groupName?: string; age: number })[]>([]);
+  const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [openDialog, setOpenDialog] = useState(false);
@@ -73,12 +69,12 @@ const ChildrenDocuments: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // Загружаем документы детей и список детей
-        const [documentsData, childrenData] = await Promise.all([
+        // Загружаем документы, детей и группы
+        const [documentsData, childrenData, groupsData] = await Promise.all([
           getDocuments({ category: 'children' }),
-          usersApi.getAll({ type: 'child' })
+          childrenApi.getAll(),
+          groupsApi.getAll()
         ]);
-        
         // Преобразуем данные из API в формат, используемый в компоненте
         const childrenDocuments = documentsData.data?.map((doc: any) => ({
           id: doc.id,
@@ -94,15 +90,18 @@ const ChildrenDocuments: React.FC = () => {
           status: doc.status,
           tags: doc.tags || []
         })) || [];
-        
-        const childrenList = childrenData.map((user: any) => ({
-          id: user.id,
-          fullName: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-          groupId: user.groupId || '',
-          groupName: user.groupName || 'Не указана',
-          age: user.age || 0
+        // Список групп для быстрого поиска по id
+        const groupMap = new Map<string, string>();
+        (groupsData || []).forEach((g: any) => {
+          groupMap.set(g.id || g._id, g.name);
+        });
+        setGroups((groupsData || []).map((g: any) => ({ id: g.id || g._id, name: g.name })));
+        // Формируем список детей с groupName и age
+        const childrenList = childrenData.map((child: Child) => ({
+          ...child,
+          groupName: child.groupId ? groupMap.get(child.groupId) || '' : '',
+          age: child.birthday ? Math.floor((Date.now() - new Date(child.birthday).getTime()) / (365.25*24*60*60*1000)) : 0
         }));
-        
         setChildren(childrenList);
         setDocuments(childrenDocuments);
         setFilteredDocuments(childrenDocuments);
@@ -522,7 +521,10 @@ const ChildrenDocuments: React.FC = () => {
                             {document.childName}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {children.find(c => c.id === document.childId)?.groupName} • {children.find(c => c.id === document.childId)?.age} лет
+                            {(() => {
+                              const child = children.find(c => c.id === document.childId);
+                              return child ? `${child.groupName || ''}${child.groupName ? ' • ' : ''}${child.age} лет` : '';
+                            })()}
                           </Typography>
                         </Box>
                       </Box>

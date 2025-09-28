@@ -1,3 +1,5 @@
+import MenuItemsAdminPage from '../pages/MedCabinet/MenuItemsAdminPage';
+import VitaminizationJournalPage from '../pages/MedCabinet/VitaminizationJournalPage';
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { 
@@ -23,8 +25,10 @@ import DocumentsTemplates from '../pages/DocumentsTemplates';
 import { Sidebar } from './Sidebar/Sidebar';
 import sidebarStructure from './Sidebar/SidebarStructure';
 import { useLocation } from 'react-router-dom';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import ChildrenReports from '../pages/Children/ChildrenReports';
 import StaffSchedule from '../pages/Staff/StaffSchedule';
+
 
 import WeeklyAttendance from '../pages/Children/WeeklyAttendance';
 import ReportsSalary from '../components/reports/ReportsSalary';
@@ -35,6 +39,20 @@ import Analytics from '../pages/Analytics';
 import StaffAttendanceTracking from '../pages/Staff/StaffAttendanceTracking';
 import { Documents } from '../pages/Documents';
 
+// Импорт страниц медкабинета
+
+import TubPositiveJournal from '../pages/MedCabinet/TubPositiveJournal';
+import InfectiousDiseasesJournal from '../pages/MedCabinet/InfectiousDiseasesJournal';
+import ContactInfectionJournal from '../pages/MedCabinet/ContactInfectionJournal';
+import RiskGroupChildren from '../pages/MedCabinet/RiskGroupChildren';
+import MedCabinetPage from '../pages/MedCabinet/MedCabinetPage';
+import ChildHealthPassportPage from '../pages/MedCabinet/ChildHealthPassportPage';
+import FoodNormsControlPage from '../pages/MedCabinet/FoodNormsControlPage';
+import HelminthJournal from '../pages/MedCabinet/HelminthJournal';
+import MantouxJournal from '../pages/MedCabinet/MantouxJournal';
+import OrganolepticJournalPage from '../pages/MedCabinet/OrganolepticJournalPage';
+import SomaticJournal from '../pages/MedCabinet/SomaticJournal';
+
 interface SimpleLayoutProps {
   children?: React.ReactNode;
 }
@@ -43,6 +61,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width:768px)');
 
   const toggleDrawer = () => {
     setDrawerOpen(!drawerOpen);
@@ -60,7 +79,6 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
-      
       {/* Верхняя панель */}
       <AppBar position="fixed"
         sx={{
@@ -77,7 +95,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             aria-label="open drawer"
             edge="start"
             onClick={toggleDrawer}
-            sx={{ mr: 2 }}
+            sx={{ mr: 2, display: { xs: 'block', md: 'none' } }}
           >
             <MenuIcon />
           </IconButton>
@@ -89,33 +107,43 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
           </Button>
         </Toolbar>
       </AppBar>
-      
+
       {/* Sidebar с древовидной структурой */}
-      <Sidebar location={location} structure={sidebarStructure} />
-      
+      {isMobile ? (
+        <Sidebar 
+          location={location} 
+          structure={sidebarStructure} 
+          variant="temporary" 
+          open={drawerOpen} 
+          onClose={toggleDrawer} 
+        />
+      ) : (
+        <Sidebar 
+          location={location} 
+          structure={sidebarStructure} 
+          variant="permanent" 
+          open={true} 
+        />
+      )}
+
       {/* Основное содержимое */}
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
         <Container maxWidth="lg">
           <Routes>
             <Route path="dashboard" element={<Dashboard />} />
-
             {/* Дети */}
             <Route path="children" element={<Children />} />
             <Route path="children/attendance" element={<WeeklyAttendance />} />
             <Route path="children/reports" element={<ChildrenReports />} />
-
             {/* Сотрудники */}
             <Route path="staff" element={<Staff />} />
             <Route path="staff/schedule" element={<StaffSchedule />} />
             <Route path="staff/attendance" element={<StaffAttendanceTracking />} />
-         
             <Route path="staff/reports" element={<Reports />} />
-
             {/* Документы */}
             <Route path="documents" element={<Documents/>} />
             <Route path="documents/templates" element={<DocumentsTemplates />} />
-
             {/* Отчеты */}
             <Route path="reports" element={<Reports />} />
             <Route path="reports/payroll" element={<ReportsSalary startDate={monthStart} endDate={monthEnd} />} />
@@ -125,6 +153,22 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path="groups" element={<Groups />} />
             <Route path="cyclogram" element={<Cyclogram />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="med/menu-admin" element={<MenuItemsAdminPage />} />
+
+
+            {/* Медицинский кабинет и журналы */}
+            <Route path="med" element={<MedCabinetPage />} />
+            <Route path="med/passport" element={<ChildHealthPassportPage />} />
+            <Route path="med/mantoux" element={<MantouxJournal />} />
+            <Route path="med/somatic" element={<SomaticJournal />} />
+            <Route path="med/helminth" element={<HelminthJournal />} />
+            <Route path="med/infectious" element={<InfectiousDiseasesJournal />} />
+            <Route path="med/contact-infection" element={<ContactInfectionJournal />} />
+            <Route path="med/risk-group" element={<RiskGroupChildren />} />
+            <Route path="med/tub-positive" element={<TubPositiveJournal />} />
+            <Route path="med/vitaminization" element={<VitaminizationJournalPage />} />
+            <Route path="med/organoleptic-journal" element={<OrganolepticJournalPage />} />
+            <Route path="med/food-norms-control" element={<FoodNormsControlPage />} />
 
             {/* Fallback */}
             <Route path="*" element={<Dashboard />} />

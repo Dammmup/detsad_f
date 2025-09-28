@@ -87,7 +87,7 @@ export interface User {
 }
 
 // Create axios instance with base config
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_URL,
   timeout: 10000, // 10 seconds
   headers: {

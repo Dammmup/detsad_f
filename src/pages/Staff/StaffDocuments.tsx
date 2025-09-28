@@ -75,7 +75,7 @@ const StaffDocuments: React.FC = () => {
         // Загружаем документы сотрудников и список сотрудников
         const [documentsData, staffData] = await Promise.all([
           getDocuments({ category: 'staff' }),
-          usersApi.getAll({ type: 'adult' }) // предполагаем, что сотрудники - это взрослые пользователи
+          usersApi.getAll() // предполагаем, что сотрудники - это взрослые пользователи
         ]);
         
         // Преобразуем данные из API в формат, используемый в компоненте

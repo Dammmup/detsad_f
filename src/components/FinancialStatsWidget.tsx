@@ -78,7 +78,11 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
         
         setChartData(chartDataArray);
       } catch (err: any) {
-        setError(err.message);
+        let friendlyError = err.message;
+        if (friendlyError && (friendlyError.includes('Unexpected token') || friendlyError.includes('<'))) {
+          friendlyError = 'Ошибка соединения с сервером или некорректный ответ API.';
+        }
+        setError(friendlyError);
         console.error('Error fetching financial stats:', err);
       } finally {
         setLoading(false);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getUsers, updateUser, deleteUser} from '../../services/api/users';
+import { getUsers, updateUser, deleteUser, usersApi } from '../../services/api/users';
 import {
   Table, TableHead, TableRow, TableCell, TableBody, Paper, CircularProgress, Alert, Button, Dialog,
   DialogTitle, DialogContent, DialogActions, TextField, IconButton, InputAdornment, FormControl,
@@ -67,8 +67,11 @@ const defaultForm: StaffMember = {
   phone: '',
   email: '',
   active: true,
-  type: 'adult',
-  iin: ''
+  iin: '',
+  salaryType: 'day',
+  salary: 0,
+  penaltyType: 'fixed',
+  penaltyAmount: 0
 };
 
 const Staff = () => {
@@ -94,7 +97,7 @@ const Staff = () => {
     const includePasswords = currentUser?.role === 'admin';
     getUsers(includePasswords)
       .then(data => {
-        setStaff(data.filter(u => u.type === 'adult'));
+  setStaff(data);
         setFilteredStaff(data);
       })
       .catch(err => setError(err?.message || 'Ошибка загрузки'))
@@ -209,10 +212,15 @@ const Staff = () => {
     try {
       if (editId) {
         await updateUser(editId, form);
+        await usersApi.updatePayrollSettings(editId, {
+          salary: form.salary,
+          salaryType: form.salaryType,
+          penaltyType: form.penaltyType,
+          penaltyAmount: form.penaltyAmount
+        });
         handleCloseModal();
       } else {
         // Создание нового сотрудника
-        
         handleCloseModal();
       }
       fetchStaff();
@@ -256,6 +264,7 @@ const Staff = () => {
   };
 
   return (
+    <>
     <Paper style={{ margin: 24, padding: 24 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h5" style={{ color: '#1890ff', display: 'flex', alignItems: 'center' }}>
@@ -421,7 +430,6 @@ const Staff = () => {
               </Typography>
               <Divider sx={{ mb: 2 }} />
             </Grid>
-            
             <Grid item xs={12} md={6}>
               <TextField
                 label="ФИО"
@@ -434,7 +442,6 @@ const Staff = () => {
                 helperText={formErrors.fullName}
               />
             </Grid>
-            
             <Grid item xs={12} md={6}>
               <FormControl fullWidth required error={!!formErrors.role}>
                 <InputLabel>Должность</InputLabel>
@@ -455,9 +462,6 @@ const Staff = () => {
                 {formErrors.role && <FormHelperText>{formErrors.role}</FormHelperText>}
               </FormControl>
             </Grid>
-            
-          
-            
             <Grid item xs={12} md={6}>
               <TextField
                 label="Телефон"
@@ -474,7 +478,6 @@ const Staff = () => {
                 }}
               />
             </Grid>
-            
             <Grid item xs={12} md={6}>
               <TextField
                 label="ИИН"
@@ -484,7 +487,6 @@ const Staff = () => {
                 fullWidth
               />
             </Grid>
-            
             <Grid item xs={12} md={6}>
               <FormControlLabel
                 control={
@@ -496,8 +498,68 @@ const Staff = () => {
                 label="Активен"
               />
             </Grid>
+            {/* --- Payroll Settings --- */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>
+                💰 Настройки зарплаты и штрафов
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth>
+                <InputLabel>Тип оклада</InputLabel>
+                <Select
+                  name="salaryType"
+                  value={form.salaryType || 'day'}
+                  onChange={handleSelectChange}
+                  label="Тип оклада"
+                >
+                  <MenuItem value="day">Оклад за день</MenuItem>
+                  <MenuItem value="month">Оклад за месяц</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                label="Оклад"
+                name="salary"
+                type="number"
+                value={form.salary ?? ''}
+                onChange={handleChange}
+                fullWidth
+                InputProps={{ startAdornment: <InputAdornment position="start">₸</InputAdornment> }}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth>
+                <InputLabel>Тип штрафа</InputLabel>
+                <Select
+                  name="penaltyType"
+                  value={form.penaltyType || 'fixed'}
+                  onChange={handleSelectChange}
+                  label="Тип штрафа"
+                >
+                  <MenuItem value="fixed">Фиксированный</MenuItem>
+                  <MenuItem value="percent">Процент от оклада</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                label={form.penaltyType === 'percent' ? 'Штраф (%)' : 'Штраф (₸)'}
+                name="penaltyAmount"
+                type="number"
+                value={form.penaltyAmount ?? ''}
+                onChange={handleChange}
+                fullWidth
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">{form.penaltyType === 'percent' ? '%' : '₸'}</InputAdornment>
+                }}
+              />
+            </Grid>
           </Grid>
-        </DialogContent>
+         </DialogContent>
+    
         <DialogActions>
           <Button onClick={handleCloseModal} color="secondary">
             Отмена
@@ -506,9 +568,11 @@ const Staff = () => {
             {editId ? 'Сохранить' : 'Добавить'}
           </Button>
         </DialogActions>
+        
       </Dialog>
 
     </Paper>
+    </>
   );
 };
 
