@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import Axios from 'axios';
-import config from '../../config';
 import { toast } from 'react-toastify';
 
 
@@ -95,7 +94,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
   const fetchTimeStatus = useCallback(async () => {
     try {
       // setLoading(true);
-      // const response = await Axios.get(`${config.baseURLApi}/time-tracking/status`);
+      // const response = await Axios.get(`${process.env.API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '')}/time-tracking/status`);
       // setTimeStatus(response.data);
       // return response.data;
       return null;
@@ -124,7 +123,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
         longitude: currentLocation?.coords.longitude,
       };
 
-      const response = await Axios.post(`${config.baseURLApi}/time-tracking/clock-in`, requestData);
+      const response = await Axios.post(`${process.env.API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '')}/time-tracking/clock-in`, requestData);
       
       // // Update status
       // await fetchTimeStatus();
@@ -157,7 +156,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
         longitude: currentLocation?.coords.longitude,
       };
 
-      const response = await Axios.post(`${config.baseURLApi}/time-tracking/clock-out`, requestData);
+      const response = await Axios.post(`${process.env.API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '')}/time-tracking/clock-out`, requestData);
       
       // // Update status
       // await fetchTimeStatus();
@@ -178,7 +177,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
   const startBreak = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await Axios.post(`${config.baseURLApi}/time-tracking/break-start`);
+      const response = await Axios.post(`${process.env.API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '')}/time-tracking/break-start`);
       
       // // Update status
       // await fetchTimeStatus();
@@ -199,7 +198,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
   const endBreak = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await Axios.post(`${config.baseURLApi}/time-tracking/break-end`);
+      const response = await Axios.post(`${process.env.API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '')}/time-tracking/break-end`);
       
       // // Update status
       // await fetchTimeStatus();
@@ -223,7 +222,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
         ...params
       });
 
-      const response = await Axios.get(`${config.baseURLApi}/time-tracking/entries?${queryParams}`);
+      const response = await Axios.get(`${process.env.API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '')}/time-tracking/entries?${queryParams}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching time entries:', error);
@@ -240,7 +239,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
         endDate: endDate.toISOString()
       });
 
-      const response = await Axios.get(`${config.baseURLApi}/time-tracking/summary?${params}`);
+      const response = await Axios.get(`${process.env.API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '')}/time-tracking/summary?${params}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching time summary:', error);

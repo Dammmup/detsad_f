@@ -1,5 +1,5 @@
 
-import { User } from '../../types/common';
+import { User } from '../types/common';
 import { api } from './settings';
 
 // API_URL и авторизация берутся из settings.ts

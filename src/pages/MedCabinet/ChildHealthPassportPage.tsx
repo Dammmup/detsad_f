@@ -1,10 +1,9 @@
 import React from 'react';
 import { Box, Typography, Paper, Button, MenuItem, TextField, Stack, Divider, CircularProgress } from '@mui/material';
-import { getUsers } from '../../services/api/users';
 import { User } from '../../types/common';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
-import childrenApi from '../../services/api/children';
+import childrenApi from '../../services/children';
 
 // Типы для формы
 interface ChildPassportForm {

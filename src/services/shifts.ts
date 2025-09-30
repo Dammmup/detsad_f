@@ -1,6 +1,6 @@
 
-import { BaseCrudApiClient, apiCache } from '../../utils/api';
-import { Shift, ShiftFormData, ShiftFilters, ID } from '../../types/common';
+import { BaseCrudApiClient, apiCache } from '../utils/api';
+import { Shift, ShiftFormData, ShiftFilters, ID } from '../types/common';
 
 /**
  * API клиент для работы со сменами

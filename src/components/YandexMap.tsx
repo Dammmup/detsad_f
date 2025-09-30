@@ -39,7 +39,7 @@ const YandexMap: React.FC<YandexMapProps> = ({
 
     const script = document.createElement('script');
     script.id = scriptId;
-    script.src = `https://api-maps.yandex.ru/2.1/?apikey=${apiKey}&lang=ru_RU`;
+    script.src = `https:/-maps.yandex.ru/2.1/?apikey=${apiKey}&lang=ru_RU`;
     script.onload = () => {
       // @ts-ignore
       setYmaps(window.ymaps);

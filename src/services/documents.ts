@@ -1,4 +1,4 @@
-import { apiClient } from '../../utils/api';
+import { apiClient } from '../utils/api';
 
 // Типы для документов
 export interface Document {
@@ -103,7 +103,7 @@ export const getDocuments = async (params?: GetDocumentsParams) => {
       });
     }
     
-  const response = await apiClient.get(`/api/documents?${queryParams.toString()}`);
+  const response = await apiClient.get(`/documents?${queryParams.toString()}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching documents:', error);
@@ -114,7 +114,7 @@ export const getDocuments = async (params?: GetDocumentsParams) => {
 // Получение конкретного документа
 export const getDocument = async (id: string) => {
   try {
-  const response = await apiClient.get(`/api/documents/${id}`);
+  const response = await apiClient.get(`/documents/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching document:', error);
@@ -136,7 +136,7 @@ export const createDocument = async (data: CreateDocumentData) => {
     if (data.tags) formData.append('tags', JSON.stringify(data.tags));
     if (data.expiryDate) formData.append('expiryDate', data.expiryDate);
     
-  const response = await apiClient.post('/api/documents', formData, {
+  const response = await apiClient.post('/documents', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -152,7 +152,7 @@ export const createDocument = async (data: CreateDocumentData) => {
 // Обновление документа
 export const updateDocument = async (id: string, data: Partial<Document>) => {
   try {
-  const response = await apiClient.put(`/api/documents/${id}`, data);
+  const response = await apiClient.put(`/documents/${id}`, data);
     return response.data;
   } catch (error) {
     console.error('Error updating document:', error);
@@ -163,7 +163,7 @@ export const updateDocument = async (id: string, data: Partial<Document>) => {
 // Удаление документа
 export const deleteDocument = async (id: string) => {
   try {
-  const response = await apiClient.delete(`/api/documents/${id}`);
+  const response = await apiClient.delete(`/documents/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error deleting document:', error);
@@ -174,7 +174,7 @@ export const deleteDocument = async (id: string) => {
 // Скачивание документа
 export const downloadDocument = async (id: string) => {
   try {
-  const response = await apiClient.get(`/api/documents/${id}/download`, {
+  const response = await apiClient.get(`/documents/${id}/download`, {
       responseType: 'blob',
     });
     
@@ -211,7 +211,7 @@ export const getDocumentTemplates = async (params?: GetTemplatesParams) => {
       });
     }
     
-  const response = await apiClient.get(`/api/documents/templates?${queryParams.toString()}`);
+  const response = await apiClient.get(`/documents/templates?${queryParams.toString()}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching document templates:', error);
@@ -222,7 +222,7 @@ export const getDocumentTemplates = async (params?: GetTemplatesParams) => {
 // Получение конкретного шаблона
 export const getDocumentTemplate = async (id: string) => {
   try {
-  const response = await apiClient.get(`/api/documents/templates/${id}`);
+  const response = await apiClient.get(`/documents/templates/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching document template:', error);
@@ -241,7 +241,7 @@ export const createDocumentTemplate = async (data: CreateTemplateData) => {
     formData.append('category', data.category);
     if (data.tags) formData.append('tags', JSON.stringify(data.tags));
     
-  const response = await apiClient.post('/api/documents/templates', formData, {
+  const response = await apiClient.post('/documents/templates', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -257,7 +257,7 @@ export const createDocumentTemplate = async (data: CreateTemplateData) => {
 // Обновление шаблона документа
 export const updateDocumentTemplate = async (id: string, data: Partial<DocumentTemplate>) => {
   try {
-  const response = await apiClient.put(`/api/documents/templates/${id}`, data);
+  const response = await apiClient.put(`/documents/templates/${id}`, data);
     return response.data;
   } catch (error) {
     console.error('Error updating document template:', error);
@@ -268,7 +268,7 @@ export const updateDocumentTemplate = async (id: string, data: Partial<DocumentT
 // Удаление шаблона документа
 export const deleteDocumentTemplate = async (id: string) => {
   try {
-  const response = await apiClient.delete(`/api/documents/templates/${id}`);
+  const response = await apiClient.delete(`/documents/templates/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error deleting document template:', error);
@@ -279,7 +279,7 @@ export const deleteDocumentTemplate = async (id: string) => {
 // Скачивание шаблона документа
 export const downloadDocumentTemplate = async (id: string) => {
   try {
-  const response = await apiClient.get(`/api/documents/templates/${id}/download`, {
+  const response = await apiClient.get(`/documents/templates/${id}/download`, {
       responseType: 'blob',
     });
     
@@ -305,7 +305,7 @@ export const downloadDocumentTemplate = async (id: string) => {
 // Экспорт документов
 export const exportDocuments = async (format: 'pdf' | 'excel' | 'csv', params?: GetDocumentsParams) => {
   try {
-  const response = await apiClient.post('/api/documents/export', {
+  const response = await apiClient.post('/documents/export', {
       format,
       ...params
     }, {
@@ -334,7 +334,7 @@ export const exportDocuments = async (format: 'pdf' | 'excel' | 'csv', params?: 
 // Экспорт шаблонов
 export const exportDocumentTemplates = async (format: 'pdf' | 'excel' | 'csv', params?: GetTemplatesParams) => {
   try {
-  const response = await apiClient.post('/api/documents/templates/export', {
+  const response = await apiClient.post('/documents/templates/export', {
       format,
       ...params
     }, {
@@ -361,7 +361,7 @@ export const exportDocumentTemplates = async (format: 'pdf' | 'excel' | 'csv', p
 };
 
 export default {
-  // Documents
+ // Documents
   getDocuments,
   getDocument,
   createDocument,
@@ -369,12 +369,12 @@ export default {
   deleteDocument,
   downloadDocument,
   
-  // Templates
+ // Templates
   getDocumentTemplates,
-  getDocumentTemplate,
-  createDocumentTemplate,
-  updateDocumentTemplate,
-  deleteDocumentTemplate,
+ getDocumentTemplate,
+ createDocumentTemplate,
+ updateDocumentTemplate,
+ deleteDocumentTemplate,
   downloadDocumentTemplate,
   
   // Export

@@ -15,10 +15,10 @@ export * from './auth';
 export * from './documents';
 
 // Утилиты API
-export { apiClient, createApiInstance, BaseApiClient, apiCache } from '../../utils/api';
+export { apiClient, createApiInstance, BaseApiClient, apiCache } from '../utils/api';
 
 // Общие типы
 
 // Утилиты форматирования и валидации
-export * from '../../utils/format';
-export * from '../../utils/validation';
+export * from '../utils/format';
+export * from '../utils/validation';

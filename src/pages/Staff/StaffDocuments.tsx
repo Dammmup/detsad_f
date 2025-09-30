@@ -21,10 +21,10 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { getDocuments, createDocument, updateDocument, deleteDocument, downloadDocument } from '../../services/api/documents';
+import { getDocuments, createDocument, updateDocument, deleteDocument, downloadDocument } from '../../services/documents';
 import ExportAutoTemplatesButton from '../../components/ExportAutoTemplatesButton';
 import { staffTemplates } from '../../utils/documentTemplates';
-import { usersApi } from '../../services/api/users';
+import { usersApi } from '../../services/users';
 
 interface StaffMember {
   id: string;

@@ -19,7 +19,7 @@ import {
   getAllUsers, createUser, updateUser, deleteUser,
   KindergartenSettings, NotificationSettings, SecuritySettings,
   GeolocationSettings, User
-} from '../services/api/settings';
+} from '../services/settings';
 
 const Settings: React.FC = () => {
   // Состояния для данных

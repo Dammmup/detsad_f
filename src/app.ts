@@ -7,8 +7,8 @@ export { GroupsProvider, useGroups } from './components/context/GroupsContext';
 // UserContext removed during refactoring
 
 // Re-export main services
-export * as groupsApi from './services/api/groups';
-export * as usersApi from './services/api/users';
+export * as groupsApi from './services/groups';
+export * as usersApi from './services/users';
 
 // Configuration
-export { default as config } from './config';
+// export { default as config } from './config';

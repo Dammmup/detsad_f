@@ -20,9 +20,8 @@ import {
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { usersApi } from '../../services/api/users';
-import fineApi, { Fine } from '../../services/api/fine';
-
+import { usersApi } from '../../services/users';
+import fineApi,{ Fine }  from '../../services/fine';
 interface PayrollReportPageProps {
   isInReports?: boolean;
 }
@@ -143,7 +142,7 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
 
   const fetchPayrolls = async () => {
     try {
-      const response = await fetch(`/api/payroll?month=${selectedMonth}`);
+      const response = await fetch(`/payroll?month=${selectedMonth}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -230,8 +229,8 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
 
       const method = currentPayroll._id ? 'PUT' : 'POST';
       const url = currentPayroll._id
-        ? `/api/payroll/${currentPayroll._id}`
-        : '/api/payroll';
+        ? `/payroll/${currentPayroll._id}`
+        : '/payroll';
       
       const response = await fetch(url, {
         method,
@@ -251,7 +250,7 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
   const handleDeletePayroll = async (id: string) => {
     if (window.confirm('Удалить расчетный лист?')) {
       try {
-        await fetch(`/api/payroll/${id}`, { method: 'DELETE' });
+        await fetch(`/payroll/${id}`, { method: 'DELETE' });
         fetchPayrolls();
       } catch (error) {
         console.error('Ошибка удаления расчетного листа:', error);
@@ -261,7 +260,7 @@ const PayrollReportPage: React.FC<PayrollReportPageProps> = ({ isInReports = fal
 
   const handleStatusChange = async (id: string, status: 'draft' | 'approved' | 'paid') => {
     try {
-      await fetch(`/api/payroll/${id}`, {
+      await fetch(`/payroll/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })

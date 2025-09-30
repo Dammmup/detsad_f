@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getUsers, updateUser, deleteUser, usersApi } from '../../services/api/users';
+import { getUsers, updateUser, deleteUser, usersApi } from '../../services/users';
 import {
   Table, TableHead, TableRow, TableCell, TableBody, Paper, CircularProgress, Alert, Button, Dialog,
   DialogTitle, DialogContent, DialogActions, TextField, IconButton, InputAdornment, FormControl,
@@ -11,7 +11,7 @@ import {
  Person
 } from '@mui/icons-material';
 import { User as StaffMember } from '../../types/common';
-import { getGroups } from '../../services/api/groups';
+import { getGroups } from '../../services/groups';
 import { useAuth } from '../../components/context/AuthContext';
 import ExportMenuButton from '../../components/ExportMenuButton';
 import { exportStaffList } from '../../utils/excelExport';

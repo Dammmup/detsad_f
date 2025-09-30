@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import * as groupsApi from '../../services/api/groups';
+import * as groupsApi from '../../services/groups';
 import { Group } from '../../types/common';
 
 

@@ -1,11 +1,11 @@
-import { BaseCrudApiClient, apiCache } from '../../utils/api';
-import { Child, ID } from '../../types/common';
+import { BaseCrudApiClient, apiCache } from '../utils/api';
+import { Child, ID } from '../types/common';
 
 /**
  * API клиент для работы с детьми
  */
 class ChildrenApiClient extends BaseCrudApiClient<Child> {
-  protected endpoint = '/api/children';
+  protected endpoint = '/children';
   private readonly CACHE_KEY = 'children';
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 минут
 
@@ -47,4 +47,4 @@ class ChildrenApiClient extends BaseCrudApiClient<Child> {
 
 const childrenApi = new ChildrenApiClient();
 export default childrenApi;
-export type { Child } from '../../types/common';
+export type { Child } from '../types/common';

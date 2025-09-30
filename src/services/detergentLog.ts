@@ -10,7 +10,7 @@ export interface DetergentLog {
 }
 
 class DetergentLogApiClient extends BaseCrudApiClient<DetergentLog> {
-  protected endpoint = '/api/detergent-log';
+  protected endpoint = '/detergent-log';
 }
 
 export const detergentLogApi = new DetergentLogApiClient();

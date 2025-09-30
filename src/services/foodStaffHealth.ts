@@ -9,7 +9,7 @@ export interface FoodStaffHealth {
 }
 
 class FoodStaffHealthApiClient extends BaseCrudApiClient<FoodStaffHealth> {
-  protected endpoint = '/api/food-staff-health';
+  protected endpoint = '/food-staff-health';
 }
 
 export const foodStaffHealthApi = new FoodStaffHealthApiClient();

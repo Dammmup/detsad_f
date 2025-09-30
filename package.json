@@ -5,7 +5,7 @@
   "private": true,
   "homepage": "/",
   "scripts": {
-    "build": "cross-env REACT_APP_BACKEND=true NODE_ENV=production PUBLIC_URL='/' react-app-rewired --openssl-legacy-provider build",
+    "build": "cross-env REACT_APP_BACKEND=true NODE_ENV=production PUBLIC_URL='.' react-app-rewired --openssl-legacy-provider build",
     "start": "cross-env react-app-rewired --openssl-legacy-provider start",
     "dev": "cross-env react-app-rewired --openssl-legacy-provider start",
     "test": "react-app-rewired --openssl-legacy-provider test",

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const API_URL = process.env.API_URL || 'http://localhost:8080';
 
 export interface ChildAttendanceRecord {
   _id?: string;
@@ -48,7 +48,10 @@ export const getChildAttendance = async (params?: {
   status?: string;
 }): Promise<ChildAttendanceRecord[]> => {
   try {
-  const response = await axios.get(`${API_URL}/api/child-attendance`, { params });
+const response = await axios.get(`${API_URL}/child-attendance`, {
+  params,
+  withCredentials: true
+});
     return response.data;
   } catch (error: any) {
     console.error('Error fetching child attendance:', error);
@@ -59,7 +62,7 @@ export const getChildAttendance = async (params?: {
 // Create or update single attendance record
 export const saveChildAttendance = async (record: Omit<ChildAttendanceRecord, '_id' | 'createdAt' | 'updatedAt'>): Promise<ChildAttendanceRecord> => {
   try {
-  const response = await axios.post(`${API_URL}/api/child-attendance`, record);
+  const response = await axios.post(`${API_URL}/child-attendance`, record);
     return response.data;
   } catch (error: any) {
     console.error('Error saving child attendance:', error);
@@ -78,7 +81,7 @@ export const bulkSaveChildAttendance = async (
   groupId: string
 ): Promise<BulkAttendanceResponse> => {
   try {
-  const response = await axios.post(`${API_URL}/api/child-attendance/bulk`, {
+  const response = await axios.post(`${API_URL}/child-attendance/bulk`, {
       records,
       groupId
     });
@@ -96,7 +99,7 @@ export const getAttendanceStats = async (params?: {
   endDate?: string;
 }): Promise<AttendanceStats> => {
   try {
-  const response = await axios.get(`${API_URL}/api/child-attendance/stats`, { params });
+  const response = await axios.get(`${API_URL}/child-attendance/stats`, { params });
     return response.data;
   } catch (error: any) {
     console.error('Error fetching attendance stats:', error);
@@ -107,7 +110,7 @@ export const getAttendanceStats = async (params?: {
 // Delete attendance record
 export const deleteChildAttendance = async (id: string): Promise<void> => {
   try {
-  await axios.delete(`${API_URL}/api/child-attendance/${id}`);
+  await axios.delete(`${API_URL}/child-attendance/${id}`);
   } catch (error: any) {
     console.error('Error deleting attendance:', error);
     throw new Error(error.response?.data?.error || 'Ошибка удаления записи');
@@ -117,7 +120,7 @@ export const deleteChildAttendance = async (id: string): Promise<void> => {
 // Debug function to check database status
 export const debugChildAttendance = async (): Promise<any> => {
   try {
-  const response = await axios.get(`${API_URL}/api/child-attendance/debug`);
+  const response = await axios.get(`${API_URL}/child-attendance/debug`);
     console.log('🔍 Debug info:', response.data);
     return response.data;
   } catch (error: any) {

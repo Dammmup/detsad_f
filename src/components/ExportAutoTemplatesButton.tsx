@@ -2,7 +2,7 @@ import React from 'react';
 import { Button, Box } from '@mui/material';
 import PdfIcon from '@mui/icons-material/PictureAsPdf';
 import ExcelIcon from '@mui/icons-material/TableChart';
-import { generateAndDownloadDocument, GenerateDocumentParams } from '../services/api/documentGenerator';
+import { generateAndDownloadDocument, GenerateDocumentParams } from '../services/documentGenerator';
 
 export type ExportTemplate = {
   template: string;

@@ -75,8 +75,6 @@ export default function MedCabinetPage() {
         return '/app/med/risk-group';
       case 'tub_positive':
         return '/app/med/tub-positive';
-      case 'vitaminization':
-        return '/app/med/vitaminization';
       case 'organoleptic':
         return '/app/med/organoleptic-journal';
       case 'food_norms_control':

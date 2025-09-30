@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import { useAuth } from './context/AuthContext';
-import { TaskList, getTaskList, toggleTaskStatus } from '../services/api/taskList';
+import { TaskList, getTaskList, toggleTaskStatus } from '../services/taskList';
 
 interface StaffTasksWidgetProps {
   onTaskChange?: () => void; // Callback для обновления при изменении задач

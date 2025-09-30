@@ -12,6 +12,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from './context/AuthContext';
 import { formatCurrency } from '../utils/format';
+import axios from 'axios';
 
 interface FinancialStatsWidgetProps {
   onStatsChange?: () => void; // Callback для обновления статистики
@@ -36,34 +37,16 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
         const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
         const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
         
-        // Используем токен из AuthContext
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Требуется аутентификация');
-        }
-        
-        const response = await fetch(`/api/reports/salary/summary?startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}&userId=${currentUser.id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        // Используем axios для запроса, токен автоматически передается в httpOnly cookie
+        const response = await axios.get(`/reports/salary/summary`, {
+          params: {
+            startDate: startDate.toISOString().split('T')[0],
+            endDate: endDate.toISOString().split('T')[0],
+            userId: currentUser.id
           }
         });
         
-        if (!response.ok) {
-          // Проверяем, является ли ответ JSON
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Не удалось загрузить финансовую статистику');
-          } else {
-            // Если ответ не JSON, то возможно это HTML страница ошибки
-            const errorText = await response.text();
-            console.error('Error response:', errorText);
-            throw new Error('Сервер вернул ошибку');
-          }
-        }
-        
-        const statsData = await response.json();
+        const statsData = response.data;
         
 
         

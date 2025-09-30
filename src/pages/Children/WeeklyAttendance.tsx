@@ -47,14 +47,14 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Types and Services
-import childrenApi, { Child } from '../../services/api/children';
+import childrenApi, { Child } from '../../services/children';
 import { STATUS_COLORS } from '../../types/common';
-import { getGroups } from '../../services/api/groups';
+import { getGroups } from '../../services/groups';
 import { 
   getChildAttendance, 
   bulkSaveChildAttendance, 
   ChildAttendanceRecord 
-} from '../../services/api/childAttendance';
+} from '../../services/childAttendance';
 import { useAuth } from '../../components/context/AuthContext';
 import { exportChildrenAttendance, getCurrentMonthRange, getCurrentPeriod } from '../../utils/excelExport';
 

@@ -44,8 +44,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Types and Services
 import { Shift, ShiftStatus, ShiftType } from '../../types/common';
-import { getShifts, createShift, updateShift, deleteShift } from '../../services/api/shifts';
-import { getUsers } from '../../services/api/users';
+import { getShifts, createShift, updateShift, deleteShift } from '../../services//shifts';
+import { getUsers } from '../../services/users';
 import { useAuth } from '../../components/context/AuthContext';
 import {User} from '../../types/common';
 import { SHIFT_TYPES } from '../../types/common';

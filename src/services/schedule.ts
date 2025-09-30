@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = `${process.env.REACT_APP_API_URL}/` || 'http://localhost:8080';
+const API_URL = `${process.env.API_URL}/` || 'http://localhost:8080';
 
 // Интерфейс для API ошибки
 interface ApiError extends Error {

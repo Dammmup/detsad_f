@@ -123,23 +123,7 @@ export const medJournals: MedJournalConfig[] = [
     ],
   },
   // --- FOOD ---
-  {
-    id: 'vitaminization',
-    type: 'food',
-    title: 'Журнал витаминизации готовых блюд',
-    description: 'C-витаминизация, дозы, подписи',
-    fields: [
-      { key: 'date', label: 'Дата и время', type: 'date' },
-      { key: 'group', label: 'Группа', type: 'string' },
-      { key: 'meal', label: 'Приём пищи', type: 'string' },
-      { key: 'dish', label: 'Блюдо/Напиток', type: 'string' },
-      { key: 'dose', label: 'Доза/порц (мг)', type: 'number' },
-      { key: 'portions', label: 'Порции (шт)', type: 'number' },
-      { key: 'nurse', label: 'Медсестра', type: 'string' },
-      { key: 'status', label: 'Статус', type: 'string' },
-      { key: 'notes', label: 'Примечания', type: 'string' },
-    ],
-  },
+
   {
     id: 'organoleptic',
     type: 'food',

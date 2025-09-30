@@ -12,7 +12,6 @@ import { LayoutProvider } from './components/context/LayoutContext';
 import { TimeTrackingProvider } from './components/context/TimeTrackingContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import config from '../src/config';
 
 import { createHashHistory, createMemoryHistory } from 'history';
 
@@ -89,7 +88,7 @@ export function getHistory() {
   return history;
 }
 
-axios.defaults.baseURL = config.baseURLApi;
+axios.defaults.baseURL = process.env.API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '');
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 const token = localStorage.getItem('token');
 if (token) {

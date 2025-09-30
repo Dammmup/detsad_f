@@ -11,7 +11,7 @@ export interface FoodStockLog {
 }
 
 class FoodStockLogApiClient extends BaseCrudApiClient<FoodStockLog> {
-  protected endpoint = '/api/food-stock-log';
+  protected endpoint = '/food-stock-log';
 }
 
 export const foodStockLogApi = new FoodStockLogApiClient();

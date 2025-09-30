@@ -114,7 +114,7 @@ src/
 
 ## API Integration
 
-The frontend communicates with the backend API through service modules located in `src/services/api/`. Each module handles specific API endpoints:
+The frontend communicates with the backend API through service modules located in `src/services/`. Each module handles specific API endpoints:
 
 - `auth.ts` - Authentication endpoints
 - `users.ts` - User management endpoints
@@ -201,7 +201,7 @@ To build and deploy the application:
 
 The application uses environment variables for configuration:
 
-- `REACT_APP_API_URL` - Backend API URL
+- `API_URL` - Backend API URL
 - `REACT_APP_NAME` - Application name
 
 ## Contributing

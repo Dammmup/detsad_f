@@ -11,7 +11,7 @@ export interface ProductCertificate {
 }
 
 class ProductCertificateApiClient extends BaseCrudApiClient<ProductCertificate> {
-  protected endpoint = '/api/product-certificate';
+  protected endpoint = '/product-certificate';
 }
 
 export const productCertificateApi = new ProductCertificateApiClient();

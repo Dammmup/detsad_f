@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, CircularProgress, Snackbar, Alert } from '@mui/material';
 import { useAuth } from './context/AuthContext';
-import shiftsApi, { getShifts } from '../services/api/shifts';
+import shiftsApi, { getShifts } from '../services/shifts';
 
 interface StaffAttendanceButtonProps {
   onStatusChange?: () => void; // Callback для обновления статуса

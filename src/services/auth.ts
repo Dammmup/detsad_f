@@ -1,10 +1,10 @@
-import { BaseApiClient } from '../../utils/api';
+import { BaseApiClient } from '../utils/api';
 import {
   LoginCredentials,
   OTPResponse,
   AuthResponse,
   User,
-} from '../../types/common';
+} from '../types/common';
 
 /**
  * API клиент для авторизации
@@ -19,11 +19,10 @@ class AuthApiClient extends BaseApiClient {
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      console.log('🔐 Попытка входа для:', credentials.email);
+      console.log('🔐 Попытка входа для:', credentials.phone);
       
       const response = await this.post<{
         user: any;
-        token?: string;
       }>('/auth/login', credentials);
       
       const authData: AuthResponse = {
@@ -33,9 +32,10 @@ class AuthApiClient extends BaseApiClient {
           fullName: response.user.fullName || response.user.name,
           role: response.user.role || 'staff'
         },
-        token: response.token
+        token: '' // Токен теперь хранится в httpOnly cookie
       };
       
+      // Сохраняем только пользователя, токен хранится в cookie
       this.saveAuthData(authData);
       
       console.log('✅ Успешный вход:', authData.user.fullName);
@@ -96,55 +96,55 @@ class AuthApiClient extends BaseApiClient {
 
   /**
    * Проверка авторизации
+   * При использовании httpOnly cookie проверяем только наличие пользователя
+   * и делаем запрос на валидацию на сервер
    */
-  isAuthenticated(): boolean {
-    const token = this.getToken();
+  async isAuthenticated(): Promise<boolean> {
     const user = this.getCurrentUser();
     
-    return !!(token && user);
+    if (!user) {
+      return false;
+    }
+    
+    // Проверяем валидность токена на сервере
+    return await this.validateToken();
   }
 
   /**
    * Обновление токена
+   * При использовании httpOnly cookie обновление происходит автоматически на сервере
+   * через механизм обновления сессии
    */
-  async refreshToken(): Promise<string | null> {
+  async refreshToken(): Promise<boolean> {
     try {
-      const currentToken = this.getToken();
+      // Просто проверяем валидность токена, обновление происходит на сервере
+      const isValid = await this.validateToken();
       
-      if (!currentToken) {
-        return null;
+      if (isValid) {
+        console.log('🔄 Токен действителен (обновление не требуется при httpOnly cookie)');
+        return true;
+      } else {
+        return false;
       }
       
-      const response = await this.post<{ token: string }>('/auth/refresh', {});
-      
-      const newToken = response.token;
-      localStorage.setItem('token', newToken);
-      
-      console.log('🔄 Токен обновлен');
-      return newToken;
-      
     } catch (error) {
-      console.error('Ошибка обновления токена:', error);
+      console.error('Ошибка проверки токена:', error);
       
-      // Если не удалось обновить токен, очищаем данные
+      // Если не удалось проверить токен, очищаем данные
       this.clearAuthData();
       
-      return null;
+      return false;
     }
   }
 
   /**
    * Валидация токена с backend
+   * При использовании httpOnly cookie токен автоматически отправляется с каждым запросом
    */
   async validateToken(): Promise<boolean> {
     try {
-      const token = this.getToken();
-      
-      if (!token) {
-        return false;
-      }
-      
-  await this.get('/api/auth/validate');
+      // Просто делаем запрос на валидацию, токен будет автоматически отправлен в cookie
+      await this.get('/auth/validate');
       return true;
       
     } catch (error) {
@@ -156,27 +156,26 @@ class AuthApiClient extends BaseApiClient {
   // ===== ПРИВАТНЫЕ МЕТОДЫ =====
 
   /**
-   * Получение токена из localStorage
+   * Получение токена из localStorage (не используется при httpOnly cookie)
+   * Возвращаем пустую строку, так как токен хранится в httpOnly cookie
    */
   private getToken(): string | null {
-    return localStorage.getItem('token');
+    return null; // Токен хранится в httpOnly cookie, недоступен из JavaScript
   }
 
   /**
    * Сохранение данных авторизации
    */
-  private saveAuthData(authData: AuthResponse): void {
-    if (authData.token) {
-      localStorage.setItem('token', authData.token);
-    }
+ private saveAuthData(authData: AuthResponse): void {
+    // Сохраняем только пользователя, токен хранится в httpOnly cookie
     localStorage.setItem('user', JSON.stringify(authData.user));
   }
 
   /**
    * Очистка данных авторизации
    */
-  private clearAuthData(): void {
-    localStorage.removeItem('token');
+ private clearAuthData(): void {
+    // Удаляем только пользователя из localStorage, токен в httpOnly cookie удаляется на сервере
     localStorage.removeItem('user');
     localStorage.removeItem('phoneNumber');
   }
@@ -195,9 +194,9 @@ class AuthApiClient extends BaseApiClient {
       token: mockToken,
       user: {
         id: 'mock-user-1',
-        email: credentials.email,
-        fullName: credentials.email.split('@')[0] || 'Тестовый пользователь',
-        role: credentials.email.includes('admin') ? 'admin' : 'staff'
+        email: credentials.phone + '@example.com', // Используем телефон как основу для email в моке
+        fullName: 'Мок пользователь ' + credentials.phone,
+        role: 'staff'
       }
     };
     

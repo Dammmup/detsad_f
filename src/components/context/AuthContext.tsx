@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import {  getCurrentUser, isAuthenticated, logout, validateToken } from '../../services/api/auth';
+import {  getCurrentUser, isAuthenticated, logout } from '../../services/auth';
 import { User } from '../../types/common';
 // Интерфейс контекста авторизации
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
   loading: boolean;
-  login: (user: User, token: string) => void;
+  login: (user: User, token: string) => void; // token теперь не используется при httpOnly cookie, но оставляем для совместимости
   logout: () => Promise<void>;
   checkAuth: () => Promise<boolean>;
 }
@@ -28,18 +28,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     try {
       const currentUser = getCurrentUser();
-      const authenticated = isAuthenticated();
+      const authenticated = await isAuthenticated(); // isAuthenticated теперь асинхронная функция
       
       if (currentUser && authenticated) {
-        // Если есть пользователь и токен в localStorage, считаем авторизованным
+        // Если есть пользователь и токен валиден, считаем авторизованным
         setUser(currentUser);
         setIsLoggedIn(true);
         console.log('✅ Пользователь авторизован:', currentUser.fullName);
-        
-        // Проверяем токен на backend в фоне (не блокируем UI)
-        validateToken().catch(() => {
-          console.warn('⚠️ Токен недействителен на backend, но продолжаем работу');
-        });
       } else {
         console.log('❌ Пользователь не авторизован');
         setUser(null);
@@ -66,8 +61,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(userData);
     setIsLoggedIn(true);
     
-    // Сохраняем данные в localStorage (уже сохранено в auth.ts, но для надежности)
-    localStorage.setItem('token', token);
+    // Сохраняем только пользователя в localStorage
+    // Токен хранится в httpOnly cookie и не доступен из JavaScript
     localStorage.setItem('user', JSON.stringify(userData));
     
     console.log('🔐 Пользователь вошел в систему:', userData.fullName);
@@ -92,7 +87,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // В любом случае очищаем локальные данные
       setUser(null);
       setIsLoggedIn(false);
-      localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
   };
@@ -101,18 +95,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuth = async (): Promise<boolean> => {
     try {
       const currentUser = getCurrentUser();
-      const authenticated = isAuthenticated();
+      const authenticated = await isAuthenticated(); // isAuthenticated теперь асинхронная функция
       
       if (currentUser && authenticated) {
-        const tokenValid = await validateToken();
-        
-        if (tokenValid) {
-          if (!user) {
-            setUser(currentUser);
-            setIsLoggedIn(true);
-          }
-          return true;
+        if (!user) {
+          setUser(currentUser);
+          setIsLoggedIn(true);
         }
+        return true;
       }
       
       // Если проверка не прошла, выходим

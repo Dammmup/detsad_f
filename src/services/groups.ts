@@ -1,11 +1,11 @@
-import { BaseCrudApiClient, apiCache } from '../../utils/api';
-import { Group, User, ID } from '../../types/common';
+import { BaseCrudApiClient, apiCache } from '../utils/api';
+import { Group, User, ID } from '../types/common';
 
 /**
  * API клиент для работы с группами
  */
 class GroupsApiClient extends BaseCrudApiClient<Group> {
-  protected endpoint = '/api/groups';
+  protected endpoint = '/groups';
   private readonly CACHE_KEY = 'groups';
   private readonly TEACHERS_CACHE_KEY = 'teachers';
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 минут

@@ -7,11 +7,11 @@ import {
 } from '@mui/material';
 import { Add, Edit, Delete, Group, Visibility, ExpandLess } from '@mui/icons-material';
 import { useGroups } from '../../components/context/GroupsContext';
-import childrenApi, { Child } from '../../services/api/children';
+import childrenApi, { Child } from '../../services/children';
 // User импорт не нужен для детей
 import { useAuth } from '../../components/context/AuthContext';
 import { SelectChangeEvent } from '@mui/material/Select';
-import { getChildrenByGroup } from '../../services/api';
+import { getChildrenByGroup } from '../../services';
 interface TeacherOption {
   id: string;
   fullName: string;
@@ -58,7 +58,7 @@ const Groups = () => {
   const fetchTeachers = async () => {
     try {
   // Для учителей оставляем getUsers, для детей используем Child
-  const users = await import('../../services/api/users').then(m => m.getUsers());
+  const users = await import('../../services/users').then(m => m.getUsers());
   const filtered = users.filter((u: any) => ['teacher', 'assistant'].includes(u.role as any));
   setTeacherList(filtered.map((u: any) => ({ id: u.id || u._id, fullName: u.fullName })));
     } catch (e) {

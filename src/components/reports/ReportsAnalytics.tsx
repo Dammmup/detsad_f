@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Grid, Card, CardContent, Typography, Table, TableHead, TableRow, TableCell, TableBody, CircularProgress, Alert } from '@mui/material';
-import { getAttendanceStatistics, getScheduleStatistics } from '../../services/api/reports';
+import { getAttendanceStatistics, getScheduleStatistics } from '../../services/reports';
 
 interface Props {
   startDate: string;

@@ -3,7 +3,7 @@ import { ApiError, DelayFunction, ErrorHandler } from '../types/common';
 
 // ===== КОНФИГУРАЦИЯ API =====
 
-export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+export const API_BASE_URL = process.env.API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '');
 export const API_TIMEOUT = 10000; // 10 секунд
 export const RETRY_DELAY = 2000; // 2 секунды
 export const MAX_RETRIES = 3;
@@ -40,15 +40,14 @@ export const createApiInstance = (baseURL: string = API_BASE_URL): AxiosInstance
     headers: {
       'Content-Type': 'application/json',
     },
+    withCredentials: true, // Включаем отправку credentials (включая cookies) с каждым запросом
   });
 
-  // Request interceptor для добавления токена авторизации
+  // Request interceptor
   api.interceptors.request.use(
     (config) => {
-      const token = localStorage.getItem('token');
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+      // При использовании httpOnly cookie токен автоматически отправляется с запросом
+      // Не нужно добавлять токен из localStorage в заголовок Authorization
       
       console.log('📤 API запрос:', config.method?.toUpperCase(), config.url);
       return config;
@@ -73,7 +72,8 @@ export const createApiInstance = (baseURL: string = API_BASE_URL): AxiosInstance
         console.warn('🔒 Ошибка 401: Требуется авторизация');
         
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('token');
+          // Удаляем только пользовательские данные из localStorage
+          // Токен в httpOnly cookie удаляется на сервере при logout
           localStorage.removeItem('user');
           window.location.href = '/login';
         }

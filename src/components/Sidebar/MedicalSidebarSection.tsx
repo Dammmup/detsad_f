@@ -15,7 +15,6 @@ export const medicalSidebarSection = {
   icon: <LocalHospitalIcon />, 
   link: '/app/med',
   children: [
-    { id: 'vitaminization', label: 'Витаминизация', link: '/med-cabinet/vitaminization', icon: <LocalDrinkIcon /> },
     { id: 'organoleptic', label: 'Органолептический журнал', link: '/med-cabinet/organoleptic-journal', icon: <AssignmentIcon /> },
     { id: 'food_norms_control', label: 'Контроль норм питания', link: '/med-cabinet/food-norms-control', icon: <ListAltIcon /> },
     { id: 'perishable_brak', label: 'Бракераж скоропортящихся', link: '/med-cabinet/perishable-brak', icon: <HealingIcon /> },

@@ -4,15 +4,15 @@ import {
   Paper, Typography, Box, Button, Table, TableHead, TableRow, TableCell, TableBody,
  Card, CardContent, Grid, Chip, IconButton, DialogTitle, DialogContent,
   DialogActions, TextField, Select, MenuItem, FormControl, InputLabel, Alert,
-  Tabs, Tab, Avatar, Slider, Switch, FormGroup, FormControlLabel, Typography as MuiTypography,
+  Tabs, Tab, Avatar, Slider,
   Dialog
 } from '@mui/material';
 import {
   AccessTime, Edit, Visibility, Warning,
-   Schedule, Person, AddLocation, Settings, Check
+   Schedule, Person, Check
 } from '@mui/icons-material';
-import { getUsers } from '../../services/api/users';
-import shiftsApi, { getShifts } from '../../services/api/shifts';
+import { getUsers } from '../../services/users';
+import shiftsApi from '../../services/shifts';
 import { Shift } from '../../types/common';
 
 // Интерфейс для записей учета времени
@@ -131,7 +131,9 @@ const StaffAttendanceTracking:React.FC = () => {
         if (selectedStaff !== 'all') params.append('staffId', selectedStaff);
         params.append('from', dateRange.from);
         params.append('to', dateRange.to);
-        const res = await fetch(`/api/staff-time-tracking?${params.toString()}`);
+        const res = await fetch(`/staff-time-tracking?${params.toString()}`, {
+          credentials: 'include'
+        });
         const json = await res.json();
         if (res.ok && json.success && json.data) {
           // Преобразуем данные для соответствия интерфейсу
@@ -307,10 +309,11 @@ const StaffAttendanceTracking:React.FC = () => {
 
   const handleMarkSubmit = async () => {
     try {
-      const res = await fetch('/api/staff-time-tracking', {
+      const res = await fetch('/staff-time-tracking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(markForm)
+        body: JSON.stringify(markForm),
+        credentials: 'include'
       });
       const json = await res.json();
       if (res.ok && json.success) {
@@ -340,7 +343,9 @@ const StaffAttendanceTracking:React.FC = () => {
         if (selectedStaff !== 'all') params2.append('staffId', selectedStaff);
         params2.append('from', dateRange.from);
         params2.append('to', dateRange.to);
-        const res2 = await fetch(`/api/staff-time-tracking?${params2.toString()}`);
+        const res2 = await fetch(`/staff-time-tracking?${params2.toString()}`, {
+          credentials: 'include'
+        });
         const json2 = await res2.json();
         if (res2.ok && json2.success && json2.data) {
           // Преобразуем данные для соответствия интерфейсу
@@ -407,7 +412,7 @@ const StaffAttendanceTracking:React.FC = () => {
     if (!selectedRecord) return;
     
     try {
-      const res = await fetch(`/api/staff-time-tracking/${selectedRecord.id}`, {
+      const res = await fetch(`/staff-time-tracking/${selectedRecord.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -415,7 +420,8 @@ const StaffAttendanceTracking:React.FC = () => {
           checkInTime: selectedRecord.checkInTime || undefined,
           checkOutTime: selectedRecord.checkOutTime || undefined,
           notes: selectedRecord.notes || undefined
-        })
+        }),
+        credentials: 'include'
       });
       const json = await res.json();
       if (res.ok && json.success) {
@@ -424,7 +430,9 @@ const StaffAttendanceTracking:React.FC = () => {
         if (selectedStaff !== 'all') params.append('staffId', selectedStaff);
         params.append('from', dateRange.from);
         params.append('to', dateRange.to);
-        const res = await fetch(`/api/staff-time-tracking?${params.toString()}`);
+        const res = await fetch(`/staff-time-tracking?${params.toString()}`, {
+          credentials: 'include'
+        });
         const json = await res.json();
         if (res.ok && json.success && json.data) {
           // Преобразуем данные для соответствия интерфейсу
@@ -455,8 +463,9 @@ const StaffAttendanceTracking:React.FC = () => {
 
   const handleDeleteRecord = async (id: string) => {
     try {
-      const res = await fetch(`/api/staff-time-tracking/${id}`, {
-        method: 'DELETE'
+      const res = await fetch(`/staff-time-tracking/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
       });
       const json = await res.json();
       if (res.ok && json.success) {
@@ -466,7 +475,9 @@ const StaffAttendanceTracking:React.FC = () => {
         if (selectedStaff !== 'all') params.append('staffId', selectedStaff);
         params.append('from', dateRange.from);
         params.append('to', dateRange.to);
-        const res = await fetch(`/api/staff-time-tracking?${params.toString()}`);
+        const res = await fetch(`/staff-time-tracking?${params.toString()}`, {
+          credentials: 'include'
+        });
         const json = await res.json();
         if (res.ok && json.success && json.data) {
           // Преобразуем данные для соответствия интерфейсу

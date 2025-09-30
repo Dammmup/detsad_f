@@ -16,10 +16,10 @@ import {
   getCyclograms, createCyclogram, updateCyclogram, deleteCyclogram,
   getCyclogramTemplates, createCyclogramFromTemplate,
   WeeklyCyclogram, CyclogramTemplate
-} from '../services/api/cyclogram';
-import { getUsers } from '../services/api/users';
+} from '../services/cyclogram';
+import { getUsers } from '../services/users';
 import {   Group } from '../types/common';
-import { getGroups } from '../services/api/groups';
+import { getGroups } from '../services/groups';
 import { User as StaffMember } from '../types/common';     
 const Cyclogram: React.FC = () => {
   // Состояния для данных

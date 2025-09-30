@@ -5,8 +5,8 @@ import {
   useMediaQuery
 } from '@mui/material';
 import { Add, Edit, Delete} from '@mui/icons-material';
-import childrenApi, { Child } from '../../services/api/children';
-import { getGroups } from '../../services/api/groups';
+import childrenApi, { Child } from '../../services/children';
+import { getGroups } from '../../services/groups';
 import { Group } from '../../types/common';
 import { exportChildrenList } from '../../utils/excelExport';
 import ExportMenuButton from '../../components/ExportMenuButton';

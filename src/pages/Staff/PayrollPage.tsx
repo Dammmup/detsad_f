@@ -16,16 +16,17 @@ import {
   PictureAsPdf,
   TableChart
 } from '@mui/icons-material';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { Alert, CircularProgress } from '@mui/material';
-import { exportSalaryReport } from '../../services/api/reports';
-import usersApi from '../../services/api/users';
+import { exportSalaryReport } from '../../services/reports';
+import usersApi from '../../services/users';
 // Типы для настроек зарплаты и штрафа
 type PayrollSettings = {
   salary?: number;
-  salaryType?: 'day' | 'month';
-  penaltyType?: 'fixed' | 'percent'; // убираем 'minute' для совместимости с User
+  shiftRate?: number;
+  salaryType?: 'day' | 'month' | 'shift';
+  penaltyType?: 'fixed' | 'percent' | 'per_minute' | 'per_5_minutes' | 'per_10_minutes'; // добавляем типы штрафов из User
   penaltyAmount?: number;
 };
   // Диалог и состояние для настроек зарплаты/штрафа
@@ -42,8 +43,9 @@ type PayrollSettings = {
       const data = await usersApi.getPayrollSettings(user._id);
       setPayrollSettings({
         salary: typeof data.salary === 'number' ? data.salary : undefined,
+        shiftRate: typeof data.shiftRate === 'number' ? data.shiftRate : undefined,
         salaryType: data.salaryType ?? 'month',
-        penaltyType: (data.penaltyType === 'fixed' || data.penaltyType === 'percent') ? data.penaltyType : 'fixed',
+        penaltyType: (data.penaltyType === 'fixed' || data.penaltyType === 'percent' || data.penaltyType === 'per_minute' || data.penaltyType === 'per_5_minutes' || data.penaltyType === 'per_10_minutes') ? data.penaltyType : 'fixed',
         penaltyAmount: typeof data.penaltyAmount === 'number' ? data.penaltyAmount : undefined
       });
     } catch {
@@ -71,6 +73,12 @@ interface PayrollPageProps {
   isInReports?: boolean;
 }
 
+// Тип для информации о пользователе
+interface CurrentUser {
+  _id: string;
+ role: string;
+}
+
 interface Payroll {
   _id: string;
   staffId: {
@@ -83,7 +91,7 @@ interface Payroll {
   bonuses: number;
   penalties: number;
   total: number;
-  status: 'draft' | 'approved' | 'paid';
+  status: 'draft' | 'calculated' | 'approved' | 'paid';
   fines: Array<{
     date: Date;
     type: string;
@@ -104,7 +112,8 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
   );
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+ const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   // Загрузка данных
   useEffect(() => {
@@ -114,6 +123,18 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
       setError(null);
       try {
         console.log('Начало загрузки данных...');
+        // Загружаем информацию о текущем пользователе
+        const userResponse = await fetch('/auth/me', {
+          credentials: 'include'
+        });
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          setCurrentUser({
+            _id: userData.data._id,
+            role: userData.data.role
+          });
+        }
+        
         await Promise.all([
           fetchPayrolls(),
           fetchStaff()
@@ -134,8 +155,10 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
   const fetchPayrolls = async () => {
     try {
       console.log('Запрос расчетных листов за месяц:', selectedMonth);
-      const response = await fetch(`/api/payroll?month=${selectedMonth}`);
-      console.log('Ответ от сервера для /api/payroll:', response.status);
+      const response = await fetch(`/payroll?month=${selectedMonth}`, {
+        credentials: 'include'
+      });
+      console.log('Ответ от сервера для /payroll:', response.status);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -159,9 +182,11 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
   const fetchStaff = async () => {
     try {
       console.log('Запрос сотрудников с типом adult...');
-  const response = await fetch('/api/users');
+  const response = await fetch('/users', {
+    credentials: 'include'
+  });
       
-      console.log('Ответ от сервера для /api/users:', response.status);
+      console.log('Ответ от сервера для /users:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -211,17 +236,32 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
   };
 
   const handleOpenDialog = (payroll?: Payroll) => {
-    setCurrentPayroll(payroll || {
-      staffId: { _id: '', fullName: '' },
-      month: selectedMonth,
-      accruals: 0,
-      deductions: 0,
-      bonuses: 0,
-      penalties: 0,
-      total: 0,
-      status: 'draft',
-      fines: []
-    });
+    // Проверяем, является ли пользователь администратором
+    if (currentUser?.role !== 'admin') {
+      // Обычный сотрудник может редактировать только свои данные
+      if (payroll && currentUser && payroll.staffId._id !== currentUser._id) {
+        alert('У вас нет прав для редактирования этого расчетного листа');
+        return;
+      }
+    }
+    
+    if (payroll) {
+      // Редактирование существующего
+      setCurrentPayroll(payroll);
+    } else {
+      // Создание нового
+      setCurrentPayroll({
+        staffId: { _id: '', fullName: '' },
+        month: selectedMonth,
+        accruals: 0,
+        deductions: 0,
+        bonuses: 0,
+        penalties: 0,
+        total: 0,
+        status: 'draft',
+        fines: []
+      });
+    }
     setOpenDialog(true);
   };
 
@@ -232,17 +272,24 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
 
   const handleSavePayroll = async () => {
     if (!currentPayroll) return;
+    
+    // Проверяем, является ли пользователь администратором
+    if (currentUser?.role !== 'admin') {
+      alert('У вас нет прав для создания или редактирования расчетных листов');
+      return;
+    }
 
     try {
       const method = currentPayroll._id ? 'PUT' : 'POST';
-      const url = currentPayroll._id 
-        ? `/api/payroll/${currentPayroll._id}` 
-        : '/api/payroll';
+      const url = currentPayroll._id
+        ? `/payroll/${currentPayroll._id}`
+        : '/payroll';
       
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentPayroll)
+        body: JSON.stringify(currentPayroll),
+        credentials: 'include'
       });
 
       if (response.ok) {
@@ -252,12 +299,21 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
     } catch (error) {
       console.error('Ошибка сохранения расчетного листа:', error);
     }
-  };
+ };
 
   const handleDeletePayroll = async (id: string) => {
+    // Проверяем, является ли пользователь администратором
+    if (currentUser?.role !== 'admin') {
+      alert('У вас нет прав для удаления расчетных листов');
+      return;
+    }
+    
     if (window.confirm('Удалить расчетный лист?')) {
       try {
-        await fetch(`/api/payroll/${id}`, { method: 'DELETE' });
+        await fetch(`/payroll/${id}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
         fetchPayrolls();
       } catch (error) {
         console.error('Ошибка удаления расчетного листа:', error);
@@ -266,17 +322,24 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
   };
 
   const handleStatusChange = async (id: string, status: 'draft' | 'approved' | 'paid') => {
+    // Проверяем, является ли пользователь администратором
+    if (currentUser?.role !== 'admin') {
+      alert('У вас нет прав для изменения статуса расчетных листов');
+      return;
+    }
+    
     try {
-      await fetch(`/api/payroll/${id}`, {
+      await fetch(`/payroll/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status }),
+        credentials: 'include'
       });
       fetchPayrolls();
     } catch (error) {
       console.error('Ошибка обновления статуса:', error);
     }
-  };
+ };
   
   // Обработчик экспорта расчетного листа
   // Экспорт зарплатного отчета через API
@@ -288,7 +351,14 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
         endDate: selectedMonth + '-28', // для простоты, можно доработать до конца месяца
         format
       };
-      if (id) params.userId = id;
+      
+      // Если пользователь не администратор, он может экспортировать только свои данные
+      if (currentUser?.role !== 'admin' && id) {
+        params.userId = currentUser?._id;
+      } else if (id) {
+        params.userId = id;
+      }
+      
       const blob = await exportSalaryReport(params);
       if (!blob) throw new Error('Пустой ответ от сервера');
       // Формируем имя файла
@@ -306,7 +376,7 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
       console.error('Ошибка экспорта расчетного листа:', error);
       setError('Не удалось экспортировать расчетный лист');
     }
-  };
+ };
   
   // Обработчик отправки расчетного листа по email
   const handleSendByEmail = async (id: string) => {
@@ -340,6 +410,7 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'calculated': return 'info';
       case 'approved': return 'primary';
       case 'paid': return 'success';
       default: return 'default';
@@ -411,14 +482,16 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
           >
             Экспорт Excel
           </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-          >
-            Добавить
-          </Button>
+          {currentUser?.role === 'admin' && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenDialog()}
+            >
+              Добавить
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -502,7 +575,7 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <TextField
-                    label="Ставка зарплаты"
+                    label="Оклад"
                     type="number"
                     fullWidth
                     value={payrollSettings.salary ?? ''}
@@ -513,15 +586,28 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
                   />
                 </Grid>
                 <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Ставка за смену"
+                    type="number"
+                    fullWidth
+                    value={payrollSettings.shiftRate ?? ''}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setPayrollSettings(s => ({ ...s, shiftRate: val === '' ? undefined : Number(val) }));
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
                   <FormControl fullWidth>
-                    <InputLabel>Тип</InputLabel>
+                    <InputLabel>Тип оплаты</InputLabel>
                     <Select
                       value={payrollSettings.salaryType || 'month'}
-                      label="Тип"
+                      label="Тип оплаты"
                       onChange={e => setPayrollSettings(s => ({ ...s, salaryType: e.target.value as any }))}
                     >
                       <MenuItem value="month">В месяц</MenuItem>
                       <MenuItem value="day">В день</MenuItem>
+                      <MenuItem value="shift">За смену</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -539,14 +625,17 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth>
-                    <InputLabel>Период/Тип</InputLabel>
+                    <InputLabel>Тип штрафа</InputLabel>
                     <Select
                       value={payrollSettings.penaltyType || 'fixed'}
-                      label="Период/Тип"
+                      label="Тип штрафа"
                       onChange={e => setPayrollSettings(s => ({ ...s, penaltyType: e.target.value as any }))}
                     >
                       <MenuItem value="fixed">Фиксированная сумма</MenuItem>
                       <MenuItem value="percent">Процент от ставки</MenuItem>
+                      <MenuItem value="per_minute">За минуту</MenuItem>
+                      <MenuItem value="per_5_minutes">За 5 минут</MenuItem>
+                      <MenuItem value="per_10_minutes">За 10 минут</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -587,8 +676,9 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
                                   {formatCurrency(payroll.total)}
                                 </TableCell>
                                 <TableCell>
-                                  <Chip 
-                                    label={payroll.status === 'draft' ? 'Черновик' : 
+                                  <Chip
+                                    label={payroll.status === 'draft' ? 'Черновик' :
+                                           payroll.status === 'calculated' ? 'Рассчитано' :
                                            payroll.status === 'approved' ? 'Подтвержден' : 'Оплачен'}
                                     color={getStatusColor(payroll.status)}
                                     variant={payroll.status === 'draft' ? 'outlined' : 'filled'}
@@ -600,20 +690,25 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
                                       <MoneyIcon fontSize="small" />
                                     </IconButton>
                                   </Tooltip>
-                                  <Tooltip title="Редактировать">
-                                    <IconButton onClick={() => handleOpenDialog(payroll)} size="small">
-                                      <EditIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                  <Tooltip title="Удалить">
-                                    <IconButton 
-                                      onClick={() => handleDeletePayroll(payroll._id)} 
-                                      color="error"
-                                      size="small"
-                                    >
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
+                                  {/* Показываем кнопки редактирования и удаления только для администраторов */}
+                                  {currentUser?.role === 'admin' && (
+                                    <>
+                                      <Tooltip title="Редактировать">
+                                        <IconButton onClick={() => handleOpenDialog(payroll)} size="small">
+                                          <EditIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                      <Tooltip title="Удалить">
+                                        <IconButton
+                                          onClick={() => handleDeletePayroll(payroll._id)}
+                                          color="error"
+                                          size="small"
+                                        >
+                                          <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </>
+                                  )}
                                   <Tooltip title="Печать">
                                     <IconButton
                                       size="small"
@@ -659,28 +754,34 @@ const PayrollPage: React.FC<PayrollPageProps> = ({ isInReports = false }) => {
                   </Paper>
       </Dialog>
                     <TableCell>
-                      <Chip 
-                        label={payroll.status === 'draft' ? 'Черновик' : 
+                      <Chip
+                        label={payroll.status === 'draft' ? 'Черновик' :
+                               payroll.status === 'calculated' ? 'Рассчитано' :
                                payroll.status === 'approved' ? 'Подтвержден' : 'Оплачен'}
                         color={getStatusColor(payroll.status)}
                         variant={payroll.status === 'draft' ? 'outlined' : 'filled'}
                       />
                     </TableCell>
                     <TableCell align="center">
-                      <Tooltip title="Редактировать">
-                        <IconButton onClick={() => handleOpenDialog(payroll)} size="small">
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Удалить">
-                        <IconButton 
-                          onClick={() => handleDeletePayroll(payroll._id)} 
-                          color="error"
-                          size="small"
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {/* Показываем кнопки редактирования и удаления только для администраторов */}
+                      {currentUser?.role === 'admin' && (
+                        <>
+                          <Tooltip title="Редактировать">
+                            <IconButton onClick={() => handleOpenDialog(payroll)} size="small">
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Удалить">
+                            <IconButton
+                              onClick={() => handleDeletePayroll(payroll._id)}
+                              color="error"
+                              size="small"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
                       <Tooltip title="Печать">
                         <IconButton
                           size="small"

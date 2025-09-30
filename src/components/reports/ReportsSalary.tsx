@@ -10,18 +10,27 @@ interface Props {
 
 interface PayrollRow {
   staffName: string;
-  month: string;
-  accruals: number;
+ month: string;
+ accruals: number;
   bonuses: number;
   penalties: number;
   total: number;
+  status: string;
+  staffId: string;
+}
+
+// Тип для информации о пользователе
+interface CurrentUser {
+  id: string;
+  role: string;
 }
 
 const ReportsSalary: React.FC<Props> = ({ startDate, endDate, userId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-   const [summary, setSummary] = useState<any>(null);
-   const [rows, setRows] = useState<PayrollRow[]>([]);
+  const [summary, setSummary] = useState<any>(null);
+  const [rows, setRows] = useState<PayrollRow[]>([]);
+  const [currentUser, setCurrentUser] = useState<{ id: string; role: string } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -29,21 +38,51 @@ const ReportsSalary: React.FC<Props> = ({ startDate, endDate, userId }) => {
       setLoading(true);
       setError(null);
       try {
-        const base = process.env.REACT_APP_API_URL || '';
-         const [sumRes, payrollsRes] = await Promise.all([
-           axios.get(`${base}/api/reports/salary/summary`, { params: { startDate, endDate, userId } }),
-           axios.get(`${base}/api/payroll`, { params: { startDate, endDate, userId } })
-         ]);
+        const base = process.env.API_URL || '';
+        
+        // Получаем информацию о текущем пользователе
+        const userResponse = await fetch('/auth/me', {
+          credentials: 'include'
+        });
+        let currentUserData = null;
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          currentUserData = {
+            id: userData.data._id || userData.data.id,
+            role: userData.data.role
+          };
+          setCurrentUser(currentUserData);
+        }
+        
+        // Используем currentUserData вместо currentUser
+        const user = currentUserData;
+        
+        // Формируем параметры запроса
+        const params: any = { startDate, endDate };
+        // Если пользователь не администратор, он может видеть только свои данные
+        if (currentUserData && currentUserData.role !== 'admin') {
+          params.userId = currentUserData.id;
+        } else if (userId) {
+          // Администратор может фильтровать по userId
+          params.userId = userId;
+        }
+        
+        const [sumRes, payrollsRes] = await Promise.all([
+          axios.get(`${base}/reports/salary/summary`, { params }),
+          axios.get(`${base}/payroll`, { params })
+        ]);
         if (!mounted) return;
         setSummary(sumRes.data);
-         const data = (payrollsRes.data?.data || []) as any[];
+        const data = (payrollsRes.data?.data || []) as any[];
         setRows(data.map((p: any) => ({
           staffName: p.staffId?.fullName || 'Неизвестно',
           month: p.month,
           accruals: p.accruals || 0,
           bonuses: p.bonuses || 0,
           penalties: p.penalties || 0,
-          total: p.total || 0
+          total: p.total || 0,
+          status: p.status || 'draft',
+          staffId: p.staffId?._id || p.staffId?.id || ''
         })));
       } catch (e: any) {
         if (mounted) setError(e?.message || 'Ошибка загрузки зарплат');
@@ -115,6 +154,7 @@ const ReportsSalary: React.FC<Props> = ({ startDate, endDate, userId }) => {
                 <TableCell align="right">Начисления</TableCell>
                 <TableCell align="right">Штрафы</TableCell>
                 <TableCell align="right">Итого</TableCell>
+                <TableCell>Статус</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -126,6 +166,11 @@ const ReportsSalary: React.FC<Props> = ({ startDate, endDate, userId }) => {
                   <TableCell align="right">{r.bonuses}</TableCell>
                   <TableCell align="right">{r.penalties}</TableCell>
                   <TableCell align="right">{r.total}</TableCell>
+                  <TableCell>
+                    {r.status === 'draft' ? 'Черновик' :
+                     r.status === 'calculated' ? 'Рассчитано' :
+                     r.status === 'approved' ? 'Подтвержден' : 'Оплачен'}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

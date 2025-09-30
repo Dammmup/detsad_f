@@ -1,4 +1,4 @@
-import { apiClient } from '../../utils/api';
+import { apiClient } from '../utils/api';
 
 export interface GenerateDocumentParams {
   template: string;

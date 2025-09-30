@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import {
   Box, Typography, Button, Stack, Table, TableHead, TableRow, TableCell, TableBody, Paper, TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, CircularProgress
 } from '@mui/material';
-import { getUsers } from '../../services/api/users';
+import { getUsers } from '../../services/users';
 import { User } from '../../types/common';
 import { MantouxRecord } from '../../types/mantoux';
 import {

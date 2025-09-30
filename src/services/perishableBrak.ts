@@ -11,7 +11,7 @@ export interface PerishableBrak {
 }
 
 class PerishableBrakApiClient extends BaseCrudApiClient<PerishableBrak> {
-  protected endpoint = '/api/perishable-brak';
+  protected endpoint = '/perishable-brak';
 }
 
 export const perishableBrakApi = new PerishableBrakApiClient();

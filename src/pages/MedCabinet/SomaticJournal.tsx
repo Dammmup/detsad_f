@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, Button, Stack, Table, TableHead, TableRow, TableCell, TableBody, Paper, TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Checkbox, FormControlLabel, CircularProgress
 } from '@mui/material';
-import { getUsers } from '../../services/api/users';
+import { getUsers } from '../../services/users';
 import { User } from '../../types/common';
 import {
   getSomaticRecords,

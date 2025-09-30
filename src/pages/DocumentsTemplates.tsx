@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TablePagination, Button, TextField, MenuItem,
-  Grid, IconButton, Tooltip, Chip, FormControl, InputLabel, Select,
-  CircularProgress, Alert
+  Grid, IconButton, Tooltip, Chip, FormControl, InputLabel, Select
 } from '@mui/material';
 import {
   Download as DownloadIcon,
@@ -13,9 +12,8 @@ import {
   TableChart as ExcelIcon,
   InsertDriveFile as FileIcon
 } from '@mui/icons-material';
-import { format } from 'date-fns';
-import { ru } from 'date-fns/locale';
-import { getDocumentTemplates, downloadDocumentTemplate } from '../services/api/documents';
+
+import { getDocumentTemplates, downloadDocumentTemplate } from '../services/documents';
 
 // Тип для шаблона документа
 interface DocumentTemplate {

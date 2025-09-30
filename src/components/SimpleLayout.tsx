@@ -1,5 +1,4 @@
 import MenuItemsAdminPage from '../pages/MedCabinet/MenuItemsAdminPage';
-import VitaminizationJournalPage from '../pages/MedCabinet/VitaminizationJournalPage';
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { 
@@ -32,7 +31,7 @@ import StaffSchedule from '../pages/Staff/StaffSchedule';
 
 import WeeklyAttendance from '../pages/Children/WeeklyAttendance';
 import ReportsSalary from '../components/reports/ReportsSalary';
-import { logout } from '../services/api/auth';
+import { logout } from '../services/auth';
 import { useNavigate } from 'react-router-dom';
 import Reports from '../pages/Reports';
 import Analytics from '../pages/Analytics';
@@ -166,7 +165,6 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path="med/contact-infection" element={<ContactInfectionJournal />} />
             <Route path="med/risk-group" element={<RiskGroupChildren />} />
             <Route path="med/tub-positive" element={<TubPositiveJournal />} />
-            <Route path="med/vitaminization" element={<VitaminizationJournalPage />} />
             <Route path="med/organoleptic-journal" element={<OrganolepticJournalPage />} />
             <Route path="med/food-norms-control" element={<FoodNormsControlPage />} />
 

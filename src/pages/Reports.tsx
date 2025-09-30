@@ -4,26 +4,22 @@ import {
   Paper, Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, FormControl, InputLabel, Select, MenuItem, Grid, IconButton,
   Tooltip, Chip, CircularProgress, Alert, SelectChangeEvent, Tabs, Tab,
-  Table, TableHead, TableRow, TableCell, TableBody, Card, CardContent
+  Table, TableHead, TableRow, TableCell, TableBody, Card, 
 } from '@mui/material';
 import { 
   Add, Delete, Assessment, PictureAsPdf, TableChart, 
-  InsertDriveFile, FilterList, Email, Schedule,
-  GetApp, AttachMoney, People, ChildCare, BarChart, PieChart, TrendingUp, 
+  InsertDriveFile, Email, Schedule,
+  GetApp, AttachMoney, People, ChildCare, BarChart,
   Download, Refresh, Search, Sort
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { 
   getReports, deleteReport, exportReport, generateCustomReport,
   exportSalaryReport, exportChildrenReport, exportAttendanceReport, sendReportByEmail, scheduleReport,
   Report
-} from '../services/api/reports';
-import ReportsAnalytics from '../components/reports/ReportsAnalytics';
+} from '../services/reports';
 import ReportsSalary from '../components/reports/ReportsSalary';
-import { getUsers } from '../services/api/users';
-import { getGroups } from '../services/api/groups';
+import { getUsers } from '../services/users';
+import { getGroups } from '../services/groups';
 import { ID, UserRole } from '../types/common';
 import Analytics from './Analytics';
 
@@ -47,6 +43,12 @@ interface ReportFilters {
   search?: string;
 }
 
+// Тип для информации о пользователе
+interface CurrentUser {
+  id: string;
+  role: string;
+}
+
 const Reports: React.FC = () => {
   // Состояния для данных
  const [reports, setReports] = useState<Report[]>([]);
@@ -61,6 +63,7 @@ const Reports: React.FC = () => {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   
   // Новые состояния для расширенного экспорта
   const [exportType, setExportType] = useState<'salary' | 'children' | 'attendance' | 'schedule'>('salary');
@@ -98,6 +101,25 @@ const Reports: React.FC = () => {
 
   // Загрузка данных при монтировании компонента
   useEffect(() => {
+    // Загружаем информацию о текущем пользователе
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch('/auth/me', {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const userData = await response.json();
+          setCurrentUser({
+            id: userData.data._id || userData.data.id,
+            role: userData.data.role
+          });
+        }
+      } catch (err) {
+        console.error('Ошибка загрузки информации о пользователе:', err);
+      }
+    };
+    
+    fetchCurrentUser();
     fetchData();
     
     // Устанавливаем начальное название отчета
@@ -517,15 +539,18 @@ const Reports: React.FC = () => {
         </Typography>
         
         <Box>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<Add />}
-            onClick={() => setDialogOpen(true)}
-            sx={{ mr: 1 }}
-          >
-            Создать отчет
-          </Button>
+          {/* Показываем кнопку "Создать отчет" только для администраторов */}
+          {currentUser?.role === 'admin' && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Add />}
+              onClick={() => setDialogOpen(true)}
+              sx={{ mr: 1 }}
+            >
+              Создать отчет
+            </Button>
+          )}
           <Button
             variant="outlined"
             color="primary"

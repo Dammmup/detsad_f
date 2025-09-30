@@ -21,12 +21,11 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { getDocuments, createDocument, updateDocument, deleteDocument, downloadDocument } from '../../services/api/documents';
+import { getDocuments, createDocument, updateDocument, deleteDocument, downloadDocument } from '../../services/documents';
 import ExportAutoTemplatesButton from '../../components/ExportAutoTemplatesButton';
 import { childrenTemplates } from '../../utils/documentTemplates';
-import childrenApi, { Child } from '../../services/api/children';
-import groupsApi from '../../services/api/groups';
-import { active } from 'sortablejs';
+import childrenApi, { Child } from '../../services/children';
+import groupsApi from '../../services/groups';
 
 
 interface ChildDocument {

@@ -1,17 +1,16 @@
-import { BaseCrudApiClient } from '../../utils/api';
-
-export interface Fine {
+import { BaseCrudApiClient } from '../utils/api';
+ interface Fine {
   _id: string;
   staffId: string;
   date: string;
   amount: number;
   reason: string;
-  createdAt?: string;
+ createdAt?: string;
   updatedAt?: string;
 }
 
 class FineApiClient extends BaseCrudApiClient<Fine> {
-  protected endpoint = '/api/fine';
+  protected endpoint = '/fine';
 
   async getAllByMonth(month: string): Promise<Fine[]> {
     return this.getAll({ month });
@@ -24,3 +23,4 @@ class FineApiClient extends BaseCrudApiClient<Fine> {
 
 const fineApi = new FineApiClient();
 export default fineApi;
+export { Fine, FineApiClient };

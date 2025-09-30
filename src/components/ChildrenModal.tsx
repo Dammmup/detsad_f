@@ -3,8 +3,8 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, CircularProgress,
   Alert, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent
 } from '@mui/material';
-import { createUser, updateUser } from '../services/api/users';
-import { getGroups } from '../services/api/groups';
+import { createUser, updateUser } from '../services/users';
+import { getGroups } from '../services/groups';
 import { Group, User } from '../types/common';
 
 interface ChildrenModalProps {

@@ -6,7 +6,7 @@ import axios from 'axios';
 import { useAuth } from '../components/context/AuthContext';
 import { User } from '../types/common';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const API_URL = process.env.API_URL || 'http://localhost:8080';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -24,7 +24,12 @@ const Login: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.post(`${API_URL}/api/auth/login`, { phone, password });
+      const res = await axios.post(
+  `${API_URL}/auth/login`,
+  { phone, password },
+  { withCredentials: true } // 🔥 важно
+);
+
       const userData: User = {
         id: res.data.user.id,
         fullName: res.data.user.fullName,
@@ -37,7 +42,7 @@ const Login: React.FC = () => {
       };
       
       // Use AuthContext login method to properly update context
-      login(userData, res.data.token);
+      login(userData, ''); // Токен теперь хранится в httpOnly cookie
       navigate('/app/dashboard');
     } catch (e: any) {
       setError(e?.response?.data?.error || 'Ошибка входа');

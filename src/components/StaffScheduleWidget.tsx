@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { CalendarToday, AccessTime } from '@mui/icons-material';
 import { useAuth } from './context/AuthContext';
-import { getStaffShifts, getShifts } from '../services/api/shifts';
+import { getStaffShifts, getShifts } from '../services/shifts';
 // import { formatTime } from '../utils/format';
 
 interface StaffScheduleWidgetProps {

@@ -173,8 +173,9 @@ export interface User {
   
   // Поля для сотрудников
   salary?: number;
-  salaryType?: 'day' | 'month';
-  penaltyType?: 'fixed' | 'percent';
+  shiftRate?: number;
+  salaryType?: 'day' | 'month' | 'shift';
+  penaltyType?: 'fixed' | 'percent' | 'per_minute' | 'per_5_minutes' | 'per_10_minutes';
   penaltyAmount?: number;
   initialPassword?: string;
   avatarUrl?: string;
@@ -546,7 +547,7 @@ export interface GeolocationSettings {
 // ===== АВТОРИЗАЦИЯ =====
 
 export interface LoginCredentials {
-  email: string;
+  phone: string; // Используем телефон вместо email для логина
   password: string;
 }
 
@@ -563,7 +564,7 @@ export interface AuthResponse {
     fullName: string;
     role: UserRole;
   };
-  token?: string;
+  token?: string; // Токен теперь хранится в httpOnly cookie, но оставляем для совместимости
 }
 
 // ===== ЭКСПОРТ =====

@@ -10,7 +10,7 @@ import {
   Chip
 } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getAttendanceStats } from '../services/api/childAttendance';
+import { getAttendanceStats } from '../services/childAttendance';
 import { useAuth } from './context/AuthContext';
 
 interface AttendanceStatsWidgetProps {

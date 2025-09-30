@@ -21,7 +21,7 @@ import {
 } from '@mui/material';
 import { Add, Delete } from '@mui/icons-material';
 import { useAuth } from './context/AuthContext';
-import { TaskList, getTaskList, createTask, deleteTask, toggleTaskStatus } from '../services/api/taskList';
+import { TaskList, getTaskList, createTask, deleteTask, toggleTaskStatus } from '../services/taskList';
 
 interface TaskListColumnProps {
   onTaskChange?: () => void; // Callback для обновления при изменении задач

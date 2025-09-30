@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   Typography, Box, Grid, Card, CardContent, CircularProgress, Alert
 } from '@mui/material';
-import { getAttendanceStatistics, getScheduleStatistics } from '../services/api/reports';
-import { getUsers } from '../services/api/users';
-import { getGroups } from '../services/api/groups';
+import { getAttendanceStatistics, getScheduleStatistics } from '../services/reports';
+import { getUsers } from '../services/users';
+import { getGroups } from '../services/groups';
 import { ID, UserRole } from '../types/common';
 
 // Интерфейс для сотрудника
