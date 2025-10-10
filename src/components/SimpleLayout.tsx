@@ -71,9 +71,6 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
     navigate('/login');
   };
 
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -145,7 +142,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path="documents/templates" element={<DocumentsTemplates />} />
             {/* Отчеты */}
             <Route path="reports" element={<Reports />} />
-            <Route path="reports/payroll" element={<ReportsSalary startDate={monthStart} endDate={monthEnd} />} />
+            <Route path="reports/payroll" element={<ReportsSalary />} />
             <Route path="reports/analytics" element={<Analytics />} />
 
             {/* Организация/Настройки */}

@@ -368,10 +368,10 @@ export const exportSalaryReport = async (params: {
 };
 
 // Получение salary summary (GET)
-export const getSalarySummary = async (startDate: string, endDate: string) => {
+export const getSalarySummary = async (month: string) => {
   try {
     const response = await api.get('/reports/salary/summary', {
-      params: { startDate, endDate }
+      params: { month }
     });
     return response.data;
   } catch (error) {

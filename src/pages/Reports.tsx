@@ -807,9 +807,7 @@ const Reports: React.FC = () => {
       {tabValue === 1 && (
         <Box>
           <Typography variant="h6" gutterBottom>Отчеты по зарплатам</Typography>
-          <ReportsSalary 
-            startDate={startDate.toISOString().split('T')[0]} 
-            endDate={endDate.toISOString().split('T')[0]} 
+          <ReportsSalary
             userId={selectedUserId || undefined}
           />
         </Box>

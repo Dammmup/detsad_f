@@ -14,10 +14,6 @@ import ReportsSalary from './reports/ReportsSalary';
 import Dashboard from '../pages/Dashboard';
 
 export const App = () => {
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-
   return (
     <AuthProvider>
       <SnackbarProvider>
@@ -35,7 +31,7 @@ export const App = () => {
                 <SimpleLayout>
                   <Routes>
                     <Route path="staff/attendance" element={<StaffAttendanceTracking />} />
-                    <Route path="reports/payroll" element={<ReportsSalary startDate={monthStart} endDate={monthEnd} />} />
+                    <Route path="reports/payroll" element={<ReportsSalary />} />
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="*" element={<Navigate to="dashboard" replace />} />
                     <Route path="reports" element={<Reports />} />

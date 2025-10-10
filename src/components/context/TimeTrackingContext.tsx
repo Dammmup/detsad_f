@@ -93,10 +93,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
   // Fetch current time tracking status
   const fetchTimeStatus = useCallback(async () => {
     try {
-      // setLoading(true);
-      // const response = await Axios.get(`${process.env.API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '')}/time-tracking/status`);
-      // setTimeStatus(response.data);
-      // return response.data;
+  
       return null;
     } catch (error) {
       console.error('Error fetching time status:', error);

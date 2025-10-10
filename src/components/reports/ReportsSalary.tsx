@@ -3,9 +3,12 @@ import { Box, Grid, Card, CardContent, Typography, Table, TableHead, TableRow, T
 import axios from 'axios';
 
 interface Props {
-  startDate: string;
-  endDate: string;
   userId?: string;
+}
+
+interface CurrentUser {
+  id: string;
+ role: string;
 }
 
 interface PayrollRow {
@@ -25,40 +28,49 @@ interface CurrentUser {
   role: string;
 }
 
-const ReportsSalary: React.FC<Props> = ({ startDate, endDate, userId }) => {
+const ReportsSalary: React.FC<Props> = ({ userId }) => {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+ const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<any>(null);
   const [rows, setRows] = useState<PayrollRow[]>([]);
-  const [currentUser, setCurrentUser] = useState<{ id: string; role: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   useEffect(() => {
     let mounted = true;
+    
+    // Определяем текущий месяц
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
     const load = async () => {
       setLoading(true);
       setError(null);
       try {
-        const base = process.env.API_URL || '';
+        // Импортируем сервисы
+        const { getCurrentUser } = await import('../../services/auth');
+        const { getSalarySummary } = await import('../../services/reports');
+        const { getPayrolls } = await import('../../services/payroll');
         
-        // Получаем информацию о текущем пользователе
-        const userResponse = await fetch('/auth/me', {
-          credentials: 'include'
-        });
+        // Получаем информацию о текущем пользователе через сервис
         let currentUserData = null;
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          currentUserData = {
-            id: userData.data._id || userData.data.id,
-            role: userData.data.role
-          };
-          setCurrentUser(currentUserData);
+        try {
+          const userData = getCurrentUser();
+          if (userData) {
+            currentUserData = {
+              id: userData.id,
+              role: userData.role || 'staff'  // Устанавливаем значение по умолчанию
+            };
+            setCurrentUser(currentUserData);
+          }
+        } catch (userError) {
+          console.error('Ошибка получения данных пользователя:', userError);
         }
         
-        // Используем currentUserData вместо currentUser
-        const user = currentUserData;
+        // Формируем параметры запроса - теперь используем текущий месяц
+        const params: any = {
+          month: currentMonth  // используем месяц вместо startDate/endDate
+        };
         
-        // Формируем параметры запроса
-        const params: any = { startDate, endDate };
         // Если пользователь не администратор, он может видеть только свои данные
         if (currentUserData && currentUserData.role !== 'admin') {
           params.userId = currentUserData.id;
@@ -67,13 +79,14 @@ const ReportsSalary: React.FC<Props> = ({ startDate, endDate, userId }) => {
           params.userId = userId;
         }
         
-        const [sumRes, payrollsRes] = await Promise.all([
-          axios.get(`${base}/reports/salary/summary`, { params }),
-          axios.get(`${base}/payroll`, { params })
+        const [summaryData, payrollsData] = await Promise.all([
+          getSalarySummary(currentMonth),
+          getPayrolls(params)
         ]);
+        
         if (!mounted) return;
-        setSummary(sumRes.data);
-        const data = (payrollsRes.data?.data || []) as any[];
+        setSummary(summaryData);
+        const data = (payrollsData?.data || payrollsData || []) as any[];
         setRows(data.map((p: any) => ({
           staffName: p.staffId?.fullName || 'Неизвестно',
           month: p.month,
@@ -92,7 +105,7 @@ const ReportsSalary: React.FC<Props> = ({ startDate, endDate, userId }) => {
     };
     load();
     return () => { mounted = false; };
-  }, [startDate, endDate, userId]);
+  }, [userId]); // убрали startDate и endDate из зависимостей
 
   if (loading) {
     return (
