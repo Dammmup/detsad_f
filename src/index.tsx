@@ -88,12 +88,10 @@ export function getHistory() {
   return history;
 }
 
-axios.defaults.baseURL = process.env.API_URL || 'http://localhost:8080';
+axios.defaults.baseURL = process.env.API_URL || 'https://detsad-b.onrender.com';
 axios.defaults.headers.common['Content-Type'] = 'application/json';
-const token = localStorage.getItem('token');
-if (token) {
-  axios.defaults.headers.common['Authorization'] = 'Bearer ' + token;
-}
+// При использовании httpOnly cookie токен автоматически отправляется с каждым запросом
+// Не нужно добавлять токен из localStorage в заголовок Authorization
 
 const rootElement = document.getElementById('root');
 if (rootElement) {

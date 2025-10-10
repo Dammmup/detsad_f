@@ -120,7 +120,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
         longitude: currentLocation?.coords.longitude,
       };
 
-      const response = await Axios.post(`${process.env.API_URL || 'http://localhost:8080'}/time-tracking/clock-in`, requestData);
+      const response = await Axios.post(`${process.env.API_URL || 'https://detsad-b.onrender.com'}/time-tracking/clock-in`, requestData);
       
       // // Update status
       // await fetchTimeStatus();
@@ -153,7 +153,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
         longitude: currentLocation?.coords.longitude,
       };
 
-      const response = await Axios.post(`${process.env.API_URL || 'http://localhost:8080'}/time-tracking/clock-out`, requestData);
+      const response = await Axios.post(`${process.env.API_URL || 'https://detsad-b.onrender.com'}/time-tracking/clock-out`, requestData);
       
       // // Update status
       // await fetchTimeStatus();
@@ -174,7 +174,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
   const startBreak = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await Axios.post(`${process.env.API_URL || 'http://localhost:8080'}/time-tracking/break-start`);
+      const response = await Axios.post(`${process.env.API_URL || 'https://detsad-b.onrender.com'}/time-tracking/break-start`);
       
       // // Update status
       // await fetchTimeStatus();
@@ -195,7 +195,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
   const endBreak = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await Axios.post(`${process.env.API_URL || 'http://localhost:8080'}/time-tracking/break-end`);
+      const response = await Axios.post(`${process.env.API_URL || 'https://detsad-b.onrender.com'}/time-tracking/break-end`);
       
       // // Update status
       // await fetchTimeStatus();
@@ -219,7 +219,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
         ...params
       });
 
-      const response = await Axios.get(`${process.env.API_URL || 'http://localhost:8080'}/time-tracking/entries?${queryParams}`);
+      const response = await Axios.get(`${process.env.API_URL || 'https://detsad-b.onrender.com'}/time-tracking/entries?${queryParams}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching time entries:', error);
@@ -236,7 +236,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
         endDate: endDate.toISOString()
       });
 
-      const response = await Axios.get(`${process.env.API_URL || 'http://localhost:8080'}/time-tracking/summary?${params}`);
+      const response = await Axios.get(`${process.env.API_URL || 'https://detsad-b.onrender.com'}/time-tracking/summary?${params}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching time summary:', error);

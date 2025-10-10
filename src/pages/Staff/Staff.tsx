@@ -16,6 +16,7 @@ import { useAuth } from '../../components/context/AuthContext';
 import ExportMenuButton from '../../components/ExportMenuButton';
 import { exportStaffList } from '../../utils/excelExport';
 import axios from 'axios';
+import { API_BASE_URL } from '../../utils/api';
 
 // 🇷🇺 Переводы ролей с английского на русский
 const roleTranslations: Record<string, string> = {
@@ -256,7 +257,7 @@ const Staff = () => {
 
   const handleExportEmail = async () => {
     try {
-      await axios.post('/exports/staff', { action: 'email' });
+      await axios.post(`${API_BASE_URL}/exports/staff`, { action: 'email' }, { withCredentials: true });
       alert('Документ отправлен на почту администратора');
     } catch (e) {
       alert('Ошибка отправки на почту');

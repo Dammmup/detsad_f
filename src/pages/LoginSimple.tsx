@@ -6,7 +6,7 @@ import axios from 'axios';
 import { useAuth } from '../components/context/AuthContext';
 import { User } from '../types/common';
 
-const API_URL = process.env.API_URL || 'http://localhost:8080';
+const API_URL = process.env.API_URL || 'https://detsad-b.onrender.com';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-let baseUrl = process.env.API_URL || 'http://localhost:8080';
+let baseUrl = process.env.API_URL || 'https://detsad-b.onrender.com';
 // Добавляем '' к базовому URL, если его нет
 if (!baseUrl.endsWith('')) {
   baseUrl = baseUrl.replace(/\/$/, '') + '';

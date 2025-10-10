@@ -3,7 +3,7 @@ import { ApiError, DelayFunction, ErrorHandler } from '../types/common';
 
 // ===== КОНФИГУРАЦИЯ API =====
 
-export const API_BASE_URL = process.env.API_URL || 'http://localhost:8080';
+export const API_BASE_URL = process.env.API_URL || 'https://detsad-b.onrender.com';
 export const API_TIMEOUT = 10000; // 10 секунд
 export const RETRY_DELAY = 2000; // 2 секунды
 export const MAX_RETRIES = 3;

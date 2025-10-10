@@ -13,6 +13,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { useAuth } from './context/AuthContext';
 import { formatCurrency } from '../utils/format';
 import axios from 'axios';
+import { API_BASE_URL } from '../utils/api';
 
 interface FinancialStatsWidgetProps {
   onStatsChange?: () => void; // Callback для обновления статистики
@@ -38,12 +39,13 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
         const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
         
         // Используем axios для запроса, токен автоматически передается в httpOnly cookie
-        const response = await axios.get(`/reports/salary/summary`, {
+        const response = await axios.get(`${API_BASE_URL}/reports/salary/summary`, {
           params: {
             startDate: startDate.toISOString().split('T')[0],
             endDate: endDate.toISOString().split('T')[0],
             userId: currentUser.id
-          }
+          },
+          withCredentials: true
         });
         
         const statsData = response.data;

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = `${process.env.API_URL}/` || 'http://localhost:8080';
+const API_URL = `${process.env.API_URL}/` || 'https://detsad-b.onrender.com';
 
 // Интерфейс для API ошибки
 interface ApiError extends Error {
