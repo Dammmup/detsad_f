@@ -289,7 +289,7 @@ const StaffSchedule: React.FC = () => {
   const handleEditShift = (shift: Shift) => {
     setFormData({
       staffId: (shift.staffId as any)?._id || shift.staffId || '',
-      staffName: shift.staffName,
+      staffName: shift.staffName as any|| '',
       date: shift.date,
       startTime: shift.startTime,
       endTime: shift.endTime,

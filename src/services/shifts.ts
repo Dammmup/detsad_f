@@ -46,7 +46,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   async create(shiftData: ShiftFormData): Promise<Shift> {
     const shift = await super.create({
       staffId: shiftData.staffId,
-      staffName: shiftData.staffName,
       date: shiftData.date,
       startTime: shiftData.startTime,
       endTime: shiftData.endTime,
@@ -350,15 +349,15 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
 export const getStaffShifts = async ({ staffId, startDate, endDate }: { staffId: ID, startDate: string, endDate: string }) => {
   return shiftsApi.getAll({ staffId, startDate, endDate });
 };
-// Экспортируем экземпляр клиента
-export const shiftsApi = new ShiftsApiClient();
 
 // Экспортируем отдельные функции для обратной совместимости
-export const getShifts = (startDate?: string, endDate?: string) => 
+export const getShifts = (startDate?: string, endDate?: string) =>
   shiftsApi.getByDateRange(startDate || '', endDate || '');
 export const createShift = (shiftData: ShiftFormData) => shiftsApi.create(shiftData);
 export const updateShift = (id: ID, shiftData: Partial<Shift>) => shiftsApi.update(id, shiftData);
 export const deleteShift = (id: ID) => shiftsApi.deleteItem(id);
 export const updateShiftStatus = (id: ID, status: Shift['status']) => shiftsApi.updateStatus(id, status);
+// Экспортируем экземпляр клиента
+export const shiftsApi = new ShiftsApiClient();
 
 export default shiftsApi;

@@ -207,7 +207,7 @@ export interface Shift {
   id: ID;
   _id?: ID;
   staffId: ID;
-  staffName: string;
+  staffName?: string; // для совместимости
   date: DateString;
   startTime: TimeString;
   endTime: TimeString;
@@ -225,7 +225,7 @@ export interface Shift {
 
 export interface ShiftFormData {
   staffId: ID;
-  staffName: string;
+ staffName?: string; // для совместимости
   date: DateString;
   startTime: TimeString;
   endTime: TimeString;

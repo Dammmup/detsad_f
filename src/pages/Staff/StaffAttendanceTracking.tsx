@@ -1,48 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { YMaps, Map, Placemark, Circle } from 'react-yandex-maps';
 import {
   Paper, Typography, Box, Button, Table, TableHead, TableRow, TableCell, TableBody,
- Card, CardContent, Grid, Chip, IconButton, DialogTitle, DialogContent,
-  DialogActions, TextField, Select, MenuItem, FormControl, InputLabel, Alert,
-  Tabs, Tab, Avatar, Slider,
+  Card, CardContent, Grid, Chip, IconButton, DialogTitle, DialogContent,
+  DialogActions, TextField, Select, MenuItem, FormControl, InputLabel,
+  Tabs, Tab, Avatar,
   Dialog
 } from '@mui/material';
 import {
-  AccessTime, Edit, Visibility, Warning,
-   Schedule, Person, Check
+  AccessTime, Edit, Visibility, Check,
+   Schedule, Person
 } from '@mui/icons-material';
 import { getUsers } from '../../services/users';
 import shiftsApi from '../../services/shifts';
 import { Shift } from '../../types/common';
 
 // Интерфейс для записей учета времени
-interface TimeRecord {
-  id: string;
-  staffId: string;
-  staffName: string;
-  date: string;
-  checkInTime?: string;
-  checkOutTime?: string;
-  status: 'checked_in' | 'checked_out' | 'on_break' | 'overtime' | 'absent';
-  workDuration?: number;
-  breakDuration?: number;
-  overtimeDuration?: number;
-  penalties: {
-    late: { minutes: number; amount: number; reason?: string };
-    earlyLeave: { minutes: number; amount: number; reason?: string };
-    unauthorized: { amount: number; reason?: string };
-  };
-  bonuses: {
-    overtime: { minutes: number; amount: number };
-    punctuality: { amount: number; reason?: string };
-  };
-  location?: {
-    checkIn?: { address?: string };
-    checkOut?: { address?: string };
-  };
-  notes?: string;
-}
-
+  interface TimeRecord {
+    id: string;
+    staffId: string;
+    staffName: string;
+    date: string;
+    checkInTime?: string;
+    checkOutTime?: string;
+    status: 'checked_in' | 'checked_out' | 'on_break' | 'overtime' | 'absent';
+    workDuration?: number;
+    breakDuration?: number;
+    overtimeDuration?: number;
+    type?: string; // Добавляем тип смены
+    penalties: {
+      late: { minutes: number; amount: number; reason?: string };
+      earlyLeave: { minutes: number; amount: number; reason?: string };
+      unauthorized: { amount: number; reason?: string };
+    };
+    bonuses: {
+      overtime: { minutes: number; amount: number };
+      punctuality: { amount: number; reason?: string };
+    };
+    location?: {
+      checkIn?: { address?: string };
+      checkOut?: { address?: string };
+    };
+    notes?: string;
+  }
 
 // Используем только смены (Shift) для учета посещаемости сотрудников
 
@@ -59,16 +58,19 @@ const StaffAttendanceTracking:React.FC = () => {
   const [selectedStaff, setSelectedStaff] = useState('all');
   const [tabValue, setTabValue] = useState(0);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
- const [selectedRecord, setSelectedRecord] = useState<TimeRecord | null>(null);
- const [inZone, setInZone] = useState(true);
+  const [selectedRecord, setSelectedRecord] = useState<TimeRecord | null>(null);
   const [checkInDialogOpen, setCheckInDialogOpen] = useState(false);
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
   const [currentStaffId, setCurrentStaffId] = useState('');
   
  const shiftTypes = {
-    full: 'Полный день'
-  };
-
+     full: 'Полный день',
+     day_off: 'Выходной',
+     vacation: 'Отпуск',
+     sick_leave: 'Больничный',
+     overtime: 'Сверхурочная'
+   };
+ 
   const statusColors = {
     checked_in: 'info',
     checked_out: 'success',
@@ -122,67 +124,69 @@ const StaffAttendanceTracking:React.FC = () => {
     return staff?.fullName || 'Неизвестно';
  };
 
-  // Загрузка реальных данных учета времени с backend
-  useEffect(() => {
-    const fetchRecords = async () => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (selectedStaff !== 'all') params.append('staffId', selectedStaff);
-        params.append('from', dateRange.from);
-        params.append('to', dateRange.to);
-        const res = await fetch(`/staff-time-tracking?${params.toString()}`, {
-          credentials: 'include'
-        });
-        const json = await res.json();
-        if (res.ok && json.success && json.data) {
-          // Преобразуем данные для соответствия интерфейсу
-          const transformedRecords = json.data.map((record: any) => ({
-            ...record,
-            id: record._id || record.id || '', // Используем _id или id в зависимости от доступности
-            staffName: getStaffName(record.staffId),
-            // Инициализируем penalties и bonuses если их нет
-            penalties: record.penalties || {
-              late: { minutes: 0, amount: 0 },
-              earlyLeave: { minutes: 0, amount: 0 },
-              unauthorized: { amount: 0 }
-            },
-            bonuses: record.bonuses || {
-              overtime: { minutes: 0, amount: 0 },
-              punctuality: { amount: 0 }
-            }
-          }));
-          setRecords(transformedRecords);
-        } else {
-          setRecords([]);
-        }
-      } catch (e) {
-        console.error('Error fetching records:', e);
-        setRecords([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRecords();
-  }, [selectedStaff, dateRange]);
-
   // Загрузка смен сотрудников (учет посещаемости)
-  useEffect(() => {
-    const fetchAttendanceRecords = async () => {
-      try {
-        let filters: any = {};
-        if (selectedStaff !== 'all') filters.staffId = selectedStaff;
-        if (date) filters.date = date;
-        const records = await shiftsApi.getAll(filters);
-        setAttendanceRecords(records);
-      } catch (e) {
-        console.error('Error fetching attendance records:', e);
-        setAttendanceRecords([]);
-      }
-    };
-    fetchAttendanceRecords();
-  }, [date, selectedStaff]);
-
+       useEffect(() => {
+         const fetchRecords = async () => {
+           setLoading(true);
+           try {
+             let filters: any = {};
+             if (selectedStaff !== 'all') filters.staffId = selectedStaff;
+             if (dateRange.from) filters.startDate = dateRange.from;
+             if (dateRange.to) filters.endDate = dateRange.to;
+             
+             const records = await shiftsApi.getAll(filters);
+             
+             // Преобразуем данные смен для отображения в таблице
+             const transformedRecords = records.map((shift: Shift) => {
+               // Преобразуем статусы смен в статусы TimeRecord
+               const statusMap: Record<string, TimeRecord['status']> = {
+                 'scheduled': 'absent', // Запланированная смена - сотрудник еще не пришел
+                 'in_progress': 'on_break',
+                 'completed': 'checked_out',
+                 'cancelled': 'absent',
+                 'no_show': 'absent',
+                 'confirmed': 'checked_in',
+                 'late': 'on_break'
+               };
+               
+               return {
+                 id: shift._id || shift.id || '',
+                 staffId: shift.staffId,
+                 staffName: shift.staffName || (shift.staffId && typeof shift.staffId === 'object' && '_id' in shift.staffId ? (shift.staffId as any).fullName : getStaffName(shift.staffId)),
+                 date: shift.date,
+                 checkInTime: shift.startTime,
+                 checkOutTime: shift.endTime,
+                 status: statusMap[shift.status] || 'checked_in',
+                 type: shift.type,
+                 workDuration: shift.startTime && shift.endTime ?
+                   calculateWorkDuration(shift.startTime, shift.endTime, 0) : 0,
+                 notes: shift.notes || '',
+                 // Инициализируем penalties и bonuses как пустые объекты для смен
+                 penalties: {
+                   late: { minutes: 0, amount: 0 },
+                   earlyLeave: { minutes: 0, amount: 0 },
+                   unauthorized: { amount: 0 }
+                 },
+                 bonuses: {
+                   overtime: { minutes: 0, amount: 0 }, // Не добавляем сверхурочные в смену
+                   punctuality: { amount: 0 }
+                 }
+               };
+             });
+             
+             setRecords(transformedRecords);
+             setAttendanceRecords(records);
+           } catch (e) {
+             console.error('Error fetching records:', e);
+             setRecords([]);
+             setAttendanceRecords([]);
+           } finally {
+             setLoading(false);
+           }
+         };
+         fetchRecords();
+       }, [selectedStaff, dateRange]);
+  
   const calculateWorkDuration = (start: string, end: string, breakTime: number = 0) => {
     const [startHours, startMinutes] = start.split(':').map(Number);
     const [endHours, endMinutes] = end.split(':').map(Number);
@@ -201,11 +205,7 @@ const StaffAttendanceTracking:React.FC = () => {
     checkInTime: '',
     checkOutTime: '',
     status: 'checked_in',
-    notes: '',
-    location: {
-      address: '',
-      radius: '50'
-    }
+    notes: ''
   });
 
   const handleOpenMarkDialog = () => {
@@ -222,29 +222,9 @@ const StaffAttendanceTracking:React.FC = () => {
 
   const handleMarkChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any) => {
     const { name, value } = e.target;
-    if (name === 'address' || name === 'radius') {
-      setMarkForm({
-        ...markForm,
-        location: {
-          ...markForm.location,
-          [name]: value
-        }
-      });
-    } else {
-      setMarkForm({ ...markForm, [name]: value });
-    }
+    setMarkForm({ ...markForm, [name]: value });
   };
 
-  // Геокодер для автозаполнения адреса
-  const fetchAddressByCoords = async (lat: string, lon: string) => {
-    try {
-      // Убрано использование API Яндекса, так как он больше не нужен
-      // const resp = await fetch(`https://geocode-maps.yandex.ru/1.x/?format=json&apikey=27f5e447-de11-4c83-8d7c-8fe75da25a7a&geocode=${lon},${lat}`);
-      // const data = await resp.json();
-      // const address = data.response.GeoObjectCollection.featureMember?.[0]?.GeoObject?.metaDataProperty?.GeocoderMetaData?.text || '';
-      // setMarkForm(form => ({ ...form, location: { ...form.location, address }));
-    } catch {}
-  };
 
   const handleCheckIn = async (staffId: string) => {
     try {
@@ -308,15 +288,17 @@ const StaffAttendanceTracking:React.FC = () => {
   // Состояние для проверки "в зоне"
 
   const handleMarkSubmit = async () => {
-    try {
-      const res = await fetch('/staff-time-tracking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(markForm),
-        credentials: 'include'
-      });
-      const json = await res.json();
-      if (res.ok && json.success) {
+      try {
+        // Создаем новую смену через API
+        await shiftsApi.create({
+          staffId: markForm.staffId,
+          date: markForm.date,
+          startTime: markForm.checkInTime,
+          endTime: markForm.checkOutTime,
+          type: 'full', // по умолчанию полная смена
+          notes: markForm.notes
+        });
+        
         setMarkDialogOpen(false);
         setMarkForm({
           staffId: '',
@@ -324,51 +306,58 @@ const StaffAttendanceTracking:React.FC = () => {
           checkInTime: '',
           checkOutTime: '',
           status: 'checked_in',
-          notes: '',
-          location: { address: '', radius: '50' }
+          notes: ''
         });
-        // Перезагрузить записи
-        const params = new URLSearchParams();
-        if (selectedStaff !== 'all') params.append('staffId', selectedStaff);
-        // if (selectedMonth) {
-        //   const [year, month] = selectedMonth.split('-');
-        //   const from = `${year}-${month}-01`;
-        //   const to = `${year}-${month}-${new Date(Number(year), Number(month), 0).getDate()}`;
-        //   params.append('from', from);
-        //   params.append('to', to);
-        // }
-
-        // Перезагрузить записи
-        const params2 = new URLSearchParams();
-        if (selectedStaff !== 'all') params2.append('staffId', selectedStaff);
-        params2.append('from', dateRange.from);
-        params2.append('to', dateRange.to);
-        const res2 = await fetch(`/staff-time-tracking?${params2.toString()}`, {
-          credentials: 'include'
-        });
-        const json2 = await res2.json();
-        if (res2.ok && json2.success && json2.data) {
-          // Преобразуем данные для соответствия интерфейсу
-          const transformedRecords = json2.data.map((record: any) => ({
-            ...record,
-            id: record._id || record.id || '', // Используем _id или id в зависимости от доступности
-            staffName: getStaffName(record.staffId),
-            // Инициализируем penalties и bonuses если их нет
-            penalties: record.penalties || {
+        
+        // Обновляем записи
+        let filters: any = {};
+        if (selectedStaff !== 'all') filters.staffId = selectedStaff;
+        if (dateRange.from) filters.startDate = dateRange.from;
+        if (dateRange.to) filters.endDate = dateRange.to;
+        
+        const records = await shiftsApi.getAll(filters);
+        
+        // Преобразуем данные смен для отображения в таблице
+        const transformedRecords = records.map((shift: Shift) => {
+          // Преобразуем статусы смен в статусы TimeRecord
+          const statusMap: Record<string, TimeRecord['status']> = {
+            'scheduled': 'checked_in',
+            'in_progress': 'on_break',
+            'completed': 'checked_out',
+            'cancelled': 'absent',
+            'no_show': 'absent',
+            'confirmed': 'checked_in',
+            'late': 'on_break'
+          };
+          
+          return {
+            id: shift._id || shift.id || '',
+            staffId: shift.staffId,
+            staffName: shift.staffName || getStaffName(shift.staffId),
+            date: shift.date,
+            checkInTime: shift.startTime,
+            checkOutTime: shift.endTime,
+            status: statusMap[shift.status] || 'checked_in',
+            type: shift.type,
+            workDuration: shift.startTime && shift.endTime ?
+              calculateWorkDuration(shift.startTime, shift.endTime, 0) : 0,
+            notes: shift.notes || '',
+            // Инициализируем penalties и bonuses как пустые объекты для смен
+            penalties: {
               late: { minutes: 0, amount: 0 },
               earlyLeave: { minutes: 0, amount: 0 },
               unauthorized: { amount: 0 }
             },
-            bonuses: record.bonuses || {
-              overtime: { minutes: 0, amount: 0 },
+            bonuses: {
+              overtime: { minutes: 0, amount: 0 }, // Не добавляем сверхурочные в смену
               punctuality: { amount: 0 }
             }
-          }));
-          setRecords(transformedRecords);
-        }
-      }
-    } catch {}
-  };
+          };
+        });
+        
+        setRecords(transformedRecords);
+      } catch {}
+    };
 
   const calculateStats = () => {
     const totalRecords = records.length;
@@ -409,100 +398,126 @@ const StaffAttendanceTracking:React.FC = () => {
  };
 
   const handleSaveRecord = async () => {
-    if (!selectedRecord) return;
-    
-    try {
-      const res = await fetch(`/staff-time-tracking/${selectedRecord.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...selectedRecord,
-          checkInTime: selectedRecord.checkInTime || undefined,
-          checkOutTime: selectedRecord.checkOutTime || undefined,
-          notes: selectedRecord.notes || undefined
-        }),
-        credentials: 'include'
-      });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        // Перезагрузить записи
-        const params = new URLSearchParams();
-        if (selectedStaff !== 'all') params.append('staffId', selectedStaff);
-        params.append('from', dateRange.from);
-        params.append('to', dateRange.to);
-        const res = await fetch(`/staff-time-tracking?${params.toString()}`, {
-          credentials: 'include'
+      if (!selectedRecord) return;
+      
+      try {
+        // Обновляем смену через API
+        await shiftsApi.update(selectedRecord.id, {
+          startTime: selectedRecord.checkInTime,
+          endTime: selectedRecord.checkOutTime,
+          notes: selectedRecord.notes
         });
-        const json = await res.json();
-        if (res.ok && json.success && json.data) {
-          // Преобразуем данные для соответствия интерфейсу
-          const transformedRecords = json.data.map((record: any) => ({
-            ...record,
-            id: record._id || record.id || '', // Используем _id или id в зависимости от доступности
-            staffName: getStaffName(record.staffId),
-            // Инициализируем penalties и bonuses если их нет
-            penalties: record.penalties || {
+        
+        // Обновляем записи
+        let filters: any = {};
+        if (selectedStaff !== 'all') filters.staffId = selectedStaff;
+        if (dateRange.from) filters.startDate = dateRange.from;
+        if (dateRange.to) filters.endDate = dateRange.to;
+        
+        const records = await shiftsApi.getAll(filters);
+        
+        // Преобразуем данные смен для отображения в таблице
+        const transformedRecords = records.map((shift: Shift) => {
+          // Преобразуем статусы смен в статусы TimeRecord
+          const statusMap: Record<string, TimeRecord['status']> = {
+            'scheduled': 'checked_in',
+            'in_progress': 'on_break',
+            'completed': 'checked_out',
+            'cancelled': 'absent',
+            'no_show': 'absent',
+            'confirmed': 'checked_in',
+            'late': 'on_break'
+          };
+          
+          return {
+            id: shift._id || shift.id || '',
+            staffId: shift.staffId,
+            staffName: shift.staffName || getStaffName(shift.staffId),
+            date: shift.date,
+            checkInTime: shift.startTime,
+            checkOutTime: shift.endTime,
+            status: statusMap[shift.status] || 'checked_in',
+            type: shift.type,
+            workDuration: shift.startTime && shift.endTime ?
+              calculateWorkDuration(shift.startTime, shift.endTime, 0) : 0,
+            notes: shift.notes || '',
+            // Инициализируем penalties и bonuses как пустые объекты для смен
+            penalties: {
               late: { minutes: 0, amount: 0 },
               earlyLeave: { minutes: 0, amount: 0 },
               unauthorized: { amount: 0 }
             },
-            bonuses: record.bonuses || {
-              overtime: { minutes: 0, amount: 0 },
+            bonuses: {
+              overtime: { minutes: 0, amount: 0 }, // Не добавляем сверхурочные в смену
               punctuality: { amount: 0 }
             }
-          }));
-          setRecords(transformedRecords);
-        }
+          };
+        });
+        
+        setRecords(transformedRecords);
         setEditDialogOpen(false);
         setSelectedRecord(null);
+      } catch (e) {
+        console.error('Error saving record:', e);
       }
-    } catch (e) {
-      console.error('Error saving record:', e);
-    }
-  };
+    };
 
   const handleDeleteRecord = async (id: string) => {
-    try {
-      const res = await fetch(`/staff-time-tracking/${id}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        // Удаляем запись из списка
-        // Перезагрузить записи
-        const params = new URLSearchParams();
-        if (selectedStaff !== 'all') params.append('staffId', selectedStaff);
-        params.append('from', dateRange.from);
-        params.append('to', dateRange.to);
-        const res = await fetch(`/staff-time-tracking?${params.toString()}`, {
-          credentials: 'include'
-        });
-        const json = await res.json();
-        if (res.ok && json.success && json.data) {
-          // Преобразуем данные для соответствия интерфейсу
-          const transformedRecords = json.data.map((record: any) => ({
-            ...record,
-            id: record._id || record.id || '', // Используем _id или id в зависимости от доступности
-            staffName: getStaffName(record.staffId),
-            // Инициализируем penalties и bonuses если их нет
-            penalties: record.penalties || {
+      try {
+        // Удаляем смену через API
+        await shiftsApi.deleteItem(id);
+        
+        // Обновляем записи
+        let filters: any = {};
+        if (selectedStaff !== 'all') filters.staffId = selectedStaff;
+        if (dateRange.from) filters.startDate = dateRange.from;
+        if (dateRange.to) filters.endDate = dateRange.to;
+        
+        const records = await shiftsApi.getAll(filters);
+        
+        // Преобразуем данные смен для отображения в таблице
+        const transformedRecords = records.map((shift: Shift) => {
+          // Преобразуем статусы смен в статусы TimeRecord
+          const statusMap: Record<string, TimeRecord['status']> = {
+            'scheduled': 'checked_in',
+            'in_progress': 'on_break',
+            'completed': 'checked_out',
+            'cancelled': 'absent',
+            'no_show': 'absent',
+            'confirmed': 'checked_in',
+            'late': 'on_break'
+          };
+          
+          return {
+            id: shift._id || shift.id || '',
+            staffId: shift.staffId,
+            staffName: shift.staffName || getStaffName(shift.staffId),
+            date: shift.date,
+            checkInTime: shift.startTime,
+            checkOutTime: shift.endTime,
+            status: statusMap[shift.status] || 'checked_in',
+            type: shift.type,
+            workDuration: shift.startTime && shift.endTime ?
+              calculateWorkDuration(shift.startTime, shift.endTime, 0) : 0,
+            notes: shift.notes || '',
+            // Инициализируем penalties и bonuses как пустые объекты для смен
+            penalties: {
               late: { minutes: 0, amount: 0 },
               earlyLeave: { minutes: 0, amount: 0 },
               unauthorized: { amount: 0 }
             },
-            bonuses: record.bonuses || {
-              overtime: { minutes: 0, amount: 0 },
+            bonuses: {
+              overtime: { minutes: 0, amount: 0 }, // Не добавляем сверхурочные в смену
               punctuality: { amount: 0 }
             }
-          }));
-          setRecords(transformedRecords);
-        }
+          };
+        });
+        
+        setRecords(transformedRecords);
+      } catch (e) {
+        console.error('Error deleting record:', e);
       }
-    } catch (e) {
-      console.error('Error deleting record:', e);
-    }
-  };
+   };
 
   const renderOverviewTab = () => (
     <Box>
@@ -531,16 +546,9 @@ const StaffAttendanceTracking:React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" color="success.main">Премии</Typography>
-              <Typography variant="h5">{formatCurrency(stats.totalBonuses)}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
 
+      </Grid>
+  
       <Paper sx={{ p: 2 }}>
         <Table>
           <TableHead>
@@ -552,7 +560,6 @@ const StaffAttendanceTracking:React.FC = () => {
               <TableCell>Статус</TableCell>
               <TableCell>Адрес</TableCell>
               <TableCell align="right">Штрафы</TableCell>
-              <TableCell align="right">Премии</TableCell>
               <TableCell align="right">Действия</TableCell>
             </TableRow>
           </TableHead>
@@ -564,51 +571,51 @@ const StaffAttendanceTracking:React.FC = () => {
                     <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
                       <Person />
                     </Avatar>
-                    {record.staffName}
+                    {record.staffName || getStaffName(record.staffId)}
                   </Box>
                 </TableCell>
                 <TableCell>{new Date(record.date).toLocaleDateString('ru-RU')}</TableCell>
                 <TableCell>
-                  <Box>
-                    <Typography variant="body2">{shiftTypes['full']}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {record.checkInTime || '-'} - {record.checkOutTime || '-'}
-                    </Typography>
-                  </Box>
-                </TableCell>
+                                <Box>
+                                  <Typography variant="body2">{shiftTypes[record.type as keyof typeof shiftTypes] || shiftTypes['full']}</Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {record.checkInTime || '-'} - {record.checkOutTime || '-'}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
                 <TableCell>
                   <Box>
                     <Typography variant="body2">{formatTime(record.workDuration || 0)}</Typography>
                     {record.penalties?.late?.minutes > 0 && (
-                      <Chip
-                        label={`Опоздание: ${record.penalties.late.minutes}м`}
-                        size="small"
-                        color="warning"
-                        sx={{ mr: 0.5, mt: 0.5 }}
-                      />
-                    )}
-                    {(record.overtimeDuration || 0) > 0 && (
-                      <Chip
-                        label={`Сверхурочные: ${record.overtimeDuration || 0}м`}
-                        size="small"
-                        color="info"
-                        sx={{ mr: 0.5, mt: 0.5 }}
-                      />
-                    )}
+                                        <Chip
+                                          label={`Опоздание: ${record.penalties.late.minutes}м`}
+                                          size="small"
+                                          color="warning"
+                                          sx={{ mr: 0.5, mt: 0.5 }}
+                                        />
+                                      )}
+                                      {record.penalties?.earlyLeave?.minutes > 0 && (
+                                        <Chip
+                                          label={`Ранний уход: ${record.penalties.earlyLeave.minutes}м`}
+                                          size="small"
+                                          color="warning"
+                                          sx={{ mr: 0.5, mt: 0.5 }}
+                                        />
+                                      )}
                   </Box>
                 </TableCell>
                 <TableCell>
                   <Chip
-                    label={statusLabels[record.status]}
-                    color={statusColors[record.status]}
+                    label={statusLabels[record.status as keyof typeof statusLabels] || attendanceStatusLabels[record.status as keyof typeof attendanceStatusLabels] || record.status}
+                    color={attendanceStatusColors[record.status as keyof typeof attendanceStatusColors] as any}
                     size="small"
                   />
                 </TableCell>
                 <TableCell align="right">
                   <Typography variant="body2" color="error">
                     {formatCurrency(
-                      (record.penalties?.late?.amount || 0) + 
-                      (record.penalties?.earlyLeave?.amount || 0) + 
+                      (record.penalties?.late?.amount || 0) +
+                      (record.penalties?.earlyLeave?.amount || 0) +
                       (record.penalties?.unauthorized?.amount || 0)
                     )}
                   </Typography>
@@ -616,7 +623,7 @@ const StaffAttendanceTracking:React.FC = () => {
                 <TableCell align="right">
                   <Typography variant="body2" color="success.main">
                     {formatCurrency(
-                      (record.bonuses?.overtime?.amount || 0) + 
+                      (record.bonuses?.overtime?.amount || 0) +
                       (record.bonuses?.punctuality?.amount || 0)
                     )}
                   </Typography>
@@ -636,362 +643,7 @@ const StaffAttendanceTracking:React.FC = () => {
       </Paper>
     </Box>
   );
-
-  const renderAttendanceTab = () => (
-    <Box>
-      <Paper sx={{ p: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Сотрудник</TableCell>
-              <TableCell>Дата</TableCell>
-              <TableCell>Смена</TableCell>
-              <TableCell>Время работы</TableCell>
-              <TableCell>Статус</TableCell>
-              <TableCell align="right">Действия</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {attendanceRecords.map((record) => (
-              <TableRow key={record.id || record._id}>
-                <TableCell>
-                  <Box display="flex" alignItems="center">
-                    <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-                      <Person />
-                    </Avatar>
-                    {record.staffName}
-                  </Box>
-                </TableCell>
-                <TableCell>{new Date(record.date).toLocaleDateString('ru-RU')}</TableCell>
-                <TableCell>
-                  <Box>
-                    <Typography variant="body2">
-                      {record.startTime} - {record.endTime}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {record.type === 'full' ? 'Полная смена' : 'Сверхурочная'}
-                    </Typography>
-                  </Box>
-                </TableCell>
-                {/* Можно добавить расчет workDuration, если есть поля actualStart/actualEnd */}
-                <TableCell>
-                  <Box>
-                    <Typography variant="body2">
-                      {record.notes || '-'}
-                    </Typography>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={attendanceStatusLabels[record.status as keyof typeof attendanceStatusLabels]}
-                    color={attendanceStatusColors[record.status as keyof typeof attendanceStatusColors] as any}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  <IconButton size="small" onClick={() => handleEditRecord(record as any)}>
-                    <Edit />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
-    </Box>
-  );
-
-  const renderPenaltiesTab = () => (
-    <Box>
-      <Alert severity="info" sx={{ mb: 2 }}>
-        Система автоматических штрафов: опоздание - 500₸/мин, ранний уход - 500₸/мин
-      </Alert>
-      
-      <Paper sx={{ p: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Сотрудник</TableCell>
-              <TableCell>Дата</TableCell>
-              <TableCell>Тип нарушения</TableCell>
-              <TableCell>Время</TableCell>
-              <TableCell align="right">Сумма штрафа</TableCell>
-              <TableCell>Причина</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {records.flatMap(record => {
-              const penalties = [];
-              if ((record.penalties?.late?.amount || 0) > 0) {
-                penalties.push({
-                  ...record,
-                  type: 'Опоздание',
-                  minutes: record.penalties.late.minutes,
-                  amount: record.penalties.late.amount,
-                  reason: record.penalties.late.reason
-                });
-              }
-              if ((record.penalties?.earlyLeave?.amount || 0) > 0) {
-                penalties.push({
-                  ...record,
-                  type: 'Ранний уход',
-                  minutes: record.penalties.earlyLeave.minutes,
-                  amount: record.penalties.earlyLeave.amount,
-                  reason: record.penalties.earlyLeave.reason
-                });
-              }
-              if ((record.penalties?.unauthorized?.amount || 0) > 0) {
-                penalties.push({
-                  ...record,
-                  type: 'Несанкционированный выход',
-                  minutes: 0,
-                  amount: record.penalties.unauthorized.amount,
-                  reason: record.penalties.unauthorized.reason
-                });
-              }
-              return penalties;
-            }).map((penalty, index) => (
-              <TableRow key={index}>
-                <TableCell>{penalty.staffName}</TableCell>
-                <TableCell>{new Date(penalty.date).toLocaleDateString('ru-RU')}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={penalty.type}
-                    color="warning"
-                    size="small"
-                    icon={<Warning />}
-                  />
-                </TableCell>
-                <TableCell>{penalty.minutes || 0} минут</TableCell>
-                <TableCell align="right">
-                  <Typography variant="body2" color="error" fontWeight="bold">
-                    {formatCurrency(penalty.amount)}
-                  </Typography>
-                </TableCell>
-                <TableCell>{penalty.reason || '-'}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
-    </Box>
-  );
-
-  const renderAnalyticsTab = () => (
-    <Box>
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Эффективность по сотрудникам</Typography>
-              <Table>
-                <TableHead>
-                  <TableRow>
-    <TableCell>Сотрудник</TableCell>
-                    <TableCell align="right">Отработано</TableCell>
-                    <TableCell align="right">Среднее время</TableCell>
-                    <TableCell align="right">Эффективность</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {staffList.map(staff => {
-                    const staffRecords = records.filter(r => r.staffId === staff.id);
-                    const totalWorkMinutes = staffRecords.reduce((sum, r) => sum + (r.workDuration || 0), 0);
-                    const avgWorkMinutes = staffRecords.length > 0 ? totalWorkMinutes / staffRecords.length : 0;
-                    // Для статусов TimeRecord используем правильное значение
-                    const completedRecords = staffRecords.filter(r => r.status === 'checked_out').length;
-                    const efficiency = staffRecords.length > 0 ? Math.round((completedRecords / staffRecords.length) * 100) : 0;
-                    
-                    return (
-                      <TableRow key={staff.id}>
-                        <TableCell>
-                          <Box display="flex" alignItems="center">
-                            <Avatar sx={{ mr: 2, width: 32, height: 32, fontSize: 14 }}>
-                              {staff.fullName.charAt(0)}
-                            </Avatar>
-                            {staff.fullName}
-                          </Box>
-                        </TableCell>
-                        <TableCell align="right">{formatTime(totalWorkMinutes)}</TableCell>
-                        <TableCell align="right">{formatTime(avgWorkMinutes)}</TableCell>
-                        <TableCell align="right">
-                          <Chip
-                            label={`${efficiency}%`}
-                            color={efficiency >= 90 ? 'success' : efficiency >= 70 ? 'warning' : 'error'}
-                            size="small"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Финансовая аналитика</Typography>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Показатель</TableCell>
-                    <TableCell align="right">Значение</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>Общие штрафы</TableCell>
-                    <TableCell align="right" color="error.main">
-                      {formatCurrency(stats.totalPenalties)}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>Общие премии</TableCell>
-                    <TableCell align="right" color="success.main">
-                      {formatCurrency(stats.totalBonuses)}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>Чистый результат</TableCell>
-                    <TableCell align="right" color={stats.totalBonuses >= stats.totalPenalties ? 'success.main' : 'error.main'}>
-                      {formatCurrency(stats.totalBonuses - stats.totalPenalties)}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Статистика нарушений</Typography>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Тип нарушения</TableCell>
-                    <TableCell align="right">Количество</TableCell>
-                    <TableCell align="right">Сумма</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  <TableRow>
-    <TableCell>Опоздания</TableCell>
-                    <TableCell align="right">
-                      {records.filter(r => (r.penalties?.late?.amount || 0) > 0).length}
-                    </TableCell>
-                    <TableCell align="right" color="error.main">
-                      {formatCurrency(records.reduce((sum, r) => sum + (r.penalties?.late?.amount || 0), 0))}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>Ранний уход</TableCell>
-                    <TableCell align="right">
-                      {records.filter(r => (r.penalties?.earlyLeave?.amount || 0) > 0).length}
-                    </TableCell>
-                    <TableCell align="right" color="error.main">
-                      {formatCurrency(records.reduce((sum, r) => sum + (r.penalties?.earlyLeave?.amount || 0), 0))}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>Несанкционированный выход</TableCell>
-                    <TableCell align="right">
-                      {records.filter(r => (r.penalties?.unauthorized?.amount || 0) > 0).length}
-                    </TableCell>
-                    <TableCell align="right" color="error.main">
-                      {formatCurrency(records.reduce((sum, r) => sum + (r.penalties?.unauthorized?.amount || 0), 0))}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
-  );
-
-  const renderStatsTab = () => (
-    <Box>
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" color="primary">Всего смен</Typography>
-              <Typography variant="h4">{attendanceRecords.length}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" color="success.main">Завершено</Typography>
-              <Typography variant="h4">
-                {attendanceRecords.filter(r => r.status === 'completed').length}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" color="warning.main">Опоздания</Typography>
-              <Typography variant="h4">
-                {attendanceRecords.filter(r => (r as any).lateMinutes && (r as any).lateMinutes > 0).length}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" color="error.main">Не явился</Typography>
-              <Typography variant="h4">
-                {attendanceRecords.filter(r => r.status === 'no_show').length}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      <Paper sx={{ p: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Сотрудник</TableCell>
-              <TableCell>Статус</TableCell>
-              <TableCell>Время прихода</TableCell>
-              <TableCell>Время ухода</TableCell>
-              <TableCell>Опоздание (мин)</TableCell>
-              <TableCell>Сверхурочные (мин)</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {attendanceRecords.map((record) => (
-              <TableRow key={record._id}>
-                <TableCell>{record.staffName}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={attendanceStatusLabels[record.status as keyof typeof attendanceStatusLabels]}
-                    color={attendanceStatusColors[record.status as keyof typeof attendanceStatusColors] as any}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>{(record as any).actualStart || '-'}</TableCell>
-                <TableCell>{(record as any).actualEnd || '-'}</TableCell>
-                <TableCell>{(record as any).lateMinutes || 0}</TableCell>
-                <TableCell>{(record as any).overtimeMinutes || 0}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
-    </Box>
-  );
+  
 
   return (
     <Box>
@@ -1056,17 +708,9 @@ const StaffAttendanceTracking:React.FC = () => {
       <Paper sx={{ width: '100%' }}>
         <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
           <Tab label="Обзор" />
-          <Tab label="Штрафы и премии" />
-          <Tab label="Аналитика" />
-          <Tab label="Табель" />
-          <Tab label="Статистика" />
         </Tabs>
         <Box sx={{ p: 3 }}>
           {tabValue === 0 && renderOverviewTab()}
-          {tabValue === 1 && renderPenaltiesTab()}
-          {tabValue === 2 && renderAnalyticsTab()}
-          {tabValue === 3 && renderAttendanceTab()}
-          {tabValue === 4 && renderStatsTab()}
         </Box>
       </Paper>
 
@@ -1143,48 +787,6 @@ const StaffAttendanceTracking:React.FC = () => {
             multiline
             minRows={2}
           />
-          <TextField
-            label="Адрес учреждения"
-            name="address"
-            value={markForm.location.address}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-              setMarkForm({
-                ...markForm,
-                location: {
-                  ...markForm.location,
-                  address: e.target.value
-                }
-              });
-            }}
-            fullWidth
-            margin="normal"
-          />
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
-            <Slider
-              min={50}
-              max={500}
-              step={10}
-              value={Number(markForm.location.radius) || 100}
-              onChange={(_event: Event, value: number | number[]) => setMarkForm({ ...markForm, location: { ...markForm.location, radius: String(value) } })}
-              valueLabelDisplay="auto"
-              sx={{ width: 200 }}
-            />
-            <TextField
-              label="Радиус (метры)"
-              name="radius"
-              type="number"
-              value={markForm.location.radius || ''}
-              onChange={e => setMarkForm({ ...markForm, location: { ...markForm.location, radius: e.target.value } })}
-              sx={{ width: 120 }}
-              inputProps={{ min: 50, max: 500, step: 10 }}
-            />
-          </Box>
-          <Typography variant="caption" color="text.secondary">Можно задать радиус допустимой отметки с помощью ползунка или вручную (от 50 до 500 метров)</Typography>
-          <Box sx={{ mt: 1 }}>
-            <Typography variant="body2" color={inZone ? 'success.main' : 'error.main'}>
-              {inZone ? 'Метка в зоне учреждения' : 'ВНЕ зоны учреждения!'}
-            </Typography>
-            </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseMarkDialog}>Отмена</Button>
