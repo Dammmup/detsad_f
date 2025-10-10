@@ -88,7 +88,7 @@ export function getHistory() {
   return history;
 }
 
-axios.defaults.baseURL = process.env.API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '');
+axios.defaults.baseURL = process.env.API_URL || 'http://localhost:8080';
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 const token = localStorage.getItem('token');
 if (token) {
