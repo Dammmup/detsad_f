@@ -14,6 +14,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { createHashHistory, createMemoryHistory } from 'history';
+import './sentry'; // Инициализируем Sentry
 
 // Простая тема MUI для детского сада
 const theme = createTheme({
