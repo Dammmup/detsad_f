@@ -89,7 +89,9 @@ export function getHistory() {
   return history;
 }
 
-axios.defaults.baseURL = process.env.API_URL || 'https://detsad-b.onrender.com';
+console.log('REACT_APP_API_URL from env:', process.env.REACT_APP_API_URL);
+axios.defaults.baseURL = process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
+console.log('Final axios baseURL:', axios.defaults.baseURL);
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 // При использовании httpOnly cookie токен автоматически отправляется с каждым запросом
 // Не нужно добавлять токен из localStorage в заголовок Authorization

@@ -6,7 +6,7 @@ import axios from 'axios';
 import { useAuth } from '../components/context/AuthContext';
 import { User } from '../types/common';
 
-const API_URL = process.env.API_URL || 'https://detsad-b.onrender.com';
+const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -25,7 +25,7 @@ const Login: React.FC = () => {
     setError(null);
     try {
       const res = await axios.post(
-  `${API_URL}/auth/login`,
+  `${REACT_APP_API_URL}/auth/login`,
   { phone, password },
   { withCredentials: true } // 🔥 важно
 );

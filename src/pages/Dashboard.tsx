@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../components/context/AuthContext';
 import { Button, Typography, Box, Container, Grid, Card, CardContent, Snackbar, Alert, useMediaQuery } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import * as Sentry from '../sentry'; // Импортируем Sentry для тестирования
 
 // Локальный импорт компонентов
 import StaffAttendanceButton from '../components/StaffAttendanceButton';

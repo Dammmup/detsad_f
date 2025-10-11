@@ -2,7 +2,7 @@
 import { User } from '../types/common';
 import { api } from './settings';
 
-// API_URL и авторизация берутся из settings.ts
+// REACT_APP_API_URL и авторизация берутся из settings.ts
 
 export interface TaskList {
   _id?: string;

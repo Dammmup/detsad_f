@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.API_URL || 'https://detsad-b.onrender.com';
+const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
 
 // Интерфейсы для отчетов
 export interface Report {
@@ -68,7 +68,7 @@ interface ApiError extends Error {
 
 // Create axios instance
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: REACT_APP_API_URL,
   timeout: 1000, // 10 seconds
   headers: {
     'Content-Type': 'application/json',

@@ -201,7 +201,7 @@ To build and deploy the application:
 
 The application uses environment variables for configuration:
 
-- `API_URL` - Backend API URL
+- `REACT_APP_API_URL` - Backend API URL
 - `REACT_APP_NAME` - Application name
 
 ## Contributing

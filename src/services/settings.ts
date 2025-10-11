@@ -1,11 +1,11 @@
 import axios from 'axios';
 
-let baseUrl = process.env.API_URL || 'https://detsad-b.onrender.com';
+let baseUrl = process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
 // Добавляем '' к базовому URL, если его нет
 if (!baseUrl.endsWith('')) {
   baseUrl = baseUrl.replace(/\/$/, '') + '';
 }
-const API_URL = baseUrl;
+const REACT_APP_API_URL = baseUrl;
 
 // Интерфейс для API ошибки
 interface ApiError extends Error {
@@ -88,7 +88,7 @@ export interface User {
 
 // Create axios instance with base config
 export const api = axios.create({
-  baseURL: API_URL,
+  baseURL: REACT_APP_API_URL,
   timeout: 10000, // 10 seconds
   headers: {
     'Content-Type': 'application/json',
