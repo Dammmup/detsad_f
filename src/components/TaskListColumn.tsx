@@ -20,8 +20,10 @@ import {
   Alert
 } from '@mui/material';
 import { Add, Delete } from '@mui/icons-material';
+import { User } from '../types/common';
 import { useAuth } from './context/AuthContext';
 import { TaskList, getTaskList, createTask, deleteTask, toggleTaskStatus } from '../services/taskList';
+import { getUsers } from '../services/users';
 
 interface TaskListColumnProps {
   onTaskChange?: () => void; // Callback для обновления при изменении задач
@@ -36,14 +38,17 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [newTaskCategory, setNewTaskCategory] = useState('');
+  const [newTaskAssignedToSpecificUser, setNewTaskAssignedToSpecificUser] = useState<string>('');
   const [showAddTaskDialog, setShowAddTaskDialog] = useState(false);
-  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+ const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
-  // Загрузка задач
+  // Загрузка задач и пользователей
   useEffect(() => {
     const fetchTasks = async () => {
       if (!currentUser) return;
-
+      
       setLoading(true);
       setError(null);
       try {
@@ -57,8 +62,26 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
         setLoading(false);
       }
     };
-    
+
+    const fetchUsers = async () => {
+      // Только администраторы могут получать список всех пользователей
+      if (currentUser?.role !== 'admin') {
+        return;
+      }
+      
+      try {
+        setLoadingUsers(true);
+        const userList = await getUsers();
+        setUsers(userList);
+      } catch (err: any) {
+        console.error('Error fetching users:', err);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
     fetchTasks();
+    fetchUsers();
   }, [currentUser]);
 
 
@@ -72,7 +95,8 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
         completed: false,
         assignedTo: currentUser.id,
         priority: newTaskPriority,
-        category: newTaskCategory
+        category: newTaskCategory,
+        assignedToSpecificUser: newTaskAssignedToSpecificUser || undefined  // Добавляем новое поле, если оно выбрано
       };
 
       const createdTask = await createTask(newTask);
@@ -81,6 +105,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
       setNewTaskDescription('');
       setNewTaskPriority('medium');
       setNewTaskCategory('');
+      setNewTaskAssignedToSpecificUser('');  // Сбрасываем выбор сотрудника
       setShowAddTaskDialog(false);
       
       if (onTaskChange) onTaskChange();
@@ -344,6 +369,21 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                     📅 Срок: {formatDate(task.dueDate)}
                   </Typography>
                 )}
+                
+                {/* Отображение информации о назначенном пользователе - только для администраторов */}
+                {currentUser?.role === 'admin' && task.assignedToSpecificUser && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: 'block',
+                      mt: 0.5,
+                      color: '#6c757d',
+                      fontStyle: 'italic'
+                    }}
+                  >
+                    🎯 Назначено: {users.find(u => u.id === task.assignedToSpecificUser)?.fullName || 'Сотрудник'}
+                  </Typography>
+                )}
               </Box>
             ))}
           </Box>
@@ -417,6 +457,28 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
               onChange={(e) => setNewTaskCategory(e.target.value)}
             />
           </Box>
+          
+          {/* Выбор сотрудника для назначения задачи - только для администраторов */}
+          {currentUser?.role === 'admin' && (
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Назначить конкретному сотруднику</InputLabel>
+              <Select
+                value={newTaskAssignedToSpecificUser}
+                label="Назначить конкретному сотруднику"
+                onChange={(e) => setNewTaskAssignedToSpecificUser(e.target.value as string)}
+                sx={{ backgroundColor: 'white' }}
+              >
+                <MenuItem value="">
+                  <em>Для всех</em>
+                </MenuItem>
+                {users.map((user) => (
+                  <MenuItem key={user.id} value={user.id}>
+                    {user.fullName} ({user.role})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
         </DialogContent>
         <DialogActions sx={{
           backgroundColor: '#f8f9fa',

@@ -344,10 +344,28 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     apiCache.clear(); // Простое решение - очищаем весь кэш
     // В продакшене лучше использовать более точную очистку по тегам
   }
+  
+  /**
+   * Отметка прихода по смене
+   */
+  async checkIn(shiftId: ID): Promise<Shift> {
+    const result = await this.post(`${this.endpoint}/checkin/${shiftId}`, {});
+    this.clearCache();
+    return result;
+ }
+  
+  /**
+   * Отметка ухода по смене
+   */
+  async checkOut(shiftId: ID): Promise<Shift> {
+    const result = await this.post(`${this.endpoint}/checkout/${shiftId}`, {});
+    this.clearCache();
+    return result;
+  }
 }
 // Получить смены сотрудника по диапазону дат
 export const getStaffShifts = async ({ staffId, startDate, endDate }: { staffId: ID, startDate: string, endDate: string }) => {
-  return shiftsApi.getAll({ staffId, startDate, endDate });
+  return shiftsApi.getByDateRange(startDate, endDate, staffId);
 };
 
 // Экспортируем отдельные функции для обратной совместимости
@@ -357,7 +375,17 @@ export const createShift = (shiftData: ShiftFormData) => shiftsApi.create(shiftD
 export const updateShift = (id: ID, shiftData: Partial<Shift>) => shiftsApi.update(id, shiftData);
 export const deleteShift = (id: ID) => shiftsApi.deleteItem(id);
 export const updateShiftStatus = (id: ID, status: Shift['status']) => shiftsApi.updateStatus(id, status);
+
 // Экспортируем экземпляр клиента
 export const shiftsApi = new ShiftsApiClient();
+
+// Новые методы для отметки прихода и ухода
+export const checkIn = async (shiftId: ID) => {
+  return shiftsApi.checkIn(shiftId);
+};
+
+export const checkOut = async (shiftId: ID) => {
+  return shiftsApi.checkOut(shiftId);
+};
 
 export default shiftsApi;

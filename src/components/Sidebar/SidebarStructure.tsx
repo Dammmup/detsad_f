@@ -18,6 +18,7 @@ export interface SidebarItem {
   link?: string;
   icon?: React.ReactNode;
   children?: SidebarItem[];
+  visibleFor?: string[]; // Массив ролей, которым виден этот элемент
 }
 
 const sidebarStructure: SidebarItem[] = [
@@ -46,6 +47,7 @@ const sidebarStructure: SidebarItem[] = [
       { id: 'staff-schedule', label: 'Смены', link: '/app/staff/schedule', icon: <ScheduleIcon /> },
       { id: 'staff-attendance-tracking', label: 'Учет рабочего времени', link: '/app/staff/attendance', icon: <AssignmentIndIcon /> },
     ],
+    visibleFor: ['admin'] // Только для администраторов
   },
   {
     id: 'documents',
@@ -66,18 +68,35 @@ const sidebarStructure: SidebarItem[] = [
       { id: 'reports-analytics', label: 'Аналитика', link: '/app/reports/analytics', icon: <AssessmentIcon /> },
      
     ],
+    visibleFor: ['admin'] // Только для администраторов
   },
   {
     id: 'organization',
     label: 'Организация',
-    icon: <SettingsIcon />, 
+    icon: <SettingsIcon />,
     children: [
       { id: 'organization-groups', label: 'Группы', link: '/app/groups', icon: <GroupIcon /> },
       { id: 'organization-cyclogram', label: 'Циклограммы', link: '/app/cyclogram', icon: <ScheduleIcon /> },
       { id: 'organization-settings', label: 'Настройки', link: '/app/settings', icon: <SettingsIcon /> },
     ],
+    visibleFor: ['admin'] // Только для администраторов
   },
   medicalSidebarSection,
 ];
+
+// Функция для фильтрации структуры боковой панели в зависимости от роли пользователя
+export const getFilteredSidebarStructure = (userRole: string = 'staff'): SidebarItem[] => {
+  return sidebarStructure
+    .filter(item => !item.visibleFor || item.visibleFor.includes(userRole))
+    .map(item => {
+      if (item.children) {
+        return {
+          ...item,
+          children: item.children.filter(child => !child.visibleFor || child.visibleFor.includes(userRole))
+        };
+      }
+      return item;
+    });
+};
 
 export default sidebarStructure;

@@ -8,7 +8,7 @@ export type ISODateString = string; // ISO 8601
 
 // Статусы
 export type UserRole = 'admin' | 'manager' | 'staff' | 'teacher' | 'assistant' | 'cook' | 'cleaner' | 'security' | 'nurse' | 'child';
-export type ShiftStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'confirmed';
+export type ShiftStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'confirmed' | 'late';
 export type ShiftType = 'full' | 'day_off' | 'vacation' | 'sick_leave' | 'overtime';
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'early-leave' | 'sick' | 'vacation';
 export type ExportFormat = 'pdf' | 'excel' | 'csv';
@@ -125,13 +125,23 @@ export interface PaginatedResponse<T> {
 // ===== ПОЛЬЗОВАТЕЛИ =====
 
 // Интерфейс для ребенка (Child)
-export interface Child {
+export interface GroupRef {
   id: ID;
   _id?: ID;
+  name: string;
+ isActive: boolean;
+ createdAt?: ISODateString;
+  updatedAt?: ISODateString;
+}
+
+// Интерфейс для ребенка (Child)
+export interface Child {
+  id: ID;
+ _id?: ID;
   fullName: string;
   birthday?: DateString;
-  groupId?: ID;
-  parentName?: string;
+  groupId?: ID | GroupRef;  // Может быть как ID, так и полный объект группы
+ parentName?: string;
   parentPhone?: string;
   iin?: string;
   notes?: string;
@@ -165,7 +175,7 @@ export interface User {
   
   // Поля для детей
   iin?: string;
-  groupId?: ID;
+  groupId?: ID | GroupRef;
   parentPhone?: string;
   parentName?: string;
   birthday?: DateString;
@@ -192,10 +202,11 @@ export interface Group {
   _id?: ID;
   name: string;
   description?: string;
-  teacher: { id?: ID; _id?: ID } | ID;
+  teacher?: { id?: ID; _id?: ID } | ID;
+  teacherId?: ID;
   isActive: boolean;
   maxStudents?: number;
-  ageGroup: string[];
+  ageGroup?: string[];
   createdBy?: ID;
   createdAt?: ISODateString;
   updatedAt?: ISODateString;
@@ -366,7 +377,7 @@ export interface BaseFilters {
 
 export interface StaffAttendanceFilters extends BaseFilters {
   staffId?: ID;
-  groupId?: ID;
+  groupId?: ID | GroupRef;
   date?: DateString;
   status?: string;
   shiftType?: string;
@@ -374,7 +385,7 @@ export interface StaffAttendanceFilters extends BaseFilters {
 
 export interface ChildAttendanceFilters extends BaseFilters {
   childId?: ID;
-  groupId?: ID;
+  groupId?: ID | GroupRef;
   date?: DateString;
   status?: string;
 }

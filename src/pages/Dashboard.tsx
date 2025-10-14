@@ -23,9 +23,12 @@ const Dashboard = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
 
   const isStaff = currentUser && currentUser.role !== 'admin';
+  const isAdmin = currentUser && currentUser.role === 'admin';
 
   const handleAttendanceStatusChange = () => {
     // Обновление статуса отметки посещаемости
+    // В данном случае, StaffScheduleWidget должен самостоятельно обновлять данные
+    // при изменении статуса через onStatusChange callback
   };
 
   const handleOpenAttendancePage = () => {
@@ -145,7 +148,7 @@ const Dashboard = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         mr: 2,
-                        boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                        boxShadow: '0 4px 8px rgba(0,0,0.1)'
                       }}
                     >
                       <Typography variant="h4">👶</Typography>
@@ -181,7 +184,7 @@ const Dashboard = () => {
               </Grid>
            
             
-        
+          
             
             {/* Кнопка добавления ребенка */}
             <Grid item xs={12} sm={6} md={6}>
@@ -243,36 +246,38 @@ const Dashboard = () => {
             </Grid>
           </Grid>
           
-          {/* Виджет статистики посещаемости */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{
-              height: '100%',
-              backgroundColor: 'white',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.18)',
-              transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-              '&:hover': {
-                transform: 'translateY(-3px)',
-                boxShadow: '0 6px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.18)'
-              },
-              borderRadius: 2
-            }}>
-              <CardContent>
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 2,
-                  pb: 1,
-                  borderBottom: '1px solid #dee2e6'
-                }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#495057' }}>
-                    📊 Статистика посещаемости
-                  </Typography>
-                </Box>
-                <AttendanceStatsWidget />
-              </CardContent>
-            </Card>
-          </Grid>
+          {/* Виджет статистики посещаемости - только для админов */}
+          {isAdmin && (
+            <Grid item xs={12} md={6}>
+              <Card sx={{
+                height: '100%',
+                backgroundColor: 'white',
+                boxShadow: '0 4px 12px rgba(0,0,0.15), 0 2px 4px rgba(0,0,0,0.18)',
+                transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                '&:hover': {
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 6px 20px rgba(0,0,0.2), 0 4px 8px rgba(0,0,0,0.18)'
+                },
+                borderRadius: 2
+              }}>
+                <CardContent>
+                  <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 2,
+                    pb: 1,
+                    borderBottom: '1px solid #dee2e6'
+                  }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#495057' }}>
+                      📊 Статистика посещаемости
+                    </Typography>
+                  </Box>
+                  <AttendanceStatsWidget />
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
           
           {/* Виджет задач сотрудников — только на desktop */}
           {!isMobile && (
@@ -338,36 +343,38 @@ const Dashboard = () => {
             </Card>
           </Grid>
           
-          {/* Виджет финансовой статистики */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{
-              height: '100%',
-              backgroundColor: 'white',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.18)',
-              transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-              '&:hover': {
-                transform: 'translateY(-3px)',
-                boxShadow: '0 6px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.18)'
-              },
-              borderRadius: 2
-            }}>
-              <CardContent>
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 2,
-                  pb: 1,
-                  borderBottom: '1px solid #dee2e6'
-                }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#495057' }}>
-                    💰 Финансовая статистика
-                  </Typography>
-                </Box>
-                <FinancialStatsWidget />
-              </CardContent>
-            </Card>
-          </Grid>
+          {/* Виджет финансовой статистики - только для админов */}
+          {isAdmin && (
+            <Grid item xs={12} md={6}>
+              <Card sx={{
+                height: '100%',
+                backgroundColor: 'white',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.18)',
+                transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                '&:hover': {
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 6px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.18)'
+                },
+                borderRadius: 2
+              }}>
+                <CardContent>
+                  <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 2,
+                    pb: 1,
+                    borderBottom: '1px solid #dee2e6'
+                  }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#495057' }}>
+                      💰 Финансовая статистика
+                    </Typography>
+                  </Box>
+                  <FinancialStatsWidget />
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
           
           {/* Виджет графика работы */}
           <Grid item xs={12} md={12}>

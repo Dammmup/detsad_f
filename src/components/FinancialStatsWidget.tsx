@@ -127,15 +127,27 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
           </Alert>
         )}
 
-        {loading ? (
+        {currentUser?.role !== 'admin' ? (
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexGrow: 1,
+            textAlign: 'center'
+          }}>
+            <Typography color="text.secondary">
+              Финансовая статистика доступна только администраторам
+            </Typography>
+          </Box>
+        ) : loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
             <CircularProgress size={24} />
           </Box>
         ) : !stats ? (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
             flexGrow: 1,
             textAlign: 'center'
           }}>
@@ -148,8 +160,8 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
             {/* Основные метрики */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
               <Grid item xs={6} sm={3}>
-                <Card sx={{ 
-                  height: '100%', 
+                <Card sx={{
+                  height: '100%',
                   backgroundColor: '#e8f5e9',
                   border: '1px solid #c8e6c9'
                 }}>
@@ -166,8 +178,8 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
               <Grid item xs={6} sm={3}>
               </Grid>
               <Grid item xs={6} sm={3}>
-                <Card sx={{ 
-                  height: '100%', 
+                <Card sx={{
+                  height: '100%',
                   backgroundColor: '#ffebee',
                   border: '1px solid #ffcdd2'
                 }}>
@@ -182,8 +194,8 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
                 </Card>
               </Grid>
               <Grid item xs={6} sm={3}>
-                <Card sx={{ 
-                  height: '100%', 
+                <Card sx={{
+                  height: '10%',
                   backgroundColor: '#fff3e0',
                   border: '1px solid #ffe0b2'
                 }}>

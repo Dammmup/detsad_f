@@ -4,7 +4,7 @@ import { ApiError, DelayFunction, ErrorHandler } from '../types/common';
 // ===== КОНФИГУРАЦИЯ API =====
 
 export const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
-export const API_TIMEOUT = 10000; // 10 секунд
+export const API_TIMEOUT = 120000; // 120 секунд
 export const RETRY_DELAY = 2000; // 2 секунды
 export const MAX_RETRIES = 3;
 

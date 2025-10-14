@@ -1,7 +1,7 @@
 import React from 'react';
 import { Container, Typography, Box } from '@mui/material';
 import PageTitle from '../../components/PageTitle';
-import PayrollTable from '../../components/Payroll/PayrollTable';
+import ReportsSalary from '../../components/reports/ReportsSalary';
 
 const PayrollPage: React.FC = () => {
   return (
@@ -12,7 +12,7 @@ const PayrollPage: React.FC = () => {
           Управление зарплатами сотрудников
         </Typography>
         <Box mt={2}>
-          <PayrollTable />
+          <ReportsSalary />
         </Box>
       </Box>
     </Container>

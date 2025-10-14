@@ -91,11 +91,6 @@ const Children: React.FC = () => {
   };
 
 
-  const findGroupById = (groupId: string | undefined): React.ReactNode => {
-    const group = groups.find(group => group.id === groupId);
-    return group ? group.name : 'Неизвестная группа';
-  };
-
   const isMobile = useMediaQuery('(max-width:900px)');
 
   return (
@@ -108,9 +103,16 @@ const Children: React.FC = () => {
         mb={2}
         gap={isMobile ? 2 : 0}
       >
-        <Typography variant={isMobile ? 'h5' : 'h4'} gutterBottom sx={{ mb: isMobile ? 1 : 0 }}>
-          Список детей
-        </Typography>
+        <Box display="flex" alignItems="center" gap={2}>
+          <Typography variant={isMobile ? 'h5' : 'h4'} gutterBottom sx={{ mb: isMobile ? 1 : 0 }}>
+            Список детей
+          </Typography>
+          {!loading && !error && (
+            <Typography variant="h6" color="textSecondary" sx={{ mb: isMobile ? 1 : 0 }}>
+              ({children.length} {children.length === 1 ? 'ребенок' : children.length < 5 ? 'ребенка' : 'детей'})
+            </Typography>
+          )}
+        </Box>
         <Box mb={isMobile ? 0 : 2} display={isMobile ? 'flex' : 'block'} flexDirection={isMobile ? 'column' : 'row'} gap={isMobile ? 1 : 0}>
           <ExportMenuButton
             onDownload={handleExportDownload}
@@ -162,7 +164,9 @@ const Children: React.FC = () => {
                 </TableCell>
                 <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.parentPhone}</TableCell>
                 <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.iin}</TableCell>
-                <TableCell sx={{ p: isMobile ? 1 : 2 }}>{findGroupById(child.groupId)}</TableCell>
+                <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+                  {typeof child.groupId === 'object' && child.groupId ? child.groupId.name : child.groupId}
+                </TableCell>
                 <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.notes}</TableCell>
                 <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.active ? 'Активен' : 'Неактивен'}</TableCell>
                 <TableCell align="right" sx={{ p: isMobile ? 1 : 2 }}>
@@ -178,7 +182,7 @@ const Children: React.FC = () => {
         open={modalOpen}
         onClose={handleCloseModal}
         onSaved={fetchChildren}
-        child={editingChild}
+        child={editingChild as any} // Временное решение для совместимости типов
       />
     </Box>
   );

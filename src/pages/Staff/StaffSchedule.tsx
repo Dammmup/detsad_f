@@ -56,7 +56,8 @@ const SHIFT_STATUSES: Record<ShiftStatus, string> = {
   completed: 'Завершена',
   cancelled: 'Отменена',
   no_show: 'Неявка',
-  confirmed: 'Подтверждена'
+  confirmed: 'Подтверждена',
+  late:'Опоздание'
 };
 
 const STATUS_COLORS = {
@@ -65,7 +66,8 @@ const STATUS_COLORS = {
   completed: 'success',
   cancelled: 'error',
   no_show: 'warning',
-  confirmed: 'info'
+  confirmed: 'info',
+  late:'primary'
 } as const;
 
 // Role colors and labels

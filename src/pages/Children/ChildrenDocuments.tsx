@@ -98,7 +98,7 @@ const ChildrenDocuments: React.FC = () => {
         // Формируем список детей с groupName и age
         const childrenList = childrenData.map((child: Child) => ({
           ...child,
-          groupName: child.groupId ? groupMap.get(child.groupId) || '' : '',
+          groupName: typeof child.groupId === 'object' && child.groupId ? groupMap.get(child.groupId.id || child.groupId._id || '') || '' : groupMap.get(child.groupId || '') || '',
           age: child.birthday ? Math.floor((Date.now() - new Date(child.birthday).getTime()) / (365.25*24*60*60*1000)) : 0
         }));
         setChildren(childrenList);

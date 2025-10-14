@@ -6,16 +6,17 @@ import { api } from './settings';
 
 export interface TaskList {
   _id?: string;
- title: string;
+  title: string;
   description?: string;
-  completed: boolean;
- assignedTo?: User;
-  createdBy: User;
+ completed: boolean;
+ assignedTo?: string; // ID пользователя
+  createdBy: string; // ID пользователя
+  assignedToSpecificUser?: string; // ID пользователя для конкретного назначения
   dueDate?: string; // ISO string
   priority: 'low' | 'medium' | 'high';
   category?: string;
-  createdAt?: string;
-  updatedAt?: string;
+ createdAt?: string;
+ updatedAt?: string;
 }
 
 export interface TaskListFilters {
@@ -42,9 +43,9 @@ export const getTaskList = async (filters: TaskListFilters = {}): Promise<TaskLi
 };
 
 // Создать новую задачу
-export const createTask = async (taskData: Omit<TaskList, '_id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'assignedTo'> & { assignedTo?: string }): Promise<TaskList> => {
+export const createTask = async (taskData: Omit<TaskList, '_id' | 'createdAt' | 'updatedAt' | 'createdBy'>): Promise<TaskList> => {
   try {
-  const response = await api.post('/task-list', taskData);
+    const response = await api.post('/task-list', taskData);
     return response.data;
   } catch (error: any) {
     console.error('Error creating task:', error);

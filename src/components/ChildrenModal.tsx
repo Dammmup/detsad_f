@@ -202,7 +202,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
           <InputLabel>Группа</InputLabel>
           <Select
             name="groupId"
-            value={form.groupId || ''}
+            value={(typeof form.groupId === 'object' && form.groupId ? form.groupId.id || form.groupId._id : form.groupId) || ''}
             onChange={handleSelectChange}
             label="Группа"
             variant="outlined"

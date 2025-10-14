@@ -55,7 +55,12 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = ({ onScheduleCha
         // Показываем только первые 5 смен
         setShifts(sortedShifts.slice(0, 5));
       } catch (err: any) {
-        setError(err.message);
+        // Обработка ошибки 403 - пользователь не имеет доступа к сменам
+        if (err.response && err.response.status === 403) {
+          setError('Недостаточно прав для просмотра графика работы');
+        } else {
+          setError(err.message);
+        }
         console.error('Error fetching schedule:', err);
       } finally {
         setLoading(false);

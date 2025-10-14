@@ -40,8 +40,8 @@ export default function ChildHealthPassportPage() {
   React.useEffect(() => {
     setLoading(true);
     childrenApi.getAll()
-      .then(users => {
-        setChildren(users);
+      .then(children => {
+        setChildren(children as any); // Временное приведение типа для совместимости
       })
       .finally(() => setLoading(false));
   }, []);

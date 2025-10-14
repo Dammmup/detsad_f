@@ -75,7 +75,7 @@ export default function RiskGroupChildren() {
         childId: id,
         fio: child.fullName || '',
         birthdate: child.birthday || '',
-        group: child.groupId || '',
+        group: typeof child.groupId === 'object' && child.groupId ? child.groupId.id || child.groupId._id || '' : child.groupId || '',
         address: child.notes || '',
       }));
     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, CircularProgress, Snackbar, Alert } from '@mui/material';
 import { useAuth } from './context/AuthContext';
-import shiftsApi, { getShifts } from '../services/shifts';
+import shiftsApi, { getShifts, getStaffShifts, checkIn, checkOut } from '../services/shifts';
 
 interface StaffAttendanceButtonProps {
   onStatusChange?: () => void; // Callback для обновления статуса
@@ -21,8 +21,14 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
       if (!currentUser) return;
       try {
         const today = new Date().toISOString().split('T')[0];
-        const shifts = await getShifts(today, today);
-        const myShift = shifts.find(s => s.staffId === currentUser.id);
+        const shifts = await getStaffShifts({ staffId: currentUser.id, startDate: today, endDate: today });
+        const myShift = shifts.find(s => {
+          // staffId может быть как строкой, так и объектом с _id
+          if (typeof s.staffId === 'object' && s.staffId !== null && '_id' in s.staffId) {
+            return (s.staffId as any)._id === currentUser.id;
+          }
+          return s.staffId === currentUser.id;
+        });
         if (myShift) {
           setStatus(myShift.status as 'scheduled' | 'in_progress' | 'completed');
         } else {
@@ -41,10 +47,16 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
     setLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      const shifts = await getShifts(today, today);
-      const myShift = shifts.find(s => s.staffId === currentUser.id);
+      const shifts = await getStaffShifts({ staffId: currentUser.id, startDate: today, endDate: today });
+      const myShift = shifts.find(s => {
+        // staffId может быть как строкой, так и объектом с _id
+        if (typeof s.staffId === 'object' && s.staffId !== null && '_id' in s.staffId) {
+          return (s.staffId as any)._id === currentUser.id;
+        }
+        return s.staffId === currentUser.id;
+      });
       if (myShift) {
-        await shiftsApi.updateStatus(myShift.id, 'in_progress');
+        await checkIn(myShift.id);
         setStatus('in_progress');
         setSnackbarMessage('Отметка о приходе успешно сохранена');
         setSnackbarSeverity('success');
@@ -70,10 +82,16 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
     setLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      const shifts = await getShifts(today, today);
-      const myShift = shifts.find(s => s.staffId === currentUser.id);
+      const shifts = await getStaffShifts({ staffId: currentUser.id, startDate: today, endDate: today });
+      const myShift = shifts.find(s => {
+        // staffId может быть как строкой, так и объектом с _id
+        if (typeof s.staffId === 'object' && s.staffId !== null && '_id' in s.staffId) {
+          return (s.staffId as any)._id === currentUser.id;
+        }
+        return s.staffId === currentUser.id;
+      });
       if (myShift) {
-        await shiftsApi.updateStatus(myShift.id, 'completed');
+        await checkOut(myShift.id);
         setStatus('completed');
         setSnackbarMessage('Отметка об уходе успешно сохранена');
         setSnackbarSeverity('success');
