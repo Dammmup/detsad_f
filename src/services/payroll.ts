@@ -216,16 +216,30 @@ export const markPayrollAsPaid = async (id: string) => {
 };
 
 /**
- * Calculate payroll for a staff member
- * @param {string} staffId - Staff member ID
+  * Calculate payroll for a staff member
+  * @param {string} staffId - Staff member ID
  * @param {string} month - Month in YYYY-MM format
- * @returns {Promise<Payroll>} Calculated payroll
- */
-export const calculatePayroll = async (staffId: string, month: string) => {
-  try {
-    const response = await api.post('/payroll/calculate', { staffId, month });
-    return response.data;
-  } catch (error) {
-    return handleApiError(error, 'calculating payroll');
-  }
-};
+  * @returns {Promise<Payroll>} Calculated payroll
+  */
+ export const calculatePayroll = async (staffId: string, month: string) => {
+   try {
+     const response = await api.post('/payroll/calculate', { staffId, month });
+     return response.data;
+   } catch (error) {
+     return handleApiError(error, 'calculating payroll');
+   }
+ };
+
+/**
+  * Generate payroll sheets for all staff members
+  * @param {string} period - Period in YYYY-MM format
+  * @returns {Promise<any>} Success response
+  */
+ export const generatePayrollSheets = async (period: string) => {
+   try {
+     const response = await api.post('/payroll/generate-sheets', { period });
+     return response.data;
+   } catch (error) {
+     return handleApiError(error, 'generating payroll sheets');
+   }
+ };

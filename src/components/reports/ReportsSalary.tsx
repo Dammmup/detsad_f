@@ -31,7 +31,7 @@ import {
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import axios from 'axios';
-import { updatePayroll, Payroll } from '../../services/payroll';
+import { updatePayroll, deletePayroll, Payroll, generatePayrollSheets } from '../../services/payroll';
 
 interface Props {
   userId?: string;
@@ -45,16 +45,14 @@ interface CurrentUser {
 interface PayrollRow {
   staffName: string;
  accruals: number;
-  bonuses: number;
-  penalties: number;
-  latePenalties: number;
-  absencePenalties: number;
-  userFines: number;
+  penalties: number; // Общая сумма штрафов (опоздания + неявки)
+  latePenalties: number; // Штрафы за опоздания
+  absencePenalties: number; // Штрафы за неявки
   latePenaltyRate: number;
   total: number;
  status: string;
  staffId: string;
-  _id?: string;
+ _id?: string;
 }
 
 
@@ -69,6 +67,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+ const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -124,12 +123,10 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           totalAccruals: data.reduce((sum, p) => sum + (p.accruals || p.baseSalary || 0), 0),
           totalPenalties: data.reduce((sum, p) => sum + (p.penalties || 0), 0),
           totalPayout: data.reduce((sum, p) => {
-            // Рассчитываем "Итого" для каждой записи
+            // Рассчитываем "Итого" для каждой записи (без бонусов)
             const accruals = p.accruals || p.baseSalary || 0;
-            const bonuses = p.bonuses || 0;
             const penalties = p.penalties || 0;
-            const latePenaltyRate = p.latePenaltyRate || 500;
-            const total = accruals + bonuses - penalties - (latePenaltyRate * 0); // Упрощенный расчет
+            const total = accruals - penalties; // Упрощенный расчет
             return sum + total;
           }, 0)
         };
@@ -138,15 +135,14 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         setRows(data.map((p: any) => ({
           staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
           accruals: p.accruals || p.baseSalary || 0,
-          bonuses: p.bonuses || 0,
-          penalties: p.penalties || 0,
+          // Рассчитываем общую сумму штрафов
+          penalties: (p.latePenalties || 0) + (p.absencePenalties || 0),
           latePenalties: p.latePenalties || 0,
           absencePenalties: p.absencePenalties || 0,
-          userFines: p.userFines || 0,
           latePenaltyRate: p.latePenaltyRate || 500, // Значение по умолчанию
-          // Рассчитываем поле "Итого" в реальном времени
-          total: (p.accruals || p.baseSalary || 0) + (p.bonuses || 0) - (p.penalties || 0) - ((p.latePenaltyRate || 500) * 0), // Упрощенный расчет
-          status: p.status || 'draft',
+          // Рассчитываем поле "Итого" в реальном времени (без бонусов)
+          total: (p.accruals || p.baseSalary || 0) - ((p.latePenalties || 0) + (p.absencePenalties || 0)), // Упрощенный расчет
+          status: p.status && p.status !== 'draft' ? p.status : 'calculated',
           staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
           _id: p._id || undefined // Добавляем ID записи зарплаты
         })));
@@ -164,13 +160,9 @@ const handleEditClick = (row: PayrollRow) => {
   setEditingId(row.staffId);
   setEditData({
     accruals: row.accruals || undefined,
-    bonuses: row.bonuses || undefined,
     penalties: row.penalties || undefined,
-    latePenalties: row.latePenalties || undefined,
-    absencePenalties: row.absencePenalties || undefined,
-    userFines: row.userFines || undefined,
     latePenaltyRate: row.latePenaltyRate || undefined,
-    status: row.status
+    status: row.status && row.status !== 'draft' ? row.status : 'calculated'
   });
 };
 
@@ -184,20 +176,18 @@ const handleSaveClick = async (rowId: string) => {
       
       // Рассчитываем поле "Итого" в реальном времени
       const accruals = editData.accruals !== undefined ? editData.accruals : originalRow.accruals || 0;
-      const bonuses = editData.bonuses !== undefined ? editData.bonuses : originalRow.bonuses || 0;
       const penalties = editData.penalties !== undefined ? editData.penalties : originalRow.penalties || 0;
-      const latePenalties = editData.latePenalties !== undefined ? editData.latePenalties : originalRow.latePenalties || 0;
-      const absencePenalties = editData.absencePenalties !== undefined ? editData.absencePenalties : originalRow.absencePenalties || 0;
-      const userFines = editData.userFines !== undefined ? editData.userFines : originalRow.userFines || 0;
       const latePenaltyRate = editData.latePenaltyRate !== undefined ? editData.latePenaltyRate : originalRow.latePenaltyRate || 500;
+      const status = editData.status && editData.status !== 'draft' ? editData.status : (originalRow.status && originalRow.status !== 'draft' ? originalRow.status : 'calculated');
       
-      // Обновленный расчет итоговой суммы
-      const total = accruals + bonuses - penalties;
+      // Обновленный расчет итоговой суммы (без бонусов)
+      const total = accruals - penalties;
       
       // Добавляем рассчитанное поле "Итого" в данные для обновления
       const updatedData = {
         ...editData,
-        total
+        total,
+        status
       };
       
       // Выведем ID для отладки
@@ -236,6 +226,39 @@ const handleInputChange = (field: string, value: any) => {
   }));
 };
 
+const handleDeleteClick = async (rowId: string) => {
+  if (!currentUser || currentUser.role !== 'admin') {
+    setSnackbarMessage('Только администратор может удалять расчетные листы');
+    setSnackbarSeverity('error');
+    setSnackbarOpen(true);
+    return;
+  }
+
+  if (window.confirm('Вы уверены, что хотите удалить этот расчетный лист? Это действие нельзя отменить.')) {
+    try {
+      // Найдем оригинальный объект зарплаты для получения полного ID
+      const originalRow = rows.find(r => r.staffId === rowId);
+      if (originalRow) {
+        // Используем _id записи зарплаты, если он есть, иначе staffId
+        const payrollId = originalRow._id || rowId;
+        
+        // Удаляем через API
+        await deletePayroll(payrollId);
+        // Обновляем локальный массив
+        setRows(prev => prev.filter(r => r.staffId !== rowId));
+        setSnackbarMessage('Расчетный лист успешно удален');
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+      }
+    } catch (error) {
+      console.error('Error deleting payroll:', error);
+      setSnackbarMessage('Ошибка при удалении расчетного листа');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    }
+  }
+};
+
 const handleSnackbarClose = () => {
   setSnackbarOpen(false);
 };
@@ -245,11 +268,11 @@ const handleExportToExcel = () => {
   let csvContent = "data:text/csv;charset=utf-8,";
   
   // Заголовки
-  csvContent += "Сотрудник;Начисления;Бонусы;Штрафы;Штрафы за опоздания;Штрафы за неявки;Штрафы пользователя;Ставка за опоздание (тг/мин);Итого;Статус\n";
+ csvContent += "Сотрудник;Начисления;Штрафы;Ставка за опоздание (тг/мин);Итого;Статус\n";
   
   // Данные
-  rows.forEach(row => {
-    csvContent += `${row.staffName};${row.accruals};${row.bonuses};${row.penalties};${row.latePenalties};${row.absencePenalties};${row.userFines};${row.latePenaltyRate};${row.total};${row.status}\n`;
+ rows.forEach(row => {
+    csvContent += `${row.staffName};${row.accruals};${row.penalties};${row.latePenaltyRate};${row.total};${row.status}\n`;
   });
   
   // Создаем ссылку для скачивания
@@ -263,7 +286,102 @@ const handleExportToExcel = () => {
   link.click();
   
   // Удаляем ссылку
-  document.body.removeChild(link);
+ document.body.removeChild(link);
+};
+
+const handleGeneratePayrollSheets = async () => {
+  if (!currentUser || currentUser.role !== 'admin') {
+    setSnackbarMessage('Только администратор может генерировать расчетные листы');
+    setSnackbarSeverity('error');
+    setSnackbarOpen(true);
+    return;
+  }
+
+  const monthToGenerate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  
+  if (window.confirm(`Вы уверены, что хотите сгенерировать расчетные листы за ${monthToGenerate}? Это действие перезапишет существующие данные.`)) {
+    try {
+      setGenerating(true);
+      await generatePayrollSheets(monthToGenerate);
+      setSnackbarMessage('Расчетные листы успешно сгенерированы');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+      
+      // Обновляем данные
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      
+      const { getCurrentUser } = await import('../../services/auth');
+      const { getPayrolls } = await import('../../services/payroll');
+      
+      let currentUserData = null;
+      try {
+        const userData = getCurrentUser();
+        if (userData) {
+          currentUserData = {
+            id: userData.id,
+            role: userData.role || 'staff'  // Устанавливаем значение по умолчанию
+          };
+          setCurrentUser(currentUserData);
+        }
+      } catch (userError) {
+        console.error('Ошибка получения данных пользователя:', userError);
+      }
+      
+      const params: any = {
+        month: currentMonth // используем месяц вместо startDate/endDate
+      };
+      
+      if (currentUserData && currentUserData.role !== 'admin') {
+        params.userId = currentUserData.id;
+      } else if (userId) {
+        // Администратор может фильтровать по userId
+        params.userId = userId;
+      }
+      
+      const payrollsData = await getPayrolls(params);
+      
+      const data = (payrollsData?.data || payrollsData || []) as any[];
+      
+      // Вычисляем сводку на основе данных
+      const summaryData = {
+        totalEmployees: data.length,
+        totalAccruals: data.reduce((sum, p) => sum + (p.accruals || p.baseSalary || 0), 0),
+        totalPenalties: data.reduce((sum, p) => sum + (p.penalties || 0), 0),
+        totalPayout: data.reduce((sum, p) => {
+          // Рассчитываем "Итого" для каждой записи
+          const accruals = p.accruals || p.baseSalary || 0;
+          const penalties = p.penalties || 0;
+          const latePenaltyRate = p.latePenaltyRate || 500;
+          const total = accruals - penalties; // Упрощенный расчет (без бонусов)
+          return sum + total;
+        }, 0)
+      };
+      
+      setSummary(summaryData);
+      setRows(data.map((p: any) => ({
+        staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
+        accruals: p.accruals || p.baseSalary || 0,
+        // Рассчитываем общую сумму штрафов
+        penalties: (p.latePenalties || 0) + (p.absencePenalties || 0),
+        latePenalties: p.latePenalties || 0,
+        absencePenalties: p.absencePenalties || 0,
+        latePenaltyRate: p.latePenaltyRate || 500, // Значение по умолчанию
+        // Рассчитываем поле "Итого" в реальном времени (без бонусов)
+        total: (p.accruals || p.baseSalary || 0) - ((p.latePenalties || 0) + (p.absencePenalties || 0)), // Упрощенный расчет
+        status: p.status && p.status !== 'draft' ? p.status : 'calculated',
+        staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
+        _id: p._id || undefined // Добавляем ID записи зарплаты
+      })));
+    } catch (error: any) {
+      console.error('Error generating payroll sheets:', error);
+      setSnackbarMessage(error?.message || 'Ошибка генерации расчетных листов');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    } finally {
+      setGenerating(false);
+    }
+  }
 };
 
   if (loading) {
@@ -279,7 +397,11 @@ const handleExportToExcel = () => {
   }
 
   return (
-    <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
+    <Box sx={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%)',
+      p: 3
+    }}>
       {/* Добавляем Snackbar для отображения сообщений */}
       <Snackbar
         open={snackbarOpen}
@@ -292,389 +414,413 @@ const handleExportToExcel = () => {
           </IconButton>
         }
       />
-      <Card
-        elevation={4}
-        sx={{
-          borderRadius: 3,
-          overflow: 'hidden',
+      
+      <Box sx={{
+        maxWidth: '1400px',
+        mx: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 3
+      }}>
+        {/* Заголовок страницы */}
+        <Box sx={{
+          textAlign: 'center',
           mb: 3,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-        }}
-      >
-        <Box sx={{ p: 3, bgcolor: 'grey.50', borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h5" component="h2" sx={{ fontWeight: 'medium' }}>
-            Сводная информация по зарплатам
-          </Typography>
-        </Box>
-        <CardContent>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{
-                backgroundColor: 'primary.light',
-                '& th': {
-                  fontWeight: 'bold',
-                  color: 'primary.contrastText',
-                  py: 1.5
-                }
-              }}>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Показатель</TableCell>
-                <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold' }}>Значение</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              <TableRow sx={{
-                '&:nth-of-type(odd)': {
-                  backgroundColor: 'grey.50',
-                },
-                '&:hover': {
-                  backgroundColor: 'grey.100',
-                },
-                height: '56px'
-              }}>
-                <TableCell sx={{ fontWeight: 'medium' }}>Общее количество сотрудников</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                  {summary?.totalEmployees ?? 0}
-                </TableCell>
-              </TableRow>
-              <TableRow sx={{
-                '&:nth-of-type(odd)': {
-                  backgroundColor: 'grey.50',
-                },
-                '&:hover': {
-                  backgroundColor: 'grey.100',
-                },
-                height: '56px'
-              }}>
-                <TableCell sx={{ fontWeight: 'medium' }}>Общая сумма начислений</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                  {(summary?.totalAccruals ?? 0)?.toLocaleString()} тг
-                </TableCell>
-              </TableRow>
-              <TableRow sx={{
-                '&:nth-of-type(odd)': {
-                  backgroundColor: 'grey.50',
-                },
-                '&:hover': {
-                  backgroundColor: 'grey.100',
-                },
-                height: '56px'
-              }}>
-                <TableCell sx={{ fontWeight: 'medium' }}>Общая сумма штрафов</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                  {(summary?.totalPenalties ?? 0)?.toLocaleString()} тг
-                </TableCell>
-              </TableRow>
-              <TableRow sx={{
-                '&:nth-of-type(odd)': {
-                  backgroundColor: 'grey.50',
-                },
-                '&:hover': {
-                  backgroundColor: 'grey.100',
-                },
-                height: '56px'
-              }}>
-                <TableCell sx={{ fontWeight: 'medium' }}>Ставка за опоздание на минуту</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                  500 тг/мин
-                </TableCell>
-              </TableRow>
-              <TableRow sx={{
-                '&:nth-of-type(odd)': {
-                  backgroundColor: 'grey.50',
-                },
-                '&:hover': {
-                  backgroundColor: 'grey.100',
-                },
-                height: '56px'
-              }}>
-                <TableCell sx={{ fontWeight: 'medium' }}>Общая сумма к выплате</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                  {(summary?.totalPayout ?? 0)?.toLocaleString()} тг
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <Card
-        elevation={4}
-        sx={{
-          borderRadius: 3,
-          overflow: 'hidden',
-          mt: 3,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-        }}
-      >
-        <Box sx={{ p: 3, bgcolor: 'grey.50', borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h5" component="h2" sx={{ fontWeight: 'medium' }}>
-            Расчетный лист за {new Date().toLocaleString('ru-RU', { month: 'long', year: 'numeric' })}
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<SaveIcon />}
-            onClick={handleExportToExcel}
+          px: 2
+        }}>
+          <Typography
+            variant="h3"
+            sx={{
+              fontWeight: 'bold',
+              color: 'primary.main',
+              mb: 1,
+              textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}
           >
-            Экспорт в Excel
-          </Button>
+            Расчетные листы
+          </Typography>
+          <Typography
+            variant="h6"
+            sx={{
+              color: 'text.secondary',
+              fontWeight: 'medium'
+            }}
+          >
+            Управление зарплатами сотрудников за {new Date().toLocaleString('ru-RU', { month: 'long', year: 'numeric' })}
+          </Typography>
         </Box>
-        <CardContent sx={{ p: 0 }}>
-          <Box sx={{ overflowX: 'auto' }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{
-                  backgroundColor: 'primary.light',
-                  '& th': {
-                    fontWeight: 'bold',
-                    color: 'primary.contrastText',
-                    py: 1.5
-                  }
-                }}>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Сотрудник</TableCell>
-                <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold' }}>Начисления</TableCell>
-                <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold' }}>Бонусы</TableCell>
-                <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold' }}>Штрафы</TableCell>
-                <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold' }}>Штрафы за опоздания</TableCell>
-                <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold' }}>Штрафы за неявки</TableCell>
-                <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold' }}>Штрафы пользователя</TableCell>
-                <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold' }}>Ставка за опоздание (тг/мин)</TableCell>
-                <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold' }}>Итого</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Статус</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map((r, idx) => (
-                <TableRow
-                  key={idx}
+        
+        {/* Сводная информация */}
+        <Card
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            overflow: 'hidden',
+            background: 'white',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+            border: '1px solid rgba(255,255,255,0.2)'
+          }}
+        >
+          <Box sx={{
+            p: 3,
+            background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
+            color: 'white',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
+              Сводная информация
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<SaveIcon />}
+                onClick={handleExportToExcel}
+                sx={{
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                  color: 'white',
+                  fontWeight: 'medium'
+                }}
+              >
+                Экспорт
+              </Button>
+              {currentUser?.role === 'admin' && (
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={generating ? <CircularProgress size={20} /> : <SaveIcon />}
+                  onClick={handleGeneratePayrollSheets}
+                  disabled={generating}
                   sx={{
-                    '&:nth-of-type(odd)': {
-                      backgroundColor: 'grey.50',
-                    },
-                    '&:hover': {
-                      backgroundColor: 'grey.100',
-                      transform: 'scale(1.01)',
-                      transition: 'all 0.2s ease-in-out'
-                    },
-                    height: '56px'
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                    color: 'white',
+                    fontWeight: 'medium'
                   }}
                 >
-                  <TableCell sx={{ fontWeight: 'medium' }}>{r.staffName}</TableCell>
-                  <TableCell align="right">
-                    {editingId === r.staffId ? (
-                      <TextField
-                        size="small"
-                        type="number"
-                        value={editData.accruals ?? ''}
-                        onChange={(e) => handleInputChange('accruals', e.target.value ? Number(e.target.value) : '')}
-                        inputProps={{ style: { fontSize: 12 } }}
-                        InputProps={{ style: { padding: '2px 4px' } }}
-                        style={{ width: '80px' }}
-                        variant="outlined"
-                      />
-                    ) : (
-                      r.accruals ? r.accruals?.toLocaleString() : ''
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    {editingId === r.staffId ? (
-                      <TextField
-                        size="small"
-                        type="number"
-                        value={editData.bonuses ?? ''}
-                        onChange={(e) => handleInputChange('bonuses', e.target.value ? Number(e.target.value) : '')}
-                        inputProps={{ style: { fontSize: 12 } }}
-                        InputProps={{ style: { padding: '2px 4px' } }}
-                        style={{ width: '80px' }}
-                        variant="outlined"
-                      />
-                    ) : (
-                      r.bonuses ? r.bonuses?.toLocaleString() : ''
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    {editingId === r.staffId ? (
-                      <TextField
-                        size="small"
-                        type="number"
-                        value={editData.penalties ?? ''}
-                        onChange={(e) => handleInputChange('penalties', e.target.value ? Number(e.target.value) : '')}
-                        inputProps={{ style: { fontSize: 12 } }}
-                        InputProps={{ style: { padding: '2px 4px' } }}
-                        style={{ width: '80px' }}
-                        variant="outlined"
-                      />
-                    ) : (
-                      r.penalties ? r.penalties?.toLocaleString() : ''
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    {editingId === r.staffId ? (
-                      <TextField
-                        size="small"
-                        type="number"
-                        value={editData.latePenalties ?? ''}
-                        onChange={(e) => handleInputChange('latePenalties', e.target.value ? Number(e.target.value) : '')}
-                        inputProps={{ style: { fontSize: 12 } }}
-                        InputProps={{ style: { padding: '2px 4px' } }}
-                        style={{ width: '80px' }}
-                        variant="outlined"
-                      />
-                    ) : (
-                      r.latePenalties ? r.latePenalties?.toLocaleString() : ''
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    {editingId === r.staffId ? (
-                      <TextField
-                        size="small"
-                        type="number"
-                        value={editData.absencePenalties ?? ''}
-                        onChange={(e) => handleInputChange('absencePenalties', e.target.value ? Number(e.target.value) : '')}
-                        inputProps={{ style: { fontSize: 12 } }}
-                        InputProps={{ style: { padding: '2px 4px' } }}
-                        style={{ width: '80px' }}
-                        variant="outlined"
-                      />
-                    ) : (
-                      r.absencePenalties ? r.absencePenalties?.toLocaleString() : ''
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    {editingId === r.staffId ? (
-                      <TextField
-                        size="small"
-                        type="number"
-                        value={editData.userFines ?? ''}
-                        onChange={(e) => handleInputChange('userFines', e.target.value ? Number(e.target.value) : '')}
-                        inputProps={{ style: { fontSize: 12 } }}
-                        InputProps={{ style: { padding: '2px 4px' } }}
-                        style={{ width: '80px' }}
-                        variant="outlined"
-                      />
-                    ) : (
-                      r.userFines ? r.userFines?.toLocaleString() : ''
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    {editingId === r.staffId ? (
-                      <TextField
-                        size="small"
-                        type="number"
-                        value={editData.latePenaltyRate ?? ''}
-                        onChange={(e) => handleInputChange('latePenaltyRate', e.target.value ? Number(e.target.value) : '')}
-                        inputProps={{ style: { fontSize: 12 } }}
-                        InputProps={{ style: { padding: '2px 4px' } }}
-                        style={{ width: '80px' }}
-                        variant="outlined"
-                      />
-                    ) : (
-                      r.latePenaltyRate ? r.latePenaltyRate : '500' // Значение по умолчанию
-                    )}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                    {editingId === r.staffId ? (
-                      // При редактировании рассчитываем "Итого" в реальном времени
-                      (() => {
-                        const accruals = editData.accruals !== undefined ? editData.accruals : r.accruals || 0;
-                        const bonuses = editData.bonuses !== undefined ? editData.bonuses : r.bonuses || 0;
-                        const penalties = editData.penalties !== undefined ? editData.penalties : r.penalties || 0;
-                        const latePenalties = editData.latePenalties !== undefined ? editData.latePenalties : r.latePenalties || 0;
-                        const absencePenalties = editData.absencePenalties !== undefined ? editData.absencePenalties : r.absencePenalties || 0;
-                        const userFines = editData.userFines !== undefined ? editData.userFines : r.userFines || 0;
-                        const latePenaltyRate = editData.latePenaltyRate !== undefined ? editData.latePenaltyRate : r.latePenaltyRate || 500;
-                        
-                        // Обновленный расчет итоговой суммы
-                        const total = accruals + bonuses - penalties;
-                        return total?.toLocaleString() || '0';
-                      })()
-                    ) : (
-                      // При отображении используем рассчитанное значение
-                      r.total ? r.total?.toLocaleString() : '0'
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingId === r.staffId ? (
-                      <FormControl size="small" style={{ minWidth: 100 }}>
-                        <Select
-                          value={editData.status ?? r.status}
-                          onChange={(e) => handleInputChange('status', e.target.value)}
-                          style={{ fontSize: 12 }}
-                          variant="outlined"
-                        >
-                          <MenuItem value="draft">Черновик</MenuItem>
-                          <MenuItem value="calculated">Рассчитано</MenuItem>
-                          <MenuItem value="approved">Подтвержден</MenuItem>
-                          <MenuItem value="paid">Оплачен</MenuItem>
-                        </Select>
-                      </FormControl>
-                    ) : (
-                      <Chip
-                        label={
-                          r.status === 'draft' ? 'Черновик' :
-                          r.status === 'calculated' ? 'Рассчитано' :
-                          r.status === 'approved' ? 'Подтвержден' : 'Оплачен'
-                        }
-                        size="small"
-                        color={
-                          r.status === 'draft' ? 'default' :
-                          r.status === 'calculated' ? 'info' :
-                          r.status === 'approved' ? 'primary' : 'success'
-                        }
-                        variant="outlined"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingId === r.staffId ? (
-                      <>
-                        <Tooltip title="Сохранить">
-                          <IconButton
-                            color="success"
+                  {generating ? 'Генерация...' : 'Сгенерировать'}
+                </Button>
+              )}
+            </Box>
+          </Box>
+          
+          <CardContent>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 3 }}>
+              <Box sx={{
+                p: 3,
+                borderRadius: 2,
+                background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 10%)',
+                textAlign: 'center'
+              }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>
+                  {summary?.totalEmployees ?? 0}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Всего сотрудников
+                </Typography>
+              </Box>
+              
+              <Box sx={{
+                p: 3,
+                borderRadius: 2,
+                background: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
+                textAlign: 'center'
+              }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main', mb: 1 }}>
+                  {(summary?.totalAccruals ?? 0)?.toLocaleString()} тг
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Начисления
+                </Typography>
+              </Box>
+              
+              <Box sx={{
+                p: 3,
+                borderRadius: 2,
+                background: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+                textAlign: 'center'
+              }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'error.main', mb: 1 }}>
+                  {(summary?.totalPenalties ?? 0)?.toLocaleString()} тг
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Штрафы
+                </Typography>
+              </Box>
+              
+              <Box sx={{
+                p: 3,
+                borderRadius: 2,
+                background: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 10%)',
+                textAlign: 'center'
+              }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main', mb: 1 }}>
+                  {(summary?.totalPayout ?? 0)?.toLocaleString()} тг
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  К выплате
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+        
+        {/* Таблица расчетных листов */}
+        <Card
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            overflow: 'hidden',
+            background: 'white',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+            border: '1px solid rgba(255,255,255,0.2)'
+          }}
+        >
+          <Box sx={{
+            p: 3,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
+              Расчетные листы сотрудников
+            </Typography>
+          </Box>
+          
+          <CardContent sx={{ p: 0 }}>
+            <Box sx={{ overflowX: 'auto' }}>
+              <Table size="medium" sx={{
+                minWidth: 1200,
+                '& .MuiTableCell-root': {
+                  borderBottom: '1px solid #e0e0e0',
+                  py: 2.5,
+                  px: 2
+                }
+              }}>
+                <TableHead>
+                  <TableRow sx={{
+                    backgroundColor: 'grey.100',
+                    '& th': {
+                      fontWeight: 'bold',
+                      color: 'text.primary',
+                      py: 2,
+                      fontSize: '0.9rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }
+                  }}>
+                    <TableCell sx={{ color: 'primary.main', fontWeight: 'bold' }}>Сотрудник</TableCell>
+                    <TableCell align="right" sx={{ color: 'primary.main', fontWeight: 'bold' }}>Начисления</TableCell>
+                    <TableCell align="right" sx={{ color: 'primary.main', fontWeight: 'bold' }}>Штрафы</TableCell>
+                    <TableCell align="right" sx={{ color: 'primary.main', fontWeight: 'bold' }}>Ставка за опоздание (тг/мин)</TableCell>
+                    <TableCell align="right" sx={{ color: 'primary.main', fontWeight: 'bold' }}>Итого</TableCell>
+                    <TableCell sx={{ color: 'primary.main', fontWeight: 'bold' }}>Статус</TableCell>
+                    <TableCell sx={{ color: 'primary.main', fontWeight: 'bold' }}>Действия</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rows.map((r, idx) => (
+                    <TableRow
+                      key={idx}
+                      sx={{
+                        '&:nth-of-type(odd)': {
+                          backgroundColor: 'grey.50',
+                        },
+                        '&:nth-of-type(even)': {
+                          backgroundColor: 'white',
+                        },
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                          boxShadow: '0 4px 20px rgba(0, 0, 0.1)',
+                          transform: 'translateY(-2px)',
+                          transition: 'all 0.3s ease',
+                          zIndex: 1,
+                          position: 'relative'
+                        },
+                        height: '70px',
+                        borderRadius: '12px',
+                        mb: 1
+                      }}
+                    >
+                      <TableCell sx={{ fontWeight: 'medium', fontSize: '1rem', color: 'text.primary' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box sx={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            bgcolor: 'primary.light',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'primary.contrastText',
+                            fontWeight: 'bold'
+                          }}>
+                            {r.staffName.charAt(0).toUpperCase()}
+                          </Box>
+                          {r.staffName}
+                        </Box>
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontSize: '1rem', fontWeight: 'medium', color: 'success.main' }}>
+                        {editingId === r.staffId ? (
+                          <TextField
                             size="small"
-                            onClick={() => handleSaveClick(r.staffId)}
-                            sx={{ mr: 1 }}
-                          >
-                            <SaveIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Отменить">
-                          <IconButton
-                            color="error"
+                            type="number"
+                            value={editData.accruals ?? ''}
+                            onChange={(e) => handleInputChange('accruals', e.target.value ? Number(e.target.value) : '')}
+                            inputProps={{ style: { fontSize: 14 } }}
+                            InputProps={{ style: { padding: '4px 8px' } }}
+                            style={{ width: '100px' }}
+                            variant="outlined"
+                          />
+                        ) : (
+                          r.accruals ? r.accruals?.toLocaleString() : '0'
+                        )}
+                      </TableCell>
+                      <TableCell
+                        align="right"
+                        sx={{ fontSize: '1rem', fontWeight: 'medium', color: 'error.main' }}
+                        title={`Штрафы за опоздания: ${r.latePenalties?.toLocaleString() || '0'} тг\nШтрафы за неявки: ${r.absencePenalties?.toLocaleString() || '0'} тг`}
+                      >
+                        {editingId === r.staffId ? (
+                          <TextField
                             size="small"
-                            onClick={handleCancelClick}
-                          >
-                            <CancelIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </>
-                    ) : (
-                      <>
-                        <Tooltip title="Редактировать">
-                          <IconButton
-                            color="primary"
+                            type="number"
+                            value={editData.penalties ?? ''}
+                            onChange={(e) => handleInputChange('penalties', e.target.value ? Number(e.target.value) : '')}
+                            inputProps={{ style: { fontSize: 14 } }}
+                            InputProps={{ style: { padding: '4px 8px' } }}
+                            style={{ width: '100px' }}
+                            variant="outlined"
+                          />
+                        ) : (
+                          r.penalties ? r.penalties?.toLocaleString() : '0'
+                        )}
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontSize: '1rem', color: 'text.secondary' }}>
+                        {editingId === r.staffId ? (
+                          <TextField
                             size="small"
-                            onClick={() => handleEditClick(r)}
-                            sx={{ mr: 1 }}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Просмотр">
-                          <IconButton color="default" size="small">
-                            <VisibilityIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Box>
-        </CardContent>
-      </Card>
+                            type="number"
+                            value={editData.latePenaltyRate ?? ''}
+                            onChange={(e) => handleInputChange('latePenaltyRate', e.target.value ? Number(e.target.value) : '')}
+                            inputProps={{ style: { fontSize: 14 } }}
+                            InputProps={{ style: { padding: '4px 8px' } }}
+                            style={{ width: '100px' }}
+                            variant="outlined"
+                          />
+                        ) : (
+                          r.latePenaltyRate ? r.latePenaltyRate : '500'
+                        )}
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold', fontSize: '1.1rem', color: r.total >= 0 ? 'success.main' : 'error.main' }}>
+                        {editingId === r.staffId ? (
+                          (() => {
+                            const accruals = editData.accruals !== undefined ? editData.accruals : r.accruals || 0;
+                            const penalties = editData.penalties !== undefined ? editData.penalties : r.penalties || 0;
+                            const latePenaltyRate = editData.latePenaltyRate !== undefined ? editData.latePenaltyRate : r.latePenaltyRate || 500;
+                            
+                            const total = accruals - penalties;
+                            return total?.toLocaleString() || '0';
+                          })()
+                        ) : (
+                          r.total ? r.total?.toLocaleString() : '0'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === r.staffId ? (
+                          <FormControl size="small" style={{ minWidth: 120 }}>
+                            <Select
+                              value={editData.status ?? r.status}
+                              onChange={(e) => handleInputChange('status', e.target.value)}
+                              style={{ fontSize: 14 }}
+                              variant="outlined"
+                            >
+                              <MenuItem value="calculated">Рассчитано</MenuItem>
+                              <MenuItem value="approved">Подтвержден</MenuItem>
+                              <MenuItem value="paid">Оплачен</MenuItem>
+                            </Select>
+                          </FormControl>
+                        ) : (
+                          <Chip
+                            label={
+                              r.status === 'calculated' ? 'Рассчитано' :
+                              r.status === 'approved' ? 'Подтвержден' : 'Оплачен'
+                            }
+                            size="medium"
+                            color={
+                              r.status === 'calculated' ? 'info' :
+                              r.status === 'approved' ? 'primary' : 'success'
+                            }
+                            variant="filled"
+                            sx={{ fontWeight: 'medium', px: 1.5, py: 0.5 }}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === r.staffId ? (
+                          <>
+                            <Tooltip title="Сохранить">
+                              <IconButton
+                                color="success"
+                                size="small"
+                                onClick={() => handleSaveClick(r.staffId)}
+                                sx={{ mr: 1 }}
+                              >
+                                <SaveIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Отменить">
+                              <IconButton
+                                color="error"
+                                size="small"
+                                onClick={handleCancelClick}
+                              >
+                                <CancelIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        ) : (
+                          <>
+                            <Tooltip title="Редактировать">
+                              <IconButton
+                                color="primary"
+                                size="small"
+                                onClick={() => handleEditClick(r)}
+                                sx={{ mr: 1 }}
+                              >
+                                <EditIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Просмотр">
+                              <IconButton color="default" size="small">
+                                <VisibilityIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Удалить">
+                              <IconButton
+                                color="error"
+                                size="small"
+                                onClick={() => handleDeleteClick(r.staffId)}
+                              >
+                                <CloseIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
     </Box>
   );
 };

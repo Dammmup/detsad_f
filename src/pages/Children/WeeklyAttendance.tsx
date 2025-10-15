@@ -207,8 +207,15 @@ const WeeklyAttendance: React.FC = () => {
   };
 
   // Get filtered children for selected group
-  const filteredChildren = selectedGroup 
-    ? children.filter(child => child.groupId === selectedGroup)
+  const filteredChildren = selectedGroup
+    ? children.filter(child => {
+        // Проверяем, является ли groupId объектом или строкой
+        if (typeof child.groupId === 'object' && child.groupId !== null) {
+          return (child.groupId as any)._id === selectedGroup || (child.groupId as any).id === selectedGroup;
+        } else {
+          return child.groupId === selectedGroup;
+        }
+      })
     : [];
 
   // Get week days

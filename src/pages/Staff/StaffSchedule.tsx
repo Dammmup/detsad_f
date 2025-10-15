@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
+import { format, startOfWeek, addDays} from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useSnackbar } from 'notistack';
 import {
@@ -126,6 +126,7 @@ const StaffSchedule: React.FC = () => {
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
   
   // Data
   const [staff, setStaff] = useState<User[]>([]);
@@ -169,10 +170,150 @@ const StaffSchedule: React.FC = () => {
     };
     
     fetchData();
-  }, [enqueueSnackbar]);
-
+  }, [selectedWeek, enqueueSnackbar]);
+  
+  const assignFiveTwoSchedule = async () => {
+    console.log('assignFiveTwoSchedule called');
+    try {
+      setLoading(true);
+      console.log('Loading set to true');
+      
+      // Определяем текущую дату и конец текущего месяца
+      const currentDate = new Date();
+      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      console.log('Current date:', currentDate, 'End of month:', endOfMonth);
+      
+      // Создаем массив дат с текущего дня до конца месяца
+      const dates = [];
+      let current = new Date(currentDate);
+      while (current <= endOfMonth) {
+        dates.push(new Date(current));
+        current.setDate(current.getDate() + 1);
+      }
+      console.log('Dates array created, length:', dates.length);
+      
+      // Фильтруем рабочие дни (понедельник-пятница)
+      const workDays = dates.filter(date => {
+        const dayOfWeek = date.getDay();
+        return dayOfWeek !== 0 && dayOfWeek !== 6; // Не воскресенье и не суббота
+      });
+      console.log('Work days filtered, length:', workDays.length);
+      
+      // Разбиваем рабочие дни на 5-дневные блоки (5 рабочих дней + 2 выходных)
+      const scheduleBlocks = [];
+      for (let i = 0; i < workDays.length; i += 5) {
+        // Берем 5 рабочих дней
+        const workBlock = workDays.slice(i, i + 5);
+        scheduleBlocks.push(...workBlock);
+        
+        // Если есть 5 рабочих дней, добавляем 2 выходных дня после них
+        if (workBlock.length === 5) {
+          const lastWorkDay = new Date(workBlock[4]);
+          const weekend1 = addDays(lastWorkDay, 1); // Суббота
+          const weekend2 = addDays(lastWorkDay, 2); // Воскресенье
+          scheduleBlocks.push(weekend1, weekend2);
+        }
+      }
+      console.log('Schedule blocks created, length:', scheduleBlocks.length);
+      
+      // Ограничиваем график до конца месяца
+      const finalSchedule = scheduleBlocks.filter(date => date <= endOfMonth);
+      console.log('Final schedule filtered, length:', finalSchedule.length);
+      
+      console.log('Selected staff:', selectedStaff);
+      
+      // Для каждого выбранного сотрудника создаем смены
+      for (const staffId of selectedStaff) {
+        console.log('Creating shifts for staff:', staffId);
+        
+        // Получаем существующие смены сотрудника в диапазоне дат
+        const existingShifts = await getShifts(format(currentDate, 'yyyy-MM-dd'), format(endOfMonth, 'yyyy-MM-dd'));
+        const existingShiftDates = new Set(
+          existingShifts
+            .filter(shift => shift.staffId === staffId)
+            .map(shift => shift.date)
+        );
+        
+        // Создаем отдельный список для отслеживания созданных смен в процессе выполнения
+        const createdShiftDates = new Set<string>();
+        
+        for (const date of finalSchedule) {
+          const dateStr = format(date, 'yyyy-MM-dd');
+          
+          // Пропускаем дату, если уже есть смена (из базы данных или созданная в этом запуске)
+          if (existingShiftDates.has(dateStr) || createdShiftDates.has(dateStr)) {
+            console.log('Skipping existing shift for', staffId, 'on', dateStr);
+            continue;
+          }
+          
+          // Проверяем, не является ли день выходным (суббота или воскресенье)
+          const dayOfWeek = date.getDay();
+          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+          
+          try {
+            if (isWeekend) {
+              // Для выходных создаем смену типа "day_off"
+              console.log('Creating day_off shift for', staffId, 'on', date);
+              await createShift({
+                staffId,
+                date: dateStr,
+                startTime: '00:00',
+                endTime: '00:00',
+                type: 'day_off',
+                notes: 'Выходной по графику 5/2'
+              });
+            } else {
+              // Для рабочих дней создаем смену типа "full"
+              console.log('Creating full shift for', staffId, 'on', date);
+              await createShift({
+                staffId,
+                date: dateStr,
+                startTime: '07:30',
+                endTime: '18:00',
+                type: 'full',
+                notes: 'Рабочий день по графику 5/2'
+              });
+            }
+            
+            // Добавляем дату в список созданных, чтобы избежать дубликатов в этой же итерации
+            createdShiftDates.add(dateStr);
+          } catch (error: any) {
+            // Если ошибка связана с дубликатом, просто продолжаем
+            const errorMessage = error.response?.data?.error || error.message || error.response?.data;
+            if (errorMessage && typeof errorMessage === 'string' && errorMessage.includes('У сотрудника уже есть смена в этот день')) {
+              console.log('Skipping duplicate shift for', staffId, 'on', dateStr);
+              // Добавляем дату в список существующих, чтобы избежать попыток создать снова
+              existingShiftDates.add(dateStr);
+              continue; // Пропускаем и продолжаем выполнение
+            } else {
+              console.error('Error creating shift for', staffId, 'on', dateStr, ':', error);
+              // Продолжаем выполнение, но логируем ошибку
+              continue;
+            }
+          }
+        }
+      }
+      
+      enqueueSnackbar('График 5/2 успешно назначен', { variant: 'success' });
+      
+      // Обновляем данные
+      const weekStart = startOfWeek(selectedWeek, { locale: ru });
+      const weekEnd = addDays(weekStart, 6);
+      const shiftsData = await getShifts(format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd'));
+      setShifts(shiftsData);
+      
+      // Сбрасываем выбранных сотрудников
+      setSelectedStaff([]);
+    } catch (err: any) {
+      console.error('Error assigning 5/2 schedule:', err);
+      enqueueSnackbar('Ошибка при назначении графика 5/2', { variant: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Получаем данные пользователя
-  const { user } = useAuth();
+ const { user } = useAuth();
 
   // Week navigation
   const goToPreviousWeek = () => {
@@ -276,7 +417,9 @@ const StaffSchedule: React.FC = () => {
       }
       
       // После создания смены обновляем только смены, а не весь список
-      const shiftsData = await getShifts();
+      const weekStart = startOfWeek(selectedWeek, { locale: ru });
+      const weekEnd = addDays(weekStart, 6);
+      const shiftsData = await getShifts(format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd'));
       setShifts(shiftsData);
       
       handleCloseModal();
@@ -346,10 +489,15 @@ const StaffSchedule: React.FC = () => {
       if (!shift.staffId) return false;
       // Проверяем тип и сравниваем
       if (typeof shift.staffId === 'string') {
-        return shift.staffId === staffId && isSameDay(parseISO(shift.date), date);
+        // Сравниваем даты как строки, чтобы избежать проблем с часовыми поясами
+        const shiftDate = shift.date.split('T')[0]; // Берем только дату, без времени
+        const compareDate = format(date, 'yyyy-MM-dd');
+        return shift.staffId === staffId && shiftDate === compareDate;
       } else {
         // Для объекта проверяем наличие _id и сравниваем
-        return (shift.staffId as any)._id === staffId && isSameDay(parseISO(shift.date), date);
+        const shiftDate = shift.date.split('T')[0]; // Берем только дату, без времени
+        const compareDate = format(date, 'yyyy-MM-dd');
+        return (shift.staffId as any)._id === staffId && shiftDate === compareDate;
       }
     });
   };
@@ -376,7 +524,7 @@ const StaffSchedule: React.FC = () => {
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
       <Box p={3}>
         <Card>
-          <CardHeader 
+          <CardHeader
             title={
               <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="h5">График смен</Typography>
@@ -388,6 +536,26 @@ const StaffSchedule: React.FC = () => {
                     onClick={() => setModalOpen(true)}
                   >
                     Добавить смену
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    sx={{ ml: 2 }}
+                    onClick={() => {
+                      console.log('5/2 button clicked');
+                      console.log('Selected staff length:', selectedStaff.length);
+                      console.log('Selected staff:', selectedStaff);
+                      // Логика для назначения графика 5/2
+                      if (selectedStaff.length === 0) {
+                        console.log('No staff selected');
+                        enqueueSnackbar('Пожалуйста, выберите сотрудников', { variant: 'warning' });
+                        return;
+                      }
+                      console.log('Calling assignFiveTwoSchedule');
+                      assignFiveTwoSchedule();
+                    }}
+                  >
+                    Назначить график 5/2
                   </Button>
                 </Box>
               </Box>
@@ -438,89 +606,119 @@ const StaffSchedule: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {staff.map(staffMember => (
-                    <TableRow key={staffMember.id}>
-                      <TableCell>
-                        <Box display="flex" alignItems="center">
-                          <Box
-                            sx={{
-                              width: 12,
-                              height: 12,
-                              borderRadius: '50%',
-                              bgcolor: ROLE_COLORS[staffMember.role as string] || '#9e9e9e',
-                              mr: 1
-                            }}
-                          />
-                          <Box>
-                            {staffMember.fullName}
-                            <Box sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
-                              {ROLE_LABELS[staffMember.role as string] || staffMember.role}
+                  {staff.map(staffMember => {
+                    const staffId = staffMember.id || staffMember._id;
+                    if (!staffId) return null;
+                    const isSelected = selectedStaff.includes(staffId);
+                    return (
+                      <TableRow
+                        key={staffMember.id}
+                        sx={{
+                          backgroundColor: isSelected ? 'action.selected' : 'inherit',
+                          '&:hover': {
+                            backgroundColor: 'action.hover'
+                          }
+                        }}
+                      >
+                        <TableCell
+                          onClick={() => {
+                            console.log('Staff cell clicked, staffId:', staffId);
+                            if (selectedStaff.includes(staffId)) {
+                              console.log('Removing staff from selection');
+                              const newSelectedStaff = selectedStaff.filter(id => id !== staffId);
+                              setSelectedStaff(newSelectedStaff);
+                              console.log('Selected staff after removal:', newSelectedStaff);
+                            } else {
+                              console.log('Adding staff to selection');
+                              const newSelectedStaff = [...selectedStaff, staffId];
+                              setSelectedStaff(newSelectedStaff);
+                              console.log('Selected staff after addition:', newSelectedStaff);
+                            }
+                          }}
+                          sx={{
+                            cursor: 'pointer',
+                            userSelect: 'none'
+                          }}
+                        >
+                          <Box display="flex" alignItems="center">
+                            <Box
+                              sx={{
+                                width: 12,
+                                height: 12,
+                                borderRadius: '50%',
+                                bgcolor: ROLE_COLORS[staffMember.role as string] || '#9e9e9e',
+                                mr: 1
+                              }}
+                            />
+                            <Box>
+                              {staffMember.fullName}
+                              <Box sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
+                                {ROLE_LABELS[staffMember.role as string] || staffMember.role}
+                              </Box>
                             </Box>
                           </Box>
-                        </Box>
-                      </TableCell>
-                      {weekDays.map(day => {
-                        const staffId = staffMember.id || staffMember._id;
-                        if (!staffId) return null;
-                        const dayShifts = getShiftsForDay(staffId, day);
-                        return (
-                          <TableCell
-                            key={day.toString()}
-                            onClick={() => {
-                              setFormData({
-                                ...formData,
-                                staffId: staffId,
-                                staffName: staffMember.fullName,
-                                date: format(day, 'yyyy-MM-dd')
-                              });
-                              setModalOpen(true);
-                            }}
-                            sx={{
-                              minHeight: '100px',
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              '&:hover': {
-                                backgroundColor: 'action.hover',
-                                cursor: 'pointer'
-                              }
-                            }}
-                          >
-                            {dayShifts.map(shift => (
-                              <Box
-                                key={shift.id}
-                                sx={{
-                                  p: 1,
-                                  mb: 1,
-                                  borderRadius: 1,
-                                  bgcolor: 'background.paper',
-                                  borderLeft: `4px solid ${theme.palette.primary.main}`,
-                                  '&:hover': {
-                                    bgcolor: 'action.selected'
-                                  }
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditShift(shift);
-                                }}
-                              >
-                                <Box>{SHIFT_TYPES[shift.type]}</Box>
-                                <Box sx={{ fontSize: 12 }}>
-                                  {shift.startTime} - {shift.endTime}
+                        </TableCell>
+                        {weekDays.map(day => {
+                          const dayShifts = getShiftsForDay(staffId, day);
+                          return (
+                            <TableCell
+                              key={day.toString()}
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  staffId: staffId,
+                                  staffName: staffMember.fullName,
+                                  date: format(day, 'yyyy-MM-dd')
+                                });
+                                setModalOpen(true);
+                              }}
+                              sx={{
+                                minHeight: '100px',
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                '&:hover': {
+                                  backgroundColor: 'action.hover',
+                                  cursor: 'pointer'
+                                }
+                              }}
+                            >
+                              {dayShifts.map(shift => (
+                                <Box
+                                  key={shift.id}
+                                  sx={{
+                                    p: 1,
+                                    mb: 1,
+                                    borderRadius: 1,
+                                    bgcolor: 'background.paper',
+                                    borderLeft: `4px solid ${theme.palette.primary.main}`,
+                                    '&:hover': {
+                                      bgcolor: 'action.selected'
+                                    }
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditShift(shift);
+                                  }}
+                                >
+                                  <Box>{SHIFT_TYPES[shift.type]}</Box>
+                                  <Box sx={{ fontSize: 12 }}>
+                                    {shift.startTime} - {shift.endTime}
+                                  </Box>
+                                  <Box mt={0.5}>
+                                    <Chip
+                                      label={SHIFT_STATUSES[shift.status]}
+                                      size="small"
+                                      color={STATUS_COLORS[shift.status] as any}
+                                    />
+                                  </Box>
                                 </Box>
-                                <Box mt={0.5}>
-                                  <Chip
-                                    label={SHIFT_STATUSES[shift.status]}
-                                    size="small"
-                                    color={STATUS_COLORS[shift.status] as any}
-                                  />
-                                </Box>
-                              </Box>
-                            ))}
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  ))}
+                              ))}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>

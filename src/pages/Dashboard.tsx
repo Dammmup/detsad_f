@@ -32,7 +32,7 @@ const Dashboard = () => {
   };
 
   const handleOpenAttendancePage = () => {
-    navigate('/children/attendance');
+    navigate('/app/children/attendance');
   };
 
   const handleAddChildModalClose = () => {
