@@ -65,6 +65,7 @@ const sidebarStructure: SidebarItem[] = [
     children: [
       { id: 'reports-all', label: 'Все отчеты', link: '/app/reports', icon: <AssessmentIcon /> },
       { id: 'reports-payroll', label: 'Зарплаты', link: '/app/reports/payroll', icon: <AssessmentIcon /> },
+      { id: 'reports-rent', label: 'Аренда', link: '/app/reports/rent', icon: <AssessmentIcon /> },
       { id: 'reports-analytics', label: 'Аналитика', link: '/app/reports/analytics', icon: <AssessmentIcon /> },
      
     ],

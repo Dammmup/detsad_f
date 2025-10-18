@@ -11,6 +11,7 @@ import Reports from '../pages/Reports';
 import { AuthProvider, ProtectedRoute } from './context/AuthContext';
 import { GroupsProvider } from './context/GroupsContext';
 import ReportsSalary from './reports/ReportsSalary';
+import ReportsRent from './reports/ReportsRent';
 import Dashboard from '../pages/Dashboard';
 import WeeklyAttendance from '../pages/Children/WeeklyAttendance';
 
@@ -33,6 +34,7 @@ export const App = () => {
                   <Routes>
                     <Route path="staff/attendance" element={<StaffAttendanceTracking />} />
                     <Route path="reports/payroll" element={<ReportsSalary />} />
+                    <Route path="reports/rent" element={<ReportsRent />} />
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="children/attendance" element={<WeeklyAttendance />} />
                     <Route path="*" element={<Navigate to="dashboard" replace />} />

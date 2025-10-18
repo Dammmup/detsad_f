@@ -4,20 +4,21 @@ import {
   Paper, Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, FormControl, InputLabel, Select, MenuItem, Grid, IconButton,
   Tooltip, Chip, CircularProgress, Alert, SelectChangeEvent, Tabs, Tab,
-  Table, TableHead, TableRow, TableCell, TableBody, Card, 
+  Table, TableHead, TableRow, TableCell, TableBody, Card,
 } from '@mui/material';
-import { 
-  Add, Delete, Assessment, PictureAsPdf, TableChart, 
+import {
+  Add, Delete, Assessment, PictureAsPdf, TableChart,
   InsertDriveFile, Email, Schedule,
   GetApp, AttachMoney, People, ChildCare, BarChart,
   Download, Refresh, Search, Sort
 } from '@mui/icons-material';
-import { 
+import {
   getReports, deleteReport, exportReport, generateCustomReport,
   exportSalaryReport, exportChildrenReport, exportAttendanceReport, sendReportByEmail, scheduleReport,
   Report
 } from '../services/reports';
 import ReportsSalary from '../components/reports/ReportsSalary';
+import ReportsRent from '../components/reports/ReportsRent';
 import { getUsers } from '../services/users';
 import { getGroups } from '../services/groups';
 import { ID, UserRole } from '../types/common';
@@ -160,10 +161,11 @@ const Reports: React.FC = () => {
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     // Если переключаемся на вкладку "Аналитика", переходим на отдельную страницу аналитики
-    if (newValue === 2) {
+    // Обновляем логику для учета вкладки "Аренда" у администраторов
+    if ((currentUser?.role === 'admin' && newValue === 3) || (currentUser?.role !== 'admin' && newValue === 2)) {
       navigate('/reports/analytics');
     }
-  };
+ };
 
   // Обработчик экспорта отчета
   const handleExport = async (reportId: string, format: 'pdf' | 'excel' | 'csv') => {
@@ -733,6 +735,8 @@ const Reports: React.FC = () => {
       <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 2 }}>
         <Tab label="Отчеты" />
         <Tab label="Зарплаты" />
+        {/* Показываем вкладку "Аренда" только для администраторов */}
+        {currentUser?.role === 'admin' && <Tab label="Аренда" />}
         <Tab label="Аналитика" />
       </Tabs>
 
@@ -813,10 +817,31 @@ const Reports: React.FC = () => {
         </Box>
       )}
 
-      {tabValue === 2 && (
+      {/* Вкладка "Аренда" для администраторов */}
+      {tabValue === 2 && currentUser?.role === 'admin' && (
+        <Box>
+          <Typography variant="h6" gutterBottom>Отчеты по аренде</Typography>
+          <ReportsRent
+            userId={selectedUserId || undefined}
+          />
+        </Box>
+      )}
+
+      {/* Обновляем вкладку "Аналитика" на индекс 3, если показываем вкладку "Аренда" */}
+      {currentUser?.role === 'admin' && tabValue === 3 && (
         <Box>
           <Typography variant="h6" gutterBottom>Аналитика</Typography>
-          <Analytics 
+          <Analytics
+           
+          />
+        </Box>
+      )}
+
+      {/* Если пользователь не администратор, вкладка "Аналитика" остается на индексе 2 */}
+      {currentUser?.role !== 'admin' && tabValue === 2 && (
+        <Box>
+          <Typography variant="h6" gutterBottom>Аналитика</Typography>
+          <Analytics
            
           />
         </Box>

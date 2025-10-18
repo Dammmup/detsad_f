@@ -237,9 +237,27 @@ export const markPayrollAsPaid = async (id: string) => {
   */
  export const generatePayrollSheets = async (period: string) => {
    try {
-     const response = await api.post('/payroll/generate-sheets', { period });
+     const response = await api.post('/payroll/generate-sheets', { period }, {
+       timeout: 60000 // 60 seconds for payroll sheet generation
+     });
      return response.data;
    } catch (error) {
      return handleApiError(error, 'generating payroll sheets');
    }
  };
+
+ /**
+   * Generate rent sheets for all tenants
+   * @param {string} period - Period in YYYY-MM format
+   * @returns {Promise<any>} Success response
+   */
+  export const generateRentSheets = async (period: string) => {
+    try {
+      const response = await api.post('/rent/generate-sheets', { period }, {
+        timeout: 60000 // 60 seconds for rent sheet generation
+      });
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, 'generating rent sheets');
+    }
+  };
