@@ -1,649 +1,335 @@
-// ===== ОБЩИЕ ТИПЫ И ИНТЕРФЕЙСЫ =====
+// Common types for the application
 
-// Базовые типы
 export type ID = string;
-export type DateString = string; // YYYY-MM-DD
-export type TimeString = string; // HH:MM
-export type ISODateString = string; // ISO 8601
 
-// Статусы
-export type UserRole = 'admin' | 'manager' | 'staff' | 'teacher' | 'assistant' | 'cook' | 'cleaner' | 'security' | 'nurse' | 'child';
-export type ShiftStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'confirmed' | 'late';
-export type ShiftType = 'full' | 'day_off' | 'vacation' | 'sick_leave' | 'overtime';
-export type AttendanceStatus = 'present' | 'absent' | 'late' | 'early-leave' | 'sick' | 'vacation';
-export type ExportFormat = 'pdf' | 'excel' | 'csv';
-export type DocumentType = 'contract' | 'certificate' | 'report' | 'policy' | 'other';
-export type DocumentCategory = 'staff' | 'children' | 'financial' | 'administrative' | 'other';
-export type DocumentStatus = 'active' | 'archived';
-export type TemplateType = 'contract' | 'certificate' | 'report' | 'policy' | 'other';
-export type TemplateCategory = 'staff' | 'children' | 'financial' | 'administrative' | 'other';
-
-// ===== ДОКУМЕНТЫ =====
-
-export interface Document {
-  id: ID;
-  _id?: ID; // для совместимости с MongoDB
-  title: string;
-  description?: string;
-  type: DocumentType;
-  category: DocumentCategory;
-  fileName: string;
-  fileSize: number;
-  filePath: string;
-  uploadDate: DateString;
-  uploader: {
-    id: ID;
-    fullName: string;
-    email: string;
-  };
-  relatedId?: ID;
-  relatedType?: 'staff' | 'child' | 'group';
-  status: DocumentStatus;
-  tags: string[];
-  version: string;
-  expiryDate?: DateString;
-  createdAt: DateString;
-  updatedAt: DateString;
+export enum UserRole {
+  admin = 'admin',
+  teacher = 'teacher',
+  assistant = 'assistant',
+  nurse = 'nurse',
+  cook = 'cook',
+  cleaner = 'cleaner',
+  security = 'security',
+  psychologist = 'psychologist',
+  music_teacher = 'music_teacher',
+  physical_teacher = 'physical_teacher',
+  staff = 'staff',
+  parent = 'parent',
+  child = 'child'
 }
 
-export interface DocumentTemplate {
-  id: ID;
-  _id?: ID; // для совместимости с MongoDB
+export interface Group {
+  _id: ID;
+  id?: ID;
   name: string;
   description?: string;
-  type: TemplateType;
-  category: TemplateCategory;
-  fileName: string;
-  fileSize: number;
-  filePath: string;
-  version: string;
-  isActive: boolean;
-  tags: string[];
-  usageCount: number;
-  createdAt: DateString;
-  updatedAt: DateString;
+  childrenCount?: number;
+  teacher?: string; // Добавляем поле для учителя
+  isActive?: boolean; // Добавляем поле для статуса активности
+  maxStudents?: number; // Добавляем поле для максимального количества студентов
+  ageGroup?: string[]; // Добавляем поле для возрастной группы
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// ===== ПАРАМЕТРЫ API =====
-
-// Параметры для получения списка документов
-export type GetDocumentsParams = any;
-
-// Параметры для получения списка шаблонов
-export type GetTemplatesParams = any;
-
-// Параметры для создания документа
-export type CreateDocumentData = any;
-
-// Параметры для создания шаблона
-export type CreateTemplateData = any;
-
-// Параметры для обновления документа
-export type UpdateDocumentData = any;
-
-// Параметры для обновления шаблона
-export type UpdateTemplateData = any;
-
-// Параметры для экспорта документов
-export type ExportDocumentsParams = any;
-
-// Параметры для экспорта шаблонов
-export type ExportTemplatesParams = any;
-
-// ===== API ИНТЕРФЕЙСЫ =====
-
-// Базовый интерфейс для API ошибок
-export interface ApiError extends Error {
-  status?: number;
-  data?: any;
-}
-
-// Базовый интерфейс для API ответов
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-}
-
-// Интерфейс для пагинации
-export interface PaginationParams {
-  page?: number;
-  limit?: number;
-  sort?: string;
-  order?: 'asc' | 'desc';
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
-// ===== ПОЛЬЗОВАТЕЛИ =====
-
-// Интерфейс для ребенка (Child)
-export interface GroupRef {
-  id: ID;
-  _id?: ID;
-  name: string;
- isActive: boolean;
- createdAt?: ISODateString;
-  updatedAt?: ISODateString;
-}
-
-// Интерфейс для ребенка (Child)
 export interface Child {
-  id: ID;
- _id?: ID;
+  _id: ID;
+ id?: ID;
   fullName: string;
-  birthday?: DateString;
-  groupId?: ID | GroupRef;  // Может быть как ID, так и полный объект группы
- parentName?: string;
-  parentPhone?: string;
   iin?: string;
+  birthday?: string;
+  address?: string;
+  parentName?: string;
+  parentPhone?: string;
+  staffId?: string; // Добавляем staffId как альтернативное поле для userId
+  groupId?: Group | string;
+ active?: boolean;
+ gender?: string;
+ clinic?: string;
+ bloodGroup?: string;
+  rhesus?: string;
+  disability?: string;
+  dispensary?: string;
+  diagnosis?: string;
+  allergy?: string;
+  infections?: string;
+  hospitalizations?: string;
+  incapacity?: string;
+  checkups?: string;
   notes?: string;
-  active: boolean;
-  createdAt?: ISODateString;
-  updatedAt?: ISODateString;
-}
-
-export interface Fine {
-  amount: number;
-  reason: string;
-  date: DateString;
-  type: 'late' | 'other';
-  approved: boolean;
-  createdBy: ID;
-  notes?: string;
+ createdAt?: string;
+ updatedAt?: string;
 }
 
 export interface User {
-  id: ID;
-  _id?: ID; // для совместимости с MongoDB
-  fullName: string;
-  role?: UserRole;
-  phone?: string;
-  email?: string;
-  active: boolean;
-  isVerified?: boolean;
-  lastLogin?: ISODateString;
-  createdAt?: ISODateString;
-  updatedAt?: ISODateString;
-  
-  // Поля для детей
-  iin?: string;
-  groupId?: ID | GroupRef;
-  parentPhone?: string;
-  parentName?: string;
-  birthday?: DateString;
-  notes?: string;
-  
-  // Поля для сотрудников
-  salary?: number;
-  shiftRate?: number;
-  salaryType?: 'day' | 'month' | 'shift';
-  penaltyType?: 'fixed' | 'percent' | 'per_minute' | 'per_5_minutes' | 'per_10_minutes';
-  penaltyAmount?: number;
-  initialPassword?: string;
-  avatarUrl?: string;
-  fines?: Fine[];
-  totalFines?: number;
-  permissions?: string[];
-  username?: string;
-}
-
-// ===== ГРУППЫ =====
-
-export interface Group {
-  id: ID;
-  _id?: ID;
-  name: string;
-  description?: string;
-  teacher?: { id?: ID; _id?: ID } | ID;
-  teacherId?: ID;
-  isActive: boolean;
-  maxStudents?: number;
-  ageGroup?: string[];
-  createdBy?: ID;
-  createdAt?: ISODateString;
-  updatedAt?: ISODateString;
-}
-
-// ===== СМЕНЫ =====
-
-export interface Shift {
-  id: ID;
-  _id?: ID;
-  staffId: ID;
-  staffName?: string; // для совместимости
-  date: DateString;
-  startTime: TimeString;
-  endTime: TimeString;
-  type: ShiftType;
-  status: ShiftStatus;
-  notes?: string;
-  createdAt?: ISODateString;
-  updatedAt?: ISODateString;
-  createdBy?: ID;
-  groupId?: ID;
-  shiftType?: string; // для совместимости
-  userId?: ID; // для совместимости
-  userName?: string; // для совместимости
-}
-
-export interface ShiftFormData {
-  staffId: ID;
- staffName?: string; // для совместимости
-  date: DateString;
-  startTime: TimeString;
-  endTime: TimeString;
-  type: ShiftType;
-  notes: string;
-}
-
-// ===== ПОСЕЩАЕМОСТЬ =====
-
-export interface Location {
-  address?: string;
-  checkIn?: string;
-  checkOut?: string;
-}
-
-// Посещаемость сотрудников
-export interface StaffAttendanceRecord {
-  _id?: ID;
+  _id: ID;
   id?: ID;
-  staffId: ID;
-  staffName?: string;
-  groupId?: ID;
-  date: DateString;
-  shiftType: 'full' | 'overtime';
-  startTime: TimeString;
-  endTime: TimeString;
-  actualStart?: TimeString;
-  actualEnd?: TimeString;
-  breakTime?: number;
-  status: ShiftStatus | 'late';
-  lateMinutes?: number;
-  overtimeMinutes?: number;
-  earlyLeaveMinutes?: number;
-  location?: Location;
-  notes?: string;
-  markedBy: ID;
-  createdAt?: ISODateString;
-  updatedAt?: ISODateString;
-  workHours?: number;
-  userId?: ID; // для совместимости
-  userName?: string; // для совместимости
-  checkIn?: TimeString; // для совместимости
-  checkOut?: TimeString; // для совместимости
-}
-
-// Посещаемость детей
-export interface ChildAttendanceRecord {
-  _id?: ID;
-  id?: ID;
-  childId: ID;
-  childName?: string;
-  groupId: ID;
-  date: DateString;
-  status: AttendanceStatus;
-  checkInTime?: TimeString;
-  checkOutTime?: TimeString;
-  notes?: string;
-  markedBy?: ID;
-  createdAt?: ISODateString;
-  updatedAt?: ISODateString;
-}
-
-// Общий интерфейс для посещаемости (для совместимости)
-export interface AttendanceRecord {
-  id?: ID;
-  userId: ID;
-  userName?: string;
-  date: DateString;
-  checkIn?: TimeString;
-  checkOut?: TimeString;
-  status: AttendanceStatus;
-  workHours?: number;
-  notes?: string;
-  location?: Location;
-}
-
-// ===== СТАТИСТИКА =====
-
-export interface StaffAttendanceStats {
-  totalDays: number;
-  presentDays: number;
-  lateDays: number;
-  totalLateMinutes: number;
-  totalOvertimeMinutes: number;
-  totalEarlyLeaveMinutes: number;
-  averageWorkHours: number;
-}
-
-export interface ChildAttendanceStats {
-  total: number;
-  byStatus: {
-    present?: number;
-    absent?: number;
-    late?: number;
-    sick?: number;
-    vacation?: number;
-  };
-  attendanceRate: number;
-}
-
-export interface AttendanceStats {
-  totalDays: number;
-  presentDays: number;
-  lateDays: number;
-  absentDays: number;
-  attendanceRate: number;
-  totalWorkHours: number;
-  averageWorkHoursPerDay: number;
-  earlyLeaveDays: number;
-  sickDays: number;
-  vacationDays: number;
-  punctualityRate: number;
-}
-
-export interface ScheduleStats {
-  totalShifts: number;
-  regularShifts: number;
-  overtimeShifts: number;
-  cancelledShifts: number;
-  totalScheduledHours: number;
-  totalWorkedHours: number;
-  efficiencyRate: number;
-  sickLeaves: number;
-  vacationDays: number;
-  totalHours: number;
-  overtimeHours: number;
-  averageHoursPerDay: number;
-}
-
-// ===== ФИЛЬТРЫ =====
-
-export interface BaseFilters {
-  startDate?: DateString;
-  endDate?: DateString;
-  _sort?: string;
-  _order?: 'asc' | 'desc';
-}
-
-export interface StaffAttendanceFilters extends BaseFilters {
-  staffId?: ID;
-  groupId?: ID | GroupRef;
-  date?: DateString;
-  status?: string;
-  shiftType?: string;
-}
-
-export interface ChildAttendanceFilters extends BaseFilters {
-  childId?: ID;
-  groupId?: ID | GroupRef;
-  date?: DateString;
-  status?: string;
-}
-
-export interface ShiftFilters extends BaseFilters {
-  staffId?: ID;
-  status?: ShiftStatus;
-}
-
-export interface UserFilters extends BaseFilters {
-  role?: UserRole;
-  active?: boolean;
-  groupId?: ID;
-}
-
-// ===== МАССОВЫЕ ОПЕРАЦИИ =====
-
-export interface BulkSaveResult<T = any> {
-  success: number;
-  errorCount: number;
-  errors: Array<{
-    record: any;
-    error: string;
-  }>;
-  records: T[];
-}
-
-export interface BulkAttendanceResponse {
-  success: number;
-  errorCount: number;
-  results: ChildAttendanceRecord[];
-  errors: Array<{
-    record: any;
-    error: string;
-  }>;
-}
-
-// ===== ОТЧЕТЫ =====
-
-export interface Report {
-  id?: ID;
-  title: string;
-  type: 'attendance' | 'schedule' | 'staff' | 'salary' | 'children' | 'custom';
-  description?: string;
-  dateRange: {
-    startDate: DateString;
-    endDate: DateString;
-  };
-  filters?: {
-    userId?: ID;
-    groupId?: ID;
-    department?: string;
-    status?: string;
-  };
-  data?: any;
-  format?: ExportFormat;
-  status?: 'generating' | 'completed' | 'failed' | 'scheduled';
-  filePath?: string;
-  fileSize?: number;
-  generatedAt?: ISODateString;
-  scheduledFor?: ISODateString;
-  emailRecipients?: string[];
-  createdBy?: ID;
-  createdAt?: ISODateString;
-  updatedAt?: ISODateString;
-}
-
-// ===== ЦИКЛОГРАММА =====
-
-export interface CyclogramActivity {
-  id?: ID;
-  name: string;
-  description?: string;
-  duration: number; // в минутах
-  type: 'educational' | 'physical' | 'creative' | 'rest' | 'meal' | 'hygiene' | 'outdoor';
-  ageGroup: string;
-  materials?: string[];
-  goals?: string[];
-  methods?: string[];
-}
-
-export interface CyclogramTimeSlot {
-  id?: ID;
-  startTime: TimeString;
-  endTime: TimeString;
-  activity: CyclogramActivity;
-  dayOfWeek: number; // 1-7 (понедельник-воскресенье)
-  groupId?: ID;
-  teacherId?: ID;
-  notes?: string;
-}
-
-export interface WeeklyCyclogram {
-  id?: ID;
-  title: string;
-  description?: string;
-  ageGroup: string;
-  groupId: ID;
-  teacherId: ID;
-  weekStartDate: DateString;
-  timeSlots: CyclogramTimeSlot[];
-  status: 'draft' | 'active' | 'archived';
-  createdAt?: ISODateString;
-  updatedAt?: ISODateString;
-}
-
-export interface CyclogramTemplate {
-  id?: ID;
-  name: string;
-  description?: string;
-  ageGroup: string;
-  timeSlots: Omit<CyclogramTimeSlot, 'id' | 'groupId' | 'teacherId'>[];
-  isDefault: boolean;
-  createdAt?: ISODateString;
-}
-
-// ===== НАСТРОЙКИ =====
-
-export interface KindergartenSettings {
-  id?: ID;
-  name: string;
-  address: string;
   phone: string;
-  email: string;
-  director: string;
-  workingHours: {
-    start: TimeString;
-    end: TimeString;
-  };
-  workingDays: string[];
-  timezone: string;
-  language: string;
-  currency: string;
+  fullName: string;
+  role: UserRole;
+  avatar?: string;
+  isActive: boolean;
+  lastLogin?: string;
+  createdAt: string;
+ updatedAt: string;
+ uniqNumber?: string;
+  notes?: string;
+  active: boolean;
+ iin?: string;
+  groupId?: string;
+  birthday?: string;
+  photo?: string;
+  // Поля для детей (наследуются от интерфейса Child)
+  parentName?: string;
+  parentPhone?: string;
+  email?: string; // Добавляем email
+  initialPassword?: string; // Добавляем начальный пароль
+  salary?: number; // Добавляем зарплату
+  salaryType?: 'shift' | 'month' | 'day'; // Добавляем тип зарплаты
+  penaltyType?: 'fixed' | 'percent' | 'per_minute' | 'per_5_minutes' | 'per_10_minutes'; // Добавляем тип штрафа
+  penaltyAmount?: number; // Добавляем сумму штрафа
+  shiftRate?: number; // Добавляем ставку за смену
+  // Добавляем поля, которые могут отсутствовать в User, но есть в других интерфейсах
+  staffId?: string;
+  staffName?: string;
 }
 
-export interface NotificationSettings {
+export interface IRent {
+  _id: ID;
   id?: ID;
-  emailNotifications: boolean;
-  smsNotifications: boolean;
-  pushNotifications: boolean;
-  lateArrivalAlert: boolean;
-  absenceAlert: boolean;
-  overtimeAlert: boolean;
-  reportReminders: boolean;
+  tenantId: User | string;
+  period: string;
+  amount: number;
+  total: number;
+  status: 'active' | 'overdue' | 'paid' | 'draft';
+  latePenalties?: number;
+  absencePenalties?: number;
+  penalties?: number;
+  latePenaltyRate?: number;
+  accruals?: number;
+  paidAmount?: number;
+  paymentDate?: string;
+  createdAt: string;
+ updatedAt: string;
 }
 
-export interface SecuritySettings {
+export interface IChildPayment {
+  _id: ID;
   id?: ID;
-  passwordPolicy: {
-    minLength: number;
-    requireUppercase: boolean;
-    requireLowercase: boolean;
-    requireNumbers: boolean;
-    requireSpecialChars: boolean;
-  };
-  sessionTimeout: number; // в минутах
-  twoFactorAuth: boolean;
-  ipWhitelist: string[];
-  maxLoginAttempts: number;
+  childId?: Child | string;
+  userId?: User | string;
+  period: string;
+  amount: number;
+  total: number;
+  status: 'active' | 'overdue' | 'paid' | 'draft';
+  latePenalties?: number;
+  absencePenalties?: number;
+  penalties?: number;
+  latePenaltyRate?: number;
+  accruals?: number;
+  deductions?: number;
+  comments?: string;
+  paidAmount?: number;
+  paymentDate?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface GeolocationSettings {
+export interface IAttendance {
+  _id: ID;
   id?: ID;
-  enabled: boolean;
-  radius: number; // в метрах
-  strictMode: boolean;
-  allowedDevices: string[];
+  userId: string;
+  date: string;
+  checkIn: string;
+  checkOut?: string;
+  status: 'present' | 'absent' | 'late' | 'early_departure';
+  notes?: string;
+ createdAt: string;
+ updatedAt: string;
 }
 
-// ===== АВТОРИЗАЦИЯ =====
-
+// Добавляем недостающие типы
 export interface LoginCredentials {
-  phone: string; // Используем телефон вместо email для логина
+  phone: string;
   password: string;
 }
 
 export interface OTPResponse {
   success: boolean;
   message: string;
-  expiresIn?: number; // время жизни кода в секундах
 }
 
 export interface AuthResponse {
-  user: {
-    id: ID;
-    email: string;
-    fullName: string;
-    role: UserRole;
-  };
-  token?: string; // Токен теперь хранится в httpOnly cookie, но оставляем для совместимости
+  success: boolean;
+  user: User;
+ token: string;
 }
 
-// ===== ЭКСПОРТ =====
-
-export interface ExportConfig {
-  filename: string;
-  sheetName: string;
-  title: string;
-  subtitle?: string;
-  headers: string[];
-  data: any[][];
-  includeDate?: boolean;
-  includeWeekdays?: boolean;
-  dateColumn?: number;
+export interface ApiError {
+  message: string;
+  status?: number;
+ data?: any;
+  details?: any;
 }
 
-// ===== УТИЛИТЫ =====
-
-// Тип для функций обработки ошибок
-export type ErrorHandler = (error: any, context?: string) => never;
-
-// Тип для функций задержки
 export type DelayFunction = (ms?: number) => Promise<void>;
 
-// Общие константы
-export const DEFAULT_PAGE_SIZE = 20;
-export const MAX_PAGE_SIZE = 100;
-export const DEFAULT_TIMEOUT = 10000;
-export const RETRY_DELAY = 2000;
-export const CACHE_DURATION = 5 * 60 * 1000; // 5 минут
+export type ErrorHandler = (error: any, context?: string) => void;
 
-// Статусы для UI
-export type StatusColor = 'success' | 'warning' | 'error' | 'info' | 'default';
+export type StatusColor = 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning';
 
-// Маппинг статусов на цвета
+
 export const STATUS_COLORS: Record<string, StatusColor> = {
-  completed: 'success',
-  in_progress: 'info',
-  late: 'warning',
-  no_show: 'error',
-  cancelled: 'error',
-  present: 'success',
-  absent: 'error',
-  sick: 'warning',
-  vacation: 'info'
+  // Статусы для смен
+  'scheduled': 'default',
+  'in_progress': 'primary',
+  'completed': 'success',
+  'cancelled': 'error',
+  'no_show': 'warning',
+  'confirmed': 'info',
+  'late': 'primary',
+  // Статусы для посещений
+  'checked_in': 'success',
+  'checked_out': 'info',
+  'on_break': 'warning',
+  'overtime': 'secondary',
+  'absent': 'error',
+  'early_departure': 'warning',
+  'present': 'success',
+  // Статусы аренды и оплаты детей
+  'active_rent': 'warning',
+  'overdue_rent': 'error',
+  'paid_rent': 'success',
+  'draft_rent': 'default',
+  'active_payment': 'warning',
+  'overdue_payment': 'error',
+  'paid_payment': 'success',
+  'draft_payment': 'default',
+  // Добавляем недостающие статусы
+  'absent_shift': 'error',
+  'checked_in_shift': 'success',
+  'checked_out_shift': 'info',
+  'on_break_shift': 'warning',
+  'overtime_shift': 'secondary',
+  'early_departure_shift': 'warning',
+  'present_shift': 'success'
 };
 
-// Маппинг статусов на русский текст
+
+// Обновляем STATUS_TEXT
 export const STATUS_TEXT: Record<string, string> = {
-  scheduled: 'Запланировано',
-  in_progress: 'В процессе',
-  completed: 'Завершено',
-  cancelled: 'Отменено',
-  no_show: 'Не явился',
-  late: 'Опоздание',
-  confirmed: 'Подтверждено',
-  present: 'Присутствует',
-  absent: 'Отсутствует',
-  sick: 'Болеет',
-  vacation: 'Отпуск',
-  'early-leave': 'Ранний уход'
+  // Статусы для смен
+  'scheduled': 'Запланирована',
+  'in_progress': 'В процессе',
+  'completed': 'Завершена',
+  'cancelled': 'Отменена',
+  'no_show': 'Не явка',
+  'confirmed': 'Подтверждена',
+  'late': 'Опоздание',
+  // Статусы для посещений
+  'checked_in': 'Прибыл',
+  'checked_out': 'Ушёл',
+  'on_break': 'Перерыв',
+  'overtime': 'Сверхурочные',
+  'absent': 'Отсутствует',
+  'early_departure': 'Ранний уход',
+  'present': 'Присутствует',
+  // Статусы аренды и оплаты детей
+  'active_rent': 'Активна',
+  'overdue_rent': 'Просрочена',
+  'paid_rent': 'Оплачена',
+  'draft_rent': 'Черновик',
+  'active_payment': 'Активна',
+  'overdue_payment': 'Просрочена',
+  'paid_payment': 'Оплачена',
+  'draft_payment': 'Черновик',
+  // Добавляем недостающие статусы
+  'absent_shift': 'Отсутствует',
+  'checked_in_shift': 'Прибыл',
+  'checked_out_shift': 'Ушёл',
+  'on_break_shift': 'Перерыв',
+  'overtime_shift': 'Сверхурочные',
+  'early_departure_shift': 'Ранний уход',
+  'present_shift': 'Присутствует'
 };
 
-// Маппинг типов смен на русский текст
-export const SHIFT_TYPES: Record<ShiftType, string> = {
-  full: 'Полная',
-  day_off: 'Выходной',
-  vacation: 'Отпуск',
-  sick_leave: 'Больничный',
-  overtime: 'Сверхурочная'
+export enum ShiftType {
+  day = 'day',
+  night = 'night',
+  weekend = 'weekend',
+  holiday = 'holiday',
+  full = 'full',
+  day_off = 'day_off'
+}
+
+export enum ShiftStatus {
+  scheduled = 'scheduled',
+  in_progress = 'in_progress',
+  completed = 'completed',
+  cancelled = 'cancelled',
+  no_show = 'no_show',
+  confirmed = 'confirmed',
+  late = 'late',
+  absent = 'absent',
+  checked_in = 'checked_in',
+  checked_out = 'checked_out',
+  on_break = 'on_break',
+  overtime = 'overtime',
+  early_departure = 'early_departure',
+  present = 'present'
+}
+
+export interface Shift {
+  _id: ID;
+  id?: ID;
+  userId: string;
+ staffId?: string; // Добавляем staffId как альтернативное поле для userId
+  staffName?: string; // Добавляем staffName для отображения
+  date: string;
+  startTime: string;
+  endTime: string;
+  breakTime?: number;
+  status: ShiftStatus;
+  type: ShiftType;
+  notes?: string;
+  createdAt: string;
+ updatedAt: string;
+}
+
+export interface ShiftFormData {
+  userId: string;
+  staffId?: string;
+  staffName?: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  breakTime?: number;
+  type: ShiftType;
+  notes?: string;
+ status?: ShiftStatus;
+}
+
+export interface ShiftFilters {
+  userId?: string;
+  staffId?: string;
+  startDate?: string;
+  endDate?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  status?: ShiftStatus;
+  type?: ShiftType;
+}
+
+export const SHIFT_TYPES: { [key: string]: string } = {
+  day: 'Дневная',
+  night: 'Ночная',
+  weekend: 'Выходная',
+  holiday: 'Праздничная'
 };
+
+export interface UserFilters {
+  role?: string;
+  groupId?: string;
+  active?: boolean;
+  search?: string;
+}

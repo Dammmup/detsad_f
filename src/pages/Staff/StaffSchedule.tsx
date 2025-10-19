@@ -43,21 +43,27 @@ import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Types and Services
-import { Shift, ShiftStatus, ShiftType } from '../../types/common';
-import { getShifts, createShift, updateShift, deleteShift } from '../../services//shifts';
+import { Shift, ShiftStatus, ShiftType, ShiftFormData } from '../../types/common';
+import { getShifts, createShift } from '../../services//shifts';
 import { getUsers } from '../../services/users';
-import { useAuth } from '../../components/context/AuthContext';
 import {User} from '../../types/common';
 import { SHIFT_TYPES } from '../../types/common';
 
 const SHIFT_STATUSES: Record<ShiftStatus, string> = {
   scheduled: 'Запланирована',
   in_progress: 'В процессе',
-  completed: 'Завершена',
+ completed: 'Завершена',
   cancelled: 'Отменена',
   no_show: 'Неявка',
   confirmed: 'Подтверждена',
-  late:'Опоздание'
+  late:'Опоздание',
+  absent: 'Отсутствует',
+  checked_in: 'Прибыл',
+  checked_out: 'Ушёл',
+  on_break: 'Перерыв',
+  overtime: 'Сверхурочные',
+  early_departure: 'Ранний уход',
+  present: 'Присутствует'
 };
 
 const STATUS_COLORS = {
@@ -67,7 +73,14 @@ const STATUS_COLORS = {
   cancelled: 'error',
   no_show: 'warning',
   confirmed: 'info',
-  late:'primary'
+  late:'primary',
+  absent: 'error',
+  checked_in: 'success',
+  checked_out: 'info',
+  on_break: 'warning',
+  overtime: 'secondary',
+  early_departure: 'warning',
+  present: 'success'
 } as const;
 
 // Role colors and labels
@@ -105,16 +118,8 @@ const ROLE_LABELS: Record<string, string> = {
   intern: 'Стажер'
 };
 
-interface ShiftFormData {
-  staffId: string;
-  staffName: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  shiftType: ShiftType;
-  status: ShiftStatus;
-  notes: string;
-}
+// Удаляем локальное определение интерфейса ShiftFormData,
+// так как он уже определен в types/common.ts
 
 const StaffSchedule: React.FC = () => {
   const theme = useTheme();
@@ -133,16 +138,17 @@ const StaffSchedule: React.FC = () => {
   const [shifts, setShifts] = useState<Shift[]>([]);
   
   // Form state
-  const [formData, setFormData] = useState<ShiftFormData>({
-    staffId: '',
-    staffName: '',
-    date: format(new Date(), 'yyyy-MM-dd'),
-    startTime: '07:30',
-    endTime: '18:00',
-    shiftType: 'full',
-    status: 'scheduled',
-    notes: ''
-  });
+    const [formData, setFormData] = useState<ShiftFormData>({
+          userId: '',
+          staffId: '',
+          staffName: '',
+          date: format(new Date(), 'yyyy-MM-dd'),
+          startTime: '07:30',
+          endTime: '18:00',
+          type: ShiftType.full,
+          notes: '',
+          status: ShiftStatus.scheduled
+        });
 
   // Load data
   useEffect(() => {
@@ -255,24 +261,30 @@ const StaffSchedule: React.FC = () => {
               // Для выходных создаем смену типа "day_off"
               console.log('Creating day_off shift for', staffId, 'on', date);
               await createShift({
-                staffId,
-                date: dateStr,
-                startTime: '00:00',
-                endTime: '00:00',
-                type: 'day_off',
-                notes: 'Выходной по графику 5/2'
-              });
+                              userId: staffId,
+                              staffId: staffId,
+                              staffName: staff.find(s => (s.id || s._id) === staffId)?.fullName || '',
+                              date: dateStr,
+                              startTime: '00:00',
+                              endTime: '00:00',
+                              type: ShiftType.day_off,
+                              notes: 'Выходной по графику 5/2',
+                              status: ShiftStatus.scheduled
+                            });
             } else {
               // Для рабочих дней создаем смену типа "full"
               console.log('Creating full shift for', staffId, 'on', date);
               await createShift({
-                staffId,
-                date: dateStr,
-                startTime: '07:30',
-                endTime: '18:00',
-                type: 'full',
-                notes: 'Рабочий день по графику 5/2'
-              });
+                              userId: staffId,
+                              staffId: staffId,
+                              staffName: staff.find(s => (s.id || s._id) === staffId)?.fullName || '',
+                              date: dateStr,
+                              startTime: '07:30',
+                              endTime: '18:00',
+                              type: ShiftType.full,
+                              notes: 'Рабочий день по графику 5/2',
+                              status: ShiftStatus.scheduled
+                            });
             }
             
             // Добавляем дату в список созданных, чтобы избежать дубликатов в этой же итерации
@@ -313,7 +325,6 @@ const StaffSchedule: React.FC = () => {
   };
   
   // Получаем данные пользователя
- const { user } = useAuth();
 
   // Week navigation
   const goToPreviousWeek = () => {
@@ -395,19 +406,36 @@ const StaffSchedule: React.FC = () => {
     setLoading(true);
     
     try {
-      const shiftData = {
-        ...formData,
-        staffName: staff.find(s => (s.id || s._id) === formData.staffId)?.fullName || '',
-        createdBy: user?.id || '',
-        type: formData.shiftType
-      };
+          const shiftData: Shift = {
+                          _id: editingShift?._id || '',
+                          id: editingShift?.id || '',
+                          userId: formData.staffId || '',
+                          staffId: formData.staffId || '',
+                          staffName: formData.staffName || '',
+                          date: formData.date,
+                          startTime: formData.startTime,
+                          endTime: formData.endTime,
+                          type: formData.type,
+                          notes: formData.notes || '',
+                          status: formData.status || ShiftStatus.scheduled,
+                          createdAt: editingShift?.createdAt || new Date().toISOString(),
+                          updatedAt: new Date().toISOString()
+                        };
       
       if (editingShift) {
-        // Update existing shift
-        const updatedShift = await updateShift(editingShift.id, shiftData);
+              // Update existing shift
+              if (editingShift.id) {
+                         
+                            setShifts(prev =>
+                              prev.map(s => s.id === editingShift.id ? { ...shiftData, staffName: shiftData.staffName } : s)
+                            );
+                            enqueueSnackbar('Смена успешно обновлена', { variant: 'success' });
+                          } else {
+                            enqueueSnackbar('Ошибка: ID смены не определен', { variant: 'error' });
+                          }
         setShifts(prev =>
-          prev.map(s => s.id === editingShift.id ? { ...updatedShift, staffName: shiftData.staffName } : s)
-        );
+                        prev.map(s => s.id === editingShift.id ? { ...shiftData, staffName: shiftData.staffName } : s)
+                      );
         enqueueSnackbar('Смена успешно обновлена', { variant: 'success' });
       } else {
         // Create new shift
@@ -432,50 +460,37 @@ const StaffSchedule: React.FC = () => {
   };
 
   const handleEditShift = (shift: Shift) => {
-    setFormData({
-      staffId: (shift.staffId as any)?._id || shift.staffId || '',
-      staffName: shift.staffName as any|| '',
-      date: shift.date,
-      startTime: shift.startTime,
-      endTime: shift.endTime,
-      shiftType: shift.type,
-      status: shift.status,
-      notes: shift.notes || ''
-    });
-    setEditingShift(shift);
-    setModalOpen(true);
-  };
+      setFormData({
+              userId: (shift.staffId as any)?._id || shift.staffId || '',
+              staffId: (shift.staffId as any)?._id || shift.staffId || '',
+              staffName: shift.staffName || '',
+              date: shift.date,
+              startTime: shift.startTime,
+              endTime: shift.endTime,
+              type: shift.type,
+              status: shift.status,
+              notes: shift.notes || ''
+            });
+      setEditingShift(shift);
+      setModalOpen(true);
+    };
 
-  const handleDeleteShift = async (id: string) => {
-    if (!window.confirm('Вы уверены, что хотите удалить эту смену?')) return;
-    
-    setLoading(true);
-    
-    try {
-      await deleteShift(id);
-      setShifts(prev => prev.filter(s => s.id !== id));
-      enqueueSnackbar('Смена успешно удалена', { variant: 'success' });
-    } catch (err) {
-      console.error('Error deleting shift:', err);
-      enqueueSnackbar('Ошибка при удалении смены', { variant: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
+ 
 
   const handleCloseModal = () => {
     setModalOpen(false);
     setEditingShift(null);
     setFormData({
-      staffId: '',
-      staffName: '',
-      date: format(new Date(), 'yyyy-MM-dd'),
-      startTime: '07:30',
-      endTime: '18:00',
-      shiftType: 'full',
-      status: 'scheduled',
-      notes: ''
-    });
+          userId: '',
+          staffId: '',
+          staffName: '',
+          date: format(new Date(), 'yyyy-MM-dd'),
+          startTime: '07:30',
+          endTime: '18:00',
+          type: 'full' as ShiftType,
+           status: 'scheduled' as ShiftStatus,
+          notes: ''
+        });
   };
 
   // Get week days
@@ -824,7 +839,7 @@ const StaffSchedule: React.FC = () => {
                     <InputLabel>Тип смены</InputLabel>
                     <Select
                       name="shiftType"
-                      value={formData.shiftType}
+                      value={formData.type}
                       onChange={handleSelectChange}
                       label="Тип смены"
                       required

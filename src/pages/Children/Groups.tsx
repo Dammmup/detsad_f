@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { Add, Edit, Delete, Group, Visibility, ExpandLess } from '@mui/icons-material';
 import { useGroups } from '../../components/context/GroupsContext';
-import childrenApi, { Child } from '../../services/children';
+import  { Child } from '../../services/children';
 // User импорт не нужен для детей
 import { useAuth } from '../../components/context/AuthContext';
 import { SelectChangeEvent } from '@mui/material/Select';
@@ -83,7 +83,7 @@ const Groups = () => {
             description: group.description || '',
             ageGroup: Object(group.ageGroup || ''),
             isActive: group.isActive ?? true,
-            teacher: typeof group.teacher === 'object' ? (group.teacher.id as any || group.teacher._id as any) : String(group.teacher || ''),
+            teacher: typeof group.teacher === 'object' && group.teacher !== null ? ((group.teacher as any).id || (group.teacher as any)._id || '') : String(group.teacher || ''),
             // isActive: group.isActive, // убрано, если не используется в UI
             // createdBy: group.createdBy, // убрано, если не используется в UI
             createdAt: group.createdAt,

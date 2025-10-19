@@ -2,8 +2,9 @@ import { BaseApiClient } from '../utils/api';
 import {
   LoginCredentials,
   OTPResponse,
-  AuthResponse,
+ AuthResponse,
   User,
+  UserRole,
 } from '../types/common';
 
 /**
@@ -26,14 +27,39 @@ class AuthApiClient extends BaseApiClient {
       }>('/auth/login', credentials);
       
       const authData: AuthResponse = {
-        user: {
-          id: response.user.id || response.user._id,
-          email: response.user.email,
-          fullName: response.user.fullName || response.user.name,
-          role: response.user.role || 'staff'
-        },
-        token: '' // Токен теперь хранится в httpOnly cookie
-      };
+              success: true,
+              user: {
+                _id: response.user._id || response.user.id || '',
+                id: response.user.id || response.user._id || '',
+                phone: response.user.phone || '',
+                fullName: response.user.fullName || response.user.name || '',
+                role: response.user.role || 'staff',
+                avatar: response.user.avatar,
+                isActive: response.user.isActive || response.user.active || false,
+                lastLogin: response.user.lastLogin,
+                createdAt: response.user.createdAt || new Date().toISOString(),
+                updatedAt: response.user.updatedAt || new Date().toISOString(),
+                uniqNumber: response.user.uniqNumber,
+                notes: response.user.notes,
+                active: response.user.active || response.user.isActive || false,
+                iin: response.user.iin,
+                groupId: response.user.groupId,
+                birthday: response.user.birthday,
+                photo: response.user.photo,
+                parentName: response.user.parentName,
+                parentPhone: response.user.parentPhone,
+                email: response.user.email,
+                initialPassword: response.user.initialPassword,
+                salary: response.user.salary,
+                salaryType: response.user.salaryType,
+                penaltyType: response.user.penaltyType,
+                penaltyAmount: response.user.penaltyAmount,
+                shiftRate: response.user.shiftRate,
+                staffId: response.user.staffId,
+                staffName: response.user.staffName
+              },
+              token: '' // Токен теперь хранится в httpOnly cookie
+            };
       
       // Сохраняем только пользователя, токен хранится в cookie
       this.saveAuthData(authData);
@@ -191,14 +217,39 @@ class AuthApiClient extends BaseApiClient {
     const mockToken = `mock-token-${Date.now()}-${Math.random().toString(36).substring(2)}`;
     
     const authData: AuthResponse = {
-      token: mockToken,
-      user: {
-        id: 'mock-user-1',
-        email: credentials.phone + '@example.com', // Используем телефон как основу для email в моке
-        fullName: 'Мок пользователь ' + credentials.phone,
-        role: 'staff'
-      }
-    };
+          success: true,
+          token: mockToken,
+          user: {
+            _id: 'mock-user-1',
+            id: 'mock-user-1',
+            phone: credentials.phone,
+            fullName: 'Мок пользователь ' + credentials.phone,
+            role: UserRole.staff,
+            avatar: '',
+            isActive: true,
+            lastLogin: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            uniqNumber: '',
+            notes: '',
+            active: true,
+            iin: '',
+            groupId: '',
+            birthday: '',
+            photo: '',
+            parentName: '',
+            parentPhone: '',
+            email: credentials.phone + '@example.com', // Используем телефон как основу для email в моке
+            initialPassword: '',
+            salary: 0,
+            salaryType: 'day',
+            penaltyType: 'fixed',
+            penaltyAmount: 0,
+            shiftRate: 0,
+            staffId: '',
+            staffName: ''
+          }
+        };
     
     this.saveAuthData(authData);
     

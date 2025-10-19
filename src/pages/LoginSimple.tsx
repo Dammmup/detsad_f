@@ -31,14 +31,16 @@ const Login: React.FC = () => {
 );
 
       const userData: User = {
-        id: res.data.user.id,
+        _id: res.data.user._id || res.data.user.id,
+        id: res.data.user.id || res.data.user._id,
         fullName: res.data.user.fullName,
         role: res.data.user.role,
         phone: phone,
         email: res.data.user.phone || phone,
-        active: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        isActive: res.data.user.isActive ?? true,
+        active: res.data.user.active ?? true,
+        createdAt: res.data.user.createdAt || new Date().toISOString(),
+        updatedAt: res.data.user.updatedAt || new Date().toISOString()
       };
       
       // Use AuthContext login method to properly update context

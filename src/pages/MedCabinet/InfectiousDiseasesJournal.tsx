@@ -75,7 +75,7 @@ export default function InfectiousDiseasesJournal() {
         childId: id,
         fio: child.fullName || '',
         birthdate: child.birthday || '',
-        group: typeof child.groupId === 'object' && child.groupId ? child.groupId.id || child.groupId._id || '' : child.groupId || '',
+        group: typeof child.groupId === 'object' && child.groupId ? (child.groupId as any).id || (child.groupId as any)._id || '' : child.groupId || '',
       }));
     }
   };

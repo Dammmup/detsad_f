@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
  Box,
-  Grid,
   Card,
   CardContent,
   Typography,
@@ -18,7 +17,6 @@ import {
   FormControl,
   Select,
   MenuItem,
-  InputLabel,
   Snackbar,
   Chip,
   Button
@@ -30,7 +28,6 @@ import {
   Close as CloseIcon,
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
-import axios from 'axios';
 import { updatePayroll, deletePayroll, Payroll, generatePayrollSheets } from '../../services/payroll';
 
 interface Props {
@@ -38,8 +35,8 @@ interface Props {
 }
 
 interface CurrentUser {
-  id: string;
- role: string;
+  id: string | undefined;
+  role: string;
 }
 
 interface PayrollRow {
@@ -90,7 +87,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           const userData = getCurrentUser();
           if (userData) {
             currentUserData = {
-              id: userData.id,
+              id: userData.id || userData._id,
               role: userData.role || 'staff'  // Устанавливаем значение по умолчанию
             };
             setCurrentUser(currentUserData);
@@ -105,7 +102,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         };
         
         // Если пользователь не администратор, он может видеть только свои данные
-        if (currentUserData && currentUserData.role !== 'admin') {
+        if (currentUserData && currentUserData.role !== 'admin' && currentUserData.id) {
           params.userId = currentUserData.id;
         } else if (userId) {
           // Администратор может фильтровать по userId
@@ -177,7 +174,6 @@ const handleSaveClick = async (rowId: string) => {
       // Рассчитываем поле "Итого" в реальном времени
       const accruals = editData.accruals !== undefined ? editData.accruals : originalRow.accruals || 0;
       const penalties = editData.penalties !== undefined ? editData.penalties : originalRow.penalties || 0;
-      const latePenaltyRate = editData.latePenaltyRate !== undefined ? editData.latePenaltyRate : originalRow.latePenaltyRate || 500;
       const status = editData.status && editData.status !== 'draft' ? editData.status : (originalRow.status && originalRow.status !== 'draft' ? originalRow.status : 'calculated');
       
       // Обновленный расчет итоговой суммы (без бонусов)
@@ -227,7 +223,7 @@ const handleInputChange = (field: string, value: any) => {
 };
 
 const handleDeleteClick = async (rowId: string) => {
-  if (!currentUser || currentUser.role !== 'admin') {
+  if (!currentUser || !currentUser.id || currentUser.role !== 'admin') {
     setSnackbarMessage('Только администратор может удалять расчетные листы');
     setSnackbarSeverity('error');
     setSnackbarOpen(true);
@@ -290,7 +286,7 @@ const handleExportToExcel = () => {
 };
 
 const handleGeneratePayrollSheets = async () => {
-  if (!currentUser || currentUser.role !== 'admin') {
+  if (!currentUser || !currentUser.id || currentUser.role !== 'admin') {
     setSnackbarMessage('Только администратор может генерировать расчетные листы');
     setSnackbarSeverity('error');
     setSnackbarOpen(true);
@@ -319,7 +315,7 @@ const handleGeneratePayrollSheets = async () => {
         const userData = getCurrentUser();
         if (userData) {
           currentUserData = {
-            id: userData.id,
+            id: userData.id || userData._id,
             role: userData.role || 'staff'  // Устанавливаем значение по умолчанию
           };
           setCurrentUser(currentUserData);
@@ -332,7 +328,7 @@ const handleGeneratePayrollSheets = async () => {
         month: currentMonth // используем месяц вместо startDate/endDate
       };
       
-      if (currentUserData && currentUserData.role !== 'admin') {
+      if (currentUserData && currentUserData.role !== 'admin' && currentUserData.id) {
         params.userId = currentUserData.id;
       } else if (userId) {
         // Администратор может фильтровать по userId
@@ -352,7 +348,6 @@ const handleGeneratePayrollSheets = async () => {
           // Рассчитываем "Итого" для каждой записи
           const accruals = p.accruals || p.baseSalary || 0;
           const penalties = p.penalties || 0;
-          const latePenaltyRate = p.latePenaltyRate || 500;
           const total = accruals - penalties; // Упрощенный расчет (без бонусов)
           return sum + total;
         }, 0)
@@ -487,7 +482,7 @@ const handleGeneratePayrollSheets = async () => {
               >
                 Экспорт
               </Button>
-              {currentUser?.role === 'admin' && (
+              {currentUser?.id && currentUser?.role === 'admin' && (
                 <Button
                   variant="contained"
                   color="success"
@@ -722,7 +717,6 @@ const handleGeneratePayrollSheets = async () => {
                           (() => {
                             const accruals = editData.accruals !== undefined ? editData.accruals : r.accruals || 0;
                             const penalties = editData.penalties !== undefined ? editData.penalties : r.penalties || 0;
-                            const latePenaltyRate = editData.latePenaltyRate !== undefined ? editData.latePenaltyRate : r.latePenaltyRate || 500;
                             
                             const total = accruals - penalties;
                             return total?.toLocaleString() || '0';

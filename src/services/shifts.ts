@@ -1,6 +1,6 @@
 
 import { BaseCrudApiClient, apiCache } from '../utils/api';
-import { Shift, ShiftFormData, ShiftFilters, ID } from '../types/common';
+import { Shift, ShiftFormData, ShiftFilters, ID, ShiftStatus } from '../types/common';
 
 /**
  * API клиент для работы со сменами
@@ -44,15 +44,18 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
    * Создание смены
    */
   async create(shiftData: ShiftFormData): Promise<Shift> {
-    const shift = await super.create({
-      staffId: shiftData.staffId,
-      date: shiftData.date,
-      startTime: shiftData.startTime,
-      endTime: shiftData.endTime,
-      type: shiftData.type,
-      status: 'scheduled',
-      notes: shiftData.notes
-    });
+      const shift = await super.create({
+        userId: shiftData.userId,
+        staffId: shiftData.staffId,
+        staffName: shiftData.staffName,
+        date: shiftData.date,
+        startTime: shiftData.startTime,
+        endTime: shiftData.endTime,
+        breakTime: shiftData.breakTime,
+        type: shiftData.type,
+        status: shiftData.status || ShiftStatus.scheduled,
+        notes: shiftData.notes
+      });
 
     this.clearCache();
     return shift;

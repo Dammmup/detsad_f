@@ -52,6 +52,7 @@ import MantouxJournal from '../pages/MedCabinet/MantouxJournal';
 import OrganolepticJournalPage from '../pages/MedCabinet/OrganolepticJournalPage';
 import SomaticJournal from '../pages/MedCabinet/SomaticJournal';
 import ReportsRent from './reports/ReportsRent';
+import ChildPayments from '../pages/Children/ChildPayments';
 
 interface SimpleLayoutProps {
   children?: React.ReactNode;
@@ -133,6 +134,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path="children" element={<Children />} />
             <Route path="children/attendance" element={<WeeklyAttendance />} />
             <Route path="children/reports" element={<ChildrenReports />} />
+            <Route path='children/payments' element={<ChildPayments/>}/>
             {/* Сотрудники */}
             <Route path="staff" element={<Staff />} />
             <Route path="staff/schedule" element={<StaffSchedule />} />

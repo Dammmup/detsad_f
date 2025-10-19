@@ -13,8 +13,8 @@ export const MAX_RETRIES = 3;
 /**
  * Функция задержки для предотвращения rate limiting
  */
-export const delay: DelayFunction = (ms = RETRY_DELAY) => 
-  new Promise(resolve => setTimeout(resolve, ms));
+export const delay: DelayFunction = (ms = RETRY_DELAY) =>
+  new Promise<void>(resolve => setTimeout(resolve, ms));
 
 /**
  * Обработчик API ошибок
@@ -173,7 +173,16 @@ export class BaseApiClient {
    * Обработка ошибок
    */
   private handleError(error: any, context: string): ApiError {
-    return handleApiError(error, context);
+    try {
+      handleApiError(error, context);
+    } catch (apiError) {
+      return apiError as ApiError;
+    }
+    // Если handleApiError не бросил ошибку, создаем свою
+    const errorObj = new Error(`Error ${context}: ${error.message || 'Неизвестная ошибка'}`) as ApiError;
+    errorObj.status = error.response?.status;
+    errorObj.data = error.response?.data;
+    return errorObj;
   }
 
   /**

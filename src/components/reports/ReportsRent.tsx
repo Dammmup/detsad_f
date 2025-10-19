@@ -40,7 +40,7 @@ interface Props {
 }
 
 interface CurrentUser {
-  id: string;
+  id?: string;
   role: string;
 }
 

@@ -4,6 +4,7 @@ import {
   Alert, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent
 } from '@mui/material';
 import { createUser, updateUser } from '../services/users';
+import childrenApi from '../services/children';
 import { getGroups } from '../services/groups';
 import { Group, User } from '../types/common';
 
@@ -42,7 +43,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
           fullName: child.fullName || '',
           phone: child.phone || '',
           iin: child.iin || '',
-          groupId: child.groupId || '',
+          groupId: typeof child.groupId === 'object' ? (child.groupId as Group).id || (child.groupId as string) : child.groupId || '',
           parentName: child.parentName || '',
           parentPhone: child.parentPhone || '',
           birthday: child.birthday || '',
@@ -106,7 +107,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
           notes: form.notes || '',
           active: form.active !== false,
         };
-        await createUser(userData);
+                await childrenApi.create(userData);
       }
       
       onSaved();
@@ -202,7 +203,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
           <InputLabel>Группа</InputLabel>
           <Select
             name="groupId"
-            value={(typeof form.groupId === 'object' && form.groupId ? form.groupId.id || form.groupId._id : form.groupId) || ''}
+            value={typeof form.groupId === 'object' ? (form.groupId as Group)?.id || (form.groupId as string) : form.groupId || ''}
             onChange={handleSelectChange}
             label="Группа"
             variant="outlined"

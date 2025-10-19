@@ -36,6 +36,7 @@ const sidebarStructure: SidebarItem[] = [
       { id: 'children-list', label: 'Список детей', link: '/app/children', icon: <PeopleIcon /> },
       { id: 'children-groups', label: 'Группы', link: '/app/groups', icon: <GroupIcon /> },
       { id: 'children-attendance', label: 'Посещаемость', link: '/app/children/attendance', icon: <CalendarViewWeekIcon /> },
+      { id: 'children-payments', label: 'Оплаты за посещение', link: '/app/children/payments', icon: <AssessmentIcon /> },
     ],
   },
   {

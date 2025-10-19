@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { CalendarToday, AccessTime } from '@mui/icons-material';
 import { useAuth } from './context/AuthContext';
-import { getStaffShifts, getShifts } from '../services/shifts';
+import { getStaffShifts } from '../services/shifts';
 // import { formatTime } from '../utils/format';
 
 interface StaffScheduleWidgetProps {
@@ -29,8 +29,8 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = ({ onScheduleCha
   // Загрузка графика работы
   useEffect(() => {
     const fetchSchedule = async () => {
-      if (!currentUser) return;
-
+      if (!currentUser || !currentUser.id) return;
+  
       setLoading(true);
       setError(null);
       try {

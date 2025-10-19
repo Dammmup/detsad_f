@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, CircularProgress, Snackbar, Alert } from '@mui/material';
 import { useAuth } from './context/AuthContext';
-import shiftsApi, { getShifts, getStaffShifts, checkIn, checkOut } from '../services/shifts';
+import {  getStaffShifts, checkIn, checkOut } from '../services/shifts';
 
 interface StaffAttendanceButtonProps {
   onStatusChange?: () => void; // Callback для обновления статуса
@@ -18,7 +18,7 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
   // Загрузка статуса посещаемости для текущего пользователя
   useEffect(() => {
     const fetchShiftStatus = async () => {
-      if (!currentUser) return;
+      if (!currentUser || !currentUser.id) return;
       try {
         const today = new Date().toISOString().split('T')[0];
         const shifts = await getStaffShifts({ staffId: currentUser.id, startDate: today, endDate: today });
@@ -43,7 +43,7 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
   }, [currentUser]);
 
   const handleCheckIn = async () => {
-    if (!currentUser) return;
+    if (!currentUser || !currentUser.id) return;
     setLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -55,7 +55,7 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
         }
         return s.staffId === currentUser.id;
       });
-      if (myShift) {
+      if (myShift && myShift.id) {
         await checkIn(myShift.id);
         setStatus('in_progress');
         setSnackbarMessage('Отметка о приходе успешно сохранена');
@@ -78,7 +78,7 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
   };
 
   const handleCheckOut = async () => {
-    if (!currentUser) return;
+    if (!currentUser || !currentUser.id) return;
     setLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -90,7 +90,7 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
         }
         return s.staffId === currentUser.id;
       });
-      if (myShift) {
+      if (myShift && myShift.id) {
         await checkOut(myShift.id);
         setStatus('completed');
         setSnackbarMessage('Отметка об уходе успешно сохранена');

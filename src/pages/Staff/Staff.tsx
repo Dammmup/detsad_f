@@ -10,7 +10,7 @@ import {
   Edit, Delete, Add, Search, Email, Phone, Badge, 
  Person
 } from '@mui/icons-material';
-import { User as StaffMember } from '../../types/common';
+import { User as StaffMember, UserRole } from '../../types/common';
 import { getGroups } from '../../services/groups';
 import { useAuth } from '../../components/context/AuthContext';
 import ExportMenuButton from '../../components/ExportMenuButton';
@@ -62,13 +62,15 @@ const getRoleByTranslation = (translation: string): string => {
 };
 
 const defaultForm: StaffMember = {
-  id: '',
-  fullName: '',
-  role: 'staff',
+  _id: '',
+ id: '',
   phone: '',
-  email: '',
+  fullName: '',
+  role: 'staff' as UserRole,
+  isActive: true,
   active: true,
-  iin: '',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
   salaryType: 'day',
   salary: 0,
   penaltyType: 'fixed',
