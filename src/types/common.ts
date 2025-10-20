@@ -283,7 +283,7 @@ export interface Shift {
   _id: ID;
   id?: ID;
   userId: string;
- staffId?: string; // Добавляем staffId как альтернативное поле для userId
+  staffId?: string; // Добавляем staffId как альтернативное поле для userId
   staffName?: string; // Добавляем staffName для отображения
   date: string;
   startTime: string;
@@ -293,7 +293,8 @@ export interface Shift {
   type: ShiftType;
   notes?: string;
   createdAt: string;
- updatedAt: string;
+  updatedAt: string;
+  alternativeStaffId?: string; // Альтернативный сотрудник для отметки посещаемости
 }
 
 export interface ShiftFormData {
@@ -303,10 +304,11 @@ export interface ShiftFormData {
   date: string;
   startTime: string;
   endTime: string;
-  breakTime?: number;
+ breakTime?: number;
   type: ShiftType;
   notes?: string;
- status?: ShiftStatus;
+  status?: ShiftStatus;
+  alternativeStaffId?: string; // Альтернативный сотрудник для отметки посещаемости
 }
 
 export interface ShiftFilters {

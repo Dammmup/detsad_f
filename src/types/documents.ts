@@ -11,7 +11,7 @@ export type TemplateCategory = 'staff' | 'children' | 'financial' | 'administrat
 
 // Документ
 export interface Document {
-  id: string;
+  id?: string; // для совместимости с фронтендом
   _id?: string; // для совместимости с MongoDB
   title: string;
   description?: string;
@@ -20,20 +20,20 @@ export interface Document {
   fileName: string;
   fileSize: number;
   filePath: string;
-  uploadDate: string; // ISODateString
-  uploader: {
-    id: string;
-    fullName: string;
-    email: string;
-  };
+  uploadDate?: string; // ISODateString
+  uploader?: {
+      id: string;
+      fullName: string;
+      email: string;
+    };
   relatedId?: string;
   relatedType?: 'staff' | 'child' | 'group';
   status: DocumentStatus;
   tags: string[];
   version: string;
   expiryDate?: string; // ISODateString
-  createdAt: string; // ISODateString
-  updatedAt: string; // ISODateString
+  createdAt?: string; // ISODateString
+    updatedAt?: string; // ISODateString
 }
 
 // Шаблон документа
@@ -51,8 +51,8 @@ export interface DocumentTemplate {
   isActive: boolean;
   tags: string[];
   usageCount: number;
-  createdAt: string; // ISODateString
-  updatedAt: string; // ISODateString
+  createdAt?: string; // ISODateString
+    updatedAt?: string; // ISODateString
 }
 
 // ===== ПАРАМЕТРЫ API =====

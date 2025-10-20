@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Paper, Typography, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, FormControl, InputLabel, Select, MenuItem, Grid, IconButton,
@@ -14,15 +13,16 @@ import {
 } from '@mui/icons-material';
 import {
   getReports, deleteReport, exportReport, generateCustomReport,
-  exportSalaryReport, exportChildrenReport, exportAttendanceReport, sendReportByEmail, scheduleReport,
+  exportSalaryReport, exportChildrenReport, exportAttendanceReport, sendReportByEmail,
+  getChildrenSummary, getAttendanceSummary,
   Report
 } from '../services/reports';
 import ReportsSalary from '../components/reports/ReportsSalary';
 import ReportsRent from '../components/reports/ReportsRent';
+import ReportsChildren from '../components/reports/ReportsChildren';
+import { useAuth } from '../components/context/AuthContext';
 import { getUsers } from '../services/users';
-import { getGroups } from '../services/groups';
 import { ID, UserRole } from '../types/common';
-import Analytics from './Analytics';
 
 // Интерфейс для сотрудника
 interface StaffMember {
@@ -44,17 +44,11 @@ interface ReportFilters {
   search?: string;
 }
 
-// Тип для информации о пользователе
-interface CurrentUser {
-  id: string;
-  role: string;
-}
 
 const Reports: React.FC = () => {
   // Состояния для данных
  const [reports, setReports] = useState<Report[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [groups, setGroups] = useState<any[]>([]);
   
   // Состояния для UI
   const [loading, setLoading] = useState<boolean>(true);
@@ -64,7 +58,7 @@ const Reports: React.FC = () => {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const { user: authUser } = useAuth();
   
   // Новые состояния для расширенного экспорта
   const [exportType, setExportType] = useState<'salary' | 'children' | 'attendance' | 'schedule'>('salary');
@@ -75,11 +69,12 @@ const Reports: React.FC = () => {
   const [scheduleFrequency, setScheduleFrequency] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
   const [scheduleRecipients, setScheduleRecipients] = useState<string>('');
   
-  // Состояния для фильтров
-  const [startDate, setStartDate] = useState<Date>(new Date());
-  const [endDate, setEndDate] = useState<Date>(new Date());
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+  // Недостающие переменные
+  const startDate = useRef<Date>(new Date());
+  const endDate = useRef<Date>(new Date());
+  const selectedUserId = useRef<string>('');
+  const selectedGroupId = useRef<string>('');
+
   const [reportType, setReportType] = useState<string>('attendance');
   const [reportFormat, setReportFormat] = useState<'pdf' | 'excel' | 'csv'>('pdf');
   const [reportTitle, setReportTitle] = useState<string>('');
@@ -97,8 +92,12 @@ const Reports: React.FC = () => {
   
   // Состояния для сортировки и поиска
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [sortField, setSortField] = useState<string>('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortField] = useState<string>('createdAt');
+  const [sortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // Состояния для сводок
+  const [childrenSummary, setChildrenSummary] = useState<any>(null);
+  const [attendanceSummary, setAttendanceSummary] = useState<any>(null);
 
   // Загрузка данных при монтировании компонента
   useEffect(() => {
@@ -109,11 +108,6 @@ const Reports: React.FC = () => {
           credentials: 'include'
         });
         if (response.ok) {
-          const userData = await response.json();
-          setCurrentUser({
-            id: userData.data._id || userData.data.id,
-            role: userData.data.role
-          });
         }
       } catch (err) {
         console.error('Ошибка загрузки информации о пользователе:', err);
@@ -124,7 +118,7 @@ const Reports: React.FC = () => {
     fetchData();
     
     // Устанавливаем начальное название отчета
-    setReportTitle(`Отчет за ${startDate.toLocaleDateString('ru-RU')} - ${endDate.toLocaleDateString('ru-RU')}`);
+    setReportTitle(`Отчет за ${new Date().toLocaleDateString('ru-RU')} - ${new Date().toLocaleDateString('ru-RU')}`);
   }, []);
 
   // Загрузка всех необходимых данных
@@ -145,9 +139,18 @@ const Reports: React.FC = () => {
         role: user.role
       })));
       
-      // Получение списка групп
-      const groupsData = await getGroups();
-      setGroups(groupsData);
+      // Получение сводок
+      
+      const [childrenSumm, attendanceSumm] = await Promise.all([
+        getChildrenSummary({}),
+        getAttendanceSummary({
+          startDate: startDate.current.toISOString().split('T')[0],
+          endDate: endDate.current.toISOString().split('T')[0]
+        })
+      ]);
+      
+      setChildrenSummary(childrenSumm);
+      setAttendanceSummary(attendanceSumm);
     } catch (err: any) {
       setError(err?.message || 'Ошибка загрузки данных');
     } finally {
@@ -155,19 +158,13 @@ const Reports: React.FC = () => {
     }
   };
 
-  const navigate = useNavigate();
   
   // Обработчик изменения вкладки
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
-    // Если переключаемся на вкладку "Аналитика", переходим на отдельную страницу аналитики
-    // Обновляем логику для учета вкладки "Аренда" у администраторов
-    if ((currentUser?.role === 'admin' && newValue === 3) || (currentUser?.role !== 'admin' && newValue === 2)) {
-      navigate('/reports/analytics');
-    }
- };
+  };
 
-  // Обработчик экспорта отчета
+ // Обработчик экспорта отчета
   const handleExport = async (reportId: string, format: 'pdf' | 'excel' | 'csv') => {
     setLoading(true);
     
@@ -188,15 +185,15 @@ const Reports: React.FC = () => {
     
     try {
       // Форматируем даты для API
-      const formattedStartDate = startDate.toISOString().split('T')[0];
-      const formattedEndDate = endDate.toISOString().split('T')[0];
+      const formattedStartDate = startDate.current.toISOString().split('T')[0];
+      const formattedEndDate = endDate.current.toISOString().split('T')[0];
       
       // Создаем отчет
       const newReport = await generateCustomReport({
         type: reportType as any,
         startDate: formattedStartDate,
         endDate: formattedEndDate,
-        userId: selectedUserId || undefined,
+        userId: selectedUserId.current || undefined,
         format: reportFormat,
         
       });
@@ -243,7 +240,7 @@ const Reports: React.FC = () => {
       e.target.value === 'schedule' ? 'расписанию' :
       e.target.value === 'staff' ? 'персоналу' : 'пользовательский';
     
-    setReportTitle(`Отчет по ${typeText} за ${startDate.toLocaleDateString('ru-RU')} - ${endDate.toLocaleDateString('ru-RU')}`);
+    setReportTitle(`Отчет по ${typeText} за ${startDate.current.toLocaleDateString('ru-RU')} - ${endDate.current.toLocaleDateString('ru-RU')}`);
   };
 
 
@@ -254,9 +251,9 @@ const Reports: React.FC = () => {
     setLoading(true);
     try {
       const blob = await exportSalaryReport({
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
-        userId: selectedUserId || undefined,
+        startDate: startDate.current.toISOString().split('T')[0],
+        endDate: endDate.current.toISOString().split('T')[0],
+        userId: selectedUserId.current || undefined,
         format: exportFormat,
         includeDeductions: true,
         includeBonus: true
@@ -266,7 +263,7 @@ const Reports: React.FC = () => {
       const url = window.URL.createObjectURL(blob as Blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `salary_report_${startDate.toISOString().split('T')[0]}.${exportFormat === 'excel' ? 'xlsx' : exportFormat}`;
+      link.download = `salary_report_${startDate.current.toISOString().split('T')[0]}.${exportFormat === 'excel' ? 'xlsx' : exportFormat}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -286,20 +283,7 @@ const Reports: React.FC = () => {
     setLoading(true);
     try {
       // В реальном приложении здесь будет запрос к API
-      const response = await scheduleReport({
-        reportType: exportType,
-        frequency: scheduleFrequency,
-        recipients: scheduleRecipients.split(',').map(email => email.trim()),
-        format: exportFormat,
-        reportParams: {
-          startDate: startDate.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
-          userId: selectedUserId || undefined
-        }
-      });
-      
-      alert(`Отчет по ${exportType} успешно запланирован!`);
-      setScheduleDialogOpen(false);
+   
     } catch (err: any) {
       setError(err?.message || 'Ошибка планирования отчета');
     } finally {
@@ -323,9 +307,9 @@ const Reports: React.FC = () => {
         message: emailMessage,
         format: exportFormat,
         reportParams: {
-          startDate: startDate.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
-          userId: selectedUserId || undefined
+          startDate: startDate.current.toISOString().split('T')[0],
+          endDate: endDate.current.toISOString().split('T')[0],
+          userId: selectedUserId.current || undefined
         }
       });
       
@@ -362,7 +346,7 @@ const Reports: React.FC = () => {
     setLoading(true);
     try {
       const blob = await exportChildrenReport({
-        groupId: selectedGroupId || undefined,
+        groupId: selectedGroupId.current || undefined,
         format: exportFormat,
         includeParentInfo: true,
         includeHealthInfo: true
@@ -392,10 +376,10 @@ const Reports: React.FC = () => {
     setLoading(true);
     try {
       const blob = await exportAttendanceReport({
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
-        userId: selectedUserId || undefined,
-        groupId: selectedGroupId || undefined,
+        startDate: startDate.current.toISOString().split('T')[0],
+        endDate: endDate.current.toISOString().split('T')[0],
+        userId: selectedUserId.current || undefined,
+        groupId: selectedGroupId.current || undefined,
         format: exportFormat,
         includeStatistics: true,
         includeCharts: true
@@ -405,7 +389,7 @@ const Reports: React.FC = () => {
       const url = window.URL.createObjectURL(blob as Blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `attendance_report_${startDate.toISOString().split('T')[0]}.${exportFormat === 'excel' ? 'xlsx' : exportFormat}`;
+      link.download = `attendance_report_${startDate.current.toISOString().split('T')[0]}.${exportFormat === 'excel' ? 'xlsx' : exportFormat}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -522,27 +506,19 @@ const Reports: React.FC = () => {
     setSearchTerm('');
   };
 
-  // Обработчик сортировки
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
-    }
-  };
+
 
   return (
     <Paper sx={{ p: 3, m: 2 }}>
       {/* Заголовок и кнопки управления */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h5" display="flex" alignItems="center">
-          <Assessment sx={{ mr: 1 }} /> Отчеты и аналитика
+          <Assessment sx={{ mr: 1 }} /> Отчеты
         </Typography>
         
         <Box>
           {/* Показываем кнопку "Создать отчет" только для администраторов */}
-          {currentUser?.role === 'admin' && (
+          {authUser?.role === 'admin' && (
             <Button
               variant="contained"
               color="primary"
@@ -554,7 +530,7 @@ const Reports: React.FC = () => {
             </Button>
           )}
           <Button
-            variant="outlined"
+            variant="contained"
             color="primary"
             startIcon={<Download />}
             onClick={() => setExportDialogOpen(true)}
@@ -649,12 +625,11 @@ const Reports: React.FC = () => {
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
           <Button
             variant="contained"
+            color="primary"
             startIcon={<AttachMoney />}
             onClick={() => { setExportType('salary'); setExportDialogOpen(true); }}
-            sx={{ 
-              bgcolor: 'rgba(255,255,0.2)', 
-              '&:hover': { bgcolor: 'rgba(255,255,0.3)' },
-              backdropFilter: 'blur(10px)'
+            sx={{
+              '&:hover': { bgcolor: 'primary.dark' }
             }}
           >
             Экспорт зарплат
@@ -662,12 +637,11 @@ const Reports: React.FC = () => {
           
           <Button
             variant="contained"
+            color="primary"
             startIcon={<ChildCare />}
             onClick={() => { setExportType('children'); setExportDialogOpen(true); }}
-            sx={{ 
-              bgcolor: 'rgba(255,0.2)', 
-              '&:hover': { bgcolor: 'rgba(255,0.3)' },
-              backdropFilter: 'blur(10px)'
+            sx={{
+              '&:hover': { bgcolor: 'primary.dark' }
             }}
           >
             Списки детей
@@ -675,12 +649,11 @@ const Reports: React.FC = () => {
           
           <Button
             variant="contained"
+            color="primary"
             startIcon={<People />}
             onClick={() => { setExportType('attendance'); setExportDialogOpen(true); }}
-            sx={{ 
-              bgcolor: 'rgba(255,0.2)', 
-              '&:hover': { bgcolor: 'rgba(255,0.3)' },
-              backdropFilter: 'blur(10px)'
+            sx={{
+              '&:hover': { bgcolor: 'primary.dark' }
             }}
           >
             Посещаемость
@@ -688,12 +661,11 @@ const Reports: React.FC = () => {
           
           <Button
             variant="contained"
+            color="primary"
             startIcon={<BarChart />}
             onClick={() => { setExportType('schedule'); setExportDialogOpen(true); }}
-            sx={{ 
-              bgcolor: 'rgba(255,255,0.2)', 
-              '&:hover': { bgcolor: 'rgba(255,255,0.3)' },
-              backdropFilter: 'blur(10px)'
+            sx={{
+              '&:hover': { bgcolor: 'primary.dark' }
             }}
           >
             Расписание
@@ -701,12 +673,11 @@ const Reports: React.FC = () => {
           
           <Button
             variant="contained"
+            color="primary"
             startIcon={<Email />}
             onClick={() => setEmailDialogOpen(true)}
-            sx={{ 
-              bgcolor: 'rgba(255,0.2)', 
-              '&:hover': { bgcolor: 'rgba(255,0.3)' },
-              backdropFilter: 'blur(10px)'
+            sx={{
+              '&:hover': { bgcolor: 'primary.dark' }
             }}
           >
             Отправить на почту
@@ -714,12 +685,11 @@ const Reports: React.FC = () => {
           
           <Button
             variant="contained"
+            color="primary"
             startIcon={<Schedule />}
             onClick={() => setScheduleDialogOpen(true)}
             sx={{
-              bgcolor: 'rgba(255,255,0.2)',
-              '&:hover': { bgcolor: 'rgba(255,0.3)' },
-              backdropFilter: 'blur(10px)'
+              '&:hover': { bgcolor: 'primary.dark' }
             }}
           >
             Запланировать
@@ -735,9 +705,9 @@ const Reports: React.FC = () => {
       <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 2 }}>
         <Tab label="Отчеты" />
         <Tab label="Зарплаты" />
+        <Tab label="Дети" />
         {/* Показываем вкладку "Аренда" только для администраторов */}
-        {currentUser?.role === 'admin' && <Tab label="Аренда" />}
-        <Tab label="Аналитика" />
+        {authUser?.role === 'admin' && <Tab label="Аренда" />}
       </Tabs>
 
       {/* Содержимое вкладок */}
@@ -745,65 +715,301 @@ const Reports: React.FC = () => {
         <Box>
           <Typography variant="h6" gutterBottom>Мои отчеты</Typography>
           
+          {/* Статистика отчетов */}
+          <Card sx={{ mb: 3, p: 3, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
+            <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>Статистика отчетов</Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
+              <Box>
+                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>{reports.length}</Typography>
+                <Typography variant="body2">Всего отчетов</Typography>
+              </Box>
+              <Box>
+                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>{reports.filter(r => r.status === 'completed').length}</Typography>
+                <Typography variant="body2">Завершенных</Typography>
+              </Box>
+              <Box>
+                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>{reports.filter(r => r.status === 'scheduled').length}</Typography>
+                <Typography variant="body2">Запланированных</Typography>
+              </Box>
+              <Box>
+                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>{reports.filter(r => r.status === 'generating').length}</Typography>
+                <Typography variant="body2">Генерируемых</Typography>
+              </Box>
+            </Box>
+          </Card>
+          
+          {/* <Grid container spacing={3} sx={{ mb: 3 }}> */}
+            <Grid item xs={12} md={6}>
+              <Card sx={{ p: 2, height: '100%' }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2, color: 'primary.main' }}>
+                  Сводка по детям
+                </Typography>
+                
+                {childrenSummary ? (
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
+                        <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                          {childrenSummary.totalChildren}
+                        </Typography>
+                        <Typography variant="body2">Всего детей</Typography>
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={6}>
+                      <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
+                        <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
+                          {Object.keys(childrenSummary.byGroup).length}
+                        </Typography>
+                        <Typography variant="body2">Групп</Typography>
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 1 }}>По группам:</Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                        {Object.entries(childrenSummary.byGroup).map(([groupName, count]) => (
+                          <Chip
+                            key={groupName}
+                            label={`${groupName}: ${count}`}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 1 }}>По возрасту:</Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                        {Object.entries(childrenSummary.ageDistribution).map(([ageGroup, count]) => (
+                          <Chip
+                            key={ageGroup}
+                            label={`${ageGroup} лет: ${count}`}
+                            size="small"
+                            color="secondary"
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    </Grid>
+                  </Grid>
+                ) : (
+                  <CircularProgress size={24} />
+                )}
+              </Card>
+            </Grid>
+            
+            {/* Сводка по посещаемости */}
+            <Grid item xs={12} md={6}>
+              <Card sx={{ p: 2, height: '100%' }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2, color: 'secondary.main' }}>
+                  Сводка по посещаемости
+                </Typography>
+                
+                {attendanceSummary ? (
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
+                        <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                          {attendanceSummary.attendanceRate}%
+                         </Typography>
+                        <Typography variant="body2">Средняя посещаемость</Typography>
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={6}>
+                      <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
+                        <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
+                          {attendanceSummary.totalRecords}
+                        </Typography>
+                        <Typography variant="body2">Всего записей</Typography>
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 1 }}>По статусам:</Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                        {Object.entries(attendanceSummary.byStatus).map(([status, count]) => (
+                          <Chip
+                            key={status}
+                            label={`${status}: ${count}`}
+                            size="small"
+                            color={
+                              status === 'present' ? 'success' :
+                              status === 'absent' ? 'error' :
+                              status === 'late' ? 'warning' : 'default'
+                            }
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 1 }}>По группам:</Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1, maxHeight: 100, overflow: 'auto' }}>
+                        {Object.entries(attendanceSummary.byGroup).map(([groupName, count]) => (
+                          <Chip
+                            key={groupName}
+                            label={`${groupName}: ${count}`}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    </Grid>
+                  </Grid>
+                ) : (
+                  <CircularProgress size={24} />
+                )}
+              </Card>
+            </Grid>
+          
+          {/* Фильтры для отчетов */}
+          <Card sx={{ mb: 3, p: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+              <TextField
+                label="Поиск отчетов"
+                variant="outlined"
+                size="small"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                sx={{ minWidth: 200 }}
+              />
+              
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Тип</InputLabel>
+                <Select
+                  value={filters.type || ''}
+                  onChange={(e) => handleFilterChange('type', e.target.value)}
+                  label="Тип"
+                >
+                  <MenuItem value="">Все типы</MenuItem>
+                  <MenuItem value="attendance">Посещаемость</MenuItem>
+                  <MenuItem value="schedule">Расписание</MenuItem>
+                  <MenuItem value="staff">Персонал</MenuItem>
+                  <MenuItem value="salary">Зарплаты</MenuItem>
+                  <MenuItem value="children">Дети</MenuItem>
+                  <MenuItem value="custom">Пользовательский</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Статус</InputLabel>
+                <Select
+                  value={filters.status || ''}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  label="Статус"
+                >
+                  <MenuItem value="">Все статусы</MenuItem>
+                  <MenuItem value="completed">Завершен</MenuItem>
+                  <MenuItem value="scheduled">Запланирован</MenuItem>
+                  <MenuItem value="generating">Генерируется</MenuItem>
+                  <MenuItem value="failed">Ошибка</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <Button
+                variant="outlined"
+                startIcon={<Refresh />}
+                onClick={resetFilters}
+              >
+                Сбросить
+              </Button>
+            </Box>
+          </Card>
+          
+          {/* Список отчетов */}
           {reports.length === 0 ? (
             <Alert severity="info">У вас пока нет сохраненных отчетов</Alert>
           ) : (
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Название</TableCell>
-                  <TableCell>Тип</TableCell>
-                  <TableCell>Период</TableCell>
-                  <TableCell>Создан</TableCell>
-                  <TableCell>Формат</TableCell>
-                  <TableCell>Действия</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedReports.map((report) => (
-                  <TableRow key={report.id}>
-                    <TableCell>{report.title}</TableCell>
-                    <TableCell>
-                      {getReportTypeText(report.type)}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(report.dateRange.startDate).toLocaleDateString('ru-RU')} - 
-                      {new Date(report.dateRange.endDate).toLocaleDateString('ru-RU')}
-                    </TableCell>
-                    <TableCell>
-                      {report.createdAt ? new Date(report.createdAt).toLocaleDateString('ru-RU') : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={report.format?.toUpperCase() || 'PDF'} 
-                        size="small"
-                        color={report.format === 'pdf' ? 'error' : report.format === 'excel' ? 'success' : 'primary'}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip title="Скачать">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleExport(report.id || '', report.format || 'pdf')}
-                        >
-                          {report.format === 'pdf' ? <PictureAsPdf fontSize="small" /> : 
-                           report.format === 'excel' ? <TableChart fontSize="small" /> : 
-                           <InsertDriveFile fontSize="small" />}
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Удалить">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleDeleteReport(report.id || '')}
-                        >
-                          <Delete fontSize="small" color="error" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
+            <Card>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Название</TableCell>
+                    <TableCell>Тип</TableCell>
+                    <TableCell>Период</TableCell>
+                    <TableCell>Создан</TableCell>
+                    <TableCell>Формат</TableCell>
+                    <TableCell>Статус</TableCell>
+                    <TableCell>Действия</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHead>
+                <TableBody>
+                  {sortedReports.map((report) => (
+                    <TableRow key={report.id}>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {report.type === 'salary' && <AttachMoney fontSize="small" sx={{ color: 'success.main' }} />}
+                          {report.type === 'children' && <ChildCare fontSize="small" sx={{ color: 'primary.main' }} />}
+                          {report.type === 'attendance' && <People fontSize="small" sx={{ color: 'info.main' }} />}
+                          {report.type === 'schedule' && <Schedule fontSize="small" sx={{ color: 'warning.main' }} />}
+                          <Typography variant="body2">{report.title}</Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        {getReportTypeText(report.type)}
+                      </TableCell>
+                      <TableCell>
+                        {report.dateRange?.startDate && report.dateRange?.endDate
+                          ? `${new Date(report.dateRange.startDate).toLocaleDateString('ru-RU')} - ${new Date(report.dateRange.endDate).toLocaleDateString('ru-RU')}`
+                          : 'Не указан'}
+                      </TableCell>
+                      <TableCell>
+                        {report.createdAt ? new Date(report.createdAt).toLocaleDateString('ru-RU') : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={report.format?.toUpperCase() || 'PDF'}
+                          size="small"
+                          color={report.format === 'pdf' ? 'error' : report.format === 'excel' ? 'success' : 'primary'}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={
+                            report.status === 'completed' ? 'Завершен' :
+                            report.status === 'scheduled' ? 'Запланирован' :
+                            report.status === 'generating' ? 'Генерируется' : 'Ошибка'
+                          }
+                          size="small"
+                          color={
+                            report.status === 'completed' ? 'success' :
+                            report.status === 'scheduled' ? 'info' :
+                            report.status === 'generating' ? 'warning' : 'error'
+                          }
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title="Скачать">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleExport(report.id || '', report.format || 'pdf')}
+                          >
+                            {report.format === 'pdf' ? <PictureAsPdf fontSize="small" /> :
+                             report.format === 'excel' ? <TableChart fontSize="small" /> :
+                             <InsertDriveFile fontSize="small" />}
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Удалить">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteReport(report.id || '')}
+                          >
+                            <Delete fontSize="small" color="error" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
           )}
         </Box>
       )}
@@ -812,40 +1018,30 @@ const Reports: React.FC = () => {
         <Box>
           <Typography variant="h6" gutterBottom>Отчеты по зарплатам</Typography>
           <ReportsSalary
-            userId={selectedUserId || undefined}
+            userId={selectedUserId.current || undefined}
+          />
+        </Box>
+      )}
+
+      {tabValue === 2 && (
+        <Box>
+          <Typography variant="h6" gutterBottom>Отчеты по детям</Typography>
+          <ReportsChildren
+            userId={selectedUserId.current || undefined}
           />
         </Box>
       )}
 
       {/* Вкладка "Аренда" для администраторов */}
-      {tabValue === 2 && currentUser?.role === 'admin' && (
+      {authUser?.role === 'admin' && tabValue === 3 && (
         <Box>
           <Typography variant="h6" gutterBottom>Отчеты по аренде</Typography>
           <ReportsRent
-            userId={selectedUserId || undefined}
+            userId={selectedUserId.current || undefined}
           />
         </Box>
       )}
 
-      {/* Обновляем вкладку "Аналитика" на индекс 3, если показываем вкладку "Аренда" */}
-      {currentUser?.role === 'admin' && tabValue === 3 && (
-        <Box>
-          <Typography variant="h6" gutterBottom>Аналитика</Typography>
-          <Analytics
-           
-          />
-        </Box>
-      )}
-
-      {/* Если пользователь не администратор, вкладка "Аналитика" остается на индексе 2 */}
-      {currentUser?.role !== 'admin' && tabValue === 2 && (
-        <Box>
-          <Typography variant="h6" gutterBottom>Аналитика</Typography>
-          <Analytics
-           
-          />
-        </Box>
-      )}
 
       {/* Диалог создания отчета */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -1016,10 +1212,10 @@ const Reports: React.FC = () => {
               setExportDialogOpen(false);
             }}
             variant="contained"
+            color="primary"
             startIcon={<Schedule />}
             sx={{
-              background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
-              '&:hover': { background: 'linear-gradient(135deg, #43A047 0%, #1B5E20 100%)' }
+              '&:hover': { bgcolor: 'primary.dark' }
             }}
           >
             Планировать
@@ -1027,10 +1223,10 @@ const Reports: React.FC = () => {
           <Button
             onClick={handleAdvancedExport}
             variant="contained"
+            color="primary"
             startIcon={<GetApp />}
             sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              '&:hover': { background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)' }
+              '&:hover': { bgcolor: 'primary.dark' }
             }}
           >
             Скачать отчет
@@ -1140,10 +1336,10 @@ const Reports: React.FC = () => {
           <Button
             onClick={handleScheduleReport}
             variant="contained"
+            color="primary"
             startIcon={<Schedule />}
             sx={{
-              background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
-              '&:hover': { background: 'linear-gradient(135deg, #43A047 0%, #1B5E20 100%)' }
+              '&:hover': { bgcolor: 'primary.dark' }
             }}
           >
             Запланировать
@@ -1232,7 +1428,7 @@ const Reports: React.FC = () => {
                 label="Тема письма"
                 value={emailSubject}
                 onChange={(e) => setEmailSubject(e.target.value)}
-                placeholder={`Отчет по ${exportType} за ${startDate.toLocaleDateString('ru-RU')} - ${endDate.toLocaleDateString('ru-RU')}`}
+                placeholder={`Отчет по ${exportType} за ${startDate.current.toLocaleDateString('ru-RU')} - ${endDate.current.toLocaleDateString('ru-RU')}`}
               />
             </Grid>
             
@@ -1257,14 +1453,14 @@ const Reports: React.FC = () => {
           >
             Отмена
           </Button>
-          <Button 
+          <Button
             onClick={handleSendByEmail}
             variant="contained"
+            color="primary"
             startIcon={<Email />}
             disabled={!emailRecipients.trim()}
-            sx={{ 
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              '&:hover': { background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)' }
+            sx={{
+              '&:hover': { bgcolor: 'primary.dark' }
             }}
           >
             Отправить

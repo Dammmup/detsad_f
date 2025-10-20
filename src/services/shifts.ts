@@ -54,7 +54,8 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
         breakTime: shiftData.breakTime,
         type: shiftData.type,
         status: shiftData.status || ShiftStatus.scheduled,
-        notes: shiftData.notes
+        notes: shiftData.notes,
+        alternativeStaffId: shiftData.alternativeStaffId
       });
 
     this.clearCache();

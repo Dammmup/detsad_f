@@ -44,7 +44,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Types and Services
 import { Shift, ShiftStatus, ShiftType, ShiftFormData } from '../../types/common';
-import { getShifts, createShift } from '../../services//shifts';
+import { getShifts, createShift, updateShift } from '../../services/shifts';
 import { getUsers } from '../../services/users';
 import {User} from '../../types/common';
 import { SHIFT_TYPES } from '../../types/common';
@@ -144,10 +144,11 @@ const StaffSchedule: React.FC = () => {
           staffName: '',
           date: format(new Date(), 'yyyy-MM-dd'),
           startTime: '07:30',
-          endTime: '18:00',
+          endTime: '18:30',
           type: ShiftType.full,
           notes: '',
-          status: ShiftStatus.scheduled
+          status: ShiftStatus.scheduled,
+          alternativeStaffId: ''
         });
 
   // Load data
@@ -205,21 +206,8 @@ const StaffSchedule: React.FC = () => {
       });
       console.log('Work days filtered, length:', workDays.length);
       
-      // Разбиваем рабочие дни на 5-дневные блоки (5 рабочих дней + 2 выходных)
-      const scheduleBlocks = [];
-      for (let i = 0; i < workDays.length; i += 5) {
-        // Берем 5 рабочих дней
-        const workBlock = workDays.slice(i, i + 5);
-        scheduleBlocks.push(...workBlock);
-        
-        // Если есть 5 рабочих дней, добавляем 2 выходных дня после них
-        if (workBlock.length === 5) {
-          const lastWorkDay = new Date(workBlock[4]);
-          const weekend1 = addDays(lastWorkDay, 1); // Суббота
-          const weekend2 = addDays(lastWorkDay, 2); // Воскресенье
-          scheduleBlocks.push(weekend1, weekend2);
-        }
-      }
+      // Берем только рабочие дни, исключаем выходные
+      const scheduleBlocks = workDays;
       console.log('Schedule blocks created, length:', scheduleBlocks.length);
       
       // Ограничиваем график до конца месяца
@@ -252,40 +240,21 @@ const StaffSchedule: React.FC = () => {
             continue;
           }
           
-          // Проверяем, не является ли день выходным (суббота или воскресенье)
-          const dayOfWeek = date.getDay();
-          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-          
           try {
-            if (isWeekend) {
-              // Для выходных создаем смену типа "day_off"
-              console.log('Creating day_off shift for', staffId, 'on', date);
-              await createShift({
-                              userId: staffId,
-                              staffId: staffId,
-                              staffName: staff.find(s => (s.id || s._id) === staffId)?.fullName || '',
-                              date: dateStr,
-                              startTime: '00:00',
-                              endTime: '00:00',
-                              type: ShiftType.day_off,
-                              notes: 'Выходной по графику 5/2',
-                              status: ShiftStatus.scheduled
-                            });
-            } else {
-              // Для рабочих дней создаем смену типа "full"
-              console.log('Creating full shift for', staffId, 'on', date);
-              await createShift({
-                              userId: staffId,
-                              staffId: staffId,
-                              staffName: staff.find(s => (s.id || s._id) === staffId)?.fullName || '',
-                              date: dateStr,
-                              startTime: '07:30',
-                              endTime: '18:00',
-                              type: ShiftType.full,
-                              notes: 'Рабочий день по графику 5/2',
-                              status: ShiftStatus.scheduled
-                            });
-            }
+            // Для рабочих дней создаем смену типа "full"
+            // (выходные дни уже исключены из массива finalSchedule)
+            console.log('Creating full shift for', staffId, 'on', date);
+            await createShift({
+                            userId: staffId,
+                            staffId: staffId,
+                            staffName: staff.find(s => (s.id || s._id) === staffId)?.fullName || '',
+                            date: dateStr,
+                            startTime: '07:30',
+                            endTime: '18:30',
+                            type: ShiftType.full,
+                            notes: 'Рабочий день по графику 5/2',
+                            status: ShiftStatus.scheduled
+                          });
             
             // Добавляем дату в список созданных, чтобы избежать дубликатов в этой же итерации
             createdShiftDates.add(dateStr);
@@ -425,21 +394,24 @@ const StaffSchedule: React.FC = () => {
       if (editingShift) {
               // Update existing shift
               if (editingShift.id) {
-                         
-                            setShifts(prev =>
-                              prev.map(s => s.id === editingShift.id ? { ...shiftData, staffName: shiftData.staffName } : s)
-                            );
-                            enqueueSnackbar('Смена успешно обновлена', { variant: 'success' });
-                          } else {
-                            enqueueSnackbar('Ошибка: ID смены не определен', { variant: 'error' });
-                          }
-        setShifts(prev =>
-                        prev.map(s => s.id === editingShift.id ? { ...shiftData, staffName: shiftData.staffName } : s)
-                      );
-        enqueueSnackbar('Смена успешно обновлена', { variant: 'success' });
+                // Обновляем смену через API
+                const updatedShift = await updateShift(editingShift.id, {
+                  ...shiftData,
+                  alternativeStaffId: formData.alternativeStaffId
+                });
+                setShifts(prev =>
+                  prev.map(s => s.id === editingShift.id ? updatedShift : s)
+                );
+                enqueueSnackbar('Смена успешно обновлена', { variant: 'success' });
+              } else {
+                enqueueSnackbar('Ошибка: ID смены не определен', { variant: 'error' });
+              }
       } else {
         // Create new shift
-        const newShift = await createShift(shiftData);
+        const newShift = await createShift({
+          ...shiftData,
+          alternativeStaffId: formData.alternativeStaffId
+        });
         setShifts(prev => [...prev, newShift]);
         enqueueSnackbar('Смена успешно создана', { variant: 'success' });
       }
@@ -469,7 +441,8 @@ const StaffSchedule: React.FC = () => {
               endTime: shift.endTime,
               type: shift.type,
               status: shift.status,
-              notes: shift.notes || ''
+              notes: shift.notes || '',
+              alternativeStaffId: shift.alternativeStaffId || ''
             });
       setEditingShift(shift);
       setModalOpen(true);
@@ -486,10 +459,11 @@ const StaffSchedule: React.FC = () => {
           staffName: '',
           date: format(new Date(), 'yyyy-MM-dd'),
           startTime: '07:30',
-          endTime: '18:00',
+          endTime: '18:30',
           type: 'full' as ShiftType,
            status: 'scheduled' as ShiftStatus,
-          notes: ''
+          notes: '',
+          alternativeStaffId: ''
         });
   };
 
@@ -872,7 +846,44 @@ const StaffSchedule: React.FC = () => {
                   </FormControl>
                 </Grid>
                 
-                <Grid item xs={12}>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Альтернативный сотрудник</InputLabel>
+                    <Select
+                      name="alternativeStaffId"
+                      value={formData.alternativeStaffId || ''}
+                      onChange={handleSelectChange}
+                      label="Альтернативный сотрудник"
+                    >
+                      <MenuItem value="">Нет альтернативного сотрудника</MenuItem>
+                      {staff
+                        .filter(s => s.role !== 'parent' && s.role !== 'child') // Исключаем родителей и детей
+                        .map(staffMember => (
+                          <MenuItem key={staffMember.id} value={staffMember.id || staffMember._id}>
+                            <Box display="flex" alignItems="center">
+                              <Box
+                                sx={{
+                                  width: 10,
+                                  height: 10,
+                                  borderRadius: '50%',
+                                  bgcolor: ROLE_COLORS[staffMember.role as string] || '#9e9e9e',
+                                  mr: 1
+                                }}
+                              />
+                              <Box>
+                                {staffMember.fullName}
+                                <Box sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
+                                  {ROLE_LABELS[staffMember.role as string] || staffMember.role}
+                                </Box>
+                              </Box>
+                            </Box>
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
                   <TextField
                     label="Примечания"
                     name="notes"

@@ -26,51 +26,25 @@ export interface Document {
   updatedAt: string;
 }
 
-// Типы для шаблонов документов
-export interface DocumentTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  type: 'contract' | 'certificate' | 'report' | 'policy' | 'other';
-  category: 'staff' | 'children' | 'financial' | 'administrative' | 'other';
-  fileName: string;
-  fileSize: number;
-  filePath: string;
-  version: string;
-  isActive: boolean;
-  tags: string[];
-  usageCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
 
 // Параметры для получения списка документов
 export interface GetDocumentsParams {
-  type?: string;
-  category?: string;
-  status?: string;
+  type?: 'contract' | 'certificate' | 'report' | 'policy' | 'other';
+  category?: 'staff' | 'children' | 'financial' | 'administrative' | 'other';
+  status?: 'active' | 'archived';
   relatedId?: string;
-  relatedType?: string;
+  relatedType?: 'staff' | 'child' | 'group';
   search?: string;
   page?: number;
   limit?: number;
 }
 
-// Параметры для получения списка шаблонов
-export interface GetTemplatesParams {
-  type?: string;
-  category?: string;
-  isActive?: boolean;
-  search?: string;
-  page?: number;
-  limit?: number;
-}
 
 // Создание документа
 export interface CreateDocumentData {
   title: string;
   description?: string;
-  type: 'contract' | 'certificate' | 'report' | 'policy' | 'other';
+ type: 'contract' | 'certificate' | 'report' | 'policy' | 'other';
   category: 'staff' | 'children' | 'financial' | 'administrative' | 'other';
   file: File;
   relatedId?: string;
@@ -79,15 +53,6 @@ export interface CreateDocumentData {
   expiryDate?: string;
 }
 
-// Создание шаблона документа
-export interface CreateTemplateData {
-  name: string;
-  description?: string;
-  type: 'contract' | 'certificate' | 'report' | 'policy' | 'other';
-  category: 'staff' | 'children' | 'financial' | 'administrative' | 'other';
-  file: File;
-  tags?: string[];
-}
 
 // ========== DOCUMENTS API ==========
 
@@ -104,7 +69,12 @@ export const getDocuments = async (params?: GetDocumentsParams) => {
     }
     
   const response = await apiClient.get(`/documents?${queryParams.toString()}`);
-    return response.data;
+      // Преобразуем _id в id для совместимости с фронтендом
+      const documents = response.data;
+      if (Array.isArray(documents)) {
+        return documents.map(doc => ({ ...doc, id: doc._id }));
+      }
+      return documents;
   } catch (error) {
     console.error('Error fetching documents:', error);
     throw error;
@@ -152,7 +122,7 @@ export const createDocument = async (data: CreateDocumentData) => {
 // Обновление документа
 export const updateDocument = async (id: string, data: Partial<Document>) => {
   try {
-  const response = await apiClient.put(`/documents/${id}`, data);
+    const response = await apiClient.put(`/documents/${id}`, data);
     return response.data;
   } catch (error) {
     console.error('Error updating document:', error);
@@ -163,7 +133,7 @@ export const updateDocument = async (id: string, data: Partial<Document>) => {
 // Удаление документа
 export const deleteDocument = async (id: string) => {
   try {
-  const response = await apiClient.delete(`/documents/${id}`);
+    const response = await apiClient.delete(`/documents/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error deleting document:', error);
@@ -174,7 +144,7 @@ export const deleteDocument = async (id: string) => {
 // Скачивание документа
 export const downloadDocument = async (id: string) => {
   try {
-  const response = await apiClient.get(`/documents/${id}/download`, {
+    const response = await apiClient.get(`/documents/${id}/download`, {
       responseType: 'blob',
     });
     
@@ -197,110 +167,8 @@ export const downloadDocument = async (id: string) => {
   }
 };
 
-// ========== TEMPLATES API ==========
 
-// Получение списка шаблонов
-export const getDocumentTemplates = async (params?: GetTemplatesParams) => {
-  try {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          queryParams.append(key, String(value));
-        }
-      });
-    }
-    
-  const response = await apiClient.get(`/documents/templates?${queryParams.toString()}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching document templates:', error);
-    throw error;
-  }
-};
 
-// Получение конкретного шаблона
-export const getDocumentTemplate = async (id: string) => {
-  try {
-  const response = await apiClient.get(`/documents/templates/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching document template:', error);
-    throw error;
-  }
-};
-
-// Создание шаблона документа
-export const createDocumentTemplate = async (data: CreateTemplateData) => {
-  try {
-    const formData = new FormData();
-    formData.append('file', data.file);
-    formData.append('name', data.name);
-    if (data.description) formData.append('description', data.description);
-    formData.append('type', data.type);
-    formData.append('category', data.category);
-    if (data.tags) formData.append('tags', JSON.stringify(data.tags));
-    
-  const response = await apiClient.post('/documents/templates', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    
-    return response.data;
-  } catch (error) {
-    console.error('Error creating document template:', error);
-    throw error;
-  }
-};
-
-// Обновление шаблона документа
-export const updateDocumentTemplate = async (id: string, data: Partial<DocumentTemplate>) => {
-  try {
-  const response = await apiClient.put(`/documents/templates/${id}`, data);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating document template:', error);
-    throw error;
-  }
-};
-
-// Удаление шаблона документа
-export const deleteDocumentTemplate = async (id: string) => {
-  try {
-  const response = await apiClient.delete(`/documents/templates/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error deleting document template:', error);
-    throw error;
-  }
-};
-
-// Скачивание шаблона документа
-export const downloadDocumentTemplate = async (id: string) => {
-  try {
-  const response = await apiClient.get(`/documents/templates/${id}/download`, {
-      responseType: 'blob',
-    });
-    
-    // Создание ссылки для скачивания
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', response.headers['content-disposition']?.split('filename=')[1] || 'template.pdf');
-    document.body.appendChild(link);
-    link.click();
-    
-    // Очистка
-    link.parentNode?.removeChild(link);
-    window.URL.revokeObjectURL(url);
-    
-    return response.data;
-  } catch (error) {
-    console.error('Error downloading document template:', error);
-    throw error;
-  }
-};
 
 // Экспорт документов
 export const exportDocuments = async (format: 'pdf' | 'excel' | 'csv', params?: GetDocumentsParams) => {
@@ -331,34 +199,7 @@ export const exportDocuments = async (format: 'pdf' | 'excel' | 'csv', params?: 
   }
 };
 
-// Экспорт шаблонов
-export const exportDocumentTemplates = async (format: 'pdf' | 'excel' | 'csv', params?: GetTemplatesParams) => {
-  try {
-  const response = await apiClient.post('/documents/templates/export', {
-      format,
-      ...params
-    }, {
-      responseType: 'blob',
-    });
-    
-    // Создание ссылки для скачивания
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `templates_export.${format === 'excel' ? 'xlsx' : format}`);
-    document.body.appendChild(link);
-    link.click();
-    
-    // Очистка
-    link.parentNode?.removeChild(link);
-    window.URL.revokeObjectURL(url);
-    
-    return response.data;
-  } catch (error) {
-    console.error('Error exporting document templates:', error);
-    throw error;
-  }
-};
+
 
 export default {
  // Documents
@@ -368,16 +209,8 @@ export default {
   updateDocument,
   deleteDocument,
   downloadDocument,
-  
- // Templates
-  getDocumentTemplates,
- getDocumentTemplate,
- createDocumentTemplate,
- updateDocumentTemplate,
- deleteDocumentTemplate,
-  downloadDocumentTemplate,
+
   
   // Export
   exportDocuments,
-  exportDocumentTemplates
 };

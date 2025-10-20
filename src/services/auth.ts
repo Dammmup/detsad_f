@@ -1,10 +1,8 @@
 import { BaseApiClient } from '../utils/api';
 import {
   LoginCredentials,
-  OTPResponse,
  AuthResponse,
   User,
-  UserRole,
 } from '../types/common';
 
 /**
@@ -70,11 +68,7 @@ class AuthApiClient extends BaseApiClient {
     } catch (error: any) {
       console.error('❌ Ошибка входа:', error);
       
-      // Если backend не настроен, создаем мок-авторизацию для разработки
-      if (error.code === 'ECONNREFUSED' || error.status === 404) {
-        console.warn('🔧 Backend недоступен, используем мок-авторизацию для разработки');
-        return this.createMockAuth(credentials);
-      }
+    
       
       throw new Error(error.message || 'Ошибка авторизации');
     }
@@ -179,12 +173,7 @@ class AuthApiClient extends BaseApiClient {
     }
   }
 
-  // ===== ПРИВАТНЫЕ МЕТОДЫ =====
 
-  /**
-   * Получение токена из localStorage (не используется при httpOnly cookie)
-   * Возвращаем пустую строку, так как токен хранится в httpOnly cookie
-   */
   private getToken(): string | null {
     return null; // Токен хранится в httpOnly cookie, недоступен из JavaScript
   }
@@ -205,58 +194,12 @@ class AuthApiClient extends BaseApiClient {
     localStorage.removeItem('user');
     localStorage.removeItem('phoneNumber');
   }
-
-  /**
-
-
-
-  /**
-   * Создание мок авторизации для разработки
-   */
-  private createMockAuth(credentials: LoginCredentials): AuthResponse {
-    const mockToken = `mock-token-${Date.now()}-${Math.random().toString(36).substring(2)}`;
-    
-    const authData: AuthResponse = {
-          success: true,
-          token: mockToken,
-          user: {
-            _id: 'mock-user-1',
-            id: 'mock-user-1',
-            phone: credentials.phone,
-            fullName: 'Мок пользователь ' + credentials.phone,
-            role: UserRole.staff,
-            avatar: '',
-            isActive: true,
-            lastLogin: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            uniqNumber: '',
-            notes: '',
-            active: true,
-            iin: '',
-            groupId: '',
-            birthday: '',
-            photo: '',
-            parentName: '',
-            parentPhone: '',
-            email: credentials.phone + '@example.com', // Используем телефон как основу для email в моке
-            initialPassword: '',
-            salary: 0,
-            salaryType: 'day',
-            penaltyType: 'fixed',
-            penaltyAmount: 0,
-            shiftRate: 0,
-            staffId: '',
-            staffName: ''
-          }
-        };
-    
-    this.saveAuthData(authData);
-    
-    console.log('🧪 Создана мок-авторизация:', authData.user);
-    return authData;
-  }
 }
+
+
+
+
+
 
 // Экспортируем экземпляр клиента
 export const authApi = new AuthApiClient();

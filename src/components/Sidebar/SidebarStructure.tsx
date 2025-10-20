@@ -56,7 +56,6 @@ const sidebarStructure: SidebarItem[] = [
     icon: <InsertDriveFileIcon />,
     children: [
       { id: 'documents-all', label: 'Все документы', link: '/app/documents', icon: <InsertDriveFileIcon /> },
-      { id: 'documents-templates', label: 'Шаблоны', link: '/app/documents/templates', icon: <TableChartIcon /> },
     ],
   },
   {
@@ -67,7 +66,6 @@ const sidebarStructure: SidebarItem[] = [
       { id: 'reports-all', label: 'Все отчеты', link: '/app/reports', icon: <AssessmentIcon /> },
       { id: 'reports-payroll', label: 'Зарплаты', link: '/app/reports/payroll', icon: <AssessmentIcon /> },
       { id: 'reports-rent', label: 'Аренда', link: '/app/reports/rent', icon: <AssessmentIcon /> },
-      { id: 'reports-analytics', label: 'Аналитика', link: '/app/reports/analytics', icon: <AssessmentIcon /> },
      
     ],
     visibleFor: ['admin'] // Только для администраторов

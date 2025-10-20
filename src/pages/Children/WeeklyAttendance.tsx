@@ -451,7 +451,7 @@ const WeeklyAttendance: React.FC = () => {
                                   Выходной
                                 </Typography>
                               ) : attendance ? (
-                                <Tooltip 
+                                <Tooltip
                                   title={
                                     <Box>
                                       <Typography variant="body2">
@@ -503,7 +503,7 @@ const WeeklyAttendance: React.FC = () => {
                                   </Box>
                                 </Tooltip>
                               ) : (
-                                <Tooltip 
+                                <Tooltip
                                   title={
                                     <Box>
                                       <Typography variant="body2">
@@ -515,6 +515,12 @@ const WeeklyAttendance: React.FC = () => {
                                       <Typography variant="caption">
                                         Нажмите для отметки посещаемости
                                       </Typography>
+                                      {/* Показываем информацию о возможности отметки альтернативным сотрудником */}
+                                      {selectedGroup && (
+                                        <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'warning.main' }}>
+                                          Может быть отмечено альтернативным сотрудником
+                                        </Typography>
+                                      )}
                                     </Box>
                                   }
                                   arrow

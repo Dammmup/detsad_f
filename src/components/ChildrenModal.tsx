@@ -3,7 +3,6 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, CircularProgress,
   Alert, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent
 } from '@mui/material';
-import { createUser, updateUser } from '../services/users';
 import childrenApi from '../services/children';
 import { getGroups } from '../services/groups';
 import { Group, User } from '../types/common';
@@ -12,7 +11,7 @@ interface ChildrenModalProps {
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
- child?: User | null;
+ child?: Partial<User> | null;
 }
 
 const defaultForm: Omit<Partial<User>, 'role'> = {
@@ -80,8 +79,8 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
     setError(null);
     try {
       if (child && child.id) {
-        // Редактирование существующего пользователя
-        const userData: Partial<User> = {
+        // Редактирование существующего ребенка
+        const childData: Partial<User> = {
           id: child.id,
           fullName: form.fullName || '',
           phone: form.phone || '',
@@ -93,7 +92,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
           notes: form.notes || '',
           active: form.active !== false,
         };
-        await updateUser(child.id, userData);
+        await childrenApi.update(child.id, childData);
       } else {
         // Создание нового пользователя
         const userData = {

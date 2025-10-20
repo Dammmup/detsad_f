@@ -18,7 +18,6 @@ import Groups from '../pages/Children/Groups';
 import Settings from '../pages/Settings';
 import Cyclogram from '../pages/Cyclogram';
 import Children from '../pages/Children/Children';
-import DocumentsTemplates from '../pages/DocumentsTemplates';
 
 // Импорт Sidebar и структуры меню
 import { Sidebar } from './Sidebar/Sidebar';
@@ -34,7 +33,6 @@ import ReportsSalary from '../components/reports/ReportsSalary';
 import { logout } from '../services/auth';
 import { useNavigate } from 'react-router-dom';
 import Reports from '../pages/Reports';
-import Analytics from '../pages/Analytics';
 import StaffAttendanceTracking from '../pages/Staff/StaffAttendanceTracking';
 import { Documents } from '../pages/Documents';
 
@@ -142,11 +140,9 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path="staff/reports" element={<Reports />} />
             {/* Документы */}
             <Route path="documents" element={<Documents/>} />
-            <Route path="documents/templates" element={<DocumentsTemplates />} />
             {/* Отчеты */}
             <Route path="reports" element={<Reports />} />
             <Route path="reports/payroll" element={<ReportsSalary />} />
-            <Route path="reports/analytics" element={<Analytics />} />
             <Route path='reports/rent' element={<ReportsRent/>}/>
 
             {/* Организация/Настройки */}

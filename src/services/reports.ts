@@ -674,7 +674,47 @@ export const generateCustomReport = async (params: {
    }
  };
 
-export default {
+// ===== ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ СВОДОК =====
+
+/**
+  * Get children summary
+  * @param {object} params - Filter parameters
+  * @returns {Promise<any>} Children summary
+  */
+ export const getChildrenSummary = async (params?: { groupId?: string }) => {
+   try {
+     const response = await api.get('/reports/children/summary', {
+       params,
+       timeout: 30000 // 30 seconds for fetching children summary
+     });
+     return response.data;
+   } catch (error) {
+     return handleApiError(error, 'fetching children summary');
+   }
+ };
+
+/**
+  * Get attendance summary
+  * @param {object} params - Filter parameters
+  * @returns {Promise<any>} Attendance summary
+  */
+ export const getAttendanceSummary = async (params: {
+   startDate: string;
+   endDate: string;
+   groupId?: string
+ }) => {
+   try {
+     const response = await api.get('/reports/attendance/summary', {
+       params,
+       timeout: 30000 // 30 seconds for fetching attendance summary
+     });
+     return response.data;
+   } catch (error) {
+     return handleApiError(error, 'fetching attendance summary');
+   }
+ };
+
+const reportsService = {
   // Reports
   getReports,
   getReport,
@@ -706,5 +746,11 @@ export default {
   updateRent,
   deleteRent,
   markRentAsPaid,
-  generateRentSheets
+  generateRentSheets,
+  
+  // Summary functions
+  getChildrenSummary,
+  getAttendanceSummary
 };
+export default reportsService;
+ 

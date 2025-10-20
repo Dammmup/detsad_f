@@ -22,27 +22,26 @@ import {
 import { format } from 'date-fns';
 import { formatFileSize, getFileIcon, getTypeText, getCategoryText } from '../utils/documentUtils';
 import { ru } from 'date-fns/locale';
-// Убран импорт downloadDocumentTemplate, так как теперь используем статические данные
 import { Document as DocumentType } from '../types/documents';
-import ExportAutoTemplatesButton from '../components/ExportAutoTemplatesButton';
-import { generalTemplates } from '../utils/documentTemplates';
 import { getStatusColor } from '../utils/format';
+import {
+  getDocuments,
+  createDocument,
+  updateDocument,
+  deleteDocument,
+  downloadDocument
+} from '../services/documents';
 
 export const Documents= () => {
- const [documents, setDocuments] = useState<DocumentType[]>([]);
-  const [filteredDocuments, setFilteredDocuments] = useState<DocumentType[]>([]);
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [filteredTemplates, setFilteredTemplates] = useState<any[]>([]);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [templatePage, setTemplatePage] = useState(0);
-  const [templateRowsPerPage, setTemplateRowsPerPage] = useState(10);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [currentDocument, setCurrentDocument] = useState<Partial<DocumentType> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [templateLoading, setTemplateLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [documents, setDocuments] = useState<DocumentType[]>([]);
+     const [filteredDocuments, setFilteredDocuments] = useState<DocumentType[]>([]);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [openDialog, setOpenDialog] = useState(false);
+    const [currentDocument, setCurrentDocument] = useState<Partial<DocumentType> | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [file, setFile] = useState<File | null>(null);
   
   // Фильтры
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,46 +49,27 @@ export const Documents= () => {
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   
-  // Для создания документа из шаблона
-  const [openTemplateDialog, setOpenTemplateDialog] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
 
-  // Функция для преобразования статических шаблонов в формат таблицы
-  const transformTemplate = (template: any) => {
-    // Определяем расширение файла на основе формата
-    let extension = 'pdf';
-    if (template.format === 'xlsx') {
-      extension = 'xlsx';
-    } else if (template.format === 'docx') {
-      extension = 'docx';
-    }
-    
-    return {
-      id: template.template,
-      name: template.label.replace(/\s*\(.*?\)/, ''), // Убираем формат из названия
-      description: '', // В статических шаблонах нет описания
-      type: 'other', // По умолчанию тип "другое"
-      category: 'other', // По умолчанию категория "другое"
-      fileName: `${template.label.replace(/\s*\(.*?\)/, '').toLowerCase().replace(/\s+/g, '_')}.${extension}`,
-      fileSize: 0, // Размер файла неизвестен для статических шаблонов
-      filePath: '', // Путь к файлу неизвестен
-      version: '1.0', // Версия по умолчанию
-      tags: [], // Теги отсутствуют в статических шаблонах
-      ...template // Сохраняем все остальные свойства
-    };
-  };
-  
-  // Инициализация данных без вызовов к бэкенду
-  useEffect(() => {
-    // Преобразуем статические шаблоны в формат таблицы
-    const transformedTemplates = generalTemplates.map(transformTemplate);
-    setFilteredTemplates(transformedTemplates);
-    setTemplates(transformedTemplates);
-    
-    // Отключаем загрузку документов с сервера
-    setLoading(false);
-    setTemplateLoading(false);
-  }, []);
+  // Загрузка данных с бэкенда
+        useEffect(() => {
+          const fetchData = async () => {
+            try {
+              setLoading(true);
+              
+              // Загрузка документов
+              const documentsData = await getDocuments();
+              setDocuments(documentsData.items || documentsData);
+              setFilteredDocuments(documentsData.items || documentsData);
+            } catch (error) {
+              console.error('Ошибка загрузки данных:', error);
+              setError('Не удалось загрузить данные документов');
+            } finally {
+              setLoading(false);
+            }
+          };
+          
+          fetchData();
+        }, []);
 
   // Применение фильтров
   useEffect(() => {
@@ -141,101 +121,79 @@ export const Documents= () => {
     setFile(null);
   };
   
- const handleOpenTemplateDialog = () => {
-    setOpenTemplateDialog(true);
- };
-  
-  const handleCloseTemplateDialog = () => {
-    setOpenTemplateDialog(false);
-    setSelectedTemplate(null);
-  };
-  
-  const handleCreateFromTemplate = () => {
-    if (selectedTemplate) {
-      setCurrentDocument({
-        title: selectedTemplate.name,
-        type: selectedTemplate.type || 'other',
-        category: selectedTemplate.category || 'other',
-        status: 'active',
-        tags: selectedTemplate.tags || []
-      });
-      setFile(null);
-      setOpenDialog(true);
-      handleCloseTemplateDialog();
-    }
-  };
   
   const handleSaveDocument = async () => {
-    if (!currentDocument) return;
-    
-    // Mock-функция сохранения документа без вызова бэкенда
-    try {
-      if (currentDocument.id) {
-        // Редактирование существующего документа (mock)
-        setDocuments(documents.map(doc =>
-          doc.id === currentDocument.id ? {...doc, ...currentDocument} : doc
-        ));
-      } else {
-        // Добавление нового документа (mock)
-        if (!file) {
-          setError('Пожалуйста, выберите файл документа');
-          return;
-        }
-        
-        const newDocument = {
-          id: Date.now().toString(),
-          title: currentDocument.title || '',
-          description: currentDocument.description,
-          type: currentDocument.type as any,
-          category: currentDocument.category as any,
-          fileName: file.name,
-          fileSize: file.size,
-          filePath: '',
-          uploadDate: new Date().toISOString(),
-          uploader: {
-            id: 'mock-user-id',
-            fullName: 'Mock User',
-            email: 'mock@example.com'
-          },
-          status: currentDocument.status || 'active',
-          tags: currentDocument.tags || [],
-          version: '1.0',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        
-        setDocuments([...documents, newDocument as DocumentType]);
-      }
-      
-      handleCloseDialog();
-    } catch (error: any) {
-      console.error('Ошибка сохранения документа:', error);
-      setError(error.message || 'Не удалось сохранить документ');
-    }
-  };
+       if (!currentDocument) return;
+       
+       try {
+         if (currentDocument.id) {
+           // Редактирование существующего документа
+           const updatedDocument = await updateDocument(currentDocument.id, {
+             title: currentDocument.title,
+             description: currentDocument.description,
+             type: currentDocument.type,
+             category: currentDocument.category,
+             status: currentDocument.status,
+             tags: currentDocument.tags
+           });
+           
+           setDocuments(documents.map(doc =>
+             doc.id === currentDocument.id ? updatedDocument : doc
+           ));
+           setFilteredDocuments(filteredDocuments.map(doc =>
+             doc.id === currentDocument.id ? updatedDocument : doc
+           ));
+         } else {
+           // Добавление нового документа
+           if (!file) {
+             setError('Пожалуйста, выберите файл документа');
+             return;
+           }
+           
+           const documentData = {
+             title: currentDocument.title || file.name,
+             description: currentDocument.description,
+             type: currentDocument.type as any,
+             category: currentDocument.category as any,
+             file: file,
+             tags: currentDocument.tags || [],
+             status: currentDocument.status || 'active'
+           };
+           
+           const newDocument = await createDocument(documentData);
+           setDocuments([...documents, newDocument]);
+           setFilteredDocuments([...filteredDocuments, newDocument]);
+         }
+         
+         handleCloseDialog();
+       } catch (error: any) {
+         console.error('Ошибка сохранения документа:', error);
+         setError(error.message || 'Не удалось сохранить документ');
+       }
+     };
   
   const handleDeleteDocument = async (id: string) => {
-    if (window.confirm('Удалить документ?')) {
-      try {
-        // Mock-функция удаления документа без вызова бэкенда
-        setDocuments(documents.filter(doc => doc.id !== id));
-      } catch (error) {
-        console.error('Ошибка удаления документа:', error);
-        setError('Не удалось удалить документ');
-      }
-    }
-  };
+          if (window.confirm('Удалить документ?')) {
+            try {
+              await deleteDocument(id);
+              setDocuments(documents.filter(doc => (doc.id || doc._id) === id ? false : true));
+              setFilteredDocuments(filteredDocuments.filter(doc => (doc.id || doc._id) === id ? false : true));
+            } catch (error) {
+              console.error('Ошибка удаления документа:', error);
+              setError('Не удалось удалить документ');
+            }
+          }
+        };
   
   const handleDownloadDocument = async (id: string) => {
-    try {
-      // Mock-функция скачивания документа без вызова бэкенда
-      console.log(`Запрошено скачивание документа с ID: ${id}`);
-      // Здесь можно реализовать логику скачивания файла, если это необходимо
-    } catch (error) {
-      console.error('Ошибка скачивания документа:', error);
-      setError('Не удалось скачать документ');
-    }
-  };
+          try {
+            console.log('Downloading document with ID:', id);
+            await downloadDocument(id);
+          } catch (error) {
+            console.error('Ошибка скачивания документа:', error);
+            setError('Не удалось скачать документ');
+          }
+        };
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -268,30 +226,20 @@ export const Documents= () => {
   return (
     <Box p={3}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" gutterBottom>
-          Документы
-        </Typography>
-        <ExportAutoTemplatesButton templates={generalTemplates} />
-        <Box>
-          <Button 
-            variant="outlined" 
-            color="primary" 
-            startIcon={<TemplateIcon />}
-            onClick={handleOpenTemplateDialog}
-            sx={{ mr: 2 }}
-          >
-            Создать из шаблона
-          </Button>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-          >
-            Добавить документ
-          </Button>
-        </Box>
-      </Box>
+              <Typography variant="h5" gutterBottom>
+                Документы
+              </Typography>
+              <Box>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => handleOpenDialog()}
+                >
+                  Добавить документ
+                </Button>
+              </Box>
+            </Box>
       
       {/* Фильтры */}
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -388,7 +336,7 @@ export const Documents= () => {
               {filteredDocuments
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((document) => (
-                  <TableRow key={document.id}>
+                  <TableRow key={document.id || document._id}>
                     <TableCell>
                       <Box display="flex" alignItems="center">
                         {getFileIcon(document.fileName)}
@@ -419,9 +367,9 @@ export const Documents= () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      {format(new Date(document.uploadDate), 'dd.MM.yyyy', { locale: ru })}
+                      {document.uploadDate ? format(new Date(document.uploadDate), 'dd.MM.yyyy', { locale: ru }) : '-'}
                     </TableCell>
-                    <TableCell>{document.uploader.fullName}</TableCell>
+                    <TableCell>{document.uploader?.fullName || '-'}</TableCell>
                     <TableCell>
                       <Chip 
                         label={document.status === 'active' ? 'Активен' : 'Архивирован'}
@@ -431,13 +379,22 @@ export const Documents= () => {
                     </TableCell>
                     <TableCell align="right">
                       <Tooltip title="Скачать">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleDownloadDocument(document.id)}
-                        >
-                          <DownloadIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                                               <IconButton
+                                                 size="small"
+                                                 onClick={() => {
+                                                   console.log('Download button clicked, document:', document);
+                                                   const docId = document.id || document._id;
+                                                   if (docId) {
+                                                     handleDownloadDocument(docId);
+                                                   } else {
+                                                     console.error('Document ID is missing');
+                                                     setError('Не удалось скачать документ: отсутствует ID');
+                                                   }
+                                                 }}
+                                               >
+                                                 <DownloadIcon fontSize="small" />
+                                               </IconButton>
+                                             </Tooltip>
                       <Tooltip title="Редактировать">
                         <IconButton 
                           size="small" 
@@ -447,14 +404,22 @@ export const Documents= () => {
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Удалить">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleDeleteDocument(document.id)}
-                          color="error"
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                                                                      <IconButton
+                                                                        size="small"
+                                                                        onClick={() => {
+                                                                          const docId = document.id || document._id;
+                                                                          if (docId) {
+                                                                            handleDeleteDocument(docId);
+                                                                          } else {
+                                                                            console.error('Document ID is missing for delete');
+                                                                            setError('Не удалось удалить документ: отсутствует ID');
+                                                                          }
+                                                                        }}
+                                                                        color="error"
+                                                                      >
+                                                                        <DeleteIcon fontSize="small" />
+                                                                      </IconButton>
+                                                                    </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -470,15 +435,6 @@ export const Documents= () => {
               Создайте документ из шаблона или загрузите новый файл
             </Typography>
             <Box mt={2}>
-              <Button 
-                variant="outlined" 
-                color="primary" 
-                startIcon={<TemplateIcon />}
-                onClick={handleOpenTemplateDialog}
-                sx={{ mr: 2 }}
-              >
-                Создать из шаблона
-              </Button>
               <Button 
                 variant="contained" 
                 color="primary" 
@@ -504,112 +460,6 @@ export const Documents= () => {
         />
       </Paper>
       
-      {/* Секция шаблонов */}
-      <Box mt={4}>
-        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-          <TemplateIcon sx={{ mr: 1 }} />
-          Шаблоны документов
-        </Typography>
-        
-        {templateLoading ? (
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight="100px">
-            <CircularProgress />
-          </Box>
-        ) : (
-          <Paper>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Название</TableCell>
-                    <TableCell>Тип</TableCell>
-                    <TableCell>Категория</TableCell>
-                    <TableCell>Файл</TableCell>
-                    <TableCell>Версия</TableCell>
-                    <TableCell align="right">Действия</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredTemplates
-                    .slice(templatePage * templateRowsPerPage, templatePage * templateRowsPerPage + templateRowsPerPage)
-                    .map((template) => (
-                      <TableRow key={template.id}>
-                        <TableCell>
-                          <Box display="flex" alignItems="center">
-                            {getFileIcon(template.fileName)}
-                            <Box ml={1}>
-                              <Typography variant="body2" fontWeight="bold">
-                                {template.name}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {template.description}
-                              </Typography>
-                              <Box display="flex" flexWrap="wrap" gap={0.5} mt={0.5}>
-                                {template.tags.map((tag: string, index: number) => (
-                                  <Chip 
-                                    key={index} 
-                                    label={tag} 
-                                    size="small" 
-                                    variant="outlined" 
-                                    sx={{ height: 20 }} 
-                                  />
-                                ))}
-                              </Box>
-                            </Box>
-                          </Box>
-                        </TableCell>
-                        <TableCell>{getTypeText(template.type)}</TableCell>
-                        <TableCell>{getCategoryText(template.category)}</TableCell>
-                        <TableCell>
-                          <Typography variant="body2">{template.fileName}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip label={`v${template.version}`} size="small" />
-                        </TableCell>
-                        <TableCell align="right">
-                          <Tooltip title="Скачать">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                // Mock-функция скачивания шаблона без вызова бэкенда
-                                console.log(`Запрошено скачивание шаблона: ${template.name} (ID: ${template.id})`);
-                                alert(`Скачивание шаблона "${template.name}" пока не реализовано в демонстрационной версии.`);
-                              }}
-                            >
-                              <DownloadIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            {filteredTemplates.length === 0 && (
-              <Box p={4} textAlign="center">
-                <Typography variant="h6" color="text.secondary">
-                  Нет доступных шаблонов
-                </Typography>
-              </Box>
-            )}
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25]}
-              component="div"
-              count={filteredTemplates.length}
-              rowsPerPage={templateRowsPerPage}
-              page={templatePage}
-              onPageChange={(event, newPage) => setTemplatePage(newPage)}
-              onRowsPerPageChange={(event) => {
-                setTemplateRowsPerPage(parseInt(event.target.value, 10));
-                setTemplatePage(0);
-              }}
-              labelRowsPerPage="Строк на странице:"
-              labelDisplayedRows={({ from, to, count }) => 
-                `${from}-${to} из ${count !== -1 ? count : `более чем ${to}`}`}
-            />
-          </Paper>
-        )}
-      </Box>
 
       {/* Диалог редактирования/создания документа */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
@@ -758,71 +608,6 @@ export const Documents= () => {
         </DialogActions>
       </Dialog>
       
-      {/* Диалог выбора шаблона */}
-      <Dialog open={openTemplateDialog} onClose={handleCloseTemplateDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          Создать документ из шаблона
-        </DialogTitle>
-        <DialogContent dividers>
-          <Autocomplete
-            options={filteredTemplates}
-            getOptionLabel={(option) => option.name}
-            value={selectedTemplate}
-            onChange={(event, newValue) => setSelectedTemplate(newValue)}
-            renderInput={(params) => (
-              <TextField 
-                {...params} 
-                label="Выберите шаблон" 
-                variant="outlined" 
-                fullWidth 
-              />
-            )}
-            renderOption={(props, option) => (
-              <li {...props}>
-                <Box display="flex" alignItems="center" width="100%">
-                  <Box mr={2}>
-                    {getFileIcon(option.fileName)}
-                  </Box>
-                  <Box>
-                    <Typography variant="body1">{option.name}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {option.description}
-                    </Typography>
-                  </Box>
-                </Box>
-              </li>
-            )}
-          />
-          {selectedTemplate && (
-            <Box mt={2} p={2} bgcolor="grey.100" borderRadius={1}>
-              <Typography variant="subtitle2">Описание шаблона:</Typography>
-              <Typography variant="body2">{selectedTemplate.description}</Typography>
-              <Box display="flex" flexWrap="wrap" gap={0.5} mt={1}>
-                {selectedTemplate.tags.map((tag: string, index: number) => (
-                  <Chip 
-                    key={index} 
-                    label={tag} 
-                    size="small" 
-                    variant="outlined" 
-                    sx={{ height: 20 }} 
-                  />
-                ))}
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseTemplateDialog}>Отмена</Button>
-          <Button 
-            onClick={handleCreateFromTemplate} 
-            variant="contained" 
-            color="primary"
-            disabled={!selectedTemplate}
-          >
-            Создать документ
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }
