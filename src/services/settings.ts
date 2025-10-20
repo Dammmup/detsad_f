@@ -163,8 +163,11 @@ export const getKindergartenSettings = async () => {
       phone: response.data.phone,
       email: response.data.email,
       director: response.data.director,
-      workingHours: response.data.workingHours,
-      workingDays: response.data.workingDays,
+      workingHours: {
+        start: response.data.workingHours?.start || '08:00',
+        end: response.data.workingHours?.end || '18:00'
+      },
+      workingDays: response.data.workingDays || [],
       timezone: response.data.timezone,
       language: response.data.language,
       currency: response.data.currency
@@ -205,8 +208,11 @@ export const updateKindergartenSettings = async (settings: KindergartenSettings)
       phone: response.data.phone,
       email: response.data.email,
       director: response.data.director,
-      workingHours: response.data.workingHours,
-      workingDays: response.data.workingDays,
+      workingHours: {
+        start: response.data.workingHours?.start || '08:00',
+        end: response.data.workingHours?.end || '18:00'
+      },
+      workingDays: response.data.workingDays || [],
       timezone: response.data.timezone,
       language: response.data.language,
       currency: response.data.currency
@@ -228,13 +234,13 @@ export const getNotificationSettings = async () => {
     
     const settings: NotificationSettings = {
       id: response.data._id,
-      emailNotifications: response.data.emailNotifications,
-      smsNotifications: response.data.smsNotifications,
-      pushNotifications: response.data.pushNotifications,
-      lateArrivalAlert: response.data.lateArrivalAlert,
-      absenceAlert: response.data.absenceAlert,
-      overtimeAlert: response.data.overtimeAlert,
-      reportReminders: response.data.reportReminders
+      emailNotifications: response.data.emailNotifications ?? true,
+      smsNotifications: response.data.smsNotifications ?? false,
+      pushNotifications: response.data.pushNotifications ?? true,
+      lateArrivalAlert: response.data.lateArrivalAlert ?? true,
+      absenceAlert: response.data.absenceAlert ?? true,
+      overtimeAlert: response.data.overtimeAlert ?? true,
+      reportReminders: response.data.reportReminders ?? true
     };
     
     return settings;
@@ -254,13 +260,13 @@ export const updateNotificationSettings = async (settings: NotificationSettings)
     
     const updatedSettings: NotificationSettings = {
       id: response.data._id,
-      emailNotifications: response.data.emailNotifications,
-      smsNotifications: response.data.smsNotifications,
-      pushNotifications: response.data.pushNotifications,
-      lateArrivalAlert: response.data.lateArrivalAlert,
-      absenceAlert: response.data.absenceAlert,
-      overtimeAlert: response.data.overtimeAlert,
-      reportReminders: response.data.reportReminders
+      emailNotifications: response.data.emailNotifications ?? true,
+      smsNotifications: response.data.smsNotifications ?? false,
+      pushNotifications: response.data.pushNotifications ?? true,
+      lateArrivalAlert: response.data.lateArrivalAlert ?? true,
+      absenceAlert: response.data.absenceAlert ?? true,
+      overtimeAlert: response.data.overtimeAlert ?? true,
+      reportReminders: response.data.reportReminders ?? true
     };
     
     return updatedSettings;
@@ -279,11 +285,17 @@ export const getSecuritySettings = async () => {
     
     const settings: SecuritySettings = {
       id: response.data._id,
-      passwordPolicy: response.data.passwordPolicy,
-      sessionTimeout: response.data.sessionTimeout,
-      twoFactorAuth: response.data.twoFactorAuth,
-      ipWhitelist: response.data.ipWhitelist,
-      maxLoginAttempts: response.data.maxLoginAttempts
+      passwordPolicy: {
+        minLength: response.data.passwordPolicy?.minLength ?? 8,
+        requireUppercase: response.data.passwordPolicy?.requireUppercase ?? true,
+        requireLowercase: response.data.passwordPolicy?.requireLowercase ?? true,
+        requireNumbers: response.data.passwordPolicy?.requireNumbers ?? true,
+        requireSpecialChars: response.data.passwordPolicy?.requireSpecialChars ?? false
+      },
+      sessionTimeout: response.data.sessionTimeout ?? 60,
+      twoFactorAuth: response.data.twoFactorAuth ?? false,
+      ipWhitelist: response.data.ipWhitelist || [],
+      maxLoginAttempts: response.data.maxLoginAttempts ?? 5
     };
     
     return settings;
@@ -303,11 +315,17 @@ export const updateSecuritySettings = async (settings: SecuritySettings) => {
     
     const updatedSettings: SecuritySettings = {
       id: response.data._id,
-      passwordPolicy: response.data.passwordPolicy,
-      sessionTimeout: response.data.sessionTimeout,
-      twoFactorAuth: response.data.twoFactorAuth,
-      ipWhitelist: response.data.ipWhitelist,
-      maxLoginAttempts: response.data.maxLoginAttempts
+      passwordPolicy: {
+        minLength: response.data.passwordPolicy?.minLength ?? 8,
+        requireUppercase: response.data.passwordPolicy?.requireUppercase ?? true,
+        requireLowercase: response.data.passwordPolicy?.requireLowercase ?? true,
+        requireNumbers: response.data.passwordPolicy?.requireNumbers ?? true,
+        requireSpecialChars: response.data.passwordPolicy?.requireSpecialChars ?? false
+      },
+      sessionTimeout: response.data.sessionTimeout ?? 60,
+      twoFactorAuth: response.data.twoFactorAuth ?? false,
+      ipWhitelist: response.data.ipWhitelist || [],
+      maxLoginAttempts: response.data.maxLoginAttempts ?? 5
     };
     
     return updatedSettings;
@@ -326,12 +344,15 @@ export const getGeolocationSettings = async () => {
     
     const settings: GeolocationSettings = {
       id: response.data._id,
-      enabled: response.data.enabled,
-      radius: response.data.radius,
-      coordinates: response.data.coordinates,
+      enabled: response.data.enabled ?? false,
+      radius: response.data.radius ?? 100,
+      coordinates: {
+        latitude: response.data.coordinates?.latitude ?? 0,
+        longitude: response.data.coordinates?.longitude ?? 0
+      },
       yandexApiKey: response.data.yandexApiKey,
-      strictMode: response.data.strictMode,
-      allowedDevices: response.data.allowedDevices
+      strictMode: response.data.strictMode ?? false,
+      allowedDevices: response.data.allowedDevices || []
     };
     
     return settings;
@@ -353,12 +374,15 @@ export const updateGeolocationSettings = async (settings: GeolocationSettings) =
     
     const updatedSettings: GeolocationSettings = {
       id: response.data._id,
-      enabled: response.data.enabled,
-      radius: response.data.radius,
-      coordinates: response.data.coordinates,
+      enabled: response.data.enabled ?? false,
+      radius: response.data.radius ?? 100,
+      coordinates: {
+        latitude: response.data.coordinates?.latitude ?? 0,
+        longitude: response.data.coordinates?.longitude ?? 0
+      },
       yandexApiKey: response.data.yandexApiKey,
-      strictMode: response.data.strictMode,
-      allowedDevices: response.data.allowedDevices
+      strictMode: response.data.strictMode ?? false,
+      allowedDevices: response.data.allowedDevices || []
     };
     
     return updatedSettings;

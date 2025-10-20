@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
   Paper, Typography, Box, Button, Table, TableHead, TableRow, TableCell, TableBody,
   Card, CardContent, Grid, Chip, IconButton, DialogTitle, DialogContent,
-  DialogActions, TextField, Select, MenuItem, FormControl, InputLabel,
-  Tabs, Tab, Avatar,
+  DialogActions, TextField, Select, MenuItem, FormControl, InputLabel, SelectChangeEvent,
+  Tabs, Tab, Avatar, OutlinedInput, InputAdornment, Checkbox, ListItemText,
   Dialog
 } from '@mui/material';
 import {
   AccessTime, Edit, Visibility, Check,
-   Schedule, Person
+   Schedule, Person, Search as SearchIcon
 } from '@mui/icons-material';
 import { getUsers } from '../../services/users';
 import shiftsApi from '../../services/shifts';
@@ -46,6 +46,43 @@ import { Shift, ShiftStatus, ShiftType } from '../../types/common';
 
 // Используем только смены (Shift) для учета посещаемости сотрудников
 
+// 🇷🇺 Переводы ролей с английского на русский
+const roleTranslations: Record<string, string> = {
+  // Административные роли
+ 'admin': 'Администратор',
+  'manager': 'Менеджер',
+  'director': 'Директор',
+  
+ // Педагогические роли
+ 'teacher': 'Воспитатель',
+  'assistant': 'Помощник воспитателя',
+  'psychologist': 'Психолог',
+  'speech_therapist': 'Логопед',
+  'music_teacher': 'Музыкальный руководитель',
+  'physical_education': 'Инструктор по физкультуре',
+  
+  // Медицинские роли
+  'nurse': 'Медсестра',
+  'doctor': 'Врач',
+  
+  // Обслуживающий персонал
+  'cook': 'Повар',
+  'cleaner': 'Уборщица',
+  'security': 'Охранник',
+  'maintenance': 'Завхоз',
+  'laundry': 'Прачка',
+  
+  // Дополнительные роли
+  'staff': 'Сотрудник',
+  'substitute': 'Подменный сотрудник',
+  'intern': 'Стажер'
+};
+
+// Функция для перевода роли на русский
+const translateRole = (role: string): string => {
+  return roleTranslations[role] || role; // Если перевода нет, возвращаем оригинал
+};
+
 const StaffAttendanceTracking:React.FC = () => {
   const [staffList, setStaffList] = useState<any[]>([]);
   const [records, setRecords] = useState<TimeRecord[]>([]);
@@ -56,6 +93,8 @@ const StaffAttendanceTracking:React.FC = () => {
   });
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedStaff, setSelectedStaff] = useState('all');
+  const [filterRole, setFilterRole] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [tabValue, setTabValue] = useState(0);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<TimeRecord | null>(null);
@@ -103,6 +142,15 @@ const StaffAttendanceTracking:React.FC = () => {
     };
     fetchStaff();
   }, []);
+
+  // 🇷🇺 Список доступных ролей на русском языке (автоматически из переводов)
+  const availableRoles = Object.values(roleTranslations).sort();
+  
+  // Обработчик для фильтра ролей
+  const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
+    const { value } = event.target;
+    setFilterRole(typeof value === 'string' ? value.split(',') : value);
+  };
 
   const getStaffName = (staffId: string) => {
     const staff = staffList.find(s => s.id === staffId || s._id === staffId);
@@ -160,7 +208,27 @@ const StaffAttendanceTracking:React.FC = () => {
                };
              });
              
-             setRecords(transformedRecords);
+             // Фильтрация по роли и имени
+             let filteredRecords = [...transformedRecords];
+             
+             // Фильтрация по поисковой строке
+             if (searchTerm) {
+               const search = searchTerm.toLowerCase();
+               filteredRecords = filteredRecords.filter(record =>
+                 record.staffName?.toLowerCase().includes(search)
+               );
+             }
+             
+             // Фильтрация по роли
+             if (filterRole.length > 0) {
+               filteredRecords = filteredRecords.filter(record => {
+                 const staff = staffList.find(s => s.id === record.staffId || (s._id === record.staffId));
+                 const russianRole = staff ? translateRole(staff.role || '') : '';
+                 return filterRole.includes(russianRole);
+               });
+             }
+             
+             setRecords(filteredRecords);
            } catch (e) {
              console.error('Error fetching records:', e);
              setRecords([]);
@@ -169,7 +237,7 @@ const StaffAttendanceTracking:React.FC = () => {
            }
          };
          fetchRecords();
-       }, [selectedStaff, dateRange]);
+       }, [selectedStaff, dateRange, filterRole, searchTerm, staffList]);
   
   const calculateWorkDuration = (start: string, end: string, breakTime: number = 0) => {
     const [startHours, startMinutes] = start.split(':').map(Number);
@@ -733,6 +801,49 @@ const StaffAttendanceTracking:React.FC = () => {
               <MenuItem value="all">Все сотрудники</MenuItem>
               {staffList.map((staff: any) => (
                 <MenuItem key={staff.id} value={staff.id}>{staff.fullName}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          
+          {/* Фильтр по имени */}
+          <TextField
+            placeholder="Поиск по имени..."
+            variant="outlined"
+            size="small"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ flexGrow: 1, minWidth: '200px' }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+          
+          {/* Фильтр по роли */}
+          <FormControl size="small" sx={{ minWidth: '200px' }}>
+            <InputLabel id="role-filter-label">Фильтр по должности</InputLabel>
+            <Select
+              labelId="role-filter-label"
+              multiple
+              value={filterRole}
+              onChange={handleFilterRoleChange}
+              input={<OutlinedInput label="Фильтр по должности" />}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.map((value) => (
+                    <Chip key={value} label={value} size="small" />
+                  ))}
+                </Box>
+              )}
+            >
+              {availableRoles.map((role) => (
+                <MenuItem key={role} value={role}>
+                  <Checkbox checked={filterRole.indexOf(role) > -1} />
+                  <ListItemText primary={role} />
+                </MenuItem>
               ))}
             </Select>
           </FormControl>

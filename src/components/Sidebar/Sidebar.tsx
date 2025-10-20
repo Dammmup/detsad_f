@@ -41,7 +41,19 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
         .map((item, idx) => {
           const hasChildren = Array.isArray(item.children) && item.children.length > 0;
           const isOpen = openMenus[item.label];
-          const isActive = location?.pathname?.startsWith(item.link);
+          
+          // Проверяем, является ли текущий элемент активным
+          // Определяем активный элемент по точному совпадению пути
+          let isActive = false;
+          if (item.link) {
+            // Для главной страницы проверяем точное совпадение
+            if (item.link === '/app') {
+              isActive = location?.pathname === '/app';
+            } else {
+              // Для других элементов проверяем точное совпадение
+              isActive = location?.pathname === item.link;
+            }
+          }
           return (
             <React.Fragment key={item.label + idx}>
               <ListItem
@@ -205,17 +217,17 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
         >
           🏫 Детсад CRM
         </Typography>
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            opacity: 0.9, 
+        {/* <Typography
+          variant="body2"
+          sx={{
+            opacity: 0.9,
             mt: 0.5,
             position: 'relative',
             zIndex: 1
           }}
         >
-          Система управления
-        </Typography>
+          Система управления детским садом
+        </Typography> */}
       </Box>
       {/* Навигационное меню */}
       <Box sx={{ flex: 1, py: 2, overflow: 'auto' }}>

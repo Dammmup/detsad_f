@@ -4,7 +4,7 @@ import {
   TableHead, TableRow, TablePagination, Button, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, MenuItem, Grid, IconButton,
   Tooltip, Chip, Divider, FormControl, InputLabel, Select, SelectChangeEvent,
- CircularProgress, Alert, Autocomplete
+ CircularProgress, Alert, Autocomplete, OutlinedInput, Checkbox, ListItemText
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -26,14 +26,60 @@ import { Document as DocumentType } from '../types/documents';
 import { getStatusColor } from '../utils/format';
 import {
   getDocuments,
-  createDocument,
+ createDocument,
   updateDocument,
   deleteDocument,
   downloadDocument
 } from '../services/documents';
+import { usersApi } from '../services/users';
+
+// 🇷🇺 Переводы ролей с английского на русский
+const roleTranslations: Record<string, string> = {
+  // Административные роли
+ 'admin': 'Администратор',
+  'manager': 'Менеджер',
+  'director': 'Директор',
+  
+ // Педагогические роли
+ 'teacher': 'Воспитатель',
+  'assistant': 'Помощник воспитателя',
+  'psychologist': 'Психолог',
+  'speech_therapist': 'Логопед',
+  'music_teacher': 'Музыкальный руководитель',
+  'physical_education': 'Инструктор по физкультуре',
+  
+  // Медицинские роли
+  'nurse': 'Медсестра',
+  'doctor': 'Врач',
+  
+  // Обслуживающий персонал
+ 'cook': 'Повар',
+  'cleaner': 'Уборщица',
+  'security': 'Охранник',
+  'maintenance': 'Завхоз',
+  'laundry': 'Прачка',
+  
+  // Дополнительные роли
+  'staff': 'Сотрудник',
+  'substitute': 'Подменный сотрудник',
+  'intern': 'Стажер'
+};
+
+// Функция для перевода роли на русский
+const translateRole = (role: string): string => {
+  return roleTranslations[role] || role; // Если перевода нет, возвращаем оригинал
+};
+
+interface StaffMember {
+  id: string;
+  fullName: string;
+ role: string;
+  position?: string;
+  department?: string;
+}
 
 export const Documents= () => {
-  const [documents, setDocuments] = useState<DocumentType[]>([]);
+ const [documents, setDocuments] = useState<DocumentType[]>([]);
      const [filteredDocuments, setFilteredDocuments] = useState<DocumentType[]>([]);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -42,12 +88,15 @@ export const Documents= () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [file, setFile] = useState<File | null>(null);
+    const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   
   // Фильтры
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterRole, setFilterRole] = useState<string[]>([]);
+  const [filterName, setFilterName] = useState<string>('');
   
 
   // Загрузка данных с бэкенда
@@ -77,7 +126,7 @@ export const Documents= () => {
     
     // Поиск по названию
     if (searchTerm) {
-      filtered = filtered.filter(doc => 
+      filtered = filtered.filter(doc =>
         doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         doc.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         doc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -99,9 +148,30 @@ export const Documents= () => {
       filtered = filtered.filter(doc => doc.status === filterStatus);
     }
     
+    // Фильтр по имени (только для категории "staff")
+    if (filterName && filterCategory === 'staff') {
+      const name = filterName.toLowerCase();
+      filtered = filtered.filter(doc => {
+        const uploaderName = doc.uploader?.fullName?.toLowerCase() || '';
+        return uploaderName.includes(name);
+      });
+    }
+    
+    // Фильтр по роли (только для категории "staff")
+    if (filterRole.length > 0 && filterCategory === 'staff') {
+      filtered = filtered.filter(doc => {
+        const uploaderId = doc.uploader?.id;
+        if (!uploaderId) return false;
+        const staff = staffMembers.find(s => s.id === uploaderId);
+        if (!staff) return false;
+        const russianRole = translateRole(staff.role || staff.position || '');
+        return filterRole.includes(russianRole);
+      });
+    }
+    
     setFilteredDocuments(filtered);
     setPage(0); // Сброс на первую страницу при изменении фильтров
-  }, [documents, searchTerm, filterType, filterCategory, filterStatus]);
+  }, [documents, searchTerm, filterType, filterCategory, filterStatus, filterRole, filterName, staffMembers]);
 
   const handleOpenDialog = (document?: DocumentType) => {
     setCurrentDocument(document || {
@@ -288,6 +358,49 @@ export const Documents= () => {
             </Select>
           </FormControl>
           
+          {/* Фильтр по имени (только для категории "staff") */}
+          {filterCategory === 'staff' && (
+            <TextField
+              label="Поиск по имени"
+              variant="outlined"
+              size="small"
+              value={filterName}
+              onChange={(e) => setFilterName(e.target.value)}
+              sx={{ minWidth: 200 }}
+            />
+          )}
+          
+          {/* Фильтр по роли (только для категории "staff") */}
+          {filterCategory === 'staff' && (
+            <FormControl size="small" sx={{ minWidth: '200px' }}>
+              <InputLabel id="role-filter-label">Фильтр по должности</InputLabel>
+              <Select
+                labelId="role-filter-label"
+                multiple
+                value={filterRole}
+                onChange={(event: SelectChangeEvent<string[]>) => {
+                  const { value } = event.target;
+                  setFilterRole(typeof value === 'string' ? value.split(',') : value);
+                }}
+                input={<OutlinedInput label="Фильтр по должности" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={value} size="small" />
+                    ))}
+                  </Box>
+                )}
+              >
+                {Object.values(roleTranslations).sort().map((role) => (
+                  <MenuItem key={role} value={role}>
+                    <Checkbox checked={filterRole.indexOf(role) > -1} />
+                    <ListItemText primary={role} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+          
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>Статус</InputLabel>
             <Select
@@ -309,6 +422,8 @@ export const Documents= () => {
               setFilterCategory('');
               setFilterStatus('');
               setSearchTerm('');
+              setFilterRole([]);
+              setFilterName('');
             }}
           >
             Сбросить

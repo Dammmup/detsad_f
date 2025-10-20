@@ -299,7 +299,7 @@ const Groups = () => {
                     <TableRow>
                       <TableCell>{group.name}</TableCell>
                       <TableCell>{group.description}</TableCell>
-                      <TableCell>{group.ageGroup.join(', ')}</TableCell>
+                      <TableCell>{Array.isArray(group.ageGroup) ? group.ageGroup.join(', ') : String(group.ageGroup)}</TableCell>
                       <TableCell>{group.maxStudents}</TableCell>
                       <TableCell>{teacherList.find(t => t.id === group.teacher)?.fullName || '—'}</TableCell>
                       <TableCell align="right">

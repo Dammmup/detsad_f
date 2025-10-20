@@ -41,7 +41,8 @@ import {
   Cancel,
   Sick,
   BeachAccess,
-  Schedule
+  Schedule,
+  EventNote as EventNoteIcon
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -50,13 +51,14 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import childrenApi, { Child } from '../../services/children';
 import { STATUS_COLORS } from '../../types/common';
 import { getGroups } from '../../services/groups';
-import { 
-  getChildAttendance, 
-  bulkSaveChildAttendance, 
-  ChildAttendanceRecord 
+import {
+  getChildAttendance,
+  bulkSaveChildAttendance,
+  ChildAttendanceRecord
 } from '../../services/childAttendance';
 import { useAuth } from '../../components/context/AuthContext';
 import { exportChildrenAttendance, getCurrentMonthRange, getCurrentPeriod } from '../../utils/excelExport';
+import AttendanceBulkModal from '../../components/AttendanceBulkModal';
 
 // Constants
 const ATTENDANCE_STATUSES = {
@@ -93,11 +95,12 @@ const WeeklyAttendance: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   
   // State
-  const [selectedWeek, setSelectedWeek] = useState<Date>(new Date());
+ const [selectedWeek, setSelectedWeek] = useState<Date>(new Date());
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   
   // Data
   const [groups, setGroups] = useState<any[]>([]);
@@ -335,6 +338,15 @@ const WeeklyAttendance: React.FC = () => {
               <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="h5">Недельная посещаемость</Typography>
                 <Box display="flex" gap={2}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<EventNoteIcon />}
+                    onClick={() => setBulkModalOpen(true)}
+                    disabled={!selectedGroup}
+                  >
+                    Массовое назначение
+                  </Button>
                   <Button
                     variant="contained"
                     color="primary"
@@ -578,6 +590,46 @@ const WeeklyAttendance: React.FC = () => {
           </MenuItem>
         </Menu>
       </Box>
+      
+      {/* Bulk Attendance Modal */}
+      <AttendanceBulkModal
+        open={bulkModalOpen}
+        onClose={() => setBulkModalOpen(false)}
+        groupId={selectedGroup}
+        onSuccess={() => {
+          // Refresh attendance data after bulk operation
+          const weekStart = startOfWeek(selectedWeek, { locale: ru });
+          const weekEnd = addDays(weekStart, 6);
+          
+          getChildAttendance({
+            groupId: selectedGroup,
+            startDate: format(weekStart, 'yyyy-MM-dd'),
+            endDate: format(weekEnd, 'yyyy-MM-dd')
+          }).then(records => {
+            // Convert records to attendance data format
+            const attendanceMap: AttendanceData = {};
+            records.forEach((record: ChildAttendanceRecord) => {
+              const childId = record.childId;
+              const date = record.date.split('T')[0];
+              
+              if (!attendanceMap[childId]) {
+                attendanceMap[childId] = {};
+              }
+              
+              attendanceMap[childId][date] = {
+                status: record.status,
+                notes: record.notes
+              };
+            });
+            
+            setAttendanceData(attendanceMap);
+            enqueueSnackbar('Посещаемость успешно обновлена', { variant: 'success' });
+          }).catch(err => {
+            console.error('Error refreshing attendance data:', err);
+            enqueueSnackbar('Ошибка при обновлении данных', { variant: 'error' });
+          });
+        }}
+      />
     </LocalizationProvider>
   );
 };

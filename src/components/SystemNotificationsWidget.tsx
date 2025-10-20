@@ -230,24 +230,24 @@ const SystemNotificationsWidget: React.FC<SystemNotificationsWidgetProps> = ({ o
                     </Typography>
                   }
                   secondary={
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <Typography 
-                        variant="body2" 
-                        color="text.secondary" 
-                        sx={{ 
+                    <div>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
                           fontSize: '0.85rem',
                           mb: 0.5
                         }}
                       >
                         {notification.message}
                       </Typography>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography variant="caption" color="text.secondary">
                           {formatDate(notification.createdAt)}
                         </Typography>
-                        <Chip 
-                          label={notification.priority.charAt(0).toUpperCase() + notification.priority.slice(1)} 
-                          size="small" 
+                        <Chip
+                          label={notification.priority.charAt(0).toUpperCase() + notification.priority.slice(1)}
+                          size="small"
                           color={getTypeColor(notification.type) as any}
                           variant="outlined"
                           sx={{
@@ -255,8 +255,8 @@ const SystemNotificationsWidget: React.FC<SystemNotificationsWidgetProps> = ({ o
                             height: 18
                           }}
                         />
-                      </Box>
-                    </Box>
+                      </div>
+                    </div>
                   }
                 />
               </ListItem>

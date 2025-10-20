@@ -17,7 +17,7 @@ import {
   Divider,
   FormControl,
   Grid,
-  IconButton,
+ IconButton,
   InputLabel,
   MenuItem,
   Paper,
@@ -31,7 +31,11 @@ import {
   TableRow,
   TextField,
   Typography,
-  useTheme
+  useTheme,
+ OutlinedInput,
+  InputAdornment,
+  Checkbox,
+  ListItemText
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -41,6 +45,7 @@ import {
 } from '@mui/icons-material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { Search as SearchIcon } from '@mui/icons-material';
 
 // Types and Services
 import { Shift, ShiftStatus, ShiftType, ShiftFormData } from '../../types/common';
@@ -132,6 +137,8 @@ const StaffSchedule: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
+  const [filterRole, setFilterRole] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Data
   const [staff, setStaff] = useState<User[]>([]);
@@ -178,6 +185,12 @@ const StaffSchedule: React.FC = () => {
     
     fetchData();
   }, [selectedWeek, enqueueSnackbar]);
+  
+  // Обработчик для фильтра ролей
+  const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
+    const { value } = event.target;
+    setFilterRole(typeof value === 'string' ? value.split(',') : value);
+  };
   
   const assignFiveTwoSchedule = async () => {
     console.log('assignFiveTwoSchedule called');
@@ -562,9 +575,9 @@ const StaffSchedule: React.FC = () => {
                 <Typography variant="h6">
                   {format(weekStart, 'MMMM yyyy', { locale: ru })}
                 </Typography>
-                <Button 
-                  variant="outlined" 
-                  size="small" 
+                <Button
+                  variant="outlined"
+                  size="small"
                   onClick={goToToday}
                   startIcon={<TodayIcon />}
                   sx={{ mt: 1 }}
@@ -576,6 +589,50 @@ const StaffSchedule: React.FC = () => {
               <IconButton onClick={goToNextWeek}>
                 <ArrowForwardIosIcon />
               </IconButton>
+            </Box>
+            
+            {/* Фильтры */}
+            <Box display="flex" flexWrap="wrap" gap={2} alignItems="center" mb={3}>
+              <TextField
+                placeholder="Поиск по имени..."
+                variant="outlined"
+                size="small"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                sx={{ flexGrow: 1, minWidth: '200px' }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              
+              <FormControl size="small" sx={{ minWidth: '200px' }}>
+                <InputLabel id="role-filter-label">Фильтр по должности</InputLabel>
+                <Select
+                  labelId="role-filter-label"
+                  multiple
+                  value={filterRole}
+                  onChange={handleFilterRoleChange}
+                  input={<OutlinedInput label="Фильтр по должности" />}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => (
+                        <Chip key={value} label={value} size="small" />
+                      ))}
+                    </Box>
+                  )}
+                >
+                  {Object.values(ROLE_LABELS).sort().map((role) => (
+                    <MenuItem key={role} value={role}>
+                      <Checkbox checked={filterRole.indexOf(role) > -1} />
+                      <ListItemText primary={role} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Box>
 
             {/* Schedule Table */}
@@ -595,119 +652,132 @@ const StaffSchedule: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {staff.map(staffMember => {
-                    const staffId = staffMember.id || staffMember._id;
-                    if (!staffId) return null;
-                    const isSelected = selectedStaff.includes(staffId);
-                    return (
-                      <TableRow
-                        key={staffMember.id}
-                        sx={{
-                          backgroundColor: isSelected ? 'action.selected' : 'inherit',
-                          '&:hover': {
-                            backgroundColor: 'action.hover'
-                          }
-                        }}
-                      >
-                        <TableCell
-                          onClick={() => {
-                            console.log('Staff cell clicked, staffId:', staffId);
-                            if (selectedStaff.includes(staffId)) {
-                              console.log('Removing staff from selection');
-                              const newSelectedStaff = selectedStaff.filter(id => id !== staffId);
-                              setSelectedStaff(newSelectedStaff);
-                              console.log('Selected staff after removal:', newSelectedStaff);
-                            } else {
-                              console.log('Adding staff to selection');
-                              const newSelectedStaff = [...selectedStaff, staffId];
-                              setSelectedStaff(newSelectedStaff);
-                              console.log('Selected staff after addition:', newSelectedStaff);
+                  {staff
+                    .filter(staffMember => {
+                      // Фильтрация по поисковой строке
+                      const matchesSearch = !searchTerm ||
+                        staffMember.fullName.toLowerCase().includes(searchTerm.toLowerCase());
+                      
+                      // Фильтрация по роли
+                      const roleLabel = ROLE_LABELS[staffMember.role as string] || staffMember.role;
+                      const matchesRole = filterRole.length === 0 ||
+                        filterRole.includes(roleLabel);
+                      
+                      return matchesSearch && matchesRole;
+                    })
+                    .map(staffMember => {
+                      const staffId = staffMember.id || staffMember._id;
+                      if (!staffId) return null;
+                      const isSelected = selectedStaff.includes(staffId);
+                      return (
+                        <TableRow
+                          key={staffMember.id}
+                          sx={{
+                            backgroundColor: isSelected ? 'action.selected' : 'inherit',
+                            '&:hover': {
+                              backgroundColor: 'action.hover'
                             }
                           }}
-                          sx={{
-                            cursor: 'pointer',
-                            userSelect: 'none'
-                          }}
                         >
-                          <Box display="flex" alignItems="center">
-                            <Box
-                              sx={{
-                                width: 12,
-                                height: 12,
-                                borderRadius: '50%',
-                                bgcolor: ROLE_COLORS[staffMember.role as string] || '#9e9e9e',
-                                mr: 1
-                              }}
-                            />
-                            <Box>
-                              {staffMember.fullName}
-                              <Box sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
-                                {ROLE_LABELS[staffMember.role as string] || staffMember.role}
+                          <TableCell
+                            onClick={() => {
+                              console.log('Staff cell clicked, staffId:', staffId);
+                              if (selectedStaff.includes(staffId)) {
+                                console.log('Removing staff from selection');
+                                const newSelectedStaff = selectedStaff.filter(id => id !== staffId);
+                                setSelectedStaff(newSelectedStaff);
+                                console.log('Selected staff after removal:', newSelectedStaff);
+                              } else {
+                                console.log('Adding staff to selection');
+                                const newSelectedStaff = [...selectedStaff, staffId];
+                                setSelectedStaff(newSelectedStaff);
+                                console.log('Selected staff after addition:', newSelectedStaff);
+                              }
+                            }}
+                            sx={{
+                              cursor: 'pointer',
+                              userSelect: 'none'
+                            }}
+                          >
+                            <Box display="flex" alignItems="center">
+                              <Box
+                                sx={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: '50%',
+                                  bgcolor: ROLE_COLORS[staffMember.role as string] || '#9e9e9e',
+                                  mr: 1
+                                }}
+                              />
+                              <Box>
+                                {staffMember.fullName}
+                                <Box sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
+                                  {ROLE_LABELS[staffMember.role as string] || staffMember.role}
+                                </Box>
                               </Box>
                             </Box>
-                          </Box>
-                        </TableCell>
-                        {weekDays.map(day => {
-                          const dayShifts = getShiftsForDay(staffId, day);
-                          return (
-                            <TableCell
-                              key={day.toString()}
-                              onClick={() => {
-                                setFormData({
-                                  ...formData,
-                                  staffId: staffId,
-                                  staffName: staffMember.fullName,
-                                  date: format(day, 'yyyy-MM-dd')
-                                });
-                                setModalOpen(true);
-                              }}
-                              sx={{
-                                minHeight: '100px',
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                '&:hover': {
-                                  backgroundColor: 'action.hover',
-                                  cursor: 'pointer'
-                                }
-                              }}
-                            >
-                              {dayShifts.map(shift => (
-                                <Box
-                                  key={shift.id}
-                                  sx={{
-                                    p: 1,
-                                    mb: 1,
-                                    borderRadius: 1,
-                                    bgcolor: 'background.paper',
-                                    borderLeft: `4px solid ${theme.palette.primary.main}`,
-                                    '&:hover': {
-                                      bgcolor: 'action.selected'
-                                    }
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditShift(shift);
-                                  }}
-                                >
-                                  <Box>{SHIFT_TYPES[shift.type]}</Box>
-                                  <Box sx={{ fontSize: 12 }}>
-                                    {shift.startTime} - {shift.endTime}
+                          </TableCell>
+                          {weekDays.map(day => {
+                            const dayShifts = getShiftsForDay(staffId, day);
+                            return (
+                              <TableCell
+                                key={day.toString()}
+                                onClick={() => {
+                                  setFormData({
+                                    ...formData,
+                                    staffId: staffId,
+                                    staffName: staffMember.fullName,
+                                    date: format(day, 'yyyy-MM-dd')
+                                  });
+                                  setModalOpen(true);
+                                }}
+                                sx={{
+                                  minHeight: '100px',
+                                  border: '1px solid',
+                                  borderColor: 'divider',
+                                  '&:hover': {
+                                    backgroundColor: 'action.hover',
+                                    cursor: 'pointer'
+                                  }
+                                }}
+                              >
+                                {dayShifts.map(shift => (
+                                  <Box
+                                    key={shift.id}
+                                    sx={{
+                                      p: 1,
+                                      mb: 1,
+                                      borderRadius: 1,
+                                      bgcolor: 'background.paper',
+                                      borderLeft: `4px solid ${theme.palette.primary.main}`,
+                                      '&:hover': {
+                                        bgcolor: 'action.selected'
+                                      }
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditShift(shift);
+                                    }}
+                                  >
+                                    <Box>{SHIFT_TYPES[shift.type]}</Box>
+                                    <Box sx={{ fontSize: 12 }}>
+                                      {shift.startTime} - {shift.endTime}
+                                    </Box>
+                                    <Box mt={0.5}>
+                                      <Chip
+                                        label={SHIFT_STATUSES[shift.status]}
+                                        size="small"
+                                        color={STATUS_COLORS[shift.status] as any}
+                                      />
+                                    </Box>
                                   </Box>
-                                  <Box mt={0.5}>
-                                    <Chip
-                                      label={SHIFT_STATUSES[shift.status]}
-                                      size="small"
-                                      color={STATUS_COLORS[shift.status] as any}
-                                    />
-                                  </Box>
-                                </Box>
-                              ))}
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    );
-                  })}
+                                ))}
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      );
+                    })}
                 </TableBody>
               </Table>
             </TableContainer>

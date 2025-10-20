@@ -1,10 +1,10 @@
 import MenuItemsAdminPage from '../pages/MedCabinet/MenuItemsAdminPage';
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { 
+import {
   AppBar, Toolbar, Typography,
   Box, Container, CssBaseline, IconButton,
-  Button, 
+  Button,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -24,7 +24,6 @@ import { Sidebar } from './Sidebar/Sidebar';
 import sidebarStructure from './Sidebar/SidebarStructure';
 import { useLocation } from 'react-router-dom';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import ChildrenReports from '../pages/Children/ChildrenReports';
 import StaffSchedule from '../pages/Staff/StaffSchedule';
 
 
@@ -51,6 +50,7 @@ import OrganolepticJournalPage from '../pages/MedCabinet/OrganolepticJournalPage
 import SomaticJournal from '../pages/MedCabinet/SomaticJournal';
 import ReportsRent from './reports/ReportsRent';
 import ChildPayments from '../pages/Children/ChildPayments';
+import Qwen3Chat from './Qwen3Chat';
 
 interface SimpleLayoutProps {
   children?: React.ReactNode;
@@ -98,7 +98,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
           <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600, letterSpacing: 1 }}>
             Система управления детским садом
           </Typography>
-          <Button variant="outlined" color="secondary" onClick={handleLogout} sx={{ borderColor: 'white', color: 'white', '&:hover': { background: 'rgba(255,255,255,0.08)' } }}>
+          <Button variant="outlined" color="secondary" onClick={handleLogout} sx={{ borderColor: 'white', color: 'white', '&:hover': { background: 'rgba(255,255,0.08)' } }}>
             Выйти
           </Button>
         </Toolbar>
@@ -106,19 +106,19 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
 
       {/* Sidebar с древовидной структурой */}
       {isMobile ? (
-        <Sidebar 
-          location={location} 
-          structure={sidebarStructure} 
-          variant="temporary" 
-          open={drawerOpen} 
-          onClose={toggleDrawer} 
+        <Sidebar
+          location={location}
+          structure={sidebarStructure}
+          variant="temporary"
+          open={drawerOpen}
+          onClose={toggleDrawer}
         />
       ) : (
-        <Sidebar 
-          location={location} 
-          structure={sidebarStructure} 
-          variant="permanent" 
-          open={true} 
+        <Sidebar
+          location={location}
+          structure={sidebarStructure}
+          variant="permanent"
+          open={true}
         />
       )}
 
@@ -131,7 +131,6 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             {/* Дети */}
             <Route path="children" element={<Children />} />
             <Route path="children/attendance" element={<WeeklyAttendance />} />
-            <Route path="children/reports" element={<ChildrenReports />} />
             <Route path='children/payments' element={<ChildPayments/>}/>
             {/* Сотрудники */}
             <Route path="staff" element={<Staff />} />
@@ -170,6 +169,9 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
           </Routes>
         </Container>
       </Box>
+      
+      {/* Компонент чата Qwen3 */}
+      <Qwen3Chat />
     </Box>
   );
 };
