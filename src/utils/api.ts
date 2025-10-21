@@ -42,9 +42,6 @@ export const createApiInstance = (baseURL: string = API_BASE_URL): AxiosInstance
       'X-Requested-With': 'XMLHttpRequest', // Помогает идентифицировать запросы как AJAX
     },
     withCredentials: true, // Включаем отправку credentials (включая cookies) с каждым запросом
-    // Устанавливаем куки для всех запросов, включая мобильные устройства
-    xsrfCookieName: 'auth_token',
-    xsrfHeaderName: 'X-CSRF-TOKEN',
   });
 
   // Request interceptor
