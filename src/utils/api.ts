@@ -41,17 +41,16 @@ export const createApiInstance = (baseURL: string = API_BASE_URL): AxiosInstance
       'Content-Type': 'application/json',
       'X-Requested-With': 'XMLHttpRequest', // Помогает идентифицировать запросы как AJAX
     },
-    withCredentials: true, // Включаем отправку credentials (включая cookies) с каждым запросом
   });
 
   // Request interceptor
   api.interceptors.request.use(
     (config) => {
-      // При использовании httpOnly cookie токен автоматически отправляется с запросом
-      // Не нужно добавлять токен из localStorage в заголовок Authorization
-      
-      // Убедимся, что куки отправляются даже в мобильных браузерах
-      config.withCredentials = true;
+      // Добавляем токен из localStorage в заголовок Authorization
+      const token = localStorage.getItem('auth_token');
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
       
       
       console.log('📤 API запрос:', config.method?.toUpperCase(), config.url);
@@ -77,9 +76,9 @@ export const createApiInstance = (baseURL: string = API_BASE_URL): AxiosInstance
         console.warn('🔒 Ошибка 401: Требуется авторизация');
         
         if (typeof window !== 'undefined') {
-          // Удаляем только пользовательские данные из localStorage
-          // Токен в httpOnly cookie удаляется на сервере при logout
+          // Удаляем данные аутентификации из localStorage
           localStorage.removeItem('user');
+          localStorage.removeItem('auth_token');
           window.location.href = '/login';
         }
         

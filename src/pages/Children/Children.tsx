@@ -47,7 +47,7 @@ const Children: React.FC = () => {
   // Экспорт: отправить на email
   const handleExportEmail = async () => {
     try {
-      await axios.post(`${API_BASE_URL}/exports/children`, { action: 'email' }, { withCredentials: true });
+      await axios.post(`${API_BASE_URL}/exports/children`, { action: 'email' });
       alert('Документ отправлен на почту администратора');
     } catch (e) {
       alert('Ошибка отправки на почту');

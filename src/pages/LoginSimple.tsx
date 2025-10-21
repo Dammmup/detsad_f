@@ -26,9 +26,7 @@ const Login: React.FC = () => {
     try {
       const res = await axios.post(
   `${REACT_APP_API_URL}/auth/login`,
-  { phone, password },
-  { withCredentials: true } // 🔥 важно
-);
+  { phone, password });
 
       const userData: User = {
         _id: res.data.user._id || res.data.user.id,

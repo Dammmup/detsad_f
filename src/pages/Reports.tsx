@@ -105,7 +105,6 @@ const Reports: React.FC = () => {
     const fetchCurrentUser = async () => {
       try {
         const response = await fetch('/auth/me', {
-          credentials: 'include'
         });
         if (response.ok) {
         }

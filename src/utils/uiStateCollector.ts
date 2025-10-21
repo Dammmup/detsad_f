@@ -149,7 +149,7 @@ export const sendUIState = async (sessionId: string, userId?: string) => {
       try {
         const currentUserResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/current-user`, {
           method: 'GET',
-          credentials: 'include' // Включаем cookies для передачи токена аутентификации
+         // Включаем cookies для передачи токена аутентификации
         });
         
         if (currentUserResponse.ok) {

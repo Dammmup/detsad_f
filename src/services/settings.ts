@@ -92,15 +92,17 @@ export const api = axios.create({
   timeout: 10000, // 10 seconds
   headers: {
     'Content-Type': 'application/json',
-  },
-  withCredentials: true // Include cookies in requests
+    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+  }
 });
 
 // Request interceptor for API calls
 api.interceptors.request.use(
   (config) => {
-    // When using httpOnly cookies, the token is automatically included in requests
-    // No need to manually add token from localStorage
+    const token = localStorage.getItem('auth_token');
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {

@@ -50,7 +50,9 @@ export const getChildAttendance = async (params?: {
   try {
 const response = await axios.get(`${REACT_APP_API_URL}/child-attendance`, {
   params,
-  withCredentials: true
+  headers: {
+    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+  }
 });
     return response.data;
   } catch (error: any) {
@@ -63,7 +65,9 @@ const response = await axios.get(`${REACT_APP_API_URL}/child-attendance`, {
 export const saveChildAttendance = async (record: Omit<ChildAttendanceRecord, '_id' | 'createdAt' | 'updatedAt'>): Promise<ChildAttendanceRecord> => {
   try {
   const response = await axios.post(`${REACT_APP_API_URL}/child-attendance`, record, {
-    withCredentials: true
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+    }
   });
     return response.data;
   } catch (error: any) {
@@ -87,7 +91,9 @@ export const bulkSaveChildAttendance = async (
       records,
       groupId
     }, {
-      withCredentials: true
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+      }
     });
     return response.data;
   } catch (error: any) {
@@ -105,7 +111,9 @@ export const getAttendanceStats = async (params?: {
   try {
   const response = await axios.get(`${REACT_APP_API_URL}/child-attendance/stats`, {
     params,
-    withCredentials: true
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+    }
   });
     return response.data;
   } catch (error: any) {
@@ -118,8 +126,10 @@ export const getAttendanceStats = async (params?: {
 export const deleteChildAttendance = async (id: string): Promise<void> => {
   try {
   await axios.delete(`${REACT_APP_API_URL}/child-attendance/${id}`, {
-    withCredentials: true
- });
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+    }
+  });
   } catch (error: any) {
     console.error('Error deleting attendance:', error);
     throw new Error(error.response?.data?.error || 'Ошибка удаления записи');
@@ -130,7 +140,9 @@ export const deleteChildAttendance = async (id: string): Promise<void> => {
 export const debugChildAttendance = async (): Promise<any> => {
   try {
   const response = await axios.get(`${REACT_APP_API_URL}/child-attendance/debug`, {
-    withCredentials: true
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+    }
  });
     console.log('🔍 Debug info:', response.data);
     return response.data;

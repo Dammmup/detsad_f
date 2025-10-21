@@ -44,9 +44,7 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
             startDate: startDate.toISOString().split('T')[0],
             endDate: endDate.toISOString().split('T')[0],
             userId: currentUser.id
-          },
-          withCredentials: true
-        });
+          }        });
         
         const statsData = response.data;
         

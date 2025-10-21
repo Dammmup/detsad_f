@@ -22,6 +22,7 @@ class AuthApiClient extends BaseApiClient {
       
       const response = await this.post<{
         user: any;
+        token: string;
       }>('/auth/login', credentials);
       
       const authData: AuthResponse = {
@@ -56,10 +57,10 @@ class AuthApiClient extends BaseApiClient {
                 staffId: response.user.staffId,
                 staffName: response.user.staffName
               },
-              token: '' // Токен теперь хранится в httpOnly cookie
+              token: response.token // Токен теперь передается в ответе
             };
       
-      // Сохраняем только пользователя, токен хранится в cookie
+      // Сохраняем пользователя и токен
       this.saveAuthData(authData);
       
       console.log('✅ Успешный вход:', authData.user.fullName);
@@ -82,12 +83,8 @@ class AuthApiClient extends BaseApiClient {
    */
   async logout(): Promise<void> {
     try {
-      const token = this.getToken();
-      
-      if (token) {
-        // Уведомляем backend о выходе (опционально)
-        await this.post('/auth/logout', {});
-      }
+      // Уведомляем backend о выходе (опционально)
+      await this.post('/auth/logout', {});
     } catch (error) {
       console.warn('Ошибка при выходе на backend:', error);
     } finally {
@@ -137,11 +134,17 @@ class AuthApiClient extends BaseApiClient {
    */
   async refreshToken(): Promise<boolean> {
     try {
-      // Просто проверяем валидность токена, обновление происходит на сервере
+      // При использовании токенов в заголовке Authorization обновление не требуется
+      // Токен валиден в течение 24 часов, после чего нужно перезайти
+      const token = this.getToken();
+      if (!token) {
+        return false;
+      }
+      
       const isValid = await this.validateToken();
       
       if (isValid) {
-        console.log('🔄 Токен действителен (обновление не требуется при httpOnly cookie)');
+        console.log('🔄 Токен действителен');
         return true;
       } else {
         return false;
@@ -163,8 +166,7 @@ class AuthApiClient extends BaseApiClient {
    */
   async validateToken(): Promise<boolean> {
     try {
-      // Просто делаем запрос на валидацию, токен будет автоматически отправлен в cookie
-      // Добавляем проверку для мобильных устройств
+      // Делаем запрос на валидацию токена, который передается в заголовке Authorization
       const response = await this.get('/auth/validate');
       
       // Проверяем, что ответ валиден
@@ -182,23 +184,27 @@ class AuthApiClient extends BaseApiClient {
 
 
   private getToken(): string | null {
-    return null; // Токен хранится в httpOnly cookie, недоступен из JavaScript
+    return localStorage.getItem('auth_token');
   }
 
   /**
    * Сохранение данных авторизации
    */
  private saveAuthData(authData: AuthResponse): void {
-    // Сохраняем только пользователя, токен хранится в httpOnly cookie
+    // Сохраняем пользователя и токен
     localStorage.setItem('user', JSON.stringify(authData.user));
+    if (authData.token) {
+      localStorage.setItem('auth_token', authData.token);
+    }
   }
 
   /**
    * Очистка данных авторизации
    */
  private clearAuthData(): void {
-    // Удаляем только пользователя из localStorage, токен в httpOnly cookie удаляется на сервере
+    // Удаляем данные аутентификации из localStorage
     localStorage.removeItem('user');
+    localStorage.removeItem('auth_token');
     localStorage.removeItem('phoneNumber');
   }
 }

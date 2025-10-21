@@ -72,15 +72,15 @@ const api = axios.create({
   timeout: 30000, // 30 seconds
   headers: {
     'Content-Type': 'application/json',
-  },
-  withCredentials: true // Include cookies in requests
+    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+  }
 });
 
 // Request interceptor for API calls
 api.interceptors.request.use(
   (config) => {
-    // Add auth token if available in localStorage (fallback)
-    const token = localStorage.getItem('token');
+    // Add auth token if available in localStorage
+    const token = localStorage.getItem('auth_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

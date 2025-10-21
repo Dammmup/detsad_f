@@ -258,7 +258,7 @@ setStaff(data);
 
   const handleExportEmail = async () => {
     try {
-      await axios.post(`${API_BASE_URL}/exports/staff`, { action: 'email' }, { withCredentials: true });
+      await axios.post(`${API_BASE_URL}/exports/staff`, { action: 'email' });
       alert('Документ отправлен на почту администратора');
     } catch (e) {
       alert('Ошибка отправки на почту');
