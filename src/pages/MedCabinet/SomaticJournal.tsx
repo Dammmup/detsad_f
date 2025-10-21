@@ -7,7 +7,6 @@ import { User } from '../../types/common';
 import {
   getSomaticRecords,
   createSomaticRecord,
-  updateSomaticRecord,
   deleteSomaticRecord
 } from '../../services/somaticJournal';
 import { Document, Packer, Paragraph, HeadingLevel, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell } from 'docx';
