@@ -42,7 +42,7 @@ const Login: React.FC = () => {
       };
       
       // Use AuthContext login method to properly update context
-      login(userData, ''); // Токен теперь хранится в httpOnly cookie
+      login(userData, ''); // Токен теперь передается в заголовке Authorization
       navigate('/app/dashboard');
     } catch (e: any) {
       setError(e?.response?.data?.error || 'Ошибка входа');

@@ -38,7 +38,7 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
         const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
         const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
         
-        // Используем axios для запроса, токен автоматически передается в httpOnly cookie
+        // Используем axios для запроса, токен передается в заголовке Authorization
         const response = await axios.get(`${API_BASE_URL}/reports/salary/summary`, {
           params: {
             startDate: startDate.toISOString().split('T')[0],

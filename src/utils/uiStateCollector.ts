@@ -149,7 +149,9 @@ export const sendUIState = async (sessionId: string, userId?: string) => {
       try {
         const currentUserResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/current-user`, {
           method: 'GET',
-         // Включаем cookies для передачи токена аутентификации
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          }
         });
         
         if (currentUserResponse.ok) {
@@ -164,6 +166,7 @@ export const sendUIState = async (sessionId: string, userId?: string) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
       },
       body: JSON.stringify({
         userId,

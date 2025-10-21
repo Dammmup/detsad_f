@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
   loading: boolean;
-  login: (user: User, token: string) => void; // token теперь не используется при httpOnly cookie, но оставляем для совместимости
+  login: (user: User, token: string) => void; // token теперь передается в заголовке Authorization
   logout: () => Promise<void>;
   checkAuth: () => Promise<boolean>;
 }
@@ -61,9 +61,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(userData);
     setIsLoggedIn(true);
     
-    // Сохраняем только пользователя в localStorage
-    // Токен хранится в httpOnly cookie и не доступен из JavaScript
+    // Сохраняем пользователя и токен в localStorage
+    // Токен передается в заголовке Authorization с каждым запросом
     localStorage.setItem('user', JSON.stringify(userData));
+    if (token) {
+      localStorage.setItem('auth_token', token);
+    }
     
     console.log('🔐 Пользователь вошел в систему:', userData.fullName);
   };

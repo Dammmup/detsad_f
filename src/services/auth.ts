@@ -113,8 +113,7 @@ class AuthApiClient extends BaseApiClient {
 
   /**
    * Проверка авторизации
-   * При использовании httpOnly cookie проверяем только наличие пользователя
-   * и делаем запрос на валидацию на сервер
+   * Проверяем наличие пользователя и делаем запрос на валидацию токена на сервер
    */
   async isAuthenticated(): Promise<boolean> {
     const user = this.getCurrentUser();
@@ -129,8 +128,7 @@ class AuthApiClient extends BaseApiClient {
 
   /**
    * Обновление токена
-   * При использовании httpOnly cookie обновление происходит автоматически на сервере
-   * через механизм обновления сессии
+   * Токен обновляется при истечении срока действия, требуя повторной аутентификации
    */
   async refreshToken(): Promise<boolean> {
     try {
@@ -162,7 +160,7 @@ class AuthApiClient extends BaseApiClient {
 
   /**
    * Валидация токена с backend
-   * При использовании httpOnly cookie токен автоматически отправляется с каждым запросом
+   * Токен отправляется в заголовке Authorization с каждым запросом
    */
   async validateToken(): Promise<boolean> {
     try {
