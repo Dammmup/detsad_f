@@ -123,6 +123,7 @@
     "@types/react-router-dom": "^5.3.3",
     "@types/sortablejs": "^1.15.0",
     "@types/tinycolor2": "^1.4.6",
+    "@types/unist": "^3.0.3",
     "cross-env": "^7.0.3",
     "eslint-plugin-css-modules": "^2.12.0",
     "eslint-plugin-import": "^2.27.5",

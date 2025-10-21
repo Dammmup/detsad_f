@@ -42,7 +42,6 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
   const [showAddTaskDialog, setShowAddTaskDialog] = useState(false);
  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
 
   // Загрузка задач и пользователей
   useEffect(() => {
@@ -70,13 +69,11 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
       }
       
       try {
-        setLoadingUsers(true);
         const userList = await getUsers();
         setUsers(userList);
       } catch (err: any) {
         console.error('Error fetching users:', err);
       } finally {
-        setLoadingUsers(false);
       }
     };
 

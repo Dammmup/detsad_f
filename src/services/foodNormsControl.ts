@@ -1,5 +1,5 @@
 import { saveAs } from 'file-saver';
-import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun } from 'docx';
+import { Document, Packer, Paragraph, Table, TableCell, TableRow } from 'docx';
 
 export interface FoodNormsRow {
   product: string;

@@ -159,7 +159,7 @@ export const validatePassword = (password: string): {
   }
   
   // Специальные символы
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password)) {
     errors.push('Пароль должен содержать специальные символы');
   } else {
     score += 1;
@@ -470,9 +470,9 @@ export const fieldValidators = {
   iin: (message: string = 'Некорректный ИИН') => 
     (value: string) => value && !isValidIIN(value) ? message : null,
     
-  positiveNumber: (message: string = 'Значение должно быть положительным числом') => 
+  positiveNumber: (message: string = 'Значение должно быть положительным числом') =>
     (value: any) => value && !isPositiveNumber(value) ? message : null,
     
-  dateNotFuture: (message: string = 'Дата не может быть в будущем') => 
+  dateNotFuture: (message: string = 'Дата не может быть в будущем') =>
     (value: string) => value && !isNotFutureDate(value) ? message : null
 };

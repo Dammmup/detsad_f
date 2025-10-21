@@ -1,5 +1,4 @@
 
-import { User } from '../types/common';
 import { api } from './settings';
 
 // REACT_APP_API_URL и авторизация берутся из settings.ts

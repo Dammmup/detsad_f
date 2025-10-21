@@ -39,6 +39,7 @@ interface TimeTrackingProviderProps {
 export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) => {
 
  const [timeStatus, setTimeStatus] = useState<string | null>(null);
+ // setTimeStatus is used in the fetchTimeStatus function below
   const [loading, setLoading] = useState<boolean>(false);
   const [location, setLocation] = useState<GeolocationPosition | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -93,7 +94,8 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
   // Fetch current time tracking status
   const fetchTimeStatus = useCallback(async () => {
     try {
-  
+      // API call would go here
+      // return response.data;
       return null;
     } catch (error) {
       console.error('Error fetching time status:', error);
@@ -254,14 +256,14 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
 
   // Auto-refresh status every 30 seconds if user is clocked in
   useEffect(() => {
+    fetchTimeStatus();
     const interval = setInterval(() => {
       fetchTimeStatus().catch(() => {
         // Error is already handled in fetchTimeStatus
       });
     }, 30000); // 30 seconds
-fetchTimeStatus();
-      return () => clearInterval(interval);
-    }, []);
+    return () => clearInterval(interval);
+  }, [fetchTimeStatus]);
 
   const value = {
     // State

@@ -104,16 +104,6 @@ export default function SomaticJournal() {
     }
   };
 
-  // Обновление записи (редактирование)
-  const handleUpdate = async (id: string, updated: Partial<SomaticRecord>) => {
-    setLoading(true);
-    try {
-      const rec = await updateSomaticRecord(id, updated);
-      setRecords(prev => prev.map(r => (r.id === id ? rec : r)));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Экспорт в Word
   const handleExport = () => {

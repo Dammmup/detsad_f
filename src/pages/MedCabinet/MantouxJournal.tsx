@@ -8,7 +8,6 @@ import { MantouxRecord } from '../../types/mantoux';
 import {
   getMantouxRecords,
   createMantouxRecord,
-  updateMantouxRecord,
   deleteMantouxRecord
 } from '../../services/mantouxJournal';
 import { Document, Packer, Paragraph, HeadingLevel, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell } from 'docx';
@@ -82,16 +81,6 @@ export default function MantouxJournal() {
     }
   };
 
-  // Обновление записи (редактирование)
-  const handleUpdate = async (id: string, updated: Partial<MantouxRecord>) => {
-    setLoading(true);
-    try {
-      const rec = await updateMantouxRecord(id, updated);
-      setRecords(prev => prev.map(r => (r.id === id ? rec : r)));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Экспорт в Word
   const handleExport = () => {

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, CircularProgress, Alert, Button, useMediaQuery, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  MenuItem, Select, InputLabel, FormControl, Chip, Avatar
+  MenuItem, Select, InputLabel, FormControl, Avatar
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
 import { IChildPayment, Child, Group } from '../../types/common';

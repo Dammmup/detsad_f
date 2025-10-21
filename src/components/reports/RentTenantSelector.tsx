@@ -5,14 +5,9 @@ import {
   TextField,
   Autocomplete,
   Typography,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   IconButton
 } from '@mui/material';
-import { Close as CloseIcon, Check as CheckIcon } from '@mui/icons-material';
+import { Close as CloseIcon } from '@mui/icons-material';
 import { getUsers } from '../../services/users';
 
 interface User {
@@ -36,7 +31,6 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
 }) => {
   const [allTenants, setAllTenants] = useState<User[]>([]);
   const [selectedTenants, setSelectedTenants] = useState<User[]>([]);
-  const [searchInput, setSearchInput] = useState('');
 
   // Загружаем всех пользователей (арендаторов)
   useEffect(() => {
@@ -64,18 +58,11 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
     onTenantSelect(newValue.map(tenant => tenant._id).filter((id): id is string => id !== undefined));
   };
 
-  // Обработчик удаления отдельного арендатора
-  const handleDeleteTenant = (tenantId: string) => () => {
-    const updatedTenants = selectedTenants.filter(tenant => tenant._id !== tenantId);
-    setSelectedTenants(updatedTenants);
-    onTenantSelect(updatedTenants.map(tenant => tenant._id).filter((id): id is string => id !== undefined));
-  };
-
  // Фильтруем арендаторов для отображения в автозаполнении
-  const filteredTenants = allTenants.filter(tenant =>
-    tenant._id && !selectedTenants.some(selected => selected._id === tenant._id) &&
-    tenant.fullName.toLowerCase().includes(searchInput.toLowerCase())
-  );
+ const filteredTenants = allTenants.filter(tenant =>
+   tenant._id && !selectedTenants.some(selected => selected._id === tenant._id) &&
+   tenant.fullName.toLowerCase().includes('')
+ );
 
   return (
     <Box sx={{ mb: 3 }}>

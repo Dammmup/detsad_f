@@ -63,7 +63,6 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   const [editData, setEditData] = useState<Partial<PayrollRow>>({});
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
@@ -199,13 +198,11 @@ const handleSaveClick = async (rowId: string) => {
       setEditingId(null);
       setEditData({});
       setSnackbarMessage('Зарплата успешно обновлена');
-      setSnackbarSeverity('success');
       setSnackbarOpen(true);
     }
   } catch (error) {
     console.error('Error updating payroll:', error);
     setSnackbarMessage('Ошибка при обновлении зарплаты');
-    setSnackbarSeverity('error');
     setSnackbarOpen(true);
   }
 };
@@ -225,7 +222,6 @@ const handleInputChange = (field: string, value: any) => {
 const handleDeleteClick = async (rowId: string) => {
   if (!currentUser || !currentUser.id || currentUser.role !== 'admin') {
     setSnackbarMessage('Только администратор может удалять расчетные листы');
-    setSnackbarSeverity('error');
     setSnackbarOpen(true);
     return;
   }
@@ -243,13 +239,11 @@ const handleDeleteClick = async (rowId: string) => {
         // Обновляем локальный массив
         setRows(prev => prev.filter(r => r.staffId !== rowId));
         setSnackbarMessage('Расчетный лист успешно удален');
-        setSnackbarSeverity('success');
         setSnackbarOpen(true);
       }
     } catch (error) {
       console.error('Error deleting payroll:', error);
       setSnackbarMessage('Ошибка при удалении расчетного листа');
-      setSnackbarSeverity('error');
       setSnackbarOpen(true);
     }
   }
@@ -288,7 +282,6 @@ const handleExportToExcel = () => {
 const handleGeneratePayrollSheets = async () => {
   if (!currentUser || !currentUser.id || currentUser.role !== 'admin') {
     setSnackbarMessage('Только администратор может генерировать расчетные листы');
-    setSnackbarSeverity('error');
     setSnackbarOpen(true);
     return;
   }
@@ -300,7 +293,6 @@ const handleGeneratePayrollSheets = async () => {
       setGenerating(true);
       await generatePayrollSheets(monthToGenerate);
       setSnackbarMessage('Расчетные листы успешно сгенерированы');
-      setSnackbarSeverity('success');
       setSnackbarOpen(true);
       
       // Обновляем данные
@@ -371,7 +363,6 @@ const handleGeneratePayrollSheets = async () => {
     } catch (error: any) {
       console.error('Error generating payroll sheets:', error);
       setSnackbarMessage(error?.message || 'Ошибка генерации расчетных листов');
-      setSnackbarSeverity('error');
       setSnackbarOpen(true);
     } finally {
       setGenerating(false);

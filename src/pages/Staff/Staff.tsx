@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { getUsers, updateUser, deleteUser, usersApi } from '../../services/users';
 import {
   Table, TableHead, TableRow, TableCell, TableBody, Paper, CircularProgress, Alert, Button, Dialog,
@@ -89,23 +89,22 @@ const Staff = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
-  const [showCodeDialog, setShowCodeDialog] = useState(false);
   const { user: currentUser } = useAuth();
   // 🇷🇺 Список доступных ролей на русском языке (автоматически из переводов)
   const availableRoles = Object.values(roleTranslations).sort();
   
-  const fetchStaff = () => {
+  const fetchStaff = useCallback(() => {
     setLoading(true);
     setError(null);
     const includePasswords = currentUser?.role === 'admin';
     getUsers(includePasswords)
       .then(data => {
-  setStaff(data);
+setStaff(data);
         setFilteredStaff(data);
       })
       .catch(err => setError(err?.message || 'Ошибка загрузки'))
       .finally(() => setLoading(false));
-  };
+  }, [currentUser?.role]);
   
   // Загрузка списка групп
   const fetchGroups = async () => {
@@ -121,7 +120,7 @@ const Staff = () => {
     
     fetchStaff();
     fetchGroups();
-  }, []);
+  }, [fetchStaff]);
   
   // Фильтрация сотрудников при изменении поисковой строки или фильтра ролей
   useEffect(() => {
@@ -149,7 +148,7 @@ const Staff = () => {
     }
     
     setFilteredStaff(filtered);
-  }, [staff, searchTerm, filterRole]);
+  }, [staff, searchTerm, filterRole,currentUser?.role]);
 
   const handleOpenModal = (member?: StaffMember) => {
     setForm(member ? { ...member } : defaultForm);

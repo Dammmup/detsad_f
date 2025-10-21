@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Paper, Typography, Box, Button, Table, TableHead, TableRow, TableCell, TableBody,
   Card, CardContent, Grid, Chip, IconButton, DialogTitle, DialogContent,
@@ -86,7 +86,6 @@ const translateRole = (role: string): string => {
 const StaffAttendanceTracking:React.FC = () => {
   const [staffList, setStaffList] = useState<any[]>([]);
   const [records, setRecords] = useState<TimeRecord[]>([]);
-  const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0]
@@ -152,15 +151,14 @@ const StaffAttendanceTracking:React.FC = () => {
     setFilterRole(typeof value === 'string' ? value.split(',') : value);
   };
 
-  const getStaffName = (staffId: string) => {
+  const getStaffName = useCallback((staffId: string) => {
     const staff = staffList.find(s => s.id === staffId || s._id === staffId);
     return staff?.fullName || 'Неизвестно';
- };
+ }, [staffList]);
 
   // Загрузка смен сотрудников (учет посещаемости)
        useEffect(() => {
          const fetchRecords = async () => {
-           setLoading(true);
            try {
              let filters: any = {};
              if (selectedStaff !== 'all') filters.staffId = selectedStaff;
@@ -233,7 +231,6 @@ const StaffAttendanceTracking:React.FC = () => {
              console.error('Error fetching records:', e);
              setRecords([]);
            } finally {
-             setLoading(false);
            }
          };
          fetchRecords();

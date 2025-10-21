@@ -9,7 +9,6 @@ import ChildCareIcon from '@mui/icons-material/ChildCare';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import ScheduleIcon from '@mui/icons-material/Schedule';
-import TableChartIcon from '@mui/icons-material/TableChart';
 import CalendarViewWeekIcon from '@mui/icons-material/CalendarViewWeek';
 
 export interface SidebarItem {

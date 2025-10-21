@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Typography, Button, Stack, Table, TableHead, TableRow, TableCell, TableBody, Paper, TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select, FormControl, InputLabel, CircularProgress } from '@mui/material';
 import { OrganolepticRecord } from '../../types/organoleptic';
 import {
@@ -9,7 +9,6 @@ import {
   clearOrganolepticRecords,
   generateOrganolepticByMenu
 } from '../../services/organolepticJournal';
-import { getMenuItems } from '../../services/menuItems';
 
 const GROUPS = ['all', 'Ясельная', 'Младшая', 'Средняя', 'Старшая', 'Подготовительная'];
 
@@ -21,11 +20,6 @@ export default function OrganolepticJournalPage() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [group, setGroup] = useState('all');
   const [responsibleSignature, setResponsibleSignature] = useState('');
-
-  useEffect(() => {
-    fetchRecords();
-  }, [date, group]);
-
   const fetchRecords = async () => {
     setLoading(true);
     try {
@@ -35,6 +29,13 @@ export default function OrganolepticJournalPage() {
       setLoading(false);
     }
   };
+  
+ const fetchRecordsCallback = useCallback(fetchRecords, [date, group]);
+
+  useEffect(() => {
+    fetchRecords();
+  }, [date, group, fetchRecordsCallback]);
+
 
   const handleGenerateByMenu = async () => {
     setLoading(true);

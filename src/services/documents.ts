@@ -201,16 +201,3 @@ export const exportDocuments = async (format: 'pdf' | 'excel' | 'csv', params?: 
 
 
 
-export default {
- // Documents
-  getDocuments,
-  getDocument,
-  createDocument,
-  updateDocument,
-  deleteDocument,
-  downloadDocument,
-
-  
-  // Export
-  exportDocuments,
-};

@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, FormControl, InputLabel,
-  Select, MenuItem, SelectChangeEvent, Checkbox, ListItemText, OutlinedInput,
-  Box, Typography, Alert, CircularProgress, TextField, IconButton, Grid
+  Select, MenuItem, SelectChangeEvent, Checkbox, ListItemText,
+  Box, Typography, Alert, CircularProgress, TextField, Grid
 } from '@mui/material';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { ru } from 'date-fns/locale';
 import childrenApi, { Child } from '../services/children';
-import { getGroups } from '../services/groups';
-import { Group } from '../types/common';
 import { bulkSaveChildAttendance } from '../services/childAttendance';
 
 interface AttendanceBulkModalProps {
@@ -35,7 +34,6 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
   groupId, 
   onSuccess 
 }) => {
- const [groups, setGroups] = useState<Group[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildren, setSelectedChildren] = useState<string[]>([]);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
@@ -44,13 +42,6 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
-
-  useEffect(() => {
-    if (open && groupId) {
-      fetchChildren();
-    }
-  }, [open, groupId]);
-
   const fetchChildren = async () => {
     try {
       const childrenList = await childrenApi.getAll();
@@ -68,6 +59,13 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
       console.error('Error fetching children:', err);
     }
   };
+  useEffect(() => {
+    if (open && groupId) {
+      fetchChildren();
+    }
+  }, [open, groupId, fetchChildren]);
+
+
 
   const handleChildToggle = (childId: string) => {
     if (selectedChildren.includes(childId)) {
@@ -175,18 +173,18 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} md={6}>
-              <DatePicker
+              <DatePicker<Date>
                 label="Начальная дата"
                 value={dateRange.start}
-                onChange={(newValue) => setDateRange({ ...dateRange, start: newValue })}
+                onChange={(newValue: Date | null) => setDateRange({ ...dateRange, start: newValue })}
                 renderInput={(params) => <TextField {...params} fullWidth />}
               />
             </Grid>
             <Grid item xs={12} md={6}>
-              <DatePicker
+              <DatePicker<Date>
                 label="Конечная дата"
                 value={dateRange.end}
-                onChange={(newValue) => setDateRange({ ...dateRange, end: newValue })}
+                onChange={(newValue: Date | null) => setDateRange({ ...dateRange, end: newValue })}
                 renderInput={(params) => <TextField {...params} fullWidth />}
               />
             </Grid>

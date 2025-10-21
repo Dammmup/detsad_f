@@ -1,13 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Box, Typography, Button, Stack, Table, TableHead, TableRow, TableCell, TableBody, Paper, TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select, FormControl, InputLabel, Checkbox, FormControlLabel, CircularProgress
+  Box, Typography, Button, Stack, Table, TableHead, TableRow, TableCell, TableBody, Paper, TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select, FormControl, InputLabel, CircularProgress
 } from '@mui/material';
 import { getUsers } from '../../services/users';
 import { User } from '../../types/common';
 import {
   getHelminthRecords,
   createHelminthRecord,
-  updateHelminthRecord,
   deleteHelminthRecord
 } from '../../services/helminthJournal';
 import { Document, Packer, Paragraph, HeadingLevel, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell } from 'docx';

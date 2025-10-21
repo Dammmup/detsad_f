@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Button, Stack, Table, TableHead, TableRow, TableCell, TableBody, Paper, TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select, FormControl, InputLabel, CircularProgress, Switch, FormControlLabel } from '@mui/material';
+import { Box, Typography, Button, Table, TableHead, TableRow, TableCell, TableBody, Paper, TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select, FormControl, InputLabel, CircularProgress, Switch, FormControlLabel } from '@mui/material';
 import { getMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from '../../services/menuItems';
 import { MenuItem as MenuItemType } from '../../types/menuItem';
 

@@ -6,7 +6,6 @@ import BugReportIcon from '@mui/icons-material/BugReport';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 
-import LocalDrinkIcon from '@mui/icons-material/LocalDrink';
 
 
 export const medicalSidebarSection = {

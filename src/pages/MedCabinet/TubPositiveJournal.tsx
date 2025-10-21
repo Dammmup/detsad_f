@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Box, Typography, Button, Stack, Table, TableHead, TableRow, TableCell, TableBody, Paper, TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, CircularProgress
+  Box, Typography, Button, Stack, Table, TableHead, TableRow, TableCell, TableBody, TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, CircularProgress
 } from '@mui/material';
 import { getUsers } from '../../services/users';
 import { User } from '../../types/common';
@@ -8,7 +8,6 @@ import { TubPositiveRecord } from '../../types/tubPositive';
 import {
   getTubPositiveRecords,
   createTubPositiveRecord,
-  updateTubPositiveRecord,
   deleteTubPositiveRecord
 } from '../../services/tubPositiveJournal';
 

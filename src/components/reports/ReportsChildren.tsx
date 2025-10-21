@@ -29,24 +29,12 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   Close as CloseIcon,
-  Visibility as VisibilityIcon,
-  BarChart as BarChartIcon,
-  People as PeopleIcon,
-  Group as GroupIcon,
-  ChildCare as ChildCareIcon
+  Visibility as VisibilityIcon
 } from '@mui/icons-material';
-import childrenApi from '../../services/children';
 import { getGroups } from '../../services/groups';
-import { getChildAttendance } from '../../services/childAttendance';
-import { Child } from '../../types/common';
 
 interface Props {
   userId?: string;
-}
-
-interface CurrentUser {
-  id?: string;
-  role: string;
 }
 
 interface ChildReportRow {
@@ -76,12 +64,10 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [rows, setRows] = useState<ChildReportRow[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<ChildReportRow>>({});
  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
  const [filterGroup, setFilterGroup] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
@@ -97,21 +83,6 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
         const childrenApi = await import('../../services/children');
         const { getChildAttendance } = await import('../../services/childAttendance');
         
-        // Получаем информацию о текущем пользователе
-        let currentUserData = null;
-        try {
-          const userData = getCurrentUser();
-          if (userData) {
-            currentUserData = {
-              id: userData.id,
-              role: userData.role || 'staff'
-            };
-            setCurrentUser(currentUserData);
-          }
-        } catch (userError) {
-          console.error('Ошибка получения данных пользователя:', userError);
-        }
-
         // Загружаем данные
         const [childrenData, groupsData, attendanceData] = await Promise.all([
           childrenApi.default.getAll(),
@@ -261,13 +232,11 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
         setEditingId(null);
         setEditData({});
         setSnackbarMessage('Информация о ребенке успешно обновлена');
-        setSnackbarSeverity('success');
         setSnackbarOpen(true);
       }
     } catch (error) {
       console.error('Error updating child:', error);
       setSnackbarMessage('Ошибка при обновлении информации о ребенке');
-      setSnackbarSeverity('error');
       setSnackbarOpen(true);
     }
   };

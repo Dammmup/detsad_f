@@ -429,34 +429,3 @@ export const getMimeType = (extension: string): string => {
 
 // ===== ЭКСПОРТ =====
 
-export default {
-  // Форматирование
-  formatFileSize,
-  formatDate,
-  formatDateWithWeekday,
-  
-  // Типы и категории
-  getDocumentTypeIcon,
-  getDocumentTypeText,
-  getDocumentCategoryText,
-  getDocumentStatusText,
-  getDocumentStatusColor,
-  getTemplateTypeText,
-  getTemplateCategoryText,
-  getTemplateActiveColor,
-  
-  // Фильтрация и сортировка
-  filterDocuments,
-  filterTemplates,
-  
-  // Пагинация
-  paginateArray,
-  
-  // Валидация
-  validateDocument,
-  validateDocumentTemplate,
-  
-  // Работа с файлами
-  getFileExtension,
-  getMimeType
-};

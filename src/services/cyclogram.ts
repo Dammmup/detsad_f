@@ -121,7 +121,6 @@ const handleApiError = (error: any, context = '') => {
 };
 
 // Add delay between requests to prevent rate limiting
-const delay = (ms: number | undefined) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Get all cyclograms

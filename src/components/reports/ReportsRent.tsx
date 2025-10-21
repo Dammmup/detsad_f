@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box,
-  Grid,
   Card,
   CardContent,
   Typography,
@@ -18,7 +17,6 @@ import {
   FormControl,
   Select,
   MenuItem,
-  InputLabel,
   Snackbar,
   Chip,
   Button
@@ -30,9 +28,7 @@ import {
   Close as CloseIcon,
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
-import axios from 'axios';
-import { updatePayroll, generatePayrollSheets, Payroll } from '../../services/payroll';
-import { getRents, generateRentSheets } from '../../services/reports'; // Импортируем новые сервисы для работы с арендой
+import {  generateRentSheets } from '../../services/reports'; // Импортируем новые сервисы для работы с арендой
 import RentTenantSelector from './RentTenantSelector';
 
 interface Props {
@@ -88,7 +84,6 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
   const [editData, setEditData] = useState<Partial<RentRow>>({});
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
   const [generating, setGenerating] = useState(false);
   const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
 
@@ -256,13 +251,11 @@ const handleSaveClick = async (rowId: string) => {
       setEditingId(null);
       setEditData({});
       setSnackbarMessage('Аренда успешно обновлена');
-      setSnackbarSeverity('success');
       setSnackbarOpen(true);
     }
   } catch (error) {
     console.error('Error updating rent:', error);
     setSnackbarMessage('Ошибка при обновлении аренды');
-    setSnackbarSeverity('error');
     setSnackbarOpen(true);
   }
 };
@@ -313,7 +306,6 @@ const handleExportToExcel = () => {
 const handleGenerateRentSheets = async () => {
   if (!currentUser || currentUser.role !== 'admin') {
     setSnackbarMessage('Только администратор может генерировать арендные листы');
-    setSnackbarSeverity('error');
     setSnackbarOpen(true);
     return;
   }
@@ -336,7 +328,6 @@ const handleGenerateRentSheets = async () => {
       // Используем специальную функцию для генерации арендных листов с учетом выбранных арендаторов
       await generateRentSheets(generationParams);
       setSnackbarMessage(`Арендные листы успешно сгенерированы за ${monthToGenerate}`);
-      setSnackbarSeverity('success');
       setSnackbarOpen(true);
       
       // Обновляем данные
@@ -408,7 +399,6 @@ const handleGenerateRentSheets = async () => {
     } catch (error: any) {
       console.error('Error generating rent sheets:', error);
       setSnackbarMessage(error?.message || 'Ошибка генерации арендных листов');
-      setSnackbarSeverity('error');
       setSnackbarOpen(true);
     } finally {
       setGenerating(false);

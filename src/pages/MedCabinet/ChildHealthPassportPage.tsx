@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography, Paper, Button, MenuItem, TextField, Stack, Divider, CircularProgress } from '@mui/material';
 import { User } from '../../types/common';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import { Document, Packer, Paragraph, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
 import childrenApi from '../../services/children';
 

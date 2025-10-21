@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Paper, Button, Table, TableHead, TableRow, TableCell, TableBody,
     IconButton, Dialog, DialogTitle, DialogContent,
@@ -101,14 +101,17 @@ const Groups = () => {
       setLoading(false);
     }
   };
+  
+  const fetchGroupsCallback = useCallback(fetchGroups, [groupsContext]);
+  
   // Загрузка групп только после успешной авторизации
   useEffect(() => {
     if (isLoggedIn && currentUser && !authLoading) {
       console.log('User authenticated, loading groups and teachers...');
-      fetchGroups();
+      fetchGroupsCallback();
       fetchTeachers();
     }
-  }, [isLoggedIn, currentUser, authLoading]);
+  }, [isLoggedIn, currentUser, authLoading, fetchGroupsCallback]);
 
   // Получение списка воспитателей
 
