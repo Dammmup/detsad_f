@@ -164,7 +164,14 @@ class AuthApiClient extends BaseApiClient {
   async validateToken(): Promise<boolean> {
     try {
       // Просто делаем запрос на валидацию, токен будет автоматически отправлен в cookie
-      await this.get('/auth/validate');
+      // Добавляем проверку для мобильных устройств
+      const response = await this.get('/auth/validate');
+      
+      // Проверяем, что ответ валиден
+      if (response && typeof response === 'object' && response.valid !== undefined) {
+        return response.valid;
+      }
+      
       return true;
       
     } catch (error) {

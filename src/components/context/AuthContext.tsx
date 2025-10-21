@@ -153,6 +153,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   useEffect(() => {
     const verifyAuth = async () => {
+      // Добавляем задержку для обеспечения корректной проверки на мобильных устройствах
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       if (!isLoggedIn && !loading) {
         const authValid = await checkAuth();
         

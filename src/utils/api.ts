@@ -39,8 +39,12 @@ export const createApiInstance = (baseURL: string = API_BASE_URL): AxiosInstance
     timeout: API_TIMEOUT,
     headers: {
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest', // Помогает идентифицировать запросы как AJAX
     },
     withCredentials: true, // Включаем отправку credentials (включая cookies) с каждым запросом
+    // Устанавливаем куки для всех запросов, включая мобильные устройства
+    xsrfCookieName: 'auth_token',
+    xsrfHeaderName: 'X-CSRF-TOKEN',
   });
 
   // Request interceptor
@@ -48,6 +52,10 @@ export const createApiInstance = (baseURL: string = API_BASE_URL): AxiosInstance
     (config) => {
       // При использовании httpOnly cookie токен автоматически отправляется с запросом
       // Не нужно добавлять токен из localStorage в заголовок Authorization
+      
+      // Убедимся, что куки отправляются даже в мобильных браузерах
+      config.withCredentials = true;
+      
       
       console.log('📤 API запрос:', config.method?.toUpperCase(), config.url);
       return config;
