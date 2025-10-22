@@ -11,7 +11,7 @@ import  { Child } from '../../services/children';
 // User импорт не нужен для детей
 import { useAuth } from '../../components/context/AuthContext';
 import { SelectChangeEvent } from '@mui/material/Select';
-import { getChildrenByGroup } from '../../services';
+// import { getChildrenByGroup } from '../../services'; // больше не используем отдельный маршрут, берём детей из /groups
 interface TeacherOption {
   id: string;
   fullName: string;
@@ -70,9 +70,9 @@ const Groups = () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('Запрашиваю список групп...');
+      if (process.env.NODE_ENV !== 'production') console.log('Запрашиваю список групп...');
       const data = await groupsContext.fetchGroups(true);
-      console.log('Получены данные групп:', data);
+      if (process.env.NODE_ENV !== 'production') console.log('Получены данные групп:', data);
       
       // Преобразуем данные, если нужно
       // Приводим к типу Group
@@ -81,18 +81,26 @@ const Groups = () => {
             id: group.id || group._id,
             name: group.name,
             description: group.description || '',
-            ageGroup: Object(group.ageGroup || ''),
+            // backend хранит ageGroup как строку; в UI используем массив для multiple UI
+            ageGroup: Array.isArray((group as any).ageGroup)
+              ? (group as any).ageGroup
+              : (group as any).ageGroup
+                ? [String((group as any).ageGroup)]
+                : [],
             isActive: group.isActive ?? true,
-            teacher: typeof group.teacher === 'object' && group.teacher !== null ? ((group.teacher as any).id || (group.teacher as any)._id || '') : String(group.teacher || ''),
+            // сервер хранит teacherId; приводим к строке id
+            teacher: (group as any).teacherId ? String((group as any).teacherId) : '',
             // isActive: group.isActive, // убрано, если не используется в UI
             // createdBy: group.createdBy, // убрано, если не используется в UI
             createdAt: group.createdAt,
             updatedAt: group.updatedAt,
-            maxStudents: group.maxStudents
+            maxStudents: group.maxStudents,
+            // добавляем детей, если backend их уже вернул
+            children: (group as any).children || []
           }))
         : [];
       
-      console.log('Отформатированные данные:', formattedData);
+      if (process.env.NODE_ENV !== 'production') console.log('Отформатированные данные:', formattedData);
       setGroups(formattedData);
     } catch (err: any) {
       console.error('Ошибка при загрузке групп:', err);
@@ -107,7 +115,7 @@ const Groups = () => {
   // Загрузка групп только после успешной авторизации
   useEffect(() => {
     if (isLoggedIn && currentUser && !authLoading) {
-      console.log('User authenticated, loading groups and teachers...');
+      if (process.env.NODE_ENV !== 'production') console.log('User authenticated, loading groups and teachers...');
       fetchGroupsCallback();
       fetchTeachers();
     }
@@ -128,7 +136,7 @@ const Groups = () => {
         description: group.description || '',
         maxStudents: group.maxStudents || 20,
         ageGroup: Array.isArray(group.ageGroup) ? group.ageGroup : typeof group.ageGroup === 'string' ? [group.ageGroup] : [],
-        teacher: group.teacher
+        teacher: (group as any).teacher || (group as any).teacherId || ''
       });
       setEditId(group.id);
     } else {
@@ -145,20 +153,28 @@ const Groups = () => {
     setEditId(null);
   };
 
-  // Обработка изменений в форме для текстовых полей
+  // Обработка изменений в форме для текстовых/числовых полей
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (name) {
-      setForm({ ...form, [name]: value });
+      setForm(prev => ({
+        ...prev,
+        [name]: name === 'maxStudents' ? Number(value) : value,
+      }));
     }
   };
 
-  // Обработка изменений в форме для Select
-  const handleSelectChange = (e: SelectChangeEvent<string[]>) => {
-    const { name, value } = e.target;
-    if (name) {
-      setForm({ ...form, [name]: typeof value === 'string' ? value.split(',') : value });
-    }
+  // Обработка изменений в Select для ageGroup (multiple)
+  const handleAgeGroupChange = (e: SelectChangeEvent<string[]>) => {
+    const { value } = e.target;
+    const arr = typeof value === 'string' ? value.split(',') : value;
+    setForm(prev => ({ ...prev, ageGroup: arr }));
+  };
+
+  // Обработка изменений в Select для teacher (single)
+  const handleTeacherChange = (e: SelectChangeEvent<string>) => {
+    const { value } = e.target;
+    setForm(prev => ({ ...prev, teacher: value as string }));
   };
 
   // Сохранение группы (создание или обновление)
@@ -169,9 +185,11 @@ const Groups = () => {
       const groupData = {
         name: form.name,
         description: form.description,
-        maxStudents: form.maxStudents, // backend ожидает maxStudents, а не maxStudents
-        ageGroup: form.ageGroup, // теперь массив строк
-        teacher: form.teacher, // теперь это id выбранного воспитателя
+        maxStudents: Number(form.maxStudents) || 0, // число
+        // в UI держим массив строк; конвертацию в строку делает сервис groups
+        ageGroup: Array.isArray(form.ageGroup) ? form.ageGroup : [],
+        // backend ждёт строку id; сервис преобразует без изменений
+        teacher: typeof form.teacher === 'string' ? form.teacher : String(form.teacher || ''),
         isActive: true
       };
       
@@ -237,7 +255,14 @@ const Groups = () => {
       // Загружаем детей, если они еще не загружены
       if (!currentState?.children?.length) {
         try {
-          const children = await getChildrenByGroup(groupId);
+          // сначала пробуем взять детей из уже загруженных групп
+          const group = groups.find(g => g.id === groupId);
+          let children: Child[] = (group && (group as any).children) || [];
+          if (!children.length) {
+            // если в списке нет детей, запрашиваем полные данные группы
+            const fullGroup = await groupsContext.getGroup(groupId);
+            children = ((fullGroup as any).children || []) as Child[];
+          }
           setExpandedGroups(prev => ({
             ...prev,
             [groupId]: {
@@ -409,7 +434,7 @@ const Groups = () => {
               value={form.ageGroup}
               label="Возрастная группа"
               name="ageGroup"
-              onChange={handleSelectChange}
+              onChange={handleAgeGroupChange}
               multiple
             >
               {options.map((option) => (
@@ -435,7 +460,7 @@ const Groups = () => {
               value={form.teacher || ''}
               label="Воспитатель"
               name="teacher"
-              onChange={handleSelectChange as any}
+              onChange={handleTeacherChange}
             >
               {teacherList.map((t) => (
                 <MenuItem key={t.id} value={t.id}>{t.fullName}</MenuItem>

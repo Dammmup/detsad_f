@@ -31,14 +31,21 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
    * Создание группы с очисткой кэша
    */
   async create(groupData: Partial<Group>): Promise<Group> {
-    const group = await super.create({
+    // Backend ожидает ageGroup как строку, UI хранит массив строк
+    const payload: any = {
       name: groupData.name,
       description: groupData.description,
       teacher: groupData.teacher,
       isActive: groupData.isActive ?? true,
       maxStudents: groupData.maxStudents,
-      ageGroup: groupData.ageGroup || []
-    });
+      ageGroup: Array.isArray(groupData.ageGroup)
+        ? (groupData.ageGroup[0] || '')
+        : (groupData.ageGroup as any as string) || ''
+    };
+    if (!payload.teacher) {
+      delete payload.teacher;
+    }
+    const group = await super.create(payload);
     
     this.clearCache();
     return group;
@@ -48,7 +55,17 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
    * Обновление группы с очисткой кэша
    */
   async update(id: ID, groupData: Partial<Group>): Promise<Group> {
-    const group = await super.update(id, groupData);
+    // Преобразуем ageGroup в строку для backend
+    const payload: any = {
+      ...groupData,
+      ageGroup: Array.isArray(groupData.ageGroup)
+        ? (groupData.ageGroup[0] || '')
+        : (groupData.ageGroup as any as string) || ''
+    };
+    if (!payload.teacher) {
+      delete payload.teacher;
+    }
+    const group = await this.put<Group>(`${this.endpoint}/${id}`, payload);
     this.clearCache();
     return group;
   }
@@ -57,7 +74,8 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
    * Удаление группы с очисткой кэша
    */
   async deleteItem(id: ID): Promise<void> {
-    await super.delete(`/groups/delete/${id}`);
+    // Корректный путь удаления согласно маршруту backend: DELETE /groups/:id
+    await this.delete(`${this.endpoint}/${id}`);
     this.clearCache();
   }
 

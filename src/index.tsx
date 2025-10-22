@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import axios from 'axios';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 // Стили удалены для упрощения структуры
@@ -100,7 +100,7 @@ const rootElement = document.getElementById('root');
 if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
-    <Router>
+    <HashRouter>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <LayoutProvider>
@@ -121,7 +121,7 @@ if (rootElement) {
           </TimeTrackingProvider>
         </LayoutProvider>
       </ThemeProvider>
-    </Router>
+    </HashRouter>
     );
 }
 
