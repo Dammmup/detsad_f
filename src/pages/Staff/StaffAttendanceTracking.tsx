@@ -172,12 +172,12 @@ const StaffAttendanceTracking:React.FC = () => {
                // Преобразуем статусы смен в статусы TimeRecord
                const statusMap: Record<string, TimeRecord['status']> = {
                  'scheduled': 'absent', // Запланированная смена - сотрудник еще не пришел
-                 'in_progress': 'on_break',
+                 'in_progress': 'checked_in',
                  'completed': 'checked_out',
                  'cancelled': 'absent',
                  'no_show': 'absent',
                  'confirmed': 'checked_in',
-                 'late': 'on_break'
+                 'late': 'checked_in'
                };
                
                return {
@@ -319,15 +319,15 @@ const StaffAttendanceTracking:React.FC = () => {
           if (record.id === myShift.id) {
             // Преобразуем статус для отображения в TimeRecord
             const displayStatusMap: Record<string, TimeRecord['status']> = {
-              'in_progress': 'on_break',
-              'late': 'on_break'
+              'in_progress': 'checked_in',
+              'late': 'checked_in'
             };
             
             // Создаем обновленную запись с информацией об опоздании
             const updatedRecord = {
               ...record,
               originalStatus: newStatus as ShiftStatus,
-              status: displayStatusMap[newStatus] || 'on_break', // Обновляем статус для отображения
+              status: displayStatusMap[newStatus] || 'checked_in', // Обновляем статус для отображения
               checkInTime: now.toTimeString().slice(0, 5) // Обновляем время прихода
             };
             
@@ -420,12 +420,12 @@ const StaffAttendanceTracking:React.FC = () => {
           // Преобразуем статусы смен в статусы TimeRecord
           const statusMap: Record<string, TimeRecord['status']> = {
             'scheduled': 'absent',
-            'in_progress': 'on_break',
+            'in_progress': 'checked_in',
             'completed': 'checked_out',
             'cancelled': 'absent',
             'no_show': 'absent',
             'confirmed': 'checked_in',
-            'late': 'on_break'
+            'late': 'checked_in'
           };
           
           return {
@@ -522,12 +522,12 @@ const StaffAttendanceTracking:React.FC = () => {
                   // Обновляем отображаемый статус в соответствии с новым оригинальным статусом
                   status: ({
                                        'scheduled': 'absent',
-                                       'in_progress': 'on_break',
+                                       'in_progress': 'checked_in',
                                        'completed': 'checked_out',
                                        'cancelled': 'absent',
                                        'no_show': 'absent',
                                        'confirmed': 'checked_in',
-                                       'late': 'on_break',
+                                       'late': 'checked_in',
                                        'absent': 'absent',
                                        'checked_in': 'checked_in',
                                        'checked_out': 'checked_out',
@@ -566,12 +566,12 @@ const StaffAttendanceTracking:React.FC = () => {
           // Преобразуем статусы смен в статусы TimeRecord
           const statusMap: Record<string, TimeRecord['status']> = {
             'scheduled': 'absent',
-            'in_progress': 'on_break',
+            'in_progress': 'checked_in',
             'completed': 'checked_out',
             'cancelled': 'absent',
             'no_show': 'absent',
             'confirmed': 'checked_in',
-            'late': 'on_break'
+            'late': 'checked_in'
           };
           
           return {
