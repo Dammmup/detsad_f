@@ -4,6 +4,21 @@ console.log('REACT_APP_API_URL from env in base service:', process.env.REACT_APP
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com',
 });
+
+// Request interceptor to add auth token to requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 console.log('Final axios baseURL in base service:', api.defaults.baseURL);
 
 export default api;

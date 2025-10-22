@@ -13,25 +13,45 @@ export interface User {
 }
 
 export const getUsers = async (): Promise<User[]> => {
-  const response = await axios.get<User[]>(REACT_APP_API_URL);
+  const response = await axios.get<User[]>(REACT_APP_API_URL, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+    }
+  });
   return response.data;
 };
 
 export const getUser = async (id: string): Promise<User> => {
-  const response = await axios.get<User>(`${REACT_APP_API_URL}/${id}`);
+  const response = await axios.get<User>(`${REACT_APP_API_URL}/${id}`, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+    }
+ });
   return response.data;
 };
 
 export const createUser = async (userData: Omit<User, 'id'>): Promise<User> => {
-  const response = await axios.post<User>(REACT_APP_API_URL, userData);
+  const response = await axios.post<User>(REACT_APP_API_URL, userData, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+    }
+  });
   return response.data;
 };
 
 export const updateUser = async (id: string, userData: Partial<User>): Promise<User> => {
-  const response = await axios.put<User>(`${REACT_APP_API_URL}/${id}`, userData);
+  const response = await axios.put<User>(`${REACT_APP_API_URL}/${id}`, userData, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+    }
+ });
   return response.data;
 };
 
 export const deleteUser = async (id: string): Promise<void> => {
-  await axios.delete(`${REACT_APP_API_URL}/${id}`);
+  await axios.delete(`${REACT_APP_API_URL}/${id}`, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+    }
+ });
 };
