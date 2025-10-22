@@ -42,7 +42,12 @@ const Login: React.FC = () => {
       };
       
       // Use AuthContext login method to properly update context
-      login(userData, ''); // Токен теперь передается в заголовке Authorization
+      const token = res.data?.token;
+      if (!token) {
+        setError('Ошибка авторизации: сервер не вернул токен');
+        return;
+      }
+      login(userData, token); // Сохраняем токен в localStorage
       navigate('/app/dashboard');
     } catch (e: any) {
       setError(e?.response?.data?.error || 'Ошибка входа');
