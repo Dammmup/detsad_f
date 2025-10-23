@@ -79,7 +79,6 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
       setError(null);
       try {
         // Импортируем сервисы
-        const { getCurrentUser } = await import('../../services/auth');
         const childrenApi = await import('../../services/children');
         const { getChildAttendance } = await import('../../services/childAttendance');
         

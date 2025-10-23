@@ -234,7 +234,7 @@ const StaffAttendanceTracking:React.FC = () => {
            }
          };
          fetchRecords();
-       }, [selectedStaff, dateRange, filterRole, searchTerm, staffList]);
+       }, [selectedStaff, dateRange, filterRole, searchTerm, staffList, getStaffName]);
   
   const calculateWorkDuration = (start: string, end: string, breakTime: number = 0) => {
     const [startHours, startMinutes] = start.split(':').map(Number);

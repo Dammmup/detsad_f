@@ -1,12 +1,21 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import {  getCurrentUser, isAuthenticated, logout } from '../../services/auth';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from 'react';
+import { getCurrentUser, isAuthenticated, logout } from '../../services/auth';
 import { User } from '../../types/common';
+import { useNavigate } from 'react-router-dom';
+
 // Интерфейс контекста авторизации
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
   loading: boolean;
-  login: (user: User, token: string) => void; // token теперь передается в заголовке Authorization
+  login: (user: User, token: string) => void;
   logout: () => Promise<void>;
   checkAuth: () => Promise<boolean>;
 }
@@ -14,7 +23,6 @@ interface AuthContextType {
 // Создаем контекст
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Провайдер контекста
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -23,15 +31,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [logoutInProgress, setLogoutInProgress] = useState(false);
+
+  // Проверка авторизации
   const checkAuthStatus = async () => {
     setLoading(true);
-    
+
     try {
       const currentUser = getCurrentUser();
-      const authenticated = await isAuthenticated(); // isAuthenticated теперь асинхронная функция
-      
+      const authenticated = await isAuthenticated();
+
       if (currentUser && authenticated) {
-        // Если есть пользователь и токен валиден, считаем авторизованным
         setUser(currentUser);
         setIsLoggedIn(true);
         console.log('✅ Пользователь авторизован:', currentUser.fullName);
@@ -48,70 +58,79 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
     }
   };
-  // Проверка авторизации при загрузке
+
   useEffect(() => {
     checkAuthStatus();
   }, []);
 
-  // Проверка статуса авторизации
-
-
-  // Вход в систему
+  // Вход
   const handleLogin = (userData: User, token: string) => {
     setUser(userData);
     setIsLoggedIn(true);
-    
-    // Сохраняем пользователя и токен в localStorage
-    // Токен передается в заголовке Authorization с каждым запросом
+
     localStorage.setItem('user', JSON.stringify(userData));
     if (token) {
       localStorage.setItem('auth_token', token);
     }
-    
+
     console.log('🔐 Пользователь вошел в систему:', userData.fullName);
   };
 
-  // Выход из системы
+  // Выход
   const handleLogout = async () => {
+    // Если уже идёт процесс выхода — не повторяем
+    if (logoutInProgress) {
+      console.log('⚠️ Выход уже выполняется, повторный вызов отклонён.');
+      return;
+    }
+
+    setLogoutInProgress(true);
+
     try {
-      await logout(); // Вызываем API logout
-      
+      await logout();
+      console.log('🚪 Пользователь вышел из системы');
+
       setUser(null);
       setIsLoggedIn(false);
-      
-      console.log('🚪 Пользователь вышел из системы');
-      
-      // Перенаправляем на страницу входа
+
+      // Чистим локальные данные
+      localStorage.removeItem('user');
+      localStorage.removeItem('auth_token');
+
+      // Перенаправляем
       window.location.href = '/login';
-      
     } catch (error) {
       console.error('Ошибка при выходе:', error);
-      
-      // В любом случае очищаем локальные данные
+
+      // Даже при ошибке очищаем данные
       setUser(null);
       setIsLoggedIn(false);
       localStorage.removeItem('user');
+      localStorage.removeItem('auth_token');
+    } finally {
+      setLogoutInProgress(false);
     }
   };
 
-  // Проверка авторизации (для внешнего использования)
+  // Проверка авторизации снаружи
   const checkAuth = useCallback(async (): Promise<boolean> => {
     try {
       const currentUser = getCurrentUser();
-      const authenticated = await isAuthenticated(); // isAuthenticated теперь асинхронная функция
-      
-      if (currentUser && authenticated) {
-        if (!user) {
-          setUser(currentUser);
-          setIsLoggedIn(true);
-        }
-        return true;
-      }
-      
-      // Если проверка не прошла, выходим
-      await handleLogout();
-      return false;
-      
+      const authenticated = await isAuthenticated();
+
+     if (currentUser && authenticated) {
+  if (!user) {
+    setUser(currentUser);
+    setIsLoggedIn(true);
+  }
+  return true;
+}
+
+// ❌ Не вызываем logout, просто возвращаем false
+setUser(null);
+setIsLoggedIn(false);
+return false;
+
     } catch (error) {
       console.error('Ошибка проверки авторизации:', error);
       return false;
@@ -124,93 +143,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     login: handleLogin,
     logout: handleLogout,
-    checkAuth
+    checkAuth,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 // Хук для использования контекста авторизации
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  
+
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  
+
   return context;
 };
 
-// Компонент для защищенных маршрутов
+// Компонент для защищённых маршрутов
 interface ProtectedRouteProps {
   children: ReactNode;
 }
 
+
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isLoggedIn, loading, checkAuth } = useAuth();
   const [checking, setChecking] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const verifyAuth = async () => {
-      // Добавляем задержку для обеспечения корректной проверки на мобильных устройствах
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      if (!isLoggedIn && !loading) {
-        const authValid = await checkAuth();
-        
-        if (!authValid) {
-          // Перенаправляем на страницу входа
-          window.location.href = '/login';
-          return;
-        }
+      if (loading) return;
+
+      const authValid = await checkAuth();
+
+      if (!authValid) {
+        console.log('🚫 Пользователь не авторизован, редиректим');
+        navigate('/login', { replace: true });
+      } else {
+        setChecking(false);
       }
-      
-      setChecking(false);
     };
 
     verifyAuth();
-  }, [isLoggedIn, loading, checkAuth]);
+  }, [loading, checkAuth, navigate]);
 
-  // Показываем загрузку во время проверки
   if (loading || checking) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-      }}>
-        <div style={{
-          background: 'rgba(255,255,255,0.9)',
-          padding: '2rem',
-          borderRadius: '12px',
-          textAlign: 'center',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '4px solid #f3f3f3',
-            borderTop: '4px solid #667eea',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 1rem'
-          }} />
-          <p style={{ margin: 0, color: '#666' }}>Проверка авторизации...</p>
-        </div>
-      </div>
-    );
+    return <div>Проверка авторизации...</div>;
   }
 
-  // Если не авторизован, не показываем контент (перенаправление уже произошло)
-  if (!isLoggedIn) {
-    return null;
-  }
+  if (!isLoggedIn) return null;
 
   return <>{children}</>;
 };
+

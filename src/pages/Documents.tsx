@@ -61,18 +61,7 @@ const roleTranslations: Record<string, string> = {
   'intern': 'Стажер'
 };
 
-// Функция для перевода роли на русский
-const translateRole = (role: string): string => {
-  return roleTranslations[role] || role; // Если перевода нет, возвращаем оригинал
-};
 
-interface StaffMember {
-  id: string;
-  fullName: string;
- role: string;
-  position?: string;
-  department?: string;
-}
 
 export const Documents= () => {
  const [documents, setDocuments] = useState<DocumentType[]>([]);
@@ -92,7 +81,6 @@ export const Documents= () => {
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [filterName, setFilterName] = useState<string>('');
-  const staffList: StaffMember[] = []; // Define staffList as an empty array since we're not using it
   
 
   // Загрузка данных с бэкенда
