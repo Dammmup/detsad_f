@@ -50,7 +50,6 @@ import OrganolepticJournalPage from '../pages/MedCabinet/OrganolepticJournalPage
 import SomaticJournal from '../pages/MedCabinet/SomaticJournal';
 import ReportsRent from './reports/ReportsRent';
 import ChildPayments from '../pages/Children/ChildPayments';
-import Qwen3Chat from './Qwen3Chat';
 
 interface SimpleLayoutProps {
   children?: React.ReactNode;
@@ -170,8 +169,6 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
         </Container>
       </Box>
       
-      {/* Компонент чата Qwen3 */}
-      <Qwen3Chat />
     </Box>
   );
 };
