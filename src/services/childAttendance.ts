@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
+import { apiClient } from '../utils/api';
 
 export interface ChildAttendanceRecord {
   _id?: string;
@@ -48,12 +46,7 @@ export const getChildAttendance = async (params?: {
   status?: string;
 }): Promise<ChildAttendanceRecord[]> => {
   try {
-const response = await axios.get(`${REACT_APP_API_URL}/child-attendance`, {
-  params,
-  headers: {
-    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-  }
-});
+const response = await apiClient.get('/child-attendance', { params });
     return response.data;
   } catch (error: any) {
     console.error('Error fetching child attendance:', error);
@@ -64,11 +57,7 @@ const response = await axios.get(`${REACT_APP_API_URL}/child-attendance`, {
 // Create or update single attendance record
 export const saveChildAttendance = async (record: Omit<ChildAttendanceRecord, '_id' | 'createdAt' | 'updatedAt'>): Promise<ChildAttendanceRecord> => {
   try {
-  const response = await axios.post(`${REACT_APP_API_URL}/child-attendance`, record, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-    }
-  });
+  const response = await apiClient.post('/child-attendance', record);
     return response.data;
   } catch (error: any) {
     console.error('Error saving child attendance:', error);
@@ -87,13 +76,9 @@ export const bulkSaveChildAttendance = async (
   groupId: string
 ): Promise<BulkAttendanceResponse> => {
   try {
-  const response = await axios.post(`${REACT_APP_API_URL}/child-attendance/bulk`, {
+  const response = await apiClient.post('/child-attendance/bulk', {
       records,
       groupId
-    }, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-      }
     });
     return response.data;
   } catch (error: any) {
@@ -109,12 +94,7 @@ export const getAttendanceStats = async (params?: {
   endDate?: string;
 }): Promise<AttendanceStats> => {
   try {
-  const response = await axios.get(`${REACT_APP_API_URL}/child-attendance/stats`, {
-    params,
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-    }
-  });
+  const response = await apiClient.get('/child-attendance/stats', { params });
     return response.data;
   } catch (error: any) {
     console.error('Error fetching attendance stats:', error);
@@ -125,11 +105,7 @@ export const getAttendanceStats = async (params?: {
 // Delete attendance record
 export const deleteChildAttendance = async (id: string): Promise<void> => {
   try {
-  await axios.delete(`${REACT_APP_API_URL}/child-attendance/${id}`, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-    }
-  });
+  await apiClient.delete(`/child-attendance/${id}`);
   } catch (error: any) {
     console.error('Error deleting attendance:', error);
     throw new Error(error.response?.data?.error || 'Ошибка удаления записи');
@@ -139,11 +115,7 @@ export const deleteChildAttendance = async (id: string): Promise<void> => {
 // Debug function to check database status
 export const debugChildAttendance = async (): Promise<any> => {
   try {
-  const response = await axios.get(`${REACT_APP_API_URL}/child-attendance/debug`, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-    }
- });
+  const response = await apiClient.get('/child-attendance/debug');
     console.log('🔍 Debug info:', response.data);
     return response.data;
   } catch (error: any) {

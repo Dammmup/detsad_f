@@ -1,5 +1,5 @@
 
-import { api } from './settings';
+import { apiClient } from '../utils/api';
 
 // REACT_APP_API_URL и авторизация берутся из settings.ts
 
@@ -31,7 +31,7 @@ export interface TaskListFilters {
 // Получить список задач
 export const getTaskList = async (filters: TaskListFilters = {}): Promise<TaskList[]> => {
   try {
-  const response = await api.get('/task-list', {
+  const response = await apiClient.get('/task-list', {
     params: filters
   });
     return response.data;
@@ -44,7 +44,7 @@ export const getTaskList = async (filters: TaskListFilters = {}): Promise<TaskLi
 // Создать новую задачу
 export const createTask = async (taskData: Omit<TaskList, '_id' | 'createdAt' | 'updatedAt' | 'createdBy'>): Promise<TaskList> => {
   try {
-    const response = await api.post('/task-list', taskData);
+    const response = await apiClient.post('/task-list', taskData);
     return response.data;
   } catch (error: any) {
     console.error('Error creating task:', error);
@@ -55,7 +55,7 @@ export const createTask = async (taskData: Omit<TaskList, '_id' | 'createdAt' | 
 // Обновить задачу
 export const updateTask = async (id: string, taskData: Partial<TaskList>): Promise<TaskList> => {
   try {
-  const response = await api.put(`/task-list/${id}`, taskData);
+  const response = await apiClient.put(`/task-list/${id}`, taskData);
     return response.data;
   } catch (error: any) {
     console.error('Error updating task:', error);
@@ -66,7 +66,7 @@ export const updateTask = async (id: string, taskData: Partial<TaskList>): Promi
 // Удалить задачу
 export const deleteTask = async (id: string): Promise<void> => {
  try {
-  await api.delete(`/task-list/${id}`);
+  await apiClient.delete(`/task-list/${id}`);
   } catch (error: any) {
     console.error('Error deleting task:', error);
     throw new Error(error.response?.data?.error || 'Ошибка удаления задачи');
@@ -76,7 +76,7 @@ export const deleteTask = async (id: string): Promise<void> => {
 // Переключить статус задачи
 export const toggleTaskStatus = async (id: string): Promise<TaskList> => {
   try {
-  const response = await api.patch(`/task-list/${id}/toggle`);
+  const response = await apiClient.patch(`/task-list/${id}/toggle`);
     return response.data;
   } catch (error: any) {
     console.error('Error toggling task status:', error);

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import Axios from 'axios';
 import { toast } from 'react-toastify';
+import { apiClient } from '../../utils/api';
 
 
 
@@ -122,7 +122,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
         longitude: currentLocation?.coords.longitude,
       };
 
-      const response = await Axios.post(`${process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com'}/time-tracking/clock-in`, requestData);
+      const response = await apiClient.post('/time-tracking/clock-in', requestData);
       
       // // Update status
       // await fetchTimeStatus();
@@ -155,7 +155,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
         longitude: currentLocation?.coords.longitude,
       };
 
-      const response = await Axios.post(`${process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com'}/time-tracking/clock-out`, requestData);
+      const response = await apiClient.post('/time-tracking/clock-out', requestData);
       
       // // Update status
       // await fetchTimeStatus();
@@ -176,7 +176,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
   const startBreak = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await Axios.post(`${process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com'}/time-tracking/break-start`);
+      const response = await apiClient.post('/time-tracking/break-start');
       
       // // Update status
       // await fetchTimeStatus();
@@ -197,7 +197,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
   const endBreak = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await Axios.post(`${process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com'}/time-tracking/break-end`);
+      const response = await apiClient.post('/time-tracking/break-end');
       
       // // Update status
       // await fetchTimeStatus();
@@ -221,7 +221,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
         ...params
       });
 
-      const response = await Axios.get(`${process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com'}/time-tracking/entries?${queryParams}`);
+      const response = await apiClient.get(`/time-tracking/entries?${queryParams}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching time entries:', error);
@@ -238,7 +238,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
         endDate: endDate.toISOString()
       });
 
-      const response = await Axios.get(`${process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com'}/time-tracking/summary?${params}`);
+      const response = await apiClient.get(`/time-tracking/summary?${params}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching time summary:', error);

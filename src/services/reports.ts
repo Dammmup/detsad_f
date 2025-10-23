@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
+import { apiClient } from '../utils/api';
 
 // Интерфейсы для отчетов
 export interface Report {
@@ -66,54 +64,6 @@ interface ApiError extends Error {
   data?: any;
 }
 
-// Create axios instance
-const api = axios.create({
-  baseURL: REACT_APP_API_URL,
-  timeout: 30000, // 30 seconds
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-  }
-});
-
-// Request interceptor for API calls
-api.interceptors.request.use(
-  (config) => {
-    // Add auth token if available in localStorage
-    const token = localStorage.getItem('auth_token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor for handling errors and rate limiting
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    
-    // If error is 429 (Too Many Requests), wait and retry
-    if (error.response?.status === 429 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      const retryAfter = error.response.headers['retry-after'] || 2; // Default to 2 seconds
-      
-      console.warn(`Rate limited. Retrying after ${retryAfter} seconds...`);
-      
-      // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-      
-      // Retry the request
-      return api(originalRequest);
-    }
-    
-    return Promise.reject(error);
-  }
-);
 
 // Helper function to handle API errors
 const handleApiError = (error: any, context = '') => {
@@ -139,7 +89,7 @@ const delay = (ms: number | undefined) => new Promise(resolve => setTimeout(reso
    try {
      console.log('Fetching reports from API...');
      
-   const response = await api.get('/reports', {
+   const response = await apiClient.get('/reports', {
        timeout: 30000 // 30 seconds for fetching reports
      });
      
@@ -181,7 +131,7 @@ const delay = (ms: number | undefined) => new Promise(resolve => setTimeout(reso
   */
  export const getReport = async (id: string) => {
    try {
-   const response = await api.get(`/reports/${id}`, {
+   const response = await apiClient.get(`/reports/${id}`, {
        timeout: 30000 // 30 seconds for fetching report
      });
      
@@ -221,7 +171,7 @@ const delay = (ms: number | undefined) => new Promise(resolve => setTimeout(reso
   */
  export const createReport = async (report: Report) => {
    try {
-   const response = await api.post('/reports', report, {
+   const response = await apiClient.post('/reports', report, {
        timeout: 30000 // 30 seconds for creating report
      });
      
@@ -261,7 +211,7 @@ const delay = (ms: number | undefined) => new Promise(resolve => setTimeout(reso
   */
  export const deleteReport = async (id: string) => {
    try {
-   await api.delete(`/reports/${id}`, {
+   await apiClient.delete(`/reports/${id}`, {
        timeout: 30000 // 30 seconds for deleting report
      });
      return { success: true };
@@ -282,7 +232,7 @@ export const getAttendanceStatistics = async (startDate: string, endDate: string
     await delay(500);
     
     // В реальном приложении здесь будет запрос к API
-  const response = await api.get('/reports/attendance-statistics', {
+  const response = await apiClient.get('/reports/attendance-statistics', {
       params: { startDate, endDate, userId },
       timeout: 30000 // 30 seconds for attendance statistics
     });
@@ -305,7 +255,7 @@ export const getScheduleStatistics = async (startDate: string, endDate: string, 
     await delay(500);
     
     // В реальном приложении здесь будет запрос к API
-  const response = await api.get('/reports/schedule-statistics', {
+  const response = await apiClient.get('/reports/schedule-statistics', {
       params: { startDate, endDate, userId },
       timeout: 30000 // 30 seconds for schedule statistics
     });
@@ -324,7 +274,7 @@ export const getScheduleStatistics = async (startDate: string, endDate: string, 
   */
  export const exportReport = async (reportId: string, format: 'pdf' | 'excel' | 'csv') => {
    try {
-   const response = await api.get(`/reports/${reportId}/export`, {
+   const response = await apiClient.get(`/reports/${reportId}/export`, {
        params: { format },
        responseType: 'blob',
        timeout: 60000 // 60 seconds for exporting report
@@ -360,7 +310,7 @@ export const exportSalaryReport = async (params: {
 }) => {
   try {
     console.log('[exportSalaryReport] Отправка запроса на экспорт зарплат:', params);
-    const response = await api.post('/reports/salary/export', params, {
+    const response = await apiClient.post('/reports/salary/export', params, {
       responseType: 'blob',
       timeout: 60000 // 60 seconds for salary report export
     });
@@ -386,7 +336,7 @@ export const exportSalaryReport = async (params: {
 // Получение salary summary (GET)
 export const getSalarySummary = async (month: string) => {
   try {
-    const response = await api.get('/reports/salary/summary', {
+    const response = await apiClient.get('/reports/salary/summary', {
       params: { month },
       timeout: 30000 // 30 seconds for salary summary
     });
@@ -409,7 +359,7 @@ export const exportChildrenReport = async (params: {
   includeHealthInfo?: boolean;
 }) => {
   try {
-  const response = await api.post('/reports/children/export', params, {
+  const response = await apiClient.post('/reports/children/export', params, {
       responseType: 'blob',
       timeout: 60000 // 60 seconds for children report export
     });
@@ -441,7 +391,7 @@ export const exportAttendanceReport = async (params: {
   includeCharts?: boolean;
 }) => {
   try {
-  const response = await api.post('/reports/attendance/export', params, {
+  const response = await apiClient.post('/reports/attendance/export', params, {
       responseType: 'blob',
       timeout: 60000 // 60 seconds for attendance report export
     });
@@ -472,7 +422,7 @@ export const sendReportByEmail = async (params: {
   reportParams?: any;
 }) => {
   try {
-  const response = await api.post('/reports/send-email', params, {
+  const response = await apiClient.post('/reports/send-email', params, {
       timeout: 30000 // 30 seconds for email sending
     });
     return response.data;
@@ -495,7 +445,7 @@ export const scheduleReport = async (params: {
   startDate?: string;
 }) => {
   try {
-  const response = await api.post('/reports/schedule', params, {
+  const response = await apiClient.post('/reports/schedule', params, {
       timeout: 30000 // 30 seconds for report scheduling
     });
     return response.data;
@@ -512,7 +462,7 @@ export const scheduleReport = async (params: {
   */
  export const downloadReport = async (reportId: string, format: 'pdf' | 'excel' | 'csv') => {
    try {
-   const response = await api.get(`/reports/${reportId}/download`, {
+   const response = await apiClient.get(`/reports/${reportId}/download`, {
        params: { format },
        responseType: 'blob',
        timeout: 60000 // 60 seconds for downloading report
@@ -554,7 +504,7 @@ export const generateCustomReport = async (params: {
   format?: 'pdf' | 'excel' | 'csv';
 }) => {
   try {
-  const response = await api.post('/reports/generate', params, {
+  const response = await apiClient.post('/reports/generate', params, {
       timeout: 60000 // 60 seconds for custom report generation
     });
     
@@ -596,7 +546,7 @@ export const generateCustomReport = async (params: {
   */
  export const getRents = async (params: any = {}) => {
    try {
-     const response = await api.get('/rent', {
+     const response = await apiClient.get('/rent', {
        params,
        timeout: 30000 // 30 seconds for fetching rents
      });
@@ -614,7 +564,7 @@ export const generateCustomReport = async (params: {
   */
  export const updateRent = async (id: string, data: any) => {
    try {
-     const response = await api.put(`/rent/${id}`, data, {
+     const response = await apiClient.put(`/rent/${id}`, data, {
        timeout: 30000 // 30 seconds for updating rent
      });
      return response.data;
@@ -630,7 +580,7 @@ export const generateCustomReport = async (params: {
   */
  export const deleteRent = async (id: string) => {
    try {
-     await api.delete(`/rent/${id}`, {
+     await apiClient.delete(`/rent/${id}`, {
        timeout: 30000 // 30 seconds for deleting rent
      });
      return { success: true };
@@ -646,7 +596,7 @@ export const generateCustomReport = async (params: {
   */
  export const markRentAsPaid = async (id: string) => {
    try {
-     const response = await api.patch(`/rent/${id}/mark-paid`, {}, {
+     const response = await apiClient.patch(`/rent/${id}/mark-paid`, {}, {
        timeout: 30000 // 30 seconds for marking rent as paid
      });
      return response.data;
@@ -665,7 +615,7 @@ export const generateCustomReport = async (params: {
    tenantIds?: string[];
  }) => {
    try {
-     const response = await api.post('/rent/generate-sheets', params, {
+     const response = await apiClient.post('/rent/generate-sheets', params, {
        timeout: 120000 // 120 seconds for rent sheet generation (may take longer than payroll)
      });
      return response.data;
@@ -683,7 +633,7 @@ export const generateCustomReport = async (params: {
   */
  export const getChildrenSummary = async (params?: { groupId?: string }) => {
    try {
-     const response = await api.get('/reports/children/summary', {
+     const response = await apiClient.get('/reports/children/summary', {
        params,
        timeout: 30000 // 30 seconds for fetching children summary
      });
@@ -704,7 +654,7 @@ export const generateCustomReport = async (params: {
    groupId?: string
  }) => {
    try {
-     const response = await api.get('/reports/attendance/summary', {
+     const response = await apiClient.get('/reports/attendance/summary', {
        params,
        timeout: 30000 // 30 seconds for fetching attendance summary
      });

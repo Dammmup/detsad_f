@@ -1,6 +1,6 @@
-import axios from 'axios';
+import { apiClient } from '../utils/api';
 
-const REACT_APP_API_URL = `${process.env.REACT_APP_API_URL}/` || 'https://detsad-b.onrender.com';
+// const REACT_APP_API_URL = `${process.env.REACT_APP_API_URL}/` || 'https://detsad-b.onrender.com';
 
 // Интерфейс для API ошибки
 interface ApiError extends Error {
@@ -23,54 +23,6 @@ export interface Shift {
   shiftType?: string;
 }
 
-// Create axios instance with base config
-const api = axios.create({
-  baseURL: REACT_APP_API_URL,
-  timeout: 10000, // 10 seconds
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor for API calls
-api.interceptors.request.use(
-  (config) => {
-    // Add auth token if available
-    const token = localStorage.getItem('auth_token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor for handling errors and rate limiting
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    
-    // If error is 429 (Too Many Requests), wait and retry
-    if (error.response?.status === 429 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      const retryAfter = error.response.headers['retry-after'] || 2; // Default to 2 seconds
-      
-      console.warn(`Rate limited. Retrying after ${retryAfter} seconds...`);
-      
-      // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-      
-      // Retry the request
-      return api(originalRequest);
-    }
-    
-    return Promise.reject(error);
-  }
-);
-
 // Helper function to handle API errors
 const handleApiError = (error: any, context = '') => {
   const errorMessage = error.response?.data?.message || error.message;
@@ -79,7 +31,7 @@ const handleApiError = (error: any, context = '') => {
   // Create a more detailed error object
   const apiError = new Error(`Error ${context}: ${errorMessage}`) as ApiError;
   apiError.status = error.response?.status;
-  apiError.data = error.response?.data;
+ apiError.data = error.response?.data;
   
   throw apiError;
 };
@@ -96,7 +48,7 @@ export const getSchedules = async (groupId?: string, userId?: string) => {
     const params: any = {};
     if (groupId) params.groupId = groupId;
     if (userId) params.userId = userId;
-    const response = await api.get('/schedule', { params });
+    const response = await apiClient.get('/schedule', { params });
     const schedules: Shift[] = response.data.map((schedule: any) => ({
       id: schedule._id,
       groupId: schedule.groupId,
@@ -122,7 +74,7 @@ export const getSchedules = async (groupId?: string, userId?: string) => {
  */
 export const getShift = async (id: string) => {
   try {
-    const response = await api.get(`/shifts/${id}`);
+    const response = await apiClient.get(`/shifts/${id}`);
     const shift: Shift = {
       id: response.data._id,
       userId: response.data.userId,
@@ -147,7 +99,7 @@ export const getShift = async (id: string) => {
  */
 export const createSchedule = async (record: Shift) => {
   try {
-    const response = await api.post('/schedule', {
+    const response = await apiClient.post('/schedule', {
       groupId: record.groupId,
       userId: record.userId,
       date: record.date,
@@ -181,7 +133,7 @@ export const createSchedule = async (record: Shift) => {
  */
 export const updateSchedule = async (id: string, record: Shift) => {
   try {
-    const response = await api.put(`/schedule/${id}`, {
+    const response = await apiClient.put(`/schedule/${id}`, {
       groupId: record.groupId,
       userId: record.userId,
       date: record.date,
@@ -214,7 +166,7 @@ export const updateSchedule = async (id: string, record: Shift) => {
  */
 export const deleteSchedule = async (id: string) => {
   try {
-    await api.delete(`/schedule/${id}`);
+    await apiClient.delete(`/schedule/${id}`);
     return { success: true };
   } catch (error) {
     return handleApiError(error, `deleting schedule ${id}`);

@@ -10,8 +10,7 @@ import {  groupsApi } from '../../services/groups';
 import { Group } from '../../types/common';
 import { exportChildrenList } from '../../utils/excelExport';
 import ExportMenuButton from '../../components/ExportMenuButton';
-import axios from 'axios';
-import { API_BASE_URL } from '../../utils/api';
+import { apiClient } from '../../utils/api';
 import ChildrenModal from '../../components/ChildrenModal';
 
 const Children: React.FC = () => {
@@ -47,7 +46,7 @@ const Children: React.FC = () => {
   // Экспорт: отправить на email
   const handleExportEmail = async () => {
     try {
-      await axios.post(`${API_BASE_URL}/exports/children`, { action: 'email' });
+      await apiClient.post('/exports/children', { action: 'email' });
       alert('Документ отправлен на почту администратора');
     } catch (e) {
       alert('Ошибка отправки на почту');

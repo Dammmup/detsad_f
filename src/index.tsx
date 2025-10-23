@@ -96,6 +96,37 @@ axios.defaults.headers.common['Content-Type'] = 'application/json';
 // Токен теперь передается в заголовке Authorization с каждым запросом
 // Токен добавляется из localStorage в заголовок Authorization
 
+// Добавляем перехватчик запросов для автоматического добавления токена авторизации
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+ (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Добавляем перехватчик ответов для обработки 401 ошибок
+axios.interceptors.response.use(
+ (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Удаляем данные аутентификации из localStorage
+      localStorage.removeItem('user');
+      localStorage.removeItem('auth_token');
+      // Перенаправляем на страницу входа
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+
 const rootElement = document.getElementById('root');
 if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);

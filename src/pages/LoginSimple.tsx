@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Box, Card, CardContent, TextField, Typography, Button, CircularProgress, InputAdornment, Alert } from '@mui/material';
 import { Phone, Lock } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../components/context/AuthContext';
 import { User } from '../types/common';
+import { authApi } from '../services/auth';
 
 const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
 
@@ -24,25 +24,23 @@ const Login: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.post(
-  `${REACT_APP_API_URL}/auth/login`,
-  { phone, password });
+      const authResponse = await authApi.login({ phone, password });
 
       const userData: User = {
-        _id: res.data.user._id || res.data.user.id,
-        id: res.data.user.id || res.data.user._id,
-        fullName: res.data.user.fullName,
-        role: res.data.user.role,
+        _id: authResponse.user._id || authResponse.user.id || '',
+        id: authResponse.user.id || authResponse.user._id || '',
+        fullName: authResponse.user.fullName || '',
+        role: authResponse.user.role || 'staff',
         phone: phone,
-        email: res.data.user.phone || phone,
-        isActive: res.data.user.isActive ?? true,
-        active: res.data.user.active ?? true,
-        createdAt: res.data.user.createdAt || new Date().toISOString(),
-        updatedAt: res.data.user.updatedAt || new Date().toISOString()
+        email: authResponse.user.phone || phone,
+        isActive: authResponse.user.isActive ?? true,
+        active: authResponse.user.active ?? true,
+        createdAt: authResponse.user.createdAt || new Date().toISOString(),
+        updatedAt: authResponse.user.updatedAt || new Date().toISOString()
       };
       
       // Use AuthContext login method to properly update context
-      const token = res.data?.token;
+      const token = authResponse.token;
       if (!token) {
         setError('Ошибка авторизации: сервер не вернул токен');
         return;
@@ -50,7 +48,7 @@ const Login: React.FC = () => {
       login(userData, token); // Сохраняем токен в localStorage
       navigate('/app/dashboard');
     } catch (e: any) {
-      setError(e?.response?.data?.error || 'Ошибка входа');
+      setError(e.message || 'Ошибка входа');
     } finally {
       setLoading(false);
     }

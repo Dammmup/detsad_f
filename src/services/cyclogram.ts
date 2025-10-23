@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const REACT_APP_API_URL = `${process.env.REACT_APP_API_URL}` || 'https://detsad-b.onrender.com';
+import { apiClient } from '../utils/api';
 
 // Интерфейс для API ошибки
 interface ApiError extends Error {
@@ -59,53 +57,6 @@ export interface CyclogramTemplate {
   createdAt?: string;
 }
 
-// Create axios instance with base config
-const api = axios.create({
-  baseURL: REACT_APP_API_URL,
-  timeout: 10000, // 10 seconds
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor for API calls
-api.interceptors.request.use(
-  (config) => {
-    // Add auth token if available
-    const token = localStorage.getItem('auth_token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor for handling errors and rate limiting
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    
-    // If error is 429 (Too Many Requests), wait and retry
-    if (error.response?.status === 429 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      const retryAfter = error.response.headers['retry-after'] || 2; // Default to 2 seconds
-      
-      console.warn(`Rate limited. Retrying after ${retryAfter} seconds...`);
-      
-      // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-      
-      // Retry the request
-      return api(originalRequest);
-    }
-    
-    return Promise.reject(error);
-  }
-);
 
 // Helper function to handle API errors
 const handleApiError = (error: any, context = '') => {
@@ -131,7 +82,7 @@ export const getCyclograms = async (groupId?: string) => {
   try {
     const params: any = {};
     if (groupId) params.groupId = groupId;
-  const response = await api.get('/cyclogram', { params });
+  const response = await apiClient.get('/cyclogram', { params });
     const cyclograms: WeeklyCyclogram[] = response.data.map((item: any) => ({
       id: item._id,
       title: item.title,
@@ -158,7 +109,7 @@ export const getCyclograms = async (groupId?: string) => {
  */
 export const getCyclogram = async (id: string) => {
   try {
-  const response = await api.get(`/cyclogram/${id}`);
+  const response = await apiClient.get(`/cyclogram/${id}`);
     const cyclogram: WeeklyCyclogram = {
       id: response.data._id,
       title: response.data.title,
@@ -185,7 +136,7 @@ export const getCyclogram = async (id: string) => {
  */
 export const createCyclogram = async (cyclogram: WeeklyCyclogram) => {
   try {
-  const response = await api.post('/cyclogram', cyclogram);
+  const response = await apiClient.post('/cyclogram', cyclogram);
     const created: WeeklyCyclogram = {
       id: response.data._id,
       title: response.data.title,
@@ -213,7 +164,7 @@ export const createCyclogram = async (cyclogram: WeeklyCyclogram) => {
  */
 export const updateCyclogram = async (id: string, cyclogram: WeeklyCyclogram) => {
   try {
-  const response = await api.put(`/cyclogram/${id}`, cyclogram);
+  const response = await apiClient.put(`/cyclogram/${id}`, cyclogram);
     const updated: WeeklyCyclogram = {
       id: response.data._id,
       title: response.data.title,
@@ -240,7 +191,7 @@ export const updateCyclogram = async (id: string, cyclogram: WeeklyCyclogram) =>
  */
 export const deleteCyclogram = async (id: string) => {
   try {
-  await api.delete(`/cyclogram/${id}`);
+  await apiClient.delete(`/cyclogram/${id}`);
     return { success: true };
   } catch (error) {
     return handleApiError(error, `deleting cyclogram ${id}`);
@@ -257,7 +208,7 @@ export const getCyclogramTemplates = async (ageGroup?: string) => {
     const params: any = {};
     if (ageGroup) params.ageGroup = ageGroup;
     
-  const response = await api.get('/cyclogram/templates', { params });
+  const response = await apiClient.get('/cyclogram/templates', { params });
     const templates: CyclogramTemplate[] = response.data.map((item: any) => ({
       id: item._id,
       name: item.name,
@@ -290,7 +241,7 @@ export const createCyclogramFromTemplate = async (
   }
 ) => {
  try {
-  const response = await api.post(`/cyclogram/templates/${templateId}/create`, params);
+  const response = await apiClient.post(`/cyclogram/templates/${templateId}/create`, params);
     
     const createdCyclogram: WeeklyCyclogram = {
       id: response.data._id,

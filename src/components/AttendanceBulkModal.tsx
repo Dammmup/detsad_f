@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, FormControl, InputLabel,
   Select, MenuItem, SelectChangeEvent, Checkbox, ListItemText,
@@ -42,7 +42,7 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
-  const fetchChildren = async () => {
+  const fetchChildren = useCallback(async () => {
     try {
       const childrenList = await childrenApi.getAll();
       const filteredChildren = childrenList.filter(child => {
@@ -58,12 +58,12 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
       setError('Не удалось загрузить список детей');
       console.error('Error fetching children:', err);
     }
-  };
+  }, [groupId]);
   useEffect(() => {
     if (open && groupId) {
       fetchChildren();
     }
-  }, [open, groupId, fetchChildren]);
+  }, [open, groupId]);
 
 
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import {  getCurrentUser, isAuthenticated, logout } from '../../services/auth';
 import { User } from '../../types/common';
 // Интерфейс контекста авторизации
@@ -95,7 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Проверка авторизации (для внешнего использования)
-  const checkAuth = async (): Promise<boolean> => {
+  const checkAuth = useCallback(async (): Promise<boolean> => {
     try {
       const currentUser = getCurrentUser();
       const authenticated = await isAuthenticated(); // isAuthenticated теперь асинхронная функция
@@ -116,7 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Ошибка проверки авторизации:', error);
       return false;
     }
-  };
+  }, [user]);
 
   const value: AuthContextType = {
     user,

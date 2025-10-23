@@ -1,11 +1,11 @@
-import axios from 'axios';
+import { apiClient } from '../utils/api';
 
-let baseUrl = process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
-// Добавляем '' к базовому URL, если его нет
-if (!baseUrl.endsWith('')) {
-  baseUrl = baseUrl.replace(/\/$/, '') + '';
-}
-const REACT_APP_API_URL = baseUrl;
+// let baseUrl = process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
+// // Добавляем '' к базовому URL, если его нет
+// if (!baseUrl.endsWith('')) {
+//   baseUrl = baseUrl.replace(/\/$/, '') + '';
+// }
+// const REACT_APP_API_URL = baseUrl;
 
 // Интерфейс для API ошибки
 interface ApiError extends Error {
@@ -86,54 +86,6 @@ export interface User {
   permissions: string[];
 }
 
-// Create axios instance with base config
-export const api = axios.create({
-  baseURL: REACT_APP_API_URL,
-  timeout: 10000, // 10 seconds
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-  }
-});
-
-// Request interceptor for API calls
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('auth_token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
- }
-);
-
-// Response interceptor for handling errors and rate limiting
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    
-    // If error is 429 (Too Many Requests), wait and retry
-    if (error.response?.status === 429 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      const retryAfter = error.response.headers['retry-after'] || 2; // Default to 2 seconds
-      
-      console.warn(`Rate limited. Retrying after ${retryAfter} seconds...`);
-      
-      // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-      
-      // Retry the request
-      return api(originalRequest);
-    }
-    
-    return Promise.reject(error);
-  }
-);
-
 // Helper function to handle API errors
 const handleApiError = (error: any, context = '') => {
   const errorMessage = error.response?.data?.message || error.message;
@@ -156,7 +108,7 @@ export const getKindergartenSettings = async () => {
   try {
     console.log('Fetching kindergarten settings from API...');
     
-  const response = await api.get('/settings/kindergarten');
+  const response = await apiClient.get('/settings/kindergarten');
     
     const settings: KindergartenSettings = {
       id: response.data._id,
@@ -190,7 +142,7 @@ export const getKindergartenSettings = async () => {
  */
 export const updateKindergartenSettings = async (settings: KindergartenSettings) => {
   try {
-  const response = await api.put('/settings/kindergarten', {
+  const response = await apiClient.put('/settings/kindergarten', {
       name: settings.name,
       address: settings.address,
       phone: settings.phone,
@@ -232,7 +184,7 @@ export const updateKindergartenSettings = async (settings: KindergartenSettings)
  */
 export const getNotificationSettings = async () => {
   try {
-  const response = await api.get('/settings/notifications');
+  const response = await apiClient.get('/settings/notifications');
     
     const settings: NotificationSettings = {
       id: response.data._id,
@@ -258,7 +210,7 @@ export const getNotificationSettings = async () => {
  */
 export const updateNotificationSettings = async (settings: NotificationSettings) => {
   try {
-  const response = await api.put('/settings/notifications', settings);
+  const response = await apiClient.put('/settings/notifications', settings);
     
     const updatedSettings: NotificationSettings = {
       id: response.data._id,
@@ -283,7 +235,7 @@ export const updateNotificationSettings = async (settings: NotificationSettings)
  */
 export const getSecuritySettings = async () => {
   try {
-  const response = await api.get('/settings/security');
+  const response = await apiClient.get('/settings/security');
     
     const settings: SecuritySettings = {
       id: response.data._id,
@@ -313,7 +265,7 @@ export const getSecuritySettings = async () => {
  */
 export const updateSecuritySettings = async (settings: SecuritySettings) => {
   try {
-  const response = await api.put('/settings/security', settings);
+  const response = await apiClient.put('/settings/security', settings);
     
     const updatedSettings: SecuritySettings = {
       id: response.data._id,
@@ -342,7 +294,7 @@ export const updateSecuritySettings = async (settings: SecuritySettings) => {
  */
 export const getGeolocationSettings = async () => {
   try {
-  const response = await api.get('/settings/geolocation');
+  const response = await apiClient.get('/settings/geolocation');
     
     const settings: GeolocationSettings = {
       id: response.data._id,
@@ -370,7 +322,7 @@ export const getGeolocationSettings = async () => {
  */
 export const updateGeolocationSettings = async (settings: GeolocationSettings) => {
   try {
-  const response = await api.put('/settings/geolocation', {
+  const response = await apiClient.put('/settings/geolocation', {
       ...settings
     });
     
@@ -399,7 +351,7 @@ export const updateGeolocationSettings = async (settings: GeolocationSettings) =
  */
 export const getAllUsers = async () => {
   try {
-  const response = await api.get('/users');
+  const response = await apiClient.get('/users');
     
     const users: User[] = response.data.map((user: any) => ({
       id: user._id,
@@ -426,7 +378,7 @@ export const getAllUsers = async () => {
  */
 export const createUser = async (user: User) => {
   try {
-  const response = await api.post('/users', user);
+  const response = await apiClient.post('/users', user);
     
     const newUser: User = {
       id: response.data._id,
@@ -454,7 +406,7 @@ export const createUser = async (user: User) => {
  */
 export const updateUser = async (id: string, user: User) => {
   try {
-  const response = await api.put(`/users/${id}`, user);
+  const response = await apiClient.put(`/users/${id}`, user);
     
     const updatedUser: User = {
       id: response.data._id,
@@ -481,9 +433,12 @@ export const updateUser = async (id: string, user: User) => {
  */
 export const deleteUser = async (id: string) => {
   try {
-  await api.delete(`/users/${id}`);
+  await apiClient.delete(`/users/${id}`);
     return { success: true };
   } catch (error) {
     return handleApiError(error, `deleting user ${id}`);
   }
 };
+
+// Export api for backward compatibility
+export { apiClient as api };
