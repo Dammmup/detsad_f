@@ -211,7 +211,6 @@ export const exportSchedule = async (scheduleData: any[], period?: string): Prom
     item.date || '',
     item.staffName || '',
     item.groupName || '',
-    item.shiftType || '',
     item.startTime || '',
     item.endTime || '',
     item.status || '',
@@ -315,13 +314,11 @@ export const exportStaffAttendance = async (
   const data = attendanceData.map(record => [
     record.staffName || '',
     record.date || '',
-    record.shiftType || '',
     `${record.startTime || ''} - ${record.endTime || ''}`,
     `${record.actualStart || ''} - ${record.actualEnd || ''}`,
     record.lateMinutes || 0,
     record.overtimeMinutes || 0,
     record.status === 'completed' ? 'Завершено' :
-    record.status === 'in_progress' ? 'В процессе' :
     record.status === 'late' ? 'Опоздание' :
     record.status === 'no_show' ? 'Не явился' : record.status || '',
     record.notes || ''

@@ -1,6 +1,6 @@
 // ===== УТИЛИТЫ ДЛЯ ФОРМАТИРОВАНИЯ =====
 
-import { StatusColor, STATUS_COLORS, STATUS_TEXT, SHIFT_TYPES } from '../types/common';
+import { StatusColor, STATUS_COLORS, STATUS_TEXT } from '../types/common';
 
 // ===== ФОРМАТИРОВАНИЕ ДАТА И ВРЕМЕНИ =====
 
@@ -152,12 +152,6 @@ export const getStatusText = (status: string): string => {
   return STATUS_TEXT[status] || status;
 };
 
-/**
- * Получение текста типа смены на русском языке
- */
-export const getShiftTypeText = (shiftType: string): string => {
-  return SHIFT_TYPES[shiftType as keyof typeof SHIFT_TYPES] || shiftType;
-};
 
 // ===== ФОРМАТИРОВАНИЕ ЧИСЕЛ И ВАЛЮТ =====
 

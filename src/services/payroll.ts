@@ -15,6 +15,8 @@ export interface Payroll {
   total: number;
   status: 'draft' | 'approved' | 'paid';
   paymentDate?: Date;
+  advance?: number; // Аванс
+  advanceDate?: Date; // Дата аванса
   createdAt: Date;
   updatedAt: Date;
   accruals: number;
@@ -54,6 +56,9 @@ export interface VirtualPayroll {
   deductions: number;
   total: number;
   status: 'draft' | 'approved' | 'paid';
+  paymentDate?: Date;
+  advance?: number; // Аванс
+  advanceDate?: Date; // Дата аванса
   createdAt: Date;
   updatedAt: Date;
   accruals: number;
@@ -70,7 +75,6 @@ export interface VirtualPayroll {
     absencePenalties: number;
     userFines: number;
   };
-  paymentDate: undefined;
   history: undefined;
   workedDays?: number;
   workedShifts?: number;

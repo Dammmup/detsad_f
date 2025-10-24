@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, CircularProgress, Alert, Button, useMediaQuery, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  MenuItem, Select, InputLabel, FormControl, Avatar
+  MenuItem, Select, InputLabel, FormControl, Avatar, Tooltip, Snackbar
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
 import { IChildPayment, Child, Group } from '../../types/common';
@@ -201,8 +201,53 @@ const ChildPayments: React.FC = () => {
     }
   };
 
+  // Состояние для управления всплывающим сообщением
+  const [showInitialTooltip, setShowInitialTooltip] = useState(false);
+
+  // Автоматическое отображение подсказки при загрузке страницы
+  useEffect(() => {
+    setShowInitialTooltip(true);
+    const timer = setTimeout(() => {
+      setShowInitialTooltip(false);
+    }, 4000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Функция для установки статуса оплаты в "Оплачено"
+  const markAsPaid = async (paymentId: string) => {
+    try {
+      await childPaymentApi.update(paymentId, { status: 'paid' });
+      // Обновляем список оплат
+      fetchPayments();
+    } catch (error) {
+      console.error('Ошибка при установке статуса "Оплачено"', error);
+      setError('Ошибка при изменении статуса оплаты');
+    }
+  };
+
+  // Функция для отмены оплаты
+  const cancelPayment = async (paymentId: string) => {
+    try {
+      await childPaymentApi.update(paymentId, { status: 'active' });
+      // Обновляем список оплат
+      fetchPayments();
+    } catch (error) {
+      console.error('Ошибка при отмене оплаты', error);
+      setError('Ошибка при отмене оплаты');
+    }
+  };
+
   return (
     <Box>
+      {/* Всплывающее сообщение при загрузке */}
+      <Snackbar
+        open={showInitialTooltip}
+        message="Нажмите на кнопку для отметки оплаты"
+        autoHideDuration={4000}
+        onClose={() => setShowInitialTooltip(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      />
       <Box
         display="flex"
         flexDirection={isMobile ? 'column' : 'row'}
@@ -282,6 +327,8 @@ const ChildPayments: React.FC = () => {
       {!loading && payments.length === 0 && (
         <Alert severity="info">Нет данных об оплатах</Alert>
       )}
+      
+      {/* Статистика по оплатам */}
       
       {/* Статистика по оплатам */}
       {!loading && filteredPayments.length > 0 && (
@@ -371,6 +418,7 @@ const ChildPayments: React.FC = () => {
         <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 650 }}>
           <TableHead>
             <TableRow>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}></TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Ребенок</TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Группа</TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Период</TableCell>
@@ -396,6 +444,39 @@ const ChildPayments: React.FC = () => {
                     '&:hover': { backgroundColor: '#f9f9f9' }
                   }}
                 >
+                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+                    <Tooltip
+                      title={payment.status === 'paid' ? 'Отменить оплату' : 'Нажмите на кнопку для отметки оплаты'}
+                      placement="right"
+                    >
+                      <IconButton
+                        size={isMobile ? 'small' : 'medium'}
+                        onClick={() => payment.status === 'paid' ? cancelPayment(payment._id) : markAsPaid(payment._id)}
+                        disabled={false}
+                        sx={{
+                          width: 44,
+                          height: 44,
+                          minWidth: 44,
+                          minHeight: 44,
+                          borderRadius: '50%',
+                          bgcolor: payment.status === 'paid' ? 'error.light' : 'primary.main',
+                          color: payment.status === 'paid' ? 'error.main' : 'white',
+                          '&:hover': {
+                            bgcolor: payment.status === 'paid' ? 'error.light' : 'primary.dark',
+                          },
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        {payment.status === 'paid' ? (
+                          <span style={{ fontSize: '22px', color: 'white' }}>✕</span>
+                        ) : (
+                          <span style={{ fontSize: '22px' }}>₸</span>
+                        )}
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>
                     {payment.childId ? (
                       typeof payment.childId === 'object'

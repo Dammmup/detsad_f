@@ -142,15 +142,13 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
           totalTenants: data.length,
           totalAmount: data.reduce((sum, p) => {
             const amount = p.amount || p.accruals || 0;
-            const paid = p.paidAmount || 0;
-            const diff = amount - paid;
-            return sum + Math.max(0, diff); // Не допускаем отрицательных значений
+            return sum + amount; // Суммируем все amount без учета предоплаты
           }, 0),
           totalReceivable: data.reduce((sum, p) => {
             // Рассчитываем "Итого" для каждой записи как сумму аренды минус оплаченная сумма
             const amount = p.amount || p.accruals || 0;
             const paid = p.paidAmount || 0;
-            return sum + (amount - paid); // Остаток к оплате
+            return sum + Math.max(0, amount - paid); // Остаток к оплате, не допускаем отрицательных значений
           }, 0)
         };
         
@@ -236,9 +234,7 @@ const handleSaveClick = async (rowId: string) => {
         
         const updatedTotalAmount = updatedRows.reduce((sum, p) => {
           const amount = p.amount || p.accruals || 0;
-          const paid = p.paidAmount || 0;
-          const diff = amount - paid;
-          return sum + Math.max(0, diff); // Не допускаем отрицательных значений
+          return sum + amount; // Суммируем все amount без учета предоплаты
         }, 0);
         
         return {
@@ -373,15 +369,13 @@ const handleGenerateRentSheets = async () => {
         totalTenants: data.length,
         totalAmount: data.reduce((sum, p) => {
           const amount = p.amount || p.accruals || 0;
-          const paid = p.paidAmount || 0;
-          const diff = amount - paid;
-          return sum + Math.max(0, diff); // Не допускаем отрицательных значений
+          return sum + amount; // Суммируем все amount без учета предоплаты
         }, 0),
         totalReceivable: data.reduce((sum, p) => {
           // Рассчитываем "Итого" для каждой записи как сумму аренды минус оплаченная сумма
           const amount = p.amount || p.accruals || 0;
           const paid = p.paidAmount || 0;
-          return sum + (amount - paid); // Остаток к оплате
+          return sum + Math.max(0, amount - paid); // Остаток к оплате, не допускаем отрицательных значений
         }, 0)
       };
       

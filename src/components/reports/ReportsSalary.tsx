@@ -46,6 +46,7 @@ interface PayrollRow {
   latePenalties: number; // Штрафы за опоздания
   absencePenalties: number; // Штрафы за неявки
   latePenaltyRate: number;
+  advance: number; // Аванс
   total: number;
  status: string;
  staffId: string;
@@ -122,8 +123,10 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
             // Рассчитываем "Итого" для каждой записи (без бонусов)
             const accruals = p.accruals || p.baseSalary || 0;
             const penalties = p.penalties || 0;
-            const total = accruals - penalties; // Упрощенный расчет
-            return sum + total;
+            const advance = p.advance || 0;
+            const total = accruals - penalties - advance; // Упрощенный расчет
+            // Не добавляем отрицательные значения в сумму
+            return sum + (total >= 0 ? total : 0);
           }, 0)
         };
         
@@ -132,12 +135,13 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
           accruals: p.accruals || p.baseSalary || 0,
           // Рассчитываем общую сумму штрафов
-          penalties: (p.latePenalties || 0) + (p.absencePenalties || 0),
+          penalties: p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0),
           latePenalties: p.latePenalties || 0,
           absencePenalties: p.absencePenalties || 0,
           latePenaltyRate: p.latePenaltyRate || 500, // Значение по умолчанию
+          advance: p.advance || 0, // Аванс
           // Рассчитываем поле "Итого" в реальном времени (без бонусов)
-          total: (p.accruals || p.baseSalary || 0) - ((p.latePenalties || 0) + (p.absencePenalties || 0)), // Упрощенный расчет
+          total: (p.accruals || p.baseSalary || 0) - ((p.latePenalties || 0) + (p.absencePenalties || 0)) - (p.advance || 0), // Упрощенный расчет
           status: p.status && p.status !== 'draft' ? p.status : 'calculated',
           staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
           _id: p._id || undefined // Добавляем ID записи зарплаты
@@ -157,6 +161,7 @@ const handleEditClick = (row: PayrollRow) => {
   setEditData({
     accruals: row.accruals || undefined,
     penalties: row.penalties || undefined,
+    advance: row.advance || undefined,
     latePenaltyRate: row.latePenaltyRate || undefined,
     status: row.status && row.status !== 'draft' ? row.status : 'calculated'
   });
@@ -173,10 +178,11 @@ const handleSaveClick = async (rowId: string) => {
       // Рассчитываем поле "Итого" в реальном времени
       const accruals = editData.accruals !== undefined ? editData.accruals : originalRow.accruals || 0;
       const penalties = editData.penalties !== undefined ? editData.penalties : originalRow.penalties || 0;
+      const advance = editData.advance !== undefined ? editData.advance : originalRow.advance || 0;
       const status = editData.status && editData.status !== 'draft' ? editData.status : (originalRow.status && originalRow.status !== 'draft' ? originalRow.status : 'calculated');
       
       // Обновленный расчет итоговой суммы (без бонусов)
-      const total = accruals - penalties;
+      const total = accruals - penalties - advance;
       
       // Добавляем рассчитанное поле "Итого" в данные для обновления
       const updatedData = {
@@ -258,11 +264,11 @@ const handleExportToExcel = () => {
   let csvContent = "data:text/csv;charset=utf-8,";
   
   // Заголовки
- csvContent += "Сотрудник;Начисления;Штрафы;Ставка за опоздание (тг/мин);Итого;Статус\n";
+ csvContent += "Сотрудник;Начисления;Аванс;Штрафы;Ставка за опоздание (тг/мин);Итого;Статус\n";
   
   // Данные
  rows.forEach(row => {
-    csvContent += `${row.staffName};${row.accruals};${row.penalties};${row.latePenaltyRate};${row.total};${row.status}\n`;
+    csvContent += `${row.staffName};${row.accruals};${row.advance};${row.penalties};${row.latePenaltyRate};${row.total};${row.status}\n`;
   });
   
   // Создаем ссылку для скачивания
@@ -340,8 +346,10 @@ const handleGeneratePayrollSheets = async () => {
           // Рассчитываем "Итого" для каждой записи
           const accruals = p.accruals || p.baseSalary || 0;
           const penalties = p.penalties || 0;
-          const total = accruals - penalties; // Упрощенный расчет (без бонусов)
-          return sum + total;
+          const advance = p.advance || 0;
+          const total = accruals - penalties - advance; // Упрощенный расчет (без бонусов)
+          // Не добавляем отрицательные значения в сумму
+          return sum + (total >= 0 ? total : 0);
         }, 0)
       };
       
@@ -350,12 +358,13 @@ const handleGeneratePayrollSheets = async () => {
         staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
         accruals: p.accruals || p.baseSalary || 0,
         // Рассчитываем общую сумму штрафов
-        penalties: (p.latePenalties || 0) + (p.absencePenalties || 0),
+        penalties: p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0),
         latePenalties: p.latePenalties || 0,
         absencePenalties: p.absencePenalties || 0,
         latePenaltyRate: p.latePenaltyRate || 500, // Значение по умолчанию
+        advance: p.advance || 0, // Аванс
         // Рассчитываем поле "Итого" в реальном времени (без бонусов)
-        total: (p.accruals || p.baseSalary || 0) - ((p.latePenalties || 0) + (p.absencePenalties || 0)), // Упрощенный расчет
+        total: (p.accruals || p.baseSalary || 0) - ((p.latePenalties || 0) + (p.absencePenalties || 0)) - (p.advance || 0), // Упрощенный расчет
         status: p.status && p.status !== 'draft' ? p.status : 'calculated',
         staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
         _id: p._id || undefined // Добавляем ID записи зарплаты
@@ -602,6 +611,7 @@ const handleGeneratePayrollSheets = async () => {
                   }}>
                     <TableCell sx={{ color: 'primary.main', fontWeight: 'bold' }}>Сотрудник</TableCell>
                     <TableCell align="right" sx={{ color: 'primary.main', fontWeight: 'bold' }}>Начисления</TableCell>
+                    <TableCell align="right" sx={{ color: 'primary.main', fontWeight: 'bold' }}>Аванс</TableCell>
                     <TableCell align="right" sx={{ color: 'primary.main', fontWeight: 'bold' }}>Штрафы</TableCell>
                     <TableCell align="right" sx={{ color: 'primary.main', fontWeight: 'bold' }}>Ставка за опоздание (тг/мин)</TableCell>
                     <TableCell align="right" sx={{ color: 'primary.main', fontWeight: 'bold' }}>Итого</TableCell>
@@ -657,9 +667,19 @@ const handleGeneratePayrollSheets = async () => {
                             size="small"
                             type="number"
                             value={editData.accruals ?? ''}
-                            onChange={(e) => handleInputChange('accruals', e.target.value ? Number(e.target.value) : '')}
-                            inputProps={{ style: { fontSize: 14 } }}
-                            InputProps={{ style: { padding: '4px 8px' } }}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === '' || value === '-') {
+                                handleInputChange('accruals', '');
+                              } else {
+                                const numValue = Number(value);
+                                if (numValue >= 0) {
+                                  handleInputChange('accruals', numValue);
+                                }
+                              }
+                            }}
+                            inputProps={{ style: { fontSize: 14 }, min: 0, step: "any" }}
+                            InputProps={{ style: { padding: '4px 8px' }, disableUnderline: true }}
                             style={{ width: '100px' }}
                             variant="outlined"
                           />
@@ -667,24 +687,62 @@ const handleGeneratePayrollSheets = async () => {
                           r.accruals ? r.accruals?.toLocaleString() : '0'
                         )}
                       </TableCell>
+                      <TableCell align="right" sx={{ fontSize: '1rem', fontWeight: 'medium', color: 'success.main' }}>
+                        {editingId === r.staffId ? (
+                          <TextField
+                            size="small"
+                            type="number"
+                            value={editData.advance ?? ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === '' || value === '-') {
+                                handleInputChange('advance', '');
+                              } else {
+                                const numValue = Number(value);
+                                if (numValue >= 0) {
+                                  handleInputChange('advance', numValue);
+                                }
+                              }
+                            }}
+                            inputProps={{ style: { fontSize: 14 }, min: 0, step: "any" }}
+                            InputProps={{ style: { padding: '4px 8px' }, disableUnderline: true }}
+                            style={{ width: '100px' }}
+                            variant="outlined"
+                          />
+                        ) : (
+                          r.advance ? r.advance?.toLocaleString() : '0'
+                        )}
+                      </TableCell>
                       <TableCell
                         align="right"
                         sx={{ fontSize: '1rem', fontWeight: 'medium', color: 'error.main' }}
-                        title={`Штрафы за опоздания: ${r.latePenalties?.toLocaleString() || '0'} тг\nШтрафы за неявки: ${r.absencePenalties?.toLocaleString() || '0'} тг`}
+                        title={`Штрафы за опоздания: ${r.latePenalties?.toLocaleString() || '0'} тг\nШтрафы за неявки: ${r.absencePenalties?.toLocaleString() || '0'} тг\nОбщая сумма штрафов: ${r.penalties?.toLocaleString() || '0'} тг`}
                       >
                         {editingId === r.staffId ? (
                           <TextField
                             size="small"
                             type="number"
                             value={editData.penalties ?? ''}
-                            onChange={(e) => handleInputChange('penalties', e.target.value ? Number(e.target.value) : '')}
-                            inputProps={{ style: { fontSize: 14 } }}
-                            InputProps={{ style: { padding: '4px 8px' } }}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === '' || value === '-') {
+                                handleInputChange('penalties', '');
+                              } else {
+                                const numValue = Number(value);
+                                if (numValue >= 0) {
+                                  handleInputChange('penalties', numValue);
+                                }
+                              }
+                            }}
+                            inputProps={{ style: { fontSize: 14 }, min: 0, step: "any" }}
+                            InputProps={{ style: { padding: '4px 8px' }, disableUnderline: true }}
                             style={{ width: '100px' }}
                             variant="outlined"
                           />
                         ) : (
-                          r.penalties ? r.penalties?.toLocaleString() : '0'
+                          <span title={`Штрафы за опоздания: ${r.latePenalties?.toLocaleString() || '0'} тг\nШтрафы за неявки: ${r.absencePenalties?.toLocaleString() || '0'} тг\nОбщая сумма штрафов: ${r.penalties?.toLocaleString() || '0'} тг`}>
+                            {r.penalties ? r.penalties?.toLocaleString() : '0'}
+                          </span>
                         )}
                       </TableCell>
                       <TableCell align="right" sx={{ fontSize: '1rem', color: 'text.secondary' }}>
@@ -694,8 +752,8 @@ const handleGeneratePayrollSheets = async () => {
                             type="number"
                             value={editData.latePenaltyRate ?? ''}
                             onChange={(e) => handleInputChange('latePenaltyRate', e.target.value ? Number(e.target.value) : '')}
-                            inputProps={{ style: { fontSize: 14 } }}
-                            InputProps={{ style: { padding: '4px 8px' } }}
+                            inputProps={{ style: { fontSize: 14 }, step: "any" }}
+                            InputProps={{ style: { padding: '4px 8px' }, disableUnderline: true }}
                             style={{ width: '100px' }}
                             variant="outlined"
                           />
@@ -708,8 +766,9 @@ const handleGeneratePayrollSheets = async () => {
                           (() => {
                             const accruals = editData.accruals !== undefined ? editData.accruals : r.accruals || 0;
                             const penalties = editData.penalties !== undefined ? editData.penalties : r.penalties || 0;
+                            const advance = editData.advance !== undefined ? editData.advance : r.advance || 0;
                             
-                            const total = accruals - penalties;
+                            const total = accruals - penalties - advance;
                             return total?.toLocaleString() || '0';
                           })()
                         ) : (

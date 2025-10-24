@@ -48,32 +48,24 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { Search as SearchIcon } from '@mui/icons-material';
 
 // Types and Services
-import { Shift, ShiftStatus, ShiftType, ShiftFormData } from '../../types/common';
+import { Shift, ShiftStatus, ShiftFormData } from '../../types/common';
 import { getShifts, createShift, updateShift } from '../../services/shifts';
 import { getUsers } from '../../services/users';
 import {User} from '../../types/common';
-import { SHIFT_TYPES } from '../../types/common';
 
 const SHIFT_STATUSES: Record<ShiftStatus, string> = {
   scheduled: 'Запланирована',
-  in_progress: 'В процессе',
- completed: 'Завершена',
+  completed: 'Завершена',
   cancelled: 'Отменена',
   no_show: 'Неявка',
   confirmed: 'Подтверждена',
-  late:'Опоздание',
   absent: 'Отсутствует',
   checked_in: 'Прибыл',
-  checked_out: 'Ушёл',
-  on_break: 'Перерыв',
-  overtime: 'Сверхурочные',
-  early_departure: 'Ранний уход',
-  present: 'Присутствует'
+  checked_out: 'Ушёл'
 };
 
 const STATUS_COLORS = {
   scheduled: 'default',
-  in_progress: 'primary',
   completed: 'success',
   cancelled: 'error',
   no_show: 'warning',
@@ -152,7 +144,6 @@ const StaffSchedule: React.FC = () => {
           date: format(new Date(), 'yyyy-MM-dd'),
           startTime: '07:30',
           endTime: '18:30',
-          type: ShiftType.full,
           notes: '',
           status: ShiftStatus.scheduled,
           alternativeStaffId: ''
@@ -264,7 +255,6 @@ const StaffSchedule: React.FC = () => {
                             date: dateStr,
                             startTime: '07:30',
                             endTime: '18:30',
-                            type: ShiftType.full,
                             notes: 'Рабочий день по графику 5/2',
                             status: ShiftStatus.scheduled
                           });
@@ -397,7 +387,6 @@ const StaffSchedule: React.FC = () => {
                           date: formData.date,
                           startTime: formData.startTime,
                           endTime: formData.endTime,
-                          type: formData.type,
                           notes: formData.notes || '',
                           status: formData.status || ShiftStatus.scheduled,
                           createdAt: editingShift?.createdAt || new Date().toISOString(),
@@ -452,7 +441,6 @@ const StaffSchedule: React.FC = () => {
               date: shift.date,
               startTime: shift.startTime,
               endTime: shift.endTime,
-              type: shift.type,
               status: shift.status,
               notes: shift.notes || '',
               alternativeStaffId: shift.alternativeStaffId || ''
@@ -473,7 +461,6 @@ const StaffSchedule: React.FC = () => {
           date: format(new Date(), 'yyyy-MM-dd'),
           startTime: '07:30',
           endTime: '18:30',
-          type: 'full' as ShiftType,
            status: 'scheduled' as ShiftStatus,
           notes: '',
           alternativeStaffId: ''
@@ -759,7 +746,6 @@ const StaffSchedule: React.FC = () => {
                                       handleEditShift(shift);
                                     }}
                                   >
-                                    <Box>{SHIFT_TYPES[shift.type]}</Box>
                                     <Box sx={{ fontSize: 12 }}>
                                       {shift.startTime} - {shift.endTime}
                                     </Box>
@@ -877,26 +863,7 @@ const StaffSchedule: React.FC = () => {
                     }}
                   />
                 </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth required>
-                    <InputLabel>Тип смены</InputLabel>
-                    <Select
-                      name="shiftType"
-                      value={formData.type}
-                      onChange={handleSelectChange}
-                      label="Тип смены"
-                      required
-                    >
-                      {Object.entries(SHIFT_TYPES).map(([value, label]) => (
-                        <MenuItem key={value} value={value}>
-                          {label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                
+           
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth required>
                     <InputLabel>Статус</InputLabel>

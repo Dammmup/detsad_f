@@ -237,7 +237,7 @@ const WeeklyAttendance: React.FC = () => {
     const existingAttendance = getAttendanceForDay(child.id!, date);
     
     // Cycle through statuses: present -> absent -> sick -> vacation -> late -> present
-    const statusCycle: AttendanceStatus[] = ['present', 'absent', 'sick', 'vacation', 'late'];
+    const statusCycle: AttendanceStatus[] = ['present', 'absent', 'sick', 'vacation'];
     const currentIndex = existingAttendance ? statusCycle.indexOf(existingAttendance.status) : -1;
     const nextStatus = statusCycle[(currentIndex + 1) % statusCycle.length];
 

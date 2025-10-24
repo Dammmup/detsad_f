@@ -22,8 +22,7 @@ const ATTENDANCE_STATUSES = {
   present: 'Присутствует',
   absent: 'Отсутствует',
   sick: 'Болеет',
-  vacation: 'Отпуск',
-  late: 'Опоздание'
+  vacation: 'Отпуск'
 } as const;
 
 type AttendanceStatus = keyof typeof ATTENDANCE_STATUSES;

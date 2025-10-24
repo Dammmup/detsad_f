@@ -70,27 +70,6 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = ({ onScheduleCha
     fetchSchedule();
   }, [currentUser]);
 
-  const getShiftTypeLabel = (shiftType: string) => {
-    switch (shiftType) {
-      case 'full': return 'Полная смена';
-      case 'overtime': return 'Сверхурочная';
-      case 'day_off': return 'Выходной';
-      case 'vacation': return 'Отпуск';
-      case 'sick_leave': return 'Больничный';
-      default: return shiftType;
-    }
-  };
-
-  const getShiftTypeColor = (shiftType: string) => {
-    switch (shiftType) {
-      case 'full': return 'primary';
-      case 'overtime': return 'info';
-      case 'day_off': return 'default';
-      case 'vacation': return 'success';
-      case 'sick_leave': return 'warning';
-      default: return 'default';
-    }
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -174,14 +153,7 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = ({ onScheduleCha
                   backgroundColor: 'white',
                   borderRadius: 2,
                   boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
-                  borderLeft: `4px solid ${
-                    shift.shiftType === 'full' ? '#007bff' :
-                    shift.shiftType === 'overtime' ? '#17a2b8' :
-                    shift.shiftType === 'day_off' ? '#6c757d' :
-                    shift.shiftType === 'vacation' ? '#28a745' :
-                    shift.shiftType === 'sick_leave' ? '#ffc107' :
-                    '#6c757d'
-                  }`,
+           
                   transition: 'all 0.3s ease-in-out',
                   '&:hover': {
                     boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
@@ -203,17 +175,7 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = ({ onScheduleCha
                       >
                         {formatDate(shift.date)}
                       </Typography>
-                      <Chip 
-                        label={getShiftTypeLabel(shift.shiftType)} 
-                        size="small" 
-                        color={getShiftTypeColor(shift.shiftType) as any}
-                        variant="outlined"
-                        sx={{
-                          fontSize: '0.7rem',
-                          height: 20,
-                          fontWeight: 600
-                        }}
-                      />
+              
                     </Box>
                   }
                   secondary={

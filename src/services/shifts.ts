@@ -52,7 +52,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
         startTime: shiftData.startTime,
         endTime: shiftData.endTime,
         breakTime: shiftData.breakTime,
-        type: shiftData.type,
         status: shiftData.status || ShiftStatus.scheduled,
         notes: shiftData.notes,
         alternativeStaffId: shiftData.alternativeStaffId
@@ -260,7 +259,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
       dayOfWeek: number; // 0-6 (воскресенье-суббота)
       startTime: string;
       endTime: string;
-      type: Shift['type'];
     }>;
   }>> {
     const cacheKey = 'shift_templates';
@@ -273,7 +271,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
         dayOfWeek: number;
         startTime: string;
         endTime: string;
-        type: Shift['type'];
       }>;
     }>>(cacheKey);
     if (cached) {

@@ -20,7 +20,6 @@ export interface Shift {
   notes?: string;
   status?: string; // planned, completed, cancelled
   groupId?: string;
-  shiftType?: string;
 }
 
 // Helper function to handle API errors
@@ -54,7 +53,6 @@ export const getSchedules = async (groupId?: string, userId?: string) => {
       groupId: schedule.groupId,
       userId: schedule.userId,
       date: schedule.date,
-      shiftType: schedule.shiftType,
       startTime: schedule.startTime,
       endTime: schedule.endTime,
       notes: schedule.notes
@@ -103,7 +101,6 @@ export const createSchedule = async (record: Shift) => {
       groupId: record.groupId,
       userId: record.userId,
       date: record.date,
-      shiftType: record.shiftType,
       startTime: record.startTime,
       endTime: record.endTime,
       notes: record.notes
@@ -113,7 +110,6 @@ export const createSchedule = async (record: Shift) => {
       groupId: response.data.groupId,
       userId: response.data.userId,
       date: response.data.date,
-      shiftType: response.data.shiftType,
       startTime: response.data.startTime,
       endTime: response.data.endTime,
       notes: response.data.notes,
@@ -137,7 +133,6 @@ export const updateSchedule = async (id: string, record: Shift) => {
       groupId: record.groupId,
       userId: record.userId,
       date: record.date,
-      shiftType: record.shiftType,
       startTime: record.startTime,
       endTime: record.endTime,
       notes: record.notes
@@ -147,7 +142,6 @@ export const updateSchedule = async (id: string, record: Shift) => {
       groupId: response.data.groupId,
       userId: response.data.userId,
       date: response.data.date,
-      shiftType: response.data.shiftType,
       startTime: response.data.startTime,
       endTime: response.data.endTime,
       notes: response.data.notes,
@@ -173,26 +167,6 @@ export const deleteSchedule = async (id: string) => {
   }
 };
 
-/**
- * Get shift types
- * @returns {Promise<string[]>} List of shift types
- */
-export const getShiftTypes = async () => {
-  try {
-    
-    // Моковые данные для тестирования
-    const shiftTypes = [
-      'regular', // Обычная смена
-      'overtime', // Сверхурочная работа
-      'sick', // Больничный
-      'vacation' // Отпуск
-    ];
-    
-    return shiftTypes;
-  } catch (error) {
-    return handleApiError(error, 'fetching shift types');
-  }
-};
 
 /**
  * Generate mock shifts for testing

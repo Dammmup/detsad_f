@@ -182,7 +182,6 @@ export type StatusColor = 'default' | 'primary' | 'secondary' | 'error' | 'info'
 export const STATUS_COLORS: Record<string, StatusColor> = {
   // Статусы для смен
   'scheduled': 'default',
-  'in_progress': 'primary',
   'completed': 'success',
   'cancelled': 'error',
   'no_show': 'warning',
@@ -220,20 +219,14 @@ export const STATUS_COLORS: Record<string, StatusColor> = {
 export const STATUS_TEXT: Record<string, string> = {
   // Статусы для смен
   'scheduled': 'Запланирована',
-  'in_progress': 'В процессе',
   'completed': 'Завершена',
   'cancelled': 'Отменена',
   'no_show': 'Не явка',
   'confirmed': 'Подтверждена',
-  'late': 'Опоздание',
   // Статусы для посещений
   'checked_in': 'Прибыл',
   'checked_out': 'Ушёл',
-  'on_break': 'Перерыв',
-  'overtime': 'Сверхурочные',
   'absent': 'Отсутствует',
-  'early_departure': 'Ранний уход',
-  'present': 'Присутствует',
   // Статусы аренды и оплаты детей
   'active_rent': 'Активна',
   'overdue_rent': 'Просрочена',
@@ -246,37 +239,20 @@ export const STATUS_TEXT: Record<string, string> = {
   // Добавляем недостающие статусы
   'absent_shift': 'Отсутствует',
   'checked_in_shift': 'Прибыл',
-  'checked_out_shift': 'Ушёл',
-  'on_break_shift': 'Перерыв',
-  'overtime_shift': 'Сверхурочные',
-  'early_departure_shift': 'Ранний уход',
-  'present_shift': 'Присутствует'
+  'checked_out_shift': 'Ушёл'
 };
 
-export enum ShiftType {
-  day = 'day',
-  night = 'night',
-  weekend = 'weekend',
-  holiday = 'holiday',
-  full = 'full',
-  day_off = 'day_off'
-}
+
 
 export enum ShiftStatus {
   scheduled = 'scheduled',
-  in_progress = 'in_progress',
   completed = 'completed',
   cancelled = 'cancelled',
   no_show = 'no_show',
   confirmed = 'confirmed',
-  late = 'late',
   absent = 'absent',
   checked_in = 'checked_in',
-  checked_out = 'checked_out',
-  on_break = 'on_break',
-  overtime = 'overtime',
-  early_departure = 'early_departure',
-  present = 'present'
+  checked_out = 'checked_out'
 }
 
 export interface Shift {
@@ -290,7 +266,6 @@ export interface Shift {
   endTime: string;
   breakTime?: number;
   status: ShiftStatus;
-  type: ShiftType;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -304,8 +279,7 @@ export interface ShiftFormData {
   date: string;
   startTime: string;
   endTime: string;
- breakTime?: number;
-  type: ShiftType;
+  breakTime?: number;
   notes?: string;
   status?: ShiftStatus;
   alternativeStaffId?: string; // Альтернативный сотрудник для отметки посещаемости
@@ -319,15 +293,9 @@ export interface ShiftFilters {
   dateFrom?: string;
   dateTo?: string;
   status?: ShiftStatus;
-  type?: ShiftType;
 }
 
-export const SHIFT_TYPES: { [key: string]: string } = {
-  day: 'Дневная',
-  night: 'Ночная',
-  weekend: 'Выходная',
-  holiday: 'Праздничная'
-};
+
 
 export interface UserFilters {
   role?: string;
