@@ -16,6 +16,11 @@ export interface ExportConfig {
 
 // Утилиты для работы с датами
 export const formatDate = (date: Date): string => {
+  // Проверяем, что дата корректна
+  if (isNaN(date.getTime())) {
+    return ''; // Возвращаем пустую строку для некорректных дат
+  }
+  
   return date.toLocaleDateString('ru-RU', {
     year: 'numeric',
     month: '2-digit',
@@ -24,12 +29,28 @@ export const formatDate = (date: Date): string => {
 };
 
 export const getWeekday = (date: Date): string => {
+  // Проверяем, что дата корректна
+  if (isNaN(date.getTime())) {
+    return ''; // Возвращаем пустую строку для некорректных дат
+  }
+  
   const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
   return weekdays[date.getDay()];
 };
 
 export const formatDateWithWeekday = (dateString: string): string => {
+  // Проверяем, что dateString не пустая строка
+  if (!dateString) {
+    return ''; // Возвращаем пустую строку вместо "Invalid Date"
+  }
+  
   const date = new Date(dateString);
+  
+  // Проверяем, что дата корректна
+  if (isNaN(date.getTime())) {
+    return ''; // Возвращаем пустую строку для некорректных дат
+  }
+  
   const formattedDate = formatDate(date);
   const weekday = getWeekday(date);
   return `${formattedDate} (${weekday})`;
@@ -45,10 +66,8 @@ export const exportToExcel = (config: ExportConfig): void => {
     headers,
     data,
     includeDate = true,
-    includeWeekdays = false,
-    dateColumn
   } = config;
-
+  
   // Создаем новую книгу
   const workbook = XLSX.utils.book_new();
   
@@ -56,54 +75,62 @@ export const exportToExcel = (config: ExportConfig): void => {
   const worksheetData: any[][] = [];
   
   // Добавляем заголовок документа
+  let fullTitle = title;
   if (includeDate) {
-    const currentDate = formatDate(new Date());
-    worksheetData.push([`${title} - ${currentDate}`]);
-    worksheetData.push([]); // Пустая строка
-  } else {
-    worksheetData.push([title]);
-    worksheetData.push([]); // Пустая строка
+    const currentDate = new Date();
+    // Проверяем, что дата корректна
+    if (!isNaN(currentDate.getTime())) {
+      fullTitle += ` - ${formatDate(currentDate)}`;
+    }
   }
+  worksheetData.push([fullTitle]);
+  worksheetData.push([]); // Пустая строка
+  const titleRowCount = worksheetData.length;
   
   // Добавляем подзаголовок если есть
   if (subtitle) {
     worksheetData.push([subtitle]);
     worksheetData.push([]); // Пустая строка
   }
+  const subtitleRowCount = subtitle ? 2 : 0;
   
-  // Добавляем заголовки колонок
+  // Добавляем заголовки колонок и данные
   worksheetData.push(headers);
-  
-  // Обрабатываем данные
-  const processedData = data.map(row => {
-    if (includeWeekdays && dateColumn !== undefined && row[dateColumn]) {
-      const newRow = [...row];
-      newRow[dateColumn] = formatDateWithWeekday(row[dateColumn]);
-      return newRow;
-    }
-    return row;
-  });
-  
-  // Добавляем данные
-  worksheetData.push(...processedData);
-  
-  // Добавляем информацию о формировании документа
-  worksheetData.push([]);
-  worksheetData.push([`Документ сформирован: ${formatDate(new Date())} в ${new Date().toLocaleTimeString('ru-RU')}`]);
+  worksheetData.push(...data);
   
   // Создаем лист
   const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
   
-  // Настраиваем ширину колонок
+  // Стилизация и ширина колонок
   const columnWidths = headers.map((header, index) => {
     const maxLength = Math.max(
       header.length,
-      ...processedData.map(row => String(row[index] || '').length)
+      ...data.map(row => String(row[index] || '').length)
     );
     return { wch: Math.min(Math.max(maxLength + 2, 10), 50) };
   });
-  
   worksheet['!cols'] = columnWidths;
+  
+  // Стилизация заголовка таблицы
+  const headerStyle = {
+    font: { bold: true },
+    fill: { fgColor: { rgb: "FFD3D3D3" } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" }
+    }
+  };
+  
+  const headerRowIndex = titleRowCount + subtitleRowCount;
+  const headerRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
+  for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+    const address = XLSX.utils.encode_cell({ r: headerRowIndex, c: C });
+    if (!worksheet[address]) continue;
+    worksheet[address].s = headerStyle;
+  }
   
   // Добавляем лист в книгу
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
@@ -208,7 +235,7 @@ export const exportSchedule = async (scheduleData: any[], period?: string): Prom
   ];
   
   const data = scheduleData.map(item => [
-    item.date || '',
+    item.date ? formatDate(new Date(item.date)) : '',
     item.staffName || '',
     item.groupName || '',
     item.startTime || '',
@@ -251,6 +278,10 @@ export const exportChildrenAttendance = async (
     "ФИО ребенка",
     ...allDates.map(dateStr => {
       const date = new Date(dateStr);
+      // Проверяем, что дата корректна
+      if (isNaN(date.getTime())) {
+        return dateStr; // Возвращаем исходную строку если дата некорректна
+      }
       const weekday = date.toLocaleDateString("ru-RU", { weekday: "short" });
       return `${date.getDate()}.${date.getMonth() + 1} (${weekday})`;
     }),
@@ -259,7 +290,7 @@ export const exportChildrenAttendance = async (
   // 4. Формируем строки только для детей из filteredChildren
   const data= filteredChildren.map(child => {
     const childId = child._id || child.id;
-    const row: (string | null)[] = [child.fullName];
+    const row: (string | null)[] = [child.fullName || ''];
 
     allDates.forEach(date => {
       const record = attendanceData.find(r => r.childId === childId && r.date === date);
@@ -296,44 +327,77 @@ export const exportChildrenAttendance = async (
 
 // 5. Экспорт табеля рабочего времени сотрудников
 export const exportStaffAttendance = async (
-  attendanceData: any[], 
+  attendanceData: any[],
   period: string
 ): Promise<void> => {
-  const headers = [
-    'ФИО сотрудника',
-    'Дата',
-    'Тип смены',
-    'Плановое время',
-    'Фактическое время',
-    'Опоздание (мин)',
-    'Сверхурочные (мин)',
-    'Статус',
-    'Примечания'
-  ];
+  // Словарь для перевода статусов
+  const statusTranslations: { [key: string]: string } = {
+    checked_in: '✓', // Пришел
+    checked_out: '✓', // Ушел (считаем как присутствие)
+    completed: '✓', // Завершено (считаем как присутствие)
+    absent: 'Н', // Неявка
+    no_show: 'Н', // Неявка
+    sick: 'Б', // Больничный
+    vacation: 'О', // Отпуск
+    late: 'ОП', // Опоздание
+    scheduled: 'П', // Запланировано
+    cancelled: 'X', // Отменено
+  };
   
-  const data = attendanceData.map(record => [
-    record.staffName || '',
-    record.date || '',
-    `${record.startTime || ''} - ${record.endTime || ''}`,
-    `${record.actualStart || ''} - ${record.actualEnd || ''}`,
-    record.lateMinutes || 0,
-    record.overtimeMinutes || 0,
-    record.status === 'completed' ? 'Завершено' :
-    record.status === 'late' ? 'Опоздание' :
-    record.status === 'no_show' ? 'Не явился' : record.status || '',
-    record.notes || ''
-  ]);
+  // 1. Получаем уникальные даты и сортируем их
+  const dates = Array.from(new Set(attendanceData.map(r => r.date))).sort();
   
+  // 2. Группируем данные по сотрудникам
+  const dataByStaff: { [staffName: string]: { [date: string]: string } } = {};
+  attendanceData.forEach(record => {
+    const staffName = record.staffName;
+    // Пропускаем записи без имени сотрудника
+    if (!staffName) return;
+    
+    if (!dataByStaff[staffName]) {
+      dataByStaff[staffName] = {};
+    }
+    const statusKey = record.originalStatus || record.status;
+    dataByStaff[staffName][record.date] = statusTranslations[statusKey] || '?';
+  });
+  
+  // 3. Формируем заголовки (Даты)
+  const headers = ['ФИО Сотрудника', ...dates.map(d => {
+    // Проверяем, что дата корректна
+    if (!d) return '';
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return d; // Возвращаем исходную строку если дата некорректна
+    return formatDateWithWeekday(d);
+  }).filter(h => h !== '')];
+  
+  // 4. Формируем строки для таблицы (Сотрудники)
+  const data = Object.keys(dataByStaff).sort().map(staffName => {
+    const row: string[] = [staffName];
+    dates.forEach(date => {
+      // Проверяем, что дата корректна
+      if (!date) {
+        row.push(''); // Добавляем пустую строку для некорректных дат
+        return;
+      }
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) {
+        row.push(''); // Добавляем пустую строку для некорректных дат
+        return;
+      }
+      row.push(dataByStaff[staffName][date] || ''); // Добавляем статус или пустую строку
+    });
+    return row;
+  });
+  
+  // 5. Конфигурация для экспорта
   const config: ExportConfig = {
-    filename: `Табель_рабочего_времени_${period}`,
-    sheetName: 'Табель рабочего времени',
+    filename: `Табель_посещаемости_сотрудников_${period}`,
+    sheetName: 'Табель',
     title: 'Табель учета рабочего времени сотрудников',
     subtitle: `Период: ${period}`,
     headers,
     data,
-    includeDate: true,
-    includeWeekdays: true,
-    dateColumn: 1
+    includeDate: false, // Дата уже включена в заголовок
   };
   
   exportToExcel(config);
@@ -352,7 +416,11 @@ export const getCurrentPeriod = (): string => {
 // Утилита для получения диапазона дат текущего месяца
 export const getCurrentMonthRange = (): { startDate: string; endDate: string } => {
   const now = new Date();
+  
+  // Получаем первый день месяца
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  
+  // Получаем последний день месяца
   const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   
   return {

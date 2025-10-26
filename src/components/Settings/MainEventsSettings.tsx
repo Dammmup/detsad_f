@@ -121,21 +121,17 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({ onSettingsSaved
     const year = today.getFullYear();
     const month = today.getMonth();
     
-    // Создаем дату для указанного дня месяца
-    let exportDate = new Date(year, month, dayOfMonth);
+    // Получаем последний день текущего месяца
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
     
-    // Если дата уже прошла в этом месяце, берем следующий месяц
+    // Создаем дату для последнего дня месяца
+    let exportDate = new Date(year, month, lastDayOfMonth);
+    
+    // Если дата уже прошла в этом месяце, берем конец следующего месяца
     if (exportDate <= today) {
-      // Проверяем, если это конец февраля (28 или 29 день)
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const finalDay = Math.min(dayOfMonth, daysInMonth);
-      exportDate = new Date(year, month + 1, finalDay);
-    } else {
-      // Проверяем, не превышает ли день максимальное количество дней в месяце
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      if (dayOfMonth > daysInMonth) {
-        exportDate = new Date(year, month, daysInMonth);
-      }
+      // Получаем последний день следующего месяца
+      const nextMonthLastDay = new Date(year, month + 2, 0).getDate();
+      exportDate = new Date(year, month + 1, nextMonthLastDay);
     }
     
     return exportDate;
@@ -209,24 +205,127 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({ onSettingsSaved
   const handleExecuteExportForEntity = async (entityId: string) => {
     try {
       // Импортируем функции экспорта
-      const { exportChildrenAttendance, exportSchedule, exportStaffAttendance } = await import('../../utils/excelExport');
+      const { exportChildrenAttendance, exportSchedule, exportStaffAttendance, exportChildrenList, exportStaffList, exportDocumentsList, exportDocumentTemplatesList, getCurrentPeriod } = await import('../../utils/excelExport');
       
-      alert(`Экспорт сущности ${entityId} запущен`);
-      
-      // Для демонстрации создаем временный файл
-      const fileName = `export_${entityId}_${new Date().toISOString().split('T')[0]}.xlsx`;
-      const content = `Экспорт данных для сущности: ${entityId}\nДата,Данные\n${new Date().toLocaleDateString()},Экспорт успешно завершен`;
-      
-      // Создаем временный файл для демонстрации
-      const blob = new Blob([content], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // В зависимости от сущности, получаем реальные данные и вызываем соответствующую функцию экспорта
+      switch (entityId) {
+        case 'childAttendance':
+          // Получаем данные о посещаемости детей
+          const attendanceData = await getChildAttendance();
+          // Получаем данные о детях для фильтрации
+          const children = await import('../../services/children').then(mod => mod.default.getAll());
+          // Получаем текущий период
+          const period = getCurrentPeriod();
+          
+          // Вызываем функцию экспорта посещаемости
+          await exportChildrenAttendance(attendanceData, 'Все группы', period, await children);
+          break;
+          
+        case 'staffShifts':
+          // Импортируем новую утилиту для экспорта посещаемости сотрудников за текущий месяц
+          const { exportStaffAttendanceCurrentMonth } = await import('../../utils/documentExport');
+          
+          // Получаем данные о сменах сотрудников за текущий месяц
+          const { getCurrentMonthRange } = await import('../../utils/excelExport');
+          const { getShifts } = await import('../../services/shifts');
+          
+          const { startDate, endDate } = getCurrentMonthRange();
+          const shiftsData = await getShifts(startDate, endDate);
+          
+          // Вызываем функцию экспорта посещаемости сотрудников за текущий месяц
+          await exportStaffAttendanceCurrentMonth(shiftsData);
+          break;
+          
+        case 'childPayment':
+          // Получаем данные об оплатах
+          const childPaymentData = await childPaymentApi.getAll();
+          // Импортируем переводы статусов
+          const { STATUS_TEXT } = await import('../../types/common');
+          
+          // Для оплат создаем простую таблицу
+          const headers = ['ФИО ребенка', 'Сумма', 'Дата оплаты', 'Статус', 'Комментарии'];
+          const data = childPaymentData.map((payment: any) => [
+            payment.childId ? (typeof payment.childId === 'object' ? payment.childId.fullName : payment.childId) : 'Не указан',
+            payment.amount || '',
+            payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('ru-RU') : (payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('ru-RU') : (payment.updatedAt ? new Date(payment.updatedAt).toLocaleDateString('ru-RU') : '')),
+            STATUS_TEXT[payment.status] || payment.status, // Используем перевод статуса
+            payment.comments || ''
+          ]);
+          
+          const config = {
+            filename: `Оплаты_за_посещение_детей_${new Date().toISOString().split('T')[0]}`,
+            sheetName: 'Оплаты',
+            title: 'Оплаты за посещение детей',
+            headers,
+            data,
+            includeDate: true
+          };
+          
+          const { exportToExcel } = await import('../../utils/excelExport');
+          exportToExcel(config);
+          break;
+          
+        case 'payroll':
+          // Получаем данные о зарплатах
+          const payrollData = await getPayrolls({});
+          // Для зарплат создаем простую таблицу
+          const payrollHeaders = ['ФИО сотрудника', 'Должность', 'Оклад', 'Премия', 'Налоги', 'Итого', 'Месяц', 'Статус'];
+          const payrollDataRows = payrollData.map((payroll: any) => [
+            payroll.staffName || '',
+            payroll.position || '',
+            payroll.baseSalary || '',
+            payroll.bonus || '',
+            payroll.taxes || '',
+            payroll.total || '',
+            payroll.month || '',
+            payroll.status || ''
+          ]);
+          
+          const payrollConfig = {
+            filename: `Зарплаты_${new Date().toISOString().split('T')[0]}`,
+            sheetName: 'Зарплаты',
+            title: 'Зарплатные ведомости',
+            headers: payrollHeaders,
+            data: payrollDataRows,
+            includeDate: true
+          };
+          
+          const { exportToExcel: exportPayrollToExcel } = await import('../../utils/excelExport');
+          exportPayrollToExcel(payrollConfig);
+          break;
+          
+        case 'rent':
+          // Получаем данные об аренде
+          const rentData = await getRents();
+          // Для аренды создаем простую таблицу
+          const rentHeaders = ['Арендатор', 'Адрес', 'Площадь', 'Стоимость', 'Дата начала', 'Дата окончания', 'Статус'];
+          const rentDataRows = rentData.map((rent: any) => [
+            rent.tenantId ? (typeof rent.tenantId === 'object' ? rent.tenantId.fullName : 'Арендатор') : 'Не указан',
+            rent.period || '',
+            '', // площадь не указана в типе
+            rent.amount ? `${rent.amount} тг` : '',
+            rent.startDate ? new Date(rent.startDate).toLocaleDateString('ru-RU') : '',
+            rent.endDate ? new Date(rent.endDate).toLocaleDateString('ru-RU') : '',
+            rent.status || ''
+          ]);
+          
+          const rentConfig = {
+            filename: `Аренда_${new Date().toISOString().split('T')[0]}`,
+            sheetName: 'Аренда',
+            title: 'Арендные платежи',
+            headers: rentHeaders,
+            data: rentDataRows,
+            includeDate: true
+          };
+          
+          const { exportToExcel: exportRentToExcel } = await import('../../utils/excelExport');
+          exportRentToExcel(rentConfig);
+          break;
+          
+        default:
+          alert(`Экспорт сущности ${entityId} не реализован`);
+          break;
+      }
     } catch (err) {
       setError('Ошибка выполнения экспорта сущности: ' + (err as Error).message);
     }
@@ -260,7 +359,15 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({ onSettingsSaved
             content = `Оплаты за посещение детей за ${month} ${year} год\nДети,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31\nДима Иванов,1000,1000,0,1000,1000,0,1000,1000,1000,0,1000,1000,0,1000,1000,1000,0,1000,1000,1000,0,1000,1000,0,1000,1000,1000,0,1000,1000,1000\nАнна Петрова,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000\nСергей Сидоров,1000,1000,1000,0,1000,1000,0,1000,1000,1000,0,1000,1000,1000,0,1000,1000,0,1000,1000,1000,0,1000,1000,1000,0,1000,1000,1000,0,1000`;
             break;
           case 'staffShifts':
-            content = `Смены сотрудников за ${month} ${year} год\nСотрудники,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31\nИван Петров,1,1,0,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1\nМария Сидорова,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1\nАлексей Козлов,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1`;
+           // Получаем данные о сменах сотрудников
+           const shiftsDataForExport = await getShifts();
+           // Получаем текущий период
+           const { getCurrentPeriod: getCurrentShiftPeriodForExport, exportStaffAttendance } = await import('../../utils/excelExport');
+           const shiftPeriodForExport = getCurrentShiftPeriodForExport();
+           
+           // Вызываем функцию экспорта посещаемости сотрудников
+           await exportStaffAttendance(shiftsDataForExport, shiftPeriodForExport);
+           return; // Прерываем выполнение для этого случая, чтобы не использовать временные данные
             break;
           case 'payroll':
             content = `Зарплаты за ${month} ${year} год\nСотрудники,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31\nИван Петров,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,50000\nМария Сидорова,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000\nАлексей Козлов,50000,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,50000,0,50000,50000,50000,0,50000`;

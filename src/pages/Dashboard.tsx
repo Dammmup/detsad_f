@@ -21,6 +21,7 @@ const Dashboard = () => {
 
   const isStaff = currentUser && currentUser.role !== 'admin';
   const isAdmin = currentUser && currentUser.role === 'admin';
+  const canManageChildren = currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher' || currentUser.role === 'substitute');
 
   const handleAttendanceStatusChange = () => {
     // Обновление статуса отметки посещаемости
@@ -118,6 +119,7 @@ const Dashboard = () => {
        
             
             {/* Кнопка отметки детей */}
+            {canManageChildren && (
             <Grid item xs={12} sm={6} md={6}>
               <Card
                 sx={{
@@ -179,11 +181,13 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
               </Grid>
-           
+            )}
+            
             
           
             
             {/* Кнопка добавления ребенка */}
+            {canManageChildren && (
             <Grid item xs={12} sm={6} md={6}>
               <Card
                 sx={{
@@ -241,6 +245,7 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
             </Grid>
+            )}
           </Grid>
           
           {/* Виджет календаря дней рождения */}
@@ -360,7 +365,7 @@ const Dashboard = () => {
             transform: 'translateX(-5px)'
           }
         }}>
-          {!isMobile && <TaskListColumn />}
+          <TaskListColumn />
         </Box>
       </Box>
 

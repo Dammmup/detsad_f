@@ -161,81 +161,76 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = ({ onScheduleCha
                   }
                 }}
               >
-                <ListItemText
-                  primary={
+                <Box sx={{ width: '100%' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <CalendarToday sx={{ fontSize: '1rem', mr: 1, color: 'text.secondary' }} />
+                    <Typography
+                      component="div"
+                      sx={{
+                        fontWeight: 600,
+                        color: '#212529',
+                        fontSize: '0.95rem',
+                        flexGrow: 1
+                      }}
+                    >
+                      {formatDate(shift.date)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', pl: 3.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <CalendarToday sx={{ fontSize: '1rem', mr: 1, color: 'text.secondary' }} />
-                      <Typography 
-                        sx={{ 
-                          fontWeight: 600,
-                          color: '#212529',
-                          fontSize: '0.95rem',
-                          flexGrow: 1
-                        }}
-                      >
-                        {formatDate(shift.date)}
+                      <AccessTime sx={{ fontSize: '1rem', mr: 1, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary" component="div">
+                        {shift.startTime} - {shift.endTime}
                       </Typography>
-              
                     </Box>
-                  }
-                  secondary={
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <AccessTime sx={{ fontSize: '1rem', mr: 1, color: 'text.secondary' }} />
-                        <Typography variant="body2" color="text.secondary">
-                          {shift.startTime} - {shift.endTime}
-                        </Typography>
-                      </Box>
-                      
-                      {shift.notes && (
-                        <Typography variant="body2" color="text.secondary" sx={{ 
-                          fontSize: '0.8rem',
-                          fontStyle: 'italic',
-                          pl: 2.5
-                        }}>
-                          {shift.notes}
-                        </Typography>
+                    
+                    {shift.notes && (
+                      <Typography variant="body2" color="text.secondary" component="div" sx={{
+                        fontSize: '0.8rem',
+                        fontStyle: 'italic',
+                      }}>
+                        {shift.notes}
+                      </Typography>
+                    )}
+                    
+                    <Box sx={{ display: 'flex', gap: 1, mt: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {shift.groupId && (
+                        <Chip
+                          label="Группа назначена"
+                          size="small"
+                          variant="outlined"
+                          sx={{
+                            fontSize: '0.7rem',
+                            height: 20,
+                            borderColor: 'rgba(0,0,0,0.1)',
+                            color: 'text.secondary'
+                          }}
+                        />
                       )}
                       
-                      <Box sx={{ display: 'flex', gap: 1, mt: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                        {shift.groupId && (
-                          <Chip 
-                            label="Группа назначена" 
-                            size="small" 
-                            variant="outlined" 
-                            sx={{
-                              fontSize: '0.7rem',
-                              height: 20,
-                              borderColor: 'rgba(0,0,0,0.1)',
-                              color: 'text.secondary'
-                            }}
-                          />
-                        )}
-                        
-                        {shift.status && (
-                          <Chip 
-                            label={shift.status.charAt(0).toUpperCase() + shift.status.slice(1)} 
-                            size="small" 
-                            color={
-                              shift.status === 'scheduled' ? 'info' :
-                              shift.status === 'in_progress' ? 'warning' :
-                              shift.status === 'completed' ? 'success' :
-                              shift.status === 'cancelled' ? 'error' :
-                              shift.status === 'no_show' ? 'error' :
-                              'default'
-                            }
-                            variant="filled"
-                            sx={{
-                              fontSize: '0.7rem',
-                              height: 20,
-                              fontWeight: 600
-                            }}
-                          />
-                        )}
-                      </Box>
+                      {shift.status && (
+                        <Chip
+                          label={shift.status.charAt(0).toUpperCase() + shift.status.slice(1)}
+                          size="small"
+                          color={
+                            shift.status === 'scheduled' ? 'info' :
+                            shift.status === 'in_progress' ? 'warning' :
+                            shift.status === 'completed' ? 'success' :
+                            shift.status === 'cancelled' ? 'error' :
+                            shift.status === 'no_show' ? 'error' :
+                            'default'
+                          }
+                          variant="filled"
+                          sx={{
+                            fontSize: '0.7rem',
+                            height: 20,
+                            fontWeight: 600
+                          }}
+                        />
+                      )}
                     </Box>
-                  }
-                />
+                  </Box>
+                </Box>
               </ListItem>
             ))}
           </List>

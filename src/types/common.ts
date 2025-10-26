@@ -15,7 +15,8 @@ export enum UserRole {
   physical_teacher = 'physical_teacher',
   staff = 'staff',
   parent = 'parent',
-  child = 'child'
+  child = 'child',
+  substitute = 'substitute'
 }
 
 export interface Group {
@@ -131,6 +132,7 @@ export interface IChildPayment {
   comments?: string;
   paidAmount?: number;
   paymentDate?: string;
+  paidAt?: string; // Дата оплаты
   createdAt: string;
   updatedAt: string;
 }
@@ -234,8 +236,11 @@ export const STATUS_TEXT: Record<string, string> = {
   'draft_rent': 'Черновик',
   'active_payment': 'Активна',
   'overdue_payment': 'Просрочена',
-  'paid_payment': 'Оплачена',
+  'paid_payment' : 'Оплачена',
   'draft_payment': 'Черновик',
+  'paid' : 'Оплачено',
+  'active' : 'Активно',
+
   // Добавляем недостающие статусы
   'absent_shift': 'Отсутствует',
   'checked_in_shift': 'Прибыл',

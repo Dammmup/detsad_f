@@ -22,7 +22,8 @@ import {
 import { Add, Delete } from '@mui/icons-material';
 import { User } from '../types/common';
 import { useAuth } from './context/AuthContext';
-import { TaskList, getTaskList, createTask, deleteTask, toggleTaskStatus } from '../services/taskList';
+import { getTaskList, createTask, deleteTask, toggleTaskStatus, markTaskAsCompleted, markTaskAsCancelled } from '../services/taskList';
+import { TaskList } from '../types/taskList';
 import { getUsers } from '../services/users';
 
 interface TaskListColumnProps {
@@ -36,7 +37,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
  const [error, setError] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
-  const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [newTaskCategory, setNewTaskCategory] = useState('');
   const [newTaskAssignedToSpecificUser, setNewTaskAssignedToSpecificUser] = useState<string>('');
   const [showAddTaskDialog, setShowAddTaskDialog] = useState(false);
@@ -51,8 +52,8 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
       setLoading(true);
       setError(null);
       try {
-        // Загружаем задачи, назначенные текущему пользователю
-        const taskList = await getTaskList({ assignedTo: currentUser.id });
+        // Все пользователи видят все задачи
+        const taskList = await getTaskList({});
         setTasks(taskList);
       } catch (err: any) {
         setError(err.message);
@@ -63,10 +64,6 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
     };
 
     const fetchUsers = async () => {
-      // Только администраторы могут получать список всех пользователей
-      if (currentUser?.role !== 'admin') {
-        return;
-      }
       
       try {
         const userList = await getUsers();
@@ -83,15 +80,16 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
 
 
   const handleAddTask = async () => {
-    if (!newTaskTitle.trim() || !currentUser) return;
+    if (!newTaskTitle.trim() || !currentUser || !currentUser.id) return;
 
     try {
       const newTask = {
         title: newTaskTitle,
         description: newTaskDescription,
-        completed: false,
         assignedTo: currentUser.id,
+        assignedBy: currentUser.id, // Автор задачи - текущий пользователь
         priority: newTaskPriority,
+        status: 'pending' as const, // Начальный статус задачи
         category: newTaskCategory,
         assignedToSpecificUser: newTaskAssignedToSpecificUser || undefined  // Добавляем новое поле, если оно выбрано
       };
@@ -113,16 +111,31 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
   };
 
   const handleToggleTask = async (task: TaskList) => {
+    if (!currentUser || !currentUser.id) return;
+    const taskId = task._id;
+    if (!taskId) return;
+
     try {
-      const updatedTask = await toggleTaskStatus(task._id!);
-      setTasks(tasks.map(t => t._id === task._id ? updatedTask : t));
+      let updatedTask: TaskList;
+      
+      // В зависимости от текущего статуса, меняем на противоположный
+      if (task.status === 'completed') {
+        // Если задача выполнена, возвращаем в статус pending
+        updatedTask = await toggleTaskStatus(taskId, currentUser.id);
+      } else {
+        // Если задача не выполнена, отмечаем как выполненную
+        updatedTask = await markTaskAsCompleted(taskId, currentUser.id);
+      }
+      
+      // Обновляем список задач
+      setTasks(tasks.map(t => t._id === taskId ? updatedTask : t));
       
       if (onTaskChange) onTaskChange();
     } catch (err: any) {
       setError(err.message);
       console.error('Error toggling task:', err);
     }
-  };
+ };
 
   const handleDeleteTask = async (id: string) => {
     try {
@@ -139,6 +152,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
+      case 'urgent':
       case 'high': return 'error';
       case 'medium': return 'warning';
       case 'low': return 'success';
@@ -263,9 +277,9 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                 }}>
                   <Typography
                     sx={{
-                      fontWeight: task.completed ? 500 : 600,
-                      textDecoration: task.completed ? 'line-through' : 'none',
-                      color: task.completed ? 'text.disabled' : '#212529',
+                      fontWeight: task.status === 'completed' ? 500 : 600,
+                      textDecoration: task.status === 'completed' ? 'line-through' : 'none',
+                      color: task.status === 'completed' ? 'text.disabled' : '#212529',
                       fontSize: '0.95rem',
                       flexGrow: 1,
                       pr: 2
@@ -274,12 +288,12 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                     {task.title}
                   </Typography>
                   <Checkbox
-                    checked={task.completed}
+                    checked={task.status === 'completed'}
                     onChange={() => handleToggleTask(task)}
                     size="small"
                     sx={{
                       ml: 1,
-                      color: task.completed ? '#28a745' : undefined,
+                      color: task.status === 'completed' ? '#28a745' : undefined,
                       '&.Mui-checked': {
                         color: '#28a745'
                       }
@@ -298,6 +312,18 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                     }}
                   >
                     {task.description}
+                  </Typography>
+                )}
+
+                {task.status === 'completed' && task.completedBy && (
+                  <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary', fontStyle: 'italic' }}>
+                    Выполнено: {task.completedBy ? (typeof task.completedBy === 'object' ? task.completedBy.fullName : users.find(u => u._id === task.completedBy)?.fullName) : 'Пользователь'} {task.completedAt ? `(${formatDate(task.completedAt)})` : ''}
+                  </Typography>
+                )}
+                
+                {task.status === 'cancelled' && task.cancelledBy && (
+                  <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary', fontStyle: 'italic' }}>
+                    Отменено: {task.cancelledBy ? (typeof task.cancelledBy === 'object' ? task.cancelledBy.fullName : users.find(u => u._id === task.cancelledBy)?.fullName) : 'Пользователь'} {task.cancelledAt ? `(${formatDate(task.cancelledAt)})` : ''}
                   </Typography>
                 )}
                 
@@ -378,7 +404,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                       fontStyle: 'italic'
                     }}
                   >
-                    🎯 Назначено: {users.find(u => u.id === task.assignedToSpecificUser)?.fullName || 'Сотрудник'}
+                    🎯 Назначено: {task.assignedToSpecificUser ? (typeof task.assignedToSpecificUser === 'object' ? task.assignedToSpecificUser.fullName : users.find(u => u.id === task.assignedToSpecificUser)?.fullName) : 'Сотрудник'}
                   </Typography>
                 )}
               </Box>
@@ -438,11 +464,12 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
               <Select
                 value={newTaskPriority}
                 label="Приоритет"
-                onChange={(e) => setNewTaskPriority(e.target.value as 'low' | 'medium' | 'high')}
+                onChange={(e) => setNewTaskPriority(e.target.value as 'low' | 'medium' | 'high' | 'urgent')}
               >
                 <MenuItem value="low">🟢 Низкий</MenuItem>
                 <MenuItem value="medium">🟡 Средний</MenuItem>
                 <MenuItem value="high">🔴 Высокий</MenuItem>
+                <MenuItem value="urgent">🚨 Срочный</MenuItem>
               </Select>
             </FormControl>
             <TextField

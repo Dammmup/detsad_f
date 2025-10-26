@@ -15,6 +15,28 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
 
+  const [isCheckInActive, setIsCheckInActive] = useState(false);
+
+  // Проверка времени для активации кнопки
+  useEffect(() => {
+    const checkTime = () => {
+      const now = new Date();
+      // Переводим время в часовой пояс Астаны (UTC+5)
+      const nowAstana = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Almaty' }));
+      const hours = nowAstana.getHours();
+      const minutes = nowAstana.getMinutes();
+      
+      // Активно с 6:30 до 7:30
+      const isActive = (hours === 6 && minutes >= 30) || (hours === 9 && minutes <= 30);
+      setIsCheckInActive(isActive);
+    };
+
+    checkTime();
+    const interval = setInterval(checkTime, 60000); // Проверяем каждую минуту
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Загрузка статуса посещаемости для текущего пользователя
   useEffect(() => {
     const fetchShiftStatus = async () => {
@@ -124,7 +146,7 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
   if (status === 'scheduled' || status === 'no_record') {
     buttonText = 'Отметить приход';
     buttonAction = handleCheckIn;
-    buttonDisabled = loading;
+    buttonDisabled = loading || !isCheckInActive;
   } else if (status === 'in_progress') {
     buttonText = 'Отметить уход';
     buttonAction = handleCheckOut;

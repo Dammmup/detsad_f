@@ -7,6 +7,7 @@ import {
   Grid,
   Avatar,
   Tooltip,
+  ClickAwayListener,
   Chip,
   Paper,
   IconButton,
@@ -26,6 +27,81 @@ import {
 import { ru } from 'date-fns/locale';
 import { Child } from '../types/common';
 import childrenApi from '../services/children';
+
+interface BirthdayAvatarProps {
+  child: Child;
+  currentYear: number;
+}
+
+const BirthdayAvatar: React.FC<BirthdayAvatarProps> = ({ child, currentYear }) => {
+  const [open, setOpen] = useState(false);
+
+  const handleTooltipClose = () => {
+    setOpen(false);
+  };
+
+  const handleTooltipOpen = () => {
+    setOpen(true);
+  };
+
+  const getGroupName = (groupId: any) => {
+    if (!groupId) return 'Без группы';
+    if (typeof groupId === 'string') return groupId;
+    if (typeof groupId === 'object' && groupId.name) return groupId.name;
+    return 'Без группы';
+  };
+
+  const calculateAge = (birthday: string, year: number) => {
+    const birthDate = new Date(birthday);
+    return year - birthDate.getFullYear();
+  };
+
+  return (
+    <ClickAwayListener onClickAway={handleTooltipClose}>
+      <div>
+        <Tooltip
+          PopperProps={{
+            disablePortal: true,
+          }}
+          onClose={handleTooltipClose}
+          open={open}
+          disableFocusListener
+          disableHoverListener
+          disableTouchListener
+          title={
+            <Box>
+              <Typography variant="body2">{child.fullName}</Typography>
+              <Typography variant="caption" color="textSecondary">
+                Группа: {getGroupName(child.groupId)}
+              </Typography>
+              <Typography variant="caption" color="textSecondary">
+                Исполнится: {calculateAge(child.birthday as any, currentYear)} лет
+              </Typography>
+            </Box>
+          }
+          arrow
+        >
+          <Avatar
+            onClick={handleTooltipOpen}
+            src={child.photo || undefined}
+            alt={child.fullName}
+            sx={{
+              width: 24,
+              height: 24,
+              border: '1px solid white',
+              fontSize: '0.6rem',
+              mb: 0.3,
+              cursor: 'pointer'
+            }}
+          >
+            {!child.photo && child.fullName?.charAt(0)}
+          </Avatar>
+        </Tooltip>
+      </div>
+    </ClickAwayListener>
+  );
+}
+
 
 interface BirthdaysCalendarWidgetProps {
   onBirthdaysChange?: () => void;
@@ -210,35 +286,7 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBir
                         {/* Фото детей */}
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                           {dayData.children.slice(0, 3).map((child) => (
-                            <Tooltip
-                              key={child._id || child.id}
-                              title={
-                                <Box>
-                                  <Typography variant="body2">{child.fullName}</Typography>
-                                  <Typography variant="caption" color="textSecondary">
-                                    Группа: {getGroupName(child.groupId)}
-                                  </Typography>
-                                  <Typography variant="caption" color="textSecondary">
-                                    Исполнится: {calculateAge(child.birthday as any, currentDate.getFullYear())} лет
-                                  </Typography>
-                                </Box>
-                              }
-                              arrow
-                            >
-                              <Avatar
-                                src={child.photo || undefined}
-                                alt={child.fullName}
-                                sx={{
-                                  width: 24,
-                                  height: 24,
-                                  border: '1px solid white',
-                                  fontSize: '0.6rem',
-                                  mb: 0.3,
-                                }}
-                              >
-                                {!child.photo && child.fullName?.charAt(0)}
-                              </Avatar>
-                            </Tooltip>
+                            <BirthdayAvatar key={child._id || child.id} child={child} currentYear={currentDate.getFullYear()} />
                           ))}
 
                           {dayData.children.length > 3 && (
@@ -286,13 +334,7 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBir
               </Grid>
             </Box>
 
-            {/* === Легенда === */}
-            <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Avatar sx={{ width: 20, height: 20, fontSize: '0.7rem' }}>А</Avatar>
-                <Typography variant="caption">День рождения</Typography>
-              </Box>
-            </Box>
+      
           </Box>
         )}
       </CardContent>

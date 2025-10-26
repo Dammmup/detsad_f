@@ -308,7 +308,7 @@ const Settings: React.FC = () => {
         <Tab label="Уведомления" />
         <Tab label="Безопасность" />
         <Tab label="Геолокация" />
-        <Tab label="Автоматический расчет" />
+        <Tab label="Автоматический экспорт" />
         <Tab label="Пользователи" />
       </Tabs>
       

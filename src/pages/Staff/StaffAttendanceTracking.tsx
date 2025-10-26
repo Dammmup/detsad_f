@@ -13,6 +13,7 @@ import {
 import { getUsers } from '../../services/users';
 import shiftsApi from '../../services/shifts';
 import { Shift, ShiftStatus } from '../../types/common';
+import { exportStaffAttendance, getCurrentPeriod } from '../../utils/excelExport';
 
 // Интерфейс для записей учета времени
   interface TimeRecord {
@@ -576,6 +577,11 @@ const StaffAttendanceTracking: React.FC = () => {
       }
    };
 
+  const handleExport = () => {
+    const period = `${dateRange.from} - ${dateRange.to}`;
+    exportStaffAttendance(records, period);
+  };
+
   const renderOverviewTab = () => (
     <Box>
       <Grid container spacing={3} mb={3}>
@@ -719,9 +725,14 @@ const StaffAttendanceTracking: React.FC = () => {
           <AccessTime sx={{ mr: 1, verticalAlign: 'middle' }} />
           Учет рабочего времени
         </Typography>
-        <Button variant="contained" startIcon={<Schedule />} onClick={handleOpenMarkDialog}>
-          Создать смену
-        </Button>
+        <Box>
+          <Button variant="contained" startIcon={<Schedule />} onClick={handleOpenMarkDialog} sx={{ mr: 1 }}>
+            Создать смену
+          </Button>
+          <Button variant="outlined" onClick={handleExport}>
+            Экспорт
+          </Button>
+        </Box>
       </Box>
 
       <Paper sx={{ p: 2, mb: 2 }}>

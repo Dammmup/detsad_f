@@ -52,7 +52,6 @@ const sidebarStructure: SidebarItem[] = [
     children: [
       { id: 'staff-list', label: 'Список сотрудников', link: '/app/staff', icon: <PeopleIcon /> },
       { id: 'staff-schedule', label: 'Смены', link: '/app/staff/schedule', icon: <ScheduleIcon /> },
-      { id: 'staff-absences', label: 'Отсутствующие сотрудники', link: '/app/staff/absences', icon: <CalendarViewWeekIcon /> },
       { id: 'staff-attendance-tracking', label: 'Учет рабочего времени', link: '/app/staff/attendance', icon: <AssignmentIndIcon /> },
     ],
     visibleFor: ['admin'] // Только для администраторов
@@ -82,7 +81,6 @@ const sidebarStructure: SidebarItem[] = [
     label: 'Организация',
     icon: <SettingsIcon />,
     children: [
-      { id: 'organization-groups', label: 'Группы', link: '/app/groups', icon: <GroupIcon /> },
       { id: 'organization-cyclogram', label: 'Циклограммы', link: '/app/cyclogram', icon: <ScheduleIcon /> },
       { id: 'organization-settings', label: 'Настройки', link: '/app/settings', icon: <SettingsIcon /> },
     ],

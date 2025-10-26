@@ -1,39 +1,15 @@
 
 import { apiClient } from '../utils/api';
+import { TaskList, TaskListFilters } from '../types/taskList';
 
 // REACT_APP_API_URL и авторизация берутся из settings.ts
-
-export interface TaskList {
-  _id?: string;
-  title: string;
-  description?: string;
- completed: boolean;
- assignedTo?: string; // ID пользователя
-  createdBy: string; // ID пользователя
-  assignedToSpecificUser?: string; // ID пользователя для конкретного назначения
-  dueDate?: string; // ISO string
-  priority: 'low' | 'medium' | 'high';
-  category?: string;
- createdAt?: string;
- updatedAt?: string;
-}
-
-export interface TaskListFilters {
-  assignedTo?: string;
-  createdBy?: string;
-  completed?: boolean;
-  priority?: 'low' | 'medium' | 'high';
-  category?: string;
-  dueDate?: string;
-  search?: string;
-}
 
 // Получить список задач
 export const getTaskList = async (filters: TaskListFilters = {}): Promise<TaskList[]> => {
   try {
-  const response = await apiClient.get('/task-list', {
-    params: filters
-  });
+    const response = await apiClient.get('/task-list', {
+      params: filters
+    });
     return response.data;
   } catch (error: any) {
     console.error('Error fetching task list:', error);
@@ -42,7 +18,7 @@ export const getTaskList = async (filters: TaskListFilters = {}): Promise<TaskLi
 };
 
 // Создать новую задачу
-export const createTask = async (taskData: Omit<TaskList, '_id' | 'createdAt' | 'updatedAt' | 'createdBy'>): Promise<TaskList> => {
+export const createTask = async (taskData: Omit<TaskList, '_id' | 'createdAt' | 'updatedAt'>): Promise<TaskList> => {
   try {
     const response = await apiClient.post('/task-list', taskData);
     return response.data;
@@ -54,8 +30,8 @@ export const createTask = async (taskData: Omit<TaskList, '_id' | 'createdAt' | 
 
 // Обновить задачу
 export const updateTask = async (id: string, taskData: Partial<TaskList>): Promise<TaskList> => {
-  try {
-  const response = await apiClient.put(`/task-list/${id}`, taskData);
+ try {
+    const response = await apiClient.put(`/task-list/${id}`, taskData);
     return response.data;
   } catch (error: any) {
     console.error('Error updating task:', error);
@@ -65,8 +41,8 @@ export const updateTask = async (id: string, taskData: Partial<TaskList>): Promi
 
 // Удалить задачу
 export const deleteTask = async (id: string): Promise<void> => {
- try {
-  await apiClient.delete(`/task-list/${id}`);
+  try {
+    await apiClient.delete(`/task-list/${id}`);
   } catch (error: any) {
     console.error('Error deleting task:', error);
     throw new Error(error.response?.data?.error || 'Ошибка удаления задачи');
@@ -74,12 +50,56 @@ export const deleteTask = async (id: string): Promise<void> => {
 };
 
 // Переключить статус задачи
-export const toggleTaskStatus = async (id: string): Promise<TaskList> => {
+export const toggleTaskStatus = async (id: string, userId: string): Promise<TaskList> => {
   try {
-  const response = await apiClient.patch(`/task-list/${id}/toggle`);
+    const response = await apiClient.patch(`/task-list/${id}/toggle`, { userId });
     return response.data;
   } catch (error: any) {
     console.error('Error toggling task status:', error);
     throw new Error(error.response?.data?.error || 'Ошибка переключения статуса задачи');
+  }
+};
+
+// Отметить задачу как выполненную
+export const markTaskAsCompleted = async (id: string, userId: string): Promise<TaskList> => {
+ try {
+    const response = await apiClient.patch(`/task-list/${id}/complete`, { userId });
+    return response.data;
+  } catch (error: any) {
+    console.error('Error marking task as completed:', error);
+    throw new Error(error.response?.data?.error || 'Ошибка завершения задачи');
+  }
+};
+
+// Отметить задачу как отмененную
+export const markTaskAsCancelled = async (id: string, userId: string): Promise<TaskList> => {
+  try {
+    const response = await apiClient.patch(`/task-list/${id}/cancel`, { userId });
+    return response.data;
+  } catch (error: any) {
+    console.error('Error marking task as cancelled:', error);
+    throw new Error(error.response?.data?.error || 'Ошибка отмены задачи');
+  }
+};
+
+// Отметить задачу как в процессе выполнения
+export const markTaskAsInProgress = async (id: string): Promise<TaskList> => {
+  try {
+    const response = await apiClient.patch(`/task-list/${id}/in-progress`);
+    return response.data;
+  } catch (error: any) {
+    console.error('Error marking task as in progress:', error);
+    throw new Error(error.response?.data?.error || 'Ошибка перевода задачи в статус "в работе"');
+  }
+};
+
+// Обновить приоритет задачи
+export const updateTaskPriority = async (id: string, priority: 'low' | 'medium' | 'high' | 'urgent'): Promise<TaskList> => {
+  try {
+    const response = await apiClient.patch(`/task-list/${id}/priority`, { priority });
+    return response.data;
+  } catch (error: any) {
+    console.error('Error updating task priority:', error);
+    throw new Error(error.response?.data?.error || 'Ошибка обновления приоритета задачи');
   }
 };
