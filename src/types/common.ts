@@ -57,8 +57,9 @@ export interface Child {
   incapacity?: string;
   checkups?: string;
   notes?: string;
- createdAt?: string;
- updatedAt?: string;
+  photo?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface User {

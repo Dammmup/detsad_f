@@ -685,41 +685,71 @@ const Settings: React.FC = () => {
                 />
               </Grid>
               
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="API ключ Яндекс.Карт"
-                  fullWidth
-                  value={geolocationSettings.yandexApiKey || ''}
-                  onChange={(e) => setGeolocationSettings({
-                    ...(geolocationSettings as GeolocationSettings),
-                    yandexApiKey: e.target.value
-                  })}
-                  helperText="API ключ хранится в переменной окружения бэкенда. Оставьте поле пустым для использования ключа из переменной окружения."
-                />
+              <Grid item xs={12}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={async () => {
+                    console.log('Кнопка "Показать карту" нажата');
+                    console.log('Текущие настройки геолокации:', geolocationSettings);
+                    
+                    // Загружаем настройки геолокации с сервера для получения API-ключа
+                    try {
+                      console.log('Пытаемся получить настройки геолокации сервера...');
+                      const freshSettings = await getGeolocationSettings();
+                      console.log('Получены настройки геолокации с сервера:', freshSettings);
+                      
+                      // Обновляем состояние с настройками, используя API-ключ из бэкенда
+                      const updatedSettings = {
+                        ...freshSettings,
+                        yandexApiKey: '' // Пустая строка означает использование ключа из бэкенда
+                      };
+                      
+                      console.log('Обновленные настройки с пустым API-ключом:', updatedSettings);
+                      setGeolocationSettings(updatedSettings);
+                    } catch (error) {
+                      console.error('Ошибка при получении настроек геолокации:', error);
+                      
+                      // В случае ошибки, используем текущие настройки с пустым API-ключом
+                      const updatedSettings = {
+                        ...geolocationSettings,
+                        yandexApiKey: '' // Пустая строка означает использование ключа из бэкенда
+                      };
+                      
+                      console.log('Используем текущие настройки с пустым API-ключом:', updatedSettings);
+                      setGeolocationSettings(updatedSettings);
+                    }
+                  }}
+                >
+                  Показать карту
+                </Button>
               </Grid>
               
-              <Grid item xs={12}>
-                <YandexMap
-                  center={{
-                    lat: (geolocationSettings as GeolocationSettings).coordinates?.latitude || 51.1605,
-                    lng: (geolocationSettings as GeolocationSettings).coordinates?.longitude || 71.4704
-                  }}
-                  radius={geolocationSettings.radius || 100}
-                  onRadiusChange={(radius) => setGeolocationSettings({
-                    ...geolocationSettings,
-                    radius: radius
-                  })}
-                  onCenterChange={(center) => setGeolocationSettings({
-                    ...geolocationSettings,
-                    ...(geolocationSettings as GeolocationSettings),
-                    coordinates: {
-                      latitude: center.lat,
-                      longitude: center.lng
-                    }
-                  })}
-                  apiKey={(geolocationSettings as GeolocationSettings).yandexApiKey || ''}
-                />
-              </Grid>
+              {/* Отображаем карту только если API-ключ был установлен после нажатия кнопки */}
+              {geolocationSettings.yandexApiKey === '' && (
+                <Grid item xs={12}>
+                  <YandexMap
+                    center={{
+                      lat: (geolocationSettings as GeolocationSettings).coordinates?.latitude || 51.1605,
+                      lng: (geolocationSettings as GeolocationSettings).coordinates?.longitude || 71.4704
+                    }}
+                    radius={geolocationSettings.radius || 100}
+                    onRadiusChange={(radius) => setGeolocationSettings({
+                      ...geolocationSettings,
+                      radius: radius
+                    })}
+                    onCenterChange={(center) => setGeolocationSettings({
+                      ...geolocationSettings,
+                      ...(geolocationSettings as GeolocationSettings),
+                      coordinates: {
+                        latitude: center.lat,
+                        longitude: center.lng
+                      }
+                    })}
+                    apiKey={(geolocationSettings as GeolocationSettings).yandexApiKey || ''}
+                  />
+                </Grid>
+              )}
               
               <Grid item xs={12}>
                 <FormControlLabel

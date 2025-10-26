@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, CircularProgress,
-  Alert, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent
+  Alert, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent, Typography
 } from '@mui/material';
 import childrenApi from '../services/children';
 import { getGroups } from '../services/groups';
+import { Avatar, Box } from '@mui/material';
 import { Group, User } from '../types/common';
 
 interface ChildrenModalProps {
@@ -24,6 +25,7 @@ const defaultForm: Omit<Partial<User>, 'role'> = {
   parentName: '',
   active: true,
   phone: '', // для совместимости с API
+  photo: '',
 };
 
 const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, child }) => {
@@ -42,6 +44,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
           fullName: child.fullName || '',
           phone: child.phone || '',
           iin: child.iin || '',
+          photo: child.photo || '',
           groupId: typeof child.groupId === 'object' ? (child.groupId as Group).id || (child.groupId as string) : child.groupId || '',
           parentName: child.parentName || '',
           parentPhone: child.parentPhone || '',
@@ -74,6 +77,19 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      
+      reader.onloadend = () => {
+        setForm({ ...form, photo: reader.result as string });
+      };
+      
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError(null);
@@ -87,6 +103,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
           parentPhone: form.parentPhone || '',
           birthday: form.birthday || '',
           iin: form.iin || '',
+          photo: form.photo || '',
           groupId: form.groupId || '',
           parentName: form.parentName || '',
           notes: form.notes || '',
@@ -101,6 +118,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
           parentPhone: form.parentPhone || '',
           birthday: form.birthday || '',
           iin: form.iin || '',
+          photo: form.photo || '',
           groupId: form.groupId || '',
           parentName: form.parentName || '',
           notes: form.notes || '',
@@ -150,6 +168,35 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
       </DialogTitle>
       <DialogContent sx={{ pt: 3 }}>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        
+        {/* Фотография */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+          <Box sx={{ position: 'relative', textAlign: 'center' }}>
+            <Avatar
+              src={form.photo || undefined}
+              alt={form.fullName || 'Фото ребенка'}
+              sx={{
+                width: 100,
+                height: 100,
+                mb: 1,
+                border: '2px solid #e0e0e0',
+                cursor: 'pointer'
+              }}
+            />
+            <input
+              accept="image/*"
+              id="photo-upload"
+              type="file"
+              style={{ display: 'none' }}
+              onChange={handlePhotoChange}
+            />
+            <label htmlFor="photo-upload">
+              <Button variant="outlined" component="span" size="small">
+                Загрузить фото
+              </Button>
+            </label>
+          </Box>
+        </Box>
         
         <TextField
           margin="dense"
@@ -206,6 +253,14 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({ open, onClose, onSaved, c
             onChange={handleSelectChange}
             label="Группа"
             variant="outlined"
+            displayEmpty
+            renderValue={(selected) => {
+              if (!selected) return 'Не выбрано';
+              
+              const selectedGroup = groups.find(g => g._id === selected || g.id === selected);
+              return selectedGroup ? selectedGroup.name :
+                (typeof form.groupId === 'object' ? (form.groupId as Group).name : 'Текущая группа');
+            }}
           >
             <MenuItem value="">Не выбрано</MenuItem>
             {groups.map((g) => (

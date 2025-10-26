@@ -498,65 +498,7 @@ setStaff(data);
                 label="Активен"
               />
             </Grid>
-            {/* --- Payroll Settings --- */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>
-                💰 Настройки зарплаты и штрафов
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth>
-                <InputLabel>Тип оклада</InputLabel>
-                <Select
-                  name="salaryType"
-                  value={form.salaryType || 'day'}
-                  onChange={handleSelectChange}
-                  label="Тип оклада"
-                >
-                  <MenuItem value="day">Оклад за день</MenuItem>
-                  <MenuItem value="month">Оклад за месяц</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField
-                label="Оклад"
-                name="salary"
-                type="number"
-                value={form.salary ?? ''}
-                onChange={handleChange}
-                fullWidth
-                InputProps={{ startAdornment: <InputAdornment position="start">₸</InputAdornment> }}
-              />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth>
-                <InputLabel>Тип штрафа</InputLabel>
-                <Select
-                  name="penaltyType"
-                  value={form.penaltyType || 'fixed'}
-                  onChange={handleSelectChange}
-                  label="Тип штрафа"
-                >
-                  <MenuItem value="fixed">Фиксированный</MenuItem>
-                  <MenuItem value="percent">Процент от оклада</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField
-                label={form.penaltyType === 'percent' ? 'Штраф (%)' : 'Штраф (₸)'}
-                name="penaltyAmount"
-                type="number"
-                value={form.penaltyAmount ?? ''}
-                onChange={handleChange}
-                fullWidth
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">{form.penaltyType === 'percent' ? '%' : '₸'}</InputAdornment>
-                }}
-              />
-            </Grid>
+
           </Grid>
          </DialogContent>
     

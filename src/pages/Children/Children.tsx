@@ -313,6 +313,7 @@ const Children: React.FC = () => {
         <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 650 }}>
           <TableHead>
             <TableRow>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Фото</TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>ФИО</TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Дата рождения</TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Телефон родителя</TableCell>
@@ -337,6 +338,21 @@ const Children: React.FC = () => {
                     '&:hover': { backgroundColor: '#f9f9f9' }
                   }}
                 >
+                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+                    {child.photo ? (
+                      <Avatar
+                        src={child.photo}
+                        alt={child.fullName}
+                        sx={{ width: 50, height: 50 }}
+                      />
+                    ) : (
+                      <Avatar
+                        sx={{ width: 50, height: 50, bgcolor: '#e0e0e0', color: '#666' }}
+                      >
+                        {child.fullName?.charAt(0) || '?'}
+                      </Avatar>
+                    )}
+                  </TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.fullName}</TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>
                     {child.birthday
