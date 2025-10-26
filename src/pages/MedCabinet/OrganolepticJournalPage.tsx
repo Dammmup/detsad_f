@@ -30,11 +30,10 @@ export default function OrganolepticJournalPage() {
     }
   };
   
- const fetchRecordsCallback = useCallback(fetchRecords, [date, group]);
 
   useEffect(() => {
     fetchRecords();
-  }, [date, group, fetchRecordsCallback]);
+  }, [date, group]);
 
 
   const handleGenerateByMenu = async () => {

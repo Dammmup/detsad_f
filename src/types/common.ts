@@ -68,14 +68,13 @@ export interface User {
   fullName: string;
   role: UserRole;
   avatar?: string;
-  isActive: boolean;
+  active: boolean;
   lastLogin?: string;
   createdAt: string;
- updatedAt: string;
- uniqNumber?: string;
+  updatedAt: string;
+  uniqNumber?: string;
   notes?: string;
-  active: boolean;
- iin?: string;
+  iin?: string;
   groupId?: string;
   birthday?: string;
   photo?: string;

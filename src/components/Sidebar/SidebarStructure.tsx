@@ -10,6 +10,7 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import CalendarViewWeekIcon from '@mui/icons-material/CalendarViewWeek';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 export interface SidebarItem {
   id: string;
@@ -26,6 +27,12 @@ const sidebarStructure: SidebarItem[] = [
     label: 'Главная',
     link: '/app',
     icon: <DashboardIcon />,
+  },
+  {
+    id: 'profile',
+    label: 'Профиль',
+    link: '/app/profile',
+    icon: <AccountCircleIcon />,
   },
   {
     id: 'children',
@@ -45,6 +52,7 @@ const sidebarStructure: SidebarItem[] = [
     children: [
       { id: 'staff-list', label: 'Список сотрудников', link: '/app/staff', icon: <PeopleIcon /> },
       { id: 'staff-schedule', label: 'Смены', link: '/app/staff/schedule', icon: <ScheduleIcon /> },
+      { id: 'staff-absences', label: 'Отсутствующие сотрудники', link: '/app/staff/absences', icon: <CalendarViewWeekIcon /> },
       { id: 'staff-attendance-tracking', label: 'Учет рабочего времени', link: '/app/staff/attendance', icon: <AssignmentIndIcon /> },
     ],
     visibleFor: ['admin'] // Только для администраторов

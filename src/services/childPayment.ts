@@ -1,5 +1,5 @@
 import { IChildPayment } from '../types/common';
-import api from '../services/base';
+import api from './base';
 
 const API_BASE_URL = '/child-payments';
 

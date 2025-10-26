@@ -20,6 +20,7 @@ import {
   KindergartenSettings, NotificationSettings, SecuritySettings,
   GeolocationSettings, User
 } from '../services/settings';
+import MainEventsSettings from '../components/Settings/MainEventsSettings';
 
 const Settings: React.FC = () => {
   // Состояния для данных
@@ -751,70 +752,7 @@ const Settings: React.FC = () => {
       )}
       
       {tabValue === 4 && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>Настройки автоматического расчета зарплат</Typography>
-            
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="День месяца для автоматического расчета"
-                  type="number"
-                  fullWidth
-                  value={payrollSettings.autoCalculationDay}
-                  onChange={(e) => setPayrollSettings({
-                    ...payrollSettings,
-                    autoCalculationDay: parseInt(e.target.value) || 25
-                  })}
-                  inputProps={{ min: 1, max: 31 }}
-                  helperText="День месяца, когда будет производиться автоматический расчет зарплат и отправка отчетов"
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  label="Email получателей отчетов"
-                  fullWidth
-                  value={payrollSettings.emailRecipients}
-                  onChange={(e) => setPayrollSettings({
-                    ...payrollSettings,
-                    emailRecipients: e.target.value
-                  })}
-                  helperText="Email адреса через запятую, на которые будут отправляться отчеты"
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={payrollSettings.autoClearData}
-                      onChange={(e) => setPayrollSettings({
-                        ...payrollSettings,
-                        autoClearData: e.target.checked
-                      })}
-                    />
-                  }
-                  label="Автоматическая очистка данных после расчета"
-                />
-                <Typography variant="caption" color="text.secondary" display="block">
-                  После автоматического расчета и отправки отчетов данные о штрафах будут очищены
-                </Typography>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<Save />}
-                  onClick={handleSavePayrollSettings}
-                >
-                  Сохранить настройки
-                </Button>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
+        <MainEventsSettings />
       )}
       
       {tabValue === 5 && (

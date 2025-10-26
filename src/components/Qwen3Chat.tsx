@@ -1,9 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Paper, TextField, Button, IconButton, Typography, List, ListItem, ListItemText, Divider, InputAdornment } from '@mui/material';
-import { Send as SendIcon, Close as CloseIcon, Chat as ChatIcon, AttachFile as AttachFileIcon } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import {
+  Box, Paper, TextField, IconButton, Typography, List, ListItem, Divider, InputAdornment, Button
+} from '@mui/material';
+import {
+  Send as SendIcon,
+  Close as CloseIcon,
+  Chat as ChatIcon,
+  AttachFile as AttachFileIcon,
+  ScreenshotMonitor as ScreenshotIcon,
+} from '@mui/icons-material';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Qwen3ApiService } from '../services/qwen3-api';
-import { useLocation } from 'react-router-dom';
 import { initUIStateCollector } from '../utils/uiStateCollector';
 
 interface Message {
@@ -21,129 +29,33 @@ const Qwen3Chat: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [sessionId] = useState<string>(() => {
-    // Проверяем, есть ли уже sessionId в localStorage
-    let storedSessionId = localStorage.getItem('qwen3-session-id');
-    if (!storedSessionId) {
-      // Генерируем новый sessionId
-      storedSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem('qwen3-session-id', storedSessionId);
+  const [sessionId] = useState(() => {
+    let id = localStorage.getItem('qwen3-session-id');
+    if (!id) {
+      id = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      localStorage.setItem('qwen3-session-id', id);
     }
-    return storedSessionId;
+    return id;
   });
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Инициализируем сборщик состояния UI при монтировании компонента
+
   useEffect(() => {
     const cleanup = initUIStateCollector(sessionId);
-    
-    // Очищаем при размонтировании компонента
-    return () => {
-      cleanup();
-    };
+    return () => cleanup();
   }, [sessionId]);
 
-  const toggleChat = () => {
-    setIsOpen(!isOpen);
-  };
+  const toggleChat = () => setIsOpen(!isOpen);
 
-  // Функция для определения команд навигации из ответа ИИ
-  const extractNavigationCommand = (response: string): string | null => {
-    const lowerResponse = response.toLowerCase();
-    
-    // Проверяем, содержит ли ответ команду навигации
-    if (lowerResponse.includes('перенаправляю вас на страницу детей') || lowerResponse.includes('дети')) {
-      return '/app/children';
-    } else if (lowerResponse.includes('перенаправляю вас на страницу сотрудников') || lowerResponse.includes('сотрудники')) {
-      return '/app/staff';
-    } else if (lowerResponse.includes('перенаправляю вас на страницу отчетов') || lowerResponse.includes('отчеты')) {
-      return '/app/reports';
-    } else if (lowerResponse.includes('перенаправляю вас на страницу документов') || lowerResponse.includes('документы')) {
-      return '/app/documents';
-    } else if (lowerResponse.includes('перенаправляю вас на страницу групп') || lowerResponse.includes('группы')) {
-      return '/app/groups';
-    } else if (lowerResponse.includes('перенаправляю вас на страницу настроек') || lowerResponse.includes('настройки')) {
-      return '/app/settings';
-    } else if (lowerResponse.includes('перенаправляю вас в медицинский кабинет') || lowerResponse.includes('мед кабинет')) {
-      return '/app/med';
-    } else if (lowerResponse.includes('главная страница') || lowerResponse.includes('главная') || lowerResponse.includes('dashboard')) {
-      return '/app/dashboard';
-    } else if (lowerResponse.includes('посещаемость')) {
-      return '/app/children/attendance';
-    }
-    
-    return null;
- };
-
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Проверяем тип файла
-      if (file.type.startsWith('image/')) {
-        setSelectedImage(file);
-        
-        // Создаем предварительный просмотр
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreview(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        alert('Пожалуйста, выберите изображение');
-      }
-    }
-  };
-
-  // Функция для захвата скриншота текущей страницы
- const captureScreenshot = async () => {
-    try {
-      // Проверяем поддержку Web API для захвата экрана
-      if ('getDisplayMedia' in navigator) {
-        // Используем getDisplayMedia для захвата экрана
-        const stream = await (navigator as any).mediaDevices.getDisplayMedia({
-          video: { mediaSource: 'screen' }
-        });
-        
-        const track = stream.getVideoTracks()[0];
-        const imageCapture = new (window as any).ImageCapture(track);
-        const blob = await imageCapture.grabFrame();
-        
-        // Останавливаем трансляцию
-        track.stop();
-        
-        // Создаем File из Blob
-        const file = new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' });
-        setSelectedImage(file);
-        
-        // Создаем предварительный просмотр
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreview(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        // Альтернативный метод с использованием html2canvas
-        const html2canvas = (await import('html2canvas')).default;
-        const canvas = await html2canvas(document.body);
-        
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const file = new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' });
-            setSelectedImage(file);
-            
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              setImagePreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Ошибка при захвате скриншота:', error);
-      alert('Не удалось захватить скриншот. Пожалуйста, разрешите доступ к экрану или используйте кнопку "Прикрепить файл".');
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
     }
   };
 
@@ -152,71 +64,56 @@ const Qwen3Chat: React.FC = () => {
     setImagePreview(null);
   };
 
- const handleSend = async () => {
-    if ((inputValue.trim() === '' && !selectedImage) || isProcessing) return;
+  const handleSend = async () => {
+    if ((!inputValue.trim() && !selectedImage) || isProcessing) return;
 
-    // Добавляем сообщение пользователя
     const userMessage: Message = {
       id: Date.now(),
       text: inputValue,
       sender: 'user',
       timestamp: new Date(),
+      imageUrl: selectedImage ? URL.createObjectURL(selectedImage) : undefined,
     };
 
-    // Если есть изображение, добавляем его к сообщению
-    if (selectedImage) {
-      userMessage.imageUrl = URL.createObjectURL(selectedImage);
-    }
-
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
     setIsProcessing(true);
 
     try {
-      // Отправляем сообщение в ИИ и получаем ответ
-      const aiResponse = await Qwen3ApiService.sendMessage([...messages, userMessage], location.pathname, selectedImage || undefined, sessionId);
-      
-      // Создаем сообщение ИИ
+      // Симулируем “печатает...”
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now() + 1, text: '...', sender: 'ai', timestamp: new Date() },
+      ]);
+
+      const aiResponse = await Qwen3ApiService.sendMessage(
+        [...messages, userMessage],
+        location.pathname,
+        selectedImage || undefined,
+        sessionId
+      );
+
+      // Убираем временное сообщение “...”
+      setMessages((prev) => prev.filter((msg) => msg.text !== '...'));
+
       const aiMessage: Message = {
-        id: Date.now() + 1,
+        id: Date.now() + 2,
         text: aiResponse,
         sender: 'ai',
         timestamp: new Date(),
       };
-      
-      setMessages(prev => [...prev, aiMessage]);
-      
-      // Проверяем, содержит ли ответ команду навигации
-      const navigationPath = extractNavigationCommand(aiResponse);
-      if (navigationPath) {
-        navigate(navigationPath);
-      }
-      
-      // Очищаем изображение после отправки
-      removeImage();
-    } catch (error: any) {
-      console.error('Error getting response from Qwen3 API:', error);
-      
-      // В случае ошибки добавляем сообщение об ошибке
-      let errorMessageText = 'Извините, возникла ошибка при соединении с ИИ.';
-      
-      if (error.message.includes('API ключ')) {
-        errorMessageText = 'API ключ для Qwen3 не установлен или недействителен. Пожалуйста, проверьте настройки.';
-      } else if (error.message.includes('HTTP error')) {
-        errorMessageText = `Ошибка соединения с API: ${error.message}`;
-      }
-      
-      const errorMessage: Message = {
-        id: Date.now() + 1,
-        text: errorMessageText,
-        sender: 'ai',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (e) {
+      console.error(e);
     } finally {
       setIsProcessing(false);
+      removeImage();
     }
- };
+  };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -225,213 +122,201 @@ const Qwen3Chat: React.FC = () => {
     }
   };
 
-  // Прокрутка к последнему сообщению
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
   return (
-    <Box
-      sx={{
-        position: 'fixed',
-        bottom: 20,
-        right: 20,
-        zIndex: 1000,
-      }}
-    >
+    <Box sx={{ position: 'fixed', bottom: 20, right: 20, zIndex: 2000 }}>
       {!isOpen ? (
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<ChatIcon />}
-          onClick={toggleChat}
-          sx={{
-            minWidth: 56,
-            width: 56,
-            height: 56,
-            borderRadius: '50%',
-            padding: 1.5,
-          }}
-          disabled={isProcessing}
-        >
-          <ChatIcon />
-        </Button>
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={toggleChat}
+            sx={{
+              minWidth: 56,
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              boxShadow: 4,
+            }}
+          >
+            <ChatIcon />
+          </Button>
+        </motion.div>
       ) : (
-        <Paper
-          elevation={3}
-          sx={{
-            width: 350,
-            height: 500,
-            display: 'flex',
-            flexDirection: 'column',
-            borderRadius: 2,
-            overflow: 'hidden',
-          }}
-        >
-          {/* Заголовок чата */}
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: 1.5,
-              backgroundColor: 'primary.main',
-              color: 'white',
-            }}
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
           >
-            <Typography variant="h6">Qwen3 Ассистент</Typography>
-            <IconButton
-              size="small"
-              onClick={toggleChat}
-              sx={{ color: 'white' }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </Box>
-
-          {/* История сообщений */}
-          <Box
-            sx={{
-              flex: 1,
-              padding: 1,
-              overflowY: 'auto',
-              backgroundColor: '#f5f5f5',
-            }}
-          >
-            <List>
-              {messages.map((message) => (
-                <ListItem
-                  key={message.id}
-                  sx={{
-                    justifyContent: message.sender === 'user' ? 'flex-end' : 'flex-start',
-                    padding: 0.5,
-                  }}
-                >
-                  <Box
-                    sx={{
-                      maxWidth: '80%',
-                      padding: 1,
-                      borderRadius: 2,
-                      backgroundColor: message.sender === 'user' ? 'primary.main' : '#e0e0e0',
-                      color: message.sender === 'user' ? 'white' : 'black',
-                    }}
-                  >
-                    {message.text && (
-                      <ListItemText
-                        primary={message.text}
-                        primaryTypographyProps={{
-                          variant: 'body2',
-                          sx: { wordWrap: 'break-word' },
-                        }}
-                      />
-                    )}
-                    {message.imageUrl && (
-                      <Box sx={{ mt: 1, textAlign: 'center' }}>
-                        <img
-                          src={message.imageUrl}
-                          alt="Вложенное изображение"
-                          style={{
-                            maxWidth: '100%',
-                            maxHeight: '200px',
-                            borderRadius: '8px',
-                            objectFit: 'contain'
-                          }}
-                        />
-                      </Box>
-                    )}
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: 'block',
-                        textAlign: 'right',
-                        marginTop: 0.5,
-                        opacity: 0.7,
-                      }}
-                    >
-                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Typography>
-                  </Box>
-                </ListItem>
-              ))}
-              <div ref={messagesEndRef} />
-            </List>
-          </Box>
-
-          {/* Поле ввода */}
-          <Divider />
-          <Box sx={{ display: 'flex', padding: 1, alignItems: 'center' }}>
-            <IconButton
-              size="small"
-              component="label"
-              disabled={isProcessing}
-              title="Прикрепить файл"
-            >
-              <AttachFileIcon fontSize="small" />
-              <input
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={handleImageChange}
-                disabled={isProcessing}
-              />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={captureScreenshot}
-              disabled={isProcessing}
-              title="Сделать скриншот страницы"
-              sx={{ marginLeft: 0.5 }}
-            >
-              <ChatIcon fontSize="small" />
-            </IconButton>
-            <TextField
-              fullWidth
-              variant="outlined"
-              size="small"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={isProcessing ? "Обработка запроса..." : "Напишите сообщение..."}
-              multiline
-              maxRows={4}
-              disabled={isProcessing}
-              InputProps={{
-                endAdornment: imagePreview ? (
-                  <InputAdornment position="end">
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Box
-                        component="img"
-                        src={imagePreview}
-                        alt="Предварительный просмотр"
-                        sx={{
-                          width: 30,
-                          height: 30,
-                          borderRadius: 1,
-                          marginRight: 1,
-                          objectFit: 'cover'
-                        }}
-                      />
-                      <IconButton
-                        size="small"
-                        onClick={removeImage}
-                        disabled={isProcessing}
-                      >
-                        <CloseIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </InputAdornment>
-                ) : undefined,
+            <Paper
+              elevation={5}
+              sx={{
+                width: 380,
+                height: 520,
+                display: 'flex',
+                flexDirection: 'column',
+                borderRadius: 3,
+                overflow: 'hidden',
+                boxShadow: '0px 6px 20px rgba(0,0,0,0.25)',
+                background: 'linear-gradient(to bottom right, #f7f9fc, #eaf1f7)',
               }}
-            />
-            <IconButton
-              onClick={handleSend}
-              disabled={(!inputValue.trim() && !selectedImage) || isProcessing}
-              sx={{ marginLeft: 1 }}
             >
-              <SendIcon />
-            </IconButton>
-          </Box>
-        </Paper>
+              {/* Header */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  px: 2,
+                  py: 1.5,
+                  background: 'linear-gradient(90deg, #1976d2, #42a5f5)',
+                  color: 'white',
+                }}
+              >
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Qwen3 Ассистент
+                </Typography>
+                <IconButton size="small" onClick={toggleChat} sx={{ color: 'white' }}>
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </Box>
+
+              {/* Messages */}
+              <Box sx={{ flex: 1, p: 1.5, overflowY: 'auto' }}>
+                <List>
+                  <AnimatePresence>
+                    {messages.map((msg) => (
+                      <motion.div
+                        key={msg.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ListItem
+                          sx={{
+                            justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              bgcolor: msg.sender === 'user' ? '#1976d2' : 'white',
+                              color: msg.sender === 'user' ? 'white' : 'black',
+                              px: 1.5,
+                              py: 1,
+                              borderRadius: 3,
+                              maxWidth: '75%',
+                              boxShadow: 1,
+                            }}
+                          >
+                            {msg.text === '...' ? (
+                              <Box sx={{ display: 'flex', gap: 0.6 }}>
+                                <motion.div
+                                  animate={{ opacity: [0.3, 1, 0.3] }}
+                                  transition={{ repeat: Infinity, duration: 1 }}
+                                  style={{ width: 6, height: 6, backgroundColor: 'gray', borderRadius: '50%' }}
+                                />
+                                <motion.div
+                                  animate={{ opacity: [0.3, 1, 0.3] }}
+                                  transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
+                                  style={{ width: 6, height: 6, backgroundColor: 'gray', borderRadius: '50%' }}
+                                />
+                                <motion.div
+                                  animate={{ opacity: [0.3, 1, 0.3] }}
+                                  transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
+                                  style={{ width: 6, height: 6, backgroundColor: 'gray', borderRadius: '50%' }}
+                                />
+                              </Box>
+                            ) : (
+                              <>
+                                <Typography variant="body2">{msg.text}</Typography>
+                                {msg.imageUrl && (
+                                  <Box sx={{ mt: 1 }}>
+                                    <motion.img
+                                      src={msg.imageUrl}
+                                      alt="attached"
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: 1 }}
+                                      style={{
+                                        maxWidth: '100%',
+                                        borderRadius: 8,
+                                      }}
+                                    />
+                                  </Box>
+                                )}
+                                <Typography variant="caption" sx={{ opacity: 0.6 }}>
+                                  {msg.timestamp.toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </Typography>
+                              </>
+                            )}
+                          </Box>
+                        </ListItem>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                  <div ref={messagesEndRef} />
+                </List>
+              </Box>
+
+              {/* Input */}
+              <Divider />
+              <Box sx={{ display: 'flex', alignItems: 'center', p: 1.5 }}>
+                <IconButton component="label" disabled={isProcessing}>
+                  <AttachFileIcon />
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    onChange={handleImageChange}
+                  />
+                </IconButton>
+                <TextField
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={isProcessing ? 'ИИ думает...' : 'Введите сообщение...'}
+                  multiline
+                  maxRows={4}
+                  InputProps={{
+                    endAdornment: imagePreview && (
+                      <InputAdornment position="end">
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box
+                            component="img"
+                            src={imagePreview}
+                            alt="preview"
+                            sx={{
+                              width: 30,
+                              height: 30,
+                              borderRadius: 1,
+                              mr: 0.5,
+                            }}
+                          />
+                          <IconButton size="small" onClick={removeImage}>
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                <IconButton
+                  onClick={handleSend}
+                  disabled={(!inputValue.trim() && !selectedImage) || isProcessing}
+                  sx={{ ml: 1 }}
+                >
+                  <SendIcon color="primary" />
+                </IconButton>
+              </Box>
+            </Paper>
+          </motion.div>
+        </AnimatePresence>
       )}
     </Box>
   );

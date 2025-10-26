@@ -66,7 +66,6 @@ const defaultForm: StaffMember = {
   phone: '',
   fullName: '',
   role: 'staff' as UserRole,
-  isActive: true,
   active: true,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),

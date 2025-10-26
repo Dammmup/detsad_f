@@ -25,10 +25,11 @@ import sidebarStructure from './Sidebar/SidebarStructure';
 import { useLocation } from 'react-router-dom';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import StaffSchedule from '../pages/Staff/StaffSchedule';
+import StaffAbsences from '../pages/Staff/StaffAbsences';
 
 
 import WeeklyAttendance from '../pages/Children/WeeklyAttendance';
-import ReportsSalary from '../components/reports/ReportsSalary';
+import ReportsSalary from './reports/ReportsSalary';
 import { logout } from '../services/auth';
 import { useNavigate } from 'react-router-dom';
 import Reports from '../pages/Reports';
@@ -51,7 +52,7 @@ import SomaticJournal from '../pages/MedCabinet/SomaticJournal';
 import ReportsRent from './reports/ReportsRent';
 import ChildPayments from '../pages/Children/ChildPayments';
 import Qwen3Chat from './Qwen3Chat';
-
+import ProfilePage from '../pages/Staff/ProfilePage';
 
 interface SimpleLayoutProps {
   children?: React.ReactNode;
@@ -99,9 +100,14 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
           <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600, letterSpacing: 1 }}>
             Система управления детским садом
           </Typography>
-          <Button variant="outlined" color="secondary" onClick={handleLogout} sx={{ borderColor: 'white', color: 'white', '&:hover': { background: 'rgba(255,255,0.08)' } }}>
-            Выйти
-          </Button>
+          <Box>
+            <Button variant="outlined" color="primary" onClick={() => navigate('/app/profile')} sx={{ mr: 1, borderColor: 'white', color: 'white', '&:hover': { background: 'rgba(255,255,0.08)' } }}>
+              Профиль
+            </Button>
+            <Button variant="outlined" color="secondary" onClick={handleLogout} sx={{ borderColor: 'white', color: 'white', '&:hover': { background: 'rgba(255,255,0.08)' } }}>
+              Выйти
+            </Button>
+          </Box>
         </Toolbar>
       </AppBar>
 
@@ -136,6 +142,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             {/* Сотрудники */}
             <Route path="staff" element={<Staff />} />
             <Route path="staff/schedule" element={<StaffSchedule />} />
+            <Route path="staff/absences" element={<StaffAbsences />} />
             <Route path="staff/attendance" element={<StaffAttendanceTracking />} />
             <Route path="staff/reports" element={<Reports />} />
             {/* Документы */}
@@ -164,6 +171,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path="med/tub-positive" element={<TubPositiveJournal />} />
             <Route path="med/organoleptic-journal" element={<OrganolepticJournalPage />} />
             <Route path="med/food-norms-control" element={<FoodNormsControlPage />} />
+            <Route path="profile" element={<ProfilePage />} />
 
             {/* Fallback */}
             <Route path="*" element={<Dashboard />} />

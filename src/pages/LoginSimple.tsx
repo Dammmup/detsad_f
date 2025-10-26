@@ -6,7 +6,6 @@ import { useAuth } from '../components/context/AuthContext';
 import { User } from '../types/common';
 import { authApi } from '../services/auth';
 
-const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -33,7 +32,6 @@ const Login: React.FC = () => {
         role: authResponse.user.role || 'staff',
         phone: phone,
         email: authResponse.user.phone || phone,
-        isActive: authResponse.user.isActive ?? true,
         active: authResponse.user.active ?? true,
         createdAt: authResponse.user.createdAt || new Date().toISOString(),
         updatedAt: authResponse.user.updatedAt || new Date().toISOString()
