@@ -103,6 +103,28 @@ const Children: React.FC = () => {
     
     setFilteredChildren(result);
   }, [children, nameFilter, groupFilter]);
+  
+  // Обновление filteredChildren при изменении children
+  useEffect(() => {
+    let result = [...children];
+    
+    // Фильтрация по имени ребенка
+    if (nameFilter) {
+      result = result.filter(child =>
+        child.fullName && child.fullName.toLowerCase().includes(nameFilter.toLowerCase())
+      );
+    }
+    
+    // Фильтрация по группе
+    if (groupFilter) {
+      result = result.filter(child => {
+        const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
+        return childGroupId === groupFilter;
+      });
+    }
+    
+    setFilteredChildren(result);
+  }, [children]);
 
   // Инициализация filteredChildren после загрузки данных
   useEffect(() => {
@@ -122,14 +144,11 @@ const Children: React.FC = () => {
   const handleDelete = async (id?: string) => {
     if (!id) return;
     if (!window.confirm('Удалить ребёнка?')) return;
-    setLoading(true);
     try {
       await childrenApi.deleteItem(id);
       fetchChildren();
     } catch (e: any) {
       setError(e?.message || 'Ошибка удаления');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -170,6 +189,42 @@ const Children: React.FC = () => {
           sx={{ width: isMobile ? '10%' : 'auto', mt: isMobile ? 1 : 0 }}
         >
           Добавить ребёнка
+        </Button>
+      </Box>
+      
+      {/* Вкладки для активных и неактивных детей */}
+      <Box mb={3} display="flex" gap={1}>
+        <Button
+          variant={nameFilter === '' && groupFilter === '' ? "contained" : "outlined"}
+          onClick={() => {setNameFilter(''); setGroupFilter('');}}
+        >
+          Все
+        </Button>
+        <Button
+          variant={nameFilter === '' && groupFilter === '' && children.some(c => c.active !== false) ? "contained" : "outlined"}
+          onClick={() => {
+            setNameFilter('');
+            setGroupFilter('');
+            setTimeout(() => {
+              const activeChildren = children.filter(child => child.active !== false);
+              setFilteredChildren(activeChildren);
+            }, 0);
+          }}
+        >
+          Активные
+        </Button>
+        <Button
+          variant={nameFilter === '' && groupFilter === '' && children.some(c => c.active === false) ? "contained" : "outlined"}
+          onClick={() => {
+            setNameFilter('');
+            setGroupFilter('');
+            setTimeout(() => {
+              const inactiveChildren = children.filter(child => child.active === false);
+              setFilteredChildren(inactiveChildren);
+            }, 0);
+          }}
+        >
+          Неактивные
         </Button>
       </Box>
       
@@ -313,6 +368,7 @@ const Children: React.FC = () => {
         <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 650 }}>
           <TableHead>
             <TableRow>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>#</TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Фото</TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>ФИО</TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Дата рождения</TableCell>
@@ -325,7 +381,7 @@ const Children: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredChildren.map(child => {
+            {filteredChildren.map((child, index) => {
               // Определяем цветовую индикацию на основе группы
               const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
               const groupColor = childGroupId ? getGroupColor(childGroupId) : '#B0B0B0';
@@ -338,6 +394,7 @@ const Children: React.FC = () => {
                     '&:hover': { backgroundColor: '#f9f9f9' }
                   }}
                 >
+                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>{index + 1}</TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>
                     {child.photo ? (
                       <Avatar
@@ -347,7 +404,7 @@ const Children: React.FC = () => {
                       />
                     ) : (
                       <Avatar
-                        sx={{ width: 50, height: 50, bgcolor: '#e0e0e0', color: '#666' }}
+                        sx={{ width: 50, height: 50, bgcolor: '#e0e0', color: '#66' }}
                       >
                         {child.fullName?.charAt(0) || '?'}
                       </Avatar>

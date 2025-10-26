@@ -277,13 +277,49 @@ setStaff(data);
             label="Экспортировать"
           />
         </Box>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          startIcon={<Add />} 
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<Add />}
           onClick={() => handleOpenModal()}
         >
           Добавить сотрудника
+        </Button>
+      </Box>
+      
+      {/* Вкладки для активных и неактивных сотрудников */}
+      <Box mb={3} display="flex" gap={1}>
+        <Button
+          variant={filterRole.length === 0 && searchTerm === '' ? "contained" : "outlined"}
+          onClick={() => {setFilterRole([]); setSearchTerm('');}}
+        >
+          Все
+        </Button>
+        <Button
+          variant={!searchTerm && filterRole.length === 0 && filteredStaff.some(m => m.active) ? "contained" : "outlined"}
+          onClick={() => {
+            setFilterRole([]);
+            setSearchTerm('');
+            setTimeout(() => {
+              const activeStaff = staff.filter(member => member.active);
+              setFilteredStaff(activeStaff);
+            }, 0);
+          }}
+        >
+          Активные
+        </Button>
+        <Button
+          variant={!searchTerm && filterRole.length === 0 && filteredStaff.some(m => !m.active) ? "contained" : "outlined"}
+          onClick={() => {
+            setFilterRole([]);
+            setSearchTerm('');
+            setTimeout(() => {
+              const inactiveStaff = staff.filter(member => !member.active);
+              setFilteredStaff(inactiveStaff);
+            }, 0);
+          }}
+        >
+          Неактивные
         </Button>
       </Box>
       
@@ -375,10 +411,10 @@ setStaff(data);
                         )}
                       </Box>
                     </TableCell>{currentUser?.role === 'admin' ? (
-                    <TableCell>{member.initialPassword || '—'}</TableCell>
-  ) : (
-    <TableCell>—</TableCell>
-  )}
+                  <TableCell>{member.initialPassword || '—'}</TableCell>
+) : (
+  <TableCell>—</TableCell>
+)}
                     <TableCell>
                        <Chip
                         label={member.active ? 'Активен' : 'Неактивен'}

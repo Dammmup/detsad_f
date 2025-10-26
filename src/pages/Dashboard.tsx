@@ -243,38 +243,36 @@ const Dashboard = () => {
             </Grid>
           </Grid>
           
-          {/* Виджет статистики посещаемости - только для админов */}
-          {isAdmin && (
-            <Grid item xs={12} md={6}>
-              <Card sx={{
-                height: '100%',
-                backgroundColor: 'white',
-                boxShadow: '0 4px 12px rgba(0,0,0.15), 0 2px 4px rgba(0,0,0,0.18)',
-                transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-                '&:hover': {
-                  transform: 'translateY(-3px)',
-                  boxShadow: '0 6px 20px rgba(0,0,0.2), 0 4px 8px rgba(0,0,0,0.18)'
-                },
-                borderRadius: 2
-              }}>
-                <CardContent>
-                  <Box sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    mb: 2,
-                    pb: 1,
-                    borderBottom: '1px solid #dee2e6'
-                  }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#495057' }}>
-                      🎂 Дни рождения
-                    </Typography>
-                  </Box>
-                  <BirthdaysCalendarWidget />
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
+          {/* Виджет календаря дней рождения */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{
+              height: '100%',
+              backgroundColor: 'white',
+              boxShadow: '0 4px 12px rgba(0,0,0.15), 0 2px 4px rgba(0,0,0,0.18)',
+              transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: '0 6px 20px rgba(0,0,0.2), 0 4px 8px rgba(0,0,0,0.18)'
+              },
+              borderRadius: 2
+            }}>
+              <CardContent>
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 2,
+                  pb: 1,
+                  borderBottom: '1px solid #dee2e6'
+                }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#495057' }}>
+                    🎂 Дни рождения
+                  </Typography>
+                </Box>
+                <BirthdaysCalendarWidget />
+              </CardContent>
+            </Card>
+          </Grid>
           
       
  
