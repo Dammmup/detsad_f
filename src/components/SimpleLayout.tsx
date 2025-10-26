@@ -25,7 +25,6 @@ import sidebarStructure from './Sidebar/SidebarStructure';
 import { useLocation } from 'react-router-dom';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import StaffSchedule from '../pages/Staff/StaffSchedule';
-import StaffAbsences from '../pages/Staff/StaffAbsences';
 
 
 import WeeklyAttendance from '../pages/Children/WeeklyAttendance';
@@ -142,7 +141,6 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             {/* Сотрудники */}
             <Route path="staff" element={<Staff />} />
             <Route path="staff/schedule" element={<StaffSchedule />} />
-            <Route path="staff/absences" element={<StaffAbsences />} />
             <Route path="staff/attendance" element={<StaffAttendanceTracking />} />
             <Route path="staff/reports" element={<Reports />} />
             {/* Документы */}
