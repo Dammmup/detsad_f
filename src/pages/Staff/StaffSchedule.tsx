@@ -16,11 +16,13 @@ import {
   DialogTitle,
   Divider,
   FormControl,
+  FormControlLabel,
   Grid,
- IconButton,
+  IconButton,
   InputLabel,
-  MenuItem,
+ MenuItem,
   Paper,
+  Popover,
   Select,
   SelectChangeEvent,
   Table,
@@ -32,7 +34,7 @@ import {
   TextField,
   Typography,
   useTheme,
- OutlinedInput,
+  OutlinedInput,
   InputAdornment,
   Checkbox,
   ListItemText
@@ -49,9 +51,10 @@ import { Search as SearchIcon } from '@mui/icons-material';
 
 // Types and Services
 import { Shift, ShiftStatus, ShiftFormData } from '../../types/common';
-import { getShifts, createShift, updateShift } from '../../services/shifts';
+import { getShifts, createShift, updateShift, deleteShift } from '../../services/shifts';
 import { getUsers } from '../../services/users';
-import {User} from '../../types/common';
+import { User } from '../../types/common';
+import { getAllHolidays, createHoliday, deleteHoliday, Holiday } from '../../services/holidays';
 
 const SHIFT_STATUSES: Record<ShiftStatus, string> = {
   scheduled: 'Запланирована',
@@ -136,6 +139,12 @@ const StaffSchedule: React.FC = () => {
   const [staff, setStaff] = useState<User[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   
+  // Holiday state
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const [selectedHolidayDate, setSelectedHolidayDate] = useState<string | null>(null);
+  const [isHolidayLoading, setIsHolidayLoading] = useState(false);
+  
   // Form state
     const [formData, setFormData] = useState<ShiftFormData>({
           userId: '',
@@ -177,10 +186,197 @@ const StaffSchedule: React.FC = () => {
     fetchData();
   }, [selectedWeek, enqueueSnackbar]);
   
+  // Загрузка праздников
+   useEffect(() => {
+     const fetchHolidays = async () => {
+       try {
+         const weekStart = startOfWeek(selectedWeek, { locale: ru });
+         const weekEnd = addDays(weekStart, 6);
+         
+         // Загружаем праздники для текущего месяца
+         const holidaysData = await getAllHolidays({
+           month: weekStart.getMonth() + 1, // Месяцы в JavaScript начинаются с 0
+           year: weekStart.getFullYear()
+         });
+         
+         // Проверяем, что данные - это массив
+         if (Array.isArray(holidaysData)) {
+           // Убираем дубликаты праздников
+           const uniqueHolidays = holidaysData.filter((holiday, index, self) =>
+             index === self.findIndex(h =>
+               h.day === holiday.day &&
+               h.month === holiday.month &&
+               (h.isRecurring || holiday.isRecurring || h.year === holiday.year)
+             )
+           );
+           
+           console.log('Fetched holidays:', holidaysData);
+           console.log('Unique holidays:', uniqueHolidays);
+           
+           setHolidays(uniqueHolidays);
+         } else {
+           console.error('Holidays data is not an array:', holidaysData);
+           setHolidays([]);
+         }
+       } catch (err) {
+         console.error('Error loading holidays:', err);
+         setHolidays([]);
+       }
+     };
+     
+     fetchHolidays();
+   }, [selectedWeek]);
+  
   // Обработчик для фильтра ролей
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
     const { value } = event.target;
     setFilterRole(typeof value === 'string' ? value.split(',') : value);
+  };
+  
+  // Функция для проверки, является ли дата праздничной
+       const isHoliday = (date: Date): boolean => {
+         // Проверяем, что holidays определен и является массивом
+         if (!holidays || !Array.isArray(holidays)) {
+           console.log('Holidays is not available or not an array:', holidays);
+           return false;
+         }
+         
+         const day = date.getDate();
+         const month = date.getMonth() + 1; // Месяцы в JavaScript начинаются с 0
+         const year = date.getFullYear();
+         
+         console.log(`Checking if ${day}.${month}.${year} is holiday. Total holidays: ${holidays.length}`);
+         console.log('Holidays array:', holidays);
+         
+         // Проверяем, есть ли праздник в этот день
+         const holiday = holidays.find(h =>
+           h.day === day && h.month === month &&
+           (h.isRecurring || h.year === year)
+         );
+         
+         console.log(`Holiday found: ${holiday ? holiday.name : 'None'}`);
+         
+         return holiday !== undefined;
+       };
+  
+  // Функция для проверки, является ли день выходным (суббота или воскресенье)
+  const isWeekend = (date: Date): boolean => {
+    const dayOfWeek = date.getDay();
+    return dayOfWeek === 0 || dayOfWeek === 6; // 0 - воскресенье, 6 - суббота
+  };
+  
+  // Обработчик клика по заголовку дня
+  const handleDayHeaderClick = (event: React.MouseEvent<HTMLElement>, date: Date) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedHolidayDate(format(date, 'yyyy-MM-dd'));
+  };
+  
+  // Обработчик изменения статуса праздника
+ const handleHolidayToggle = async () => {
+    if (!selectedHolidayDate) return;
+    
+    setIsHolidayLoading(true);
+    
+    try {
+      const date = new Date(selectedHolidayDate);
+      const day = date.getDate();
+      const month = date.getMonth() + 1; // Месяцы в JavaScript начинаются с 0
+      const year = date.getFullYear();
+      
+      console.log(`Toggling holiday for date: ${day}.${month}.${year}`);
+      console.log('Current holidays array:', holidays);
+      
+      // Проверяем, есть ли уже праздник в этот день
+      const existingHoliday = holidays && Array.isArray(holidays) ?
+        holidays.find(h =>
+          h.day === day && h.month === month &&
+          (h.isRecurring || h.year === year)
+        ) : undefined;
+      
+      console.log(`Existing holiday: ${existingHoliday ? existingHoliday.name : 'None'}`);
+      
+      if (existingHoliday) {
+        // Удаляем праздник
+        await deleteHoliday(existingHoliday._id);
+        setHolidays(prev => Array.isArray(prev) ? prev.filter(h => h._id !== existingHoliday._id) : []);
+        
+        // Удаляем все смены для этого дня с помощью DELETE-запроса
+        const shiftsToDelete = shifts.filter(shift => shift.date === selectedHolidayDate);
+        for (const shift of shiftsToDelete) {
+          await deleteShift(shift.id!); // Используем DELETE-запрос вместо PUT
+        }
+        // Обновляем локальный список смен
+        setShifts(shifts.filter(shift => shift.date !== selectedHolidayDate));
+        
+        enqueueSnackbar(`День ${selectedHolidayDate} больше не является праздником`, { variant: 'info' });
+      } else {
+        // Проверяем, не существует ли уже такой праздник (избегаем дубликатов)
+        const duplicateHoliday = holidays && Array.isArray(holidays) ?
+          holidays.find(h =>
+            h.day === day && h.month === month && h.year === year && !h.isRecurring
+          ) : undefined;
+        
+        console.log(`Duplicate holiday: ${duplicateHoliday ? duplicateHoliday.name : 'None'}`);
+        
+        if (duplicateHoliday) {
+          enqueueSnackbar(`День ${selectedHolidayDate} уже отмечен как праздник`, { variant: 'warning' });
+          return;
+        }
+        
+        // Создаем праздник
+        const newHoliday = await createHoliday({
+          name: `Праздник ${selectedHolidayDate}`,
+          day,
+          month,
+          year,
+          isRecurring: false,
+          description: `Праздничный день ${selectedHolidayDate}`
+        });
+        
+        // Добавляем новый праздник к списку, обновляя состояние
+        setHolidays(prev => {
+          if (Array.isArray(prev)) {
+            // Проверяем, не добавился ли уже такой праздник
+            const alreadyExists = prev.some(h =>
+              h.day === newHoliday.day &&
+              h.month === newHoliday.month &&
+              (h.isRecurring || h.year === newHoliday.year)
+            );
+            
+            if (!alreadyExists) {
+              return [...prev, newHoliday];
+            } else {
+              return prev;
+            }
+          } else {
+            return [newHoliday];
+          }
+        });
+        
+        // Удаляем все смены для этого дня с помощью DELETE-запроса
+        const shiftsToDelete = shifts.filter(shift => shift.date === selectedHolidayDate);
+        for (const shift of shiftsToDelete) {
+          await deleteShift(shift.id!); // Используем DELETE-запрос вместо PUT
+        }
+        // Обновляем локальный список смен
+        setShifts(shifts.filter(shift => shift.date !== selectedHolidayDate));
+        
+        enqueueSnackbar(`День ${selectedHolidayDate} отмечен как праздник`, { variant: 'success' });
+      }
+    } catch (err) {
+      console.error('Error toggling holiday:', err);
+      enqueueSnackbar('Ошибка при изменении статуса праздника', { variant: 'error' });
+    } finally {
+      setIsHolidayLoading(false);
+      setAnchorEl(null);
+      setSelectedHolidayDate(null);
+    }
+  };
+  
+  // Закрытие popover
+  const handleClosePopover = () => {
+    setAnchorEl(null);
+    setSelectedHolidayDate(null);
   };
   
   const assignFiveTwoSchedule = async () => {
@@ -317,6 +513,14 @@ const StaffSchedule: React.FC = () => {
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: checked
     }));
   };
 
@@ -628,14 +832,28 @@ const StaffSchedule: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Сотрудник</TableCell>
-                    {weekDays.map(day => (
-                      <TableCell key={day.toString()} align="center">
-                        <Box>
-                          <Box>{format(day, 'EEEEEE', { locale: ru })}</Box>
-                          <Box>{format(day, 'd MMM', { locale: ru })}</Box>
-                        </Box>
-                      </TableCell>
-                    ))}
+                    {weekDays.map(day => {
+                      const isDayHoliday = isHoliday(day);
+                      return (
+                        <TableCell
+                          key={day.toString()}
+                          align="center"
+                          onClick={(e) => handleDayHeaderClick(e, day)}
+                          sx={{
+                            cursor: 'pointer',
+                            backgroundColor: isDayHoliday ? 'error.light' : 'inherit',
+                            '&:hover': {
+                              backgroundColor: isDayHoliday ? 'error.light' : 'action.hover'
+                            }
+                          }}
+                        >
+                          <Box>
+                            <Box>{format(day, 'EEEEEE', { locale: ru })}</Box>
+                            <Box>{format(day, 'd MMM', { locale: ru })}</Box>
+                          </Box>
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -705,59 +923,80 @@ const StaffSchedule: React.FC = () => {
                             </Box>
                           </TableCell>
                           {weekDays.map(day => {
+                            const isDayHoliday = isHoliday(day);
                             const dayShifts = getShiftsForDay(staffId, day);
                             return (
                               <TableCell
                                 key={day.toString()}
                                 onClick={() => {
-                                  setFormData({
-                                    ...formData,
-                                    staffId: staffId,
-                                    staffName: staffMember.fullName,
-                                    date: format(day, 'yyyy-MM-dd')
-                                  });
-                                  setModalOpen(true);
+                                  if (!isDayHoliday && !isWeekend(day)) { // Не открываем модальное окно для праздничных дней и выходных
+                                    setFormData({
+                                      ...formData,
+                                      staffId: staffId,
+                                      staffName: staffMember.fullName,
+                                      date: format(day, 'yyyy-MM-dd')
+                                    });
+                                    setModalOpen(true);
+                                  }
                                 }}
                                 sx={{
                                   minHeight: '100px',
                                   border: '1px solid',
                                   borderColor: 'divider',
+                                  backgroundColor: isDayHoliday ? 'error.light' : isWeekend(day) ? 'grey.100' : 'inherit',
                                   '&:hover': {
-                                    backgroundColor: 'action.hover',
-                                    cursor: 'pointer'
+                                    backgroundColor: isDayHoliday ? 'error.light' : isWeekend(day) ? 'grey.200' : 'action.hover',
+                                    cursor: (isDayHoliday || isWeekend(day)) ? 'not-allowed' : 'pointer'
                                   }
                                 }}
                               >
-                                {dayShifts.map(shift => (
+                                {isDayHoliday || isWeekend(day) ? (
                                   <Box
-                                    key={shift.id}
-                                    sx={{
-                                      p: 1,
-                                      mb: 1,
-                                      borderRadius: 1,
-                                      bgcolor: 'background.paper',
-                                      borderLeft: `4px solid ${theme.palette.primary.main}`,
-                                      '&:hover': {
-                                        bgcolor: 'action.selected'
-                                      }
-                                    }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleEditShift(shift);
-                                    }}
+                                    display="flex"
+                                    alignItems="center"
+                                    justifyContent="center"
+                                    height="100%"
+                                    color={isDayHoliday ? "error.main" : "text.secondary"}
+                                    fontSize="0.8rem"
                                   >
-                                    <Box sx={{ fontSize: 12 }}>
-                                      {shift.startTime} - {shift.endTime}
-                                    </Box>
-                                    <Box mt={0.5}>
-                                      <Chip
-                                        label={SHIFT_STATUSES[shift.status]}
-                                        size="small"
-                                        color={STATUS_COLORS[shift.status] as any}
-                                      />
-                                    </Box>
+                                    {isDayHoliday ? "Праздник" : "Выходной"}
                                   </Box>
-                                ))}
+                                ) : (
+                                  dayShifts.map(shift => (
+                                    <Box
+                                      key={shift.id}
+                                      sx={{
+                                        p: 1,
+                                        mb: 1,
+                                        borderRadius: 1,
+                                        bgcolor: 'background.paper',
+                                        borderLeft: `4px solid ${theme.palette.primary.main}`,
+                                        '&:hover': {
+                                          bgcolor: 'action.selected'
+                                        }
+                                      }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        // Проверяем, не является ли день праздничным или выходным перед редактированием
+                                        const shiftDate = new Date(shift.date);
+                                        if (!isHoliday(shiftDate) && !isWeekend(shiftDate)) {
+                                          handleEditShift(shift);
+                                        }
+                                      }}
+                                    >
+                                      <Box sx={{ fontSize: 12 }}>
+                                        {shift.startTime} - {shift.endTime}
+                                      </Box>
+                                      <Box mt={0.5}>
+                                        <Chip
+                                          label={SHIFT_STATUSES[shift.status]}
+                                          size="small"
+                                          color={STATUS_COLORS[shift.status] as any}
+                                        />
+                                      </Box>
+                                    </Box>
+                                  ))
+                                )}
                               </TableCell>
                             );
                           })}
@@ -767,6 +1006,34 @@ const StaffSchedule: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+            
+            {/* Popover для установки праздника */}
+            <Popover
+              open={Boolean(anchorEl)}
+              anchorEl={anchorEl}
+              onClose={handleClosePopover}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'center',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'center',
+              }}
+            >
+              <Box p={2}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={selectedHolidayDate ? isHoliday(new Date(selectedHolidayDate)) : false}
+                      onChange={handleHolidayToggle}
+                      disabled={isHolidayLoading}
+                    />
+                  }
+                  label="Является праздником"
+                />
+              </Box>
+            </Popover>
           </CardContent>
         </Card>
 

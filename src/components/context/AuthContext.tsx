@@ -9,6 +9,7 @@ import React, {
 import { getCurrentUser, isAuthenticated, logout } from '../../services/auth';
 import { User } from '../../types/common';
 import { useNavigate } from 'react-router-dom';
+import { CircularProgress } from '@mui/material';
 
 // Интерфейс контекста авторизации
 interface AuthContextType {
@@ -189,7 +190,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }, [loading, checkAuth, navigate]);
 
   if (loading || checking) {
-    return <div>Проверка авторизации...</div>;
+    return <CircularProgress color="secondary" />
+
   }
 
   if (!isLoggedIn) return null;
