@@ -26,8 +26,8 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
       const hours = nowAstana.getHours();
       const minutes = nowAstana.getMinutes();
       
-      // Активно с 6:30 до 7:30
-      const isActive = (hours === 6 && minutes >= 30) || (hours === 9 && minutes <= 30);
+      // Активно с 6:30 до 9:30
+      const isActive = (hours === 6 && minutes >= 30) || (hours > 6 && hours < 9) || (hours === 9 && minutes <= 30);
       setIsCheckInActive(isActive);
     };
 
