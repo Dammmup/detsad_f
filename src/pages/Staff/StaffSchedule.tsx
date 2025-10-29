@@ -56,31 +56,18 @@ import { getUsers } from '../../services/users';
 import { User } from '../../types/common';
 import { getAllHolidays, createHoliday, deleteHoliday, Holiday } from '../../services/holidays';
 
-const SHIFT_STATUSES: Record<ShiftStatus, string> = {
-  scheduled: 'Запланирована',
+const SHIFT_STATUSES = {
+ scheduled: 'Запланирована',
   completed: 'Завершена',
-  cancelled: 'Отменена',
-  no_show: 'Неявка',
-  confirmed: 'Подтверждена',
-  absent: 'Отсутствует',
-  checked_in: 'Прибыл',
-  checked_out: 'Ушёл'
-};
+  in_progress: 'В процессе',
+  absent: 'Отсутствует'
+} as const;
 
 const STATUS_COLORS = {
   scheduled: 'default',
-  completed: 'success',
-  cancelled: 'error',
-  no_show: 'warning',
-  confirmed: 'info',
-  late:'primary',
+ completed: 'success',
   absent: 'error',
-  checked_in: 'success',
-  checked_out: 'info',
-  on_break: 'warning',
-  overtime: 'secondary',
-  early_departure: 'warning',
-  present: 'success'
+  in_progress: 'primary'
 } as const;
 
 // Role colors and labels
@@ -989,9 +976,9 @@ const StaffSchedule: React.FC = () => {
                                       </Box>
                                       <Box mt={0.5}>
                                         <Chip
-                                          label={SHIFT_STATUSES[shift.status]}
+                                          label={SHIFT_STATUSES[shift.status as keyof typeof SHIFT_STATUSES] || shift.status}
                                           size="small"
-                                          color={STATUS_COLORS[shift.status] as any}
+                                          color={STATUS_COLORS[shift.status as keyof typeof STATUS_COLORS] || 'default'}
                                         />
                                       </Box>
                                     </Box>
@@ -1141,11 +1128,9 @@ const StaffSchedule: React.FC = () => {
                       label="Статус"
                       required
                     >
-                      {Object.entries(SHIFT_STATUSES).map(([value, label]) => (
-                        <MenuItem key={value} value={value}>
-                          {label}
-                        </MenuItem>
-                      ))}
+                      <MenuItem value="scheduled">Запланирована</MenuItem>
+                      <MenuItem value="completed">Завершена</MenuItem>
+                      <MenuItem value="in_progress">В процессе</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>

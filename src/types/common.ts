@@ -16,7 +16,8 @@ export enum UserRole {
   staff = 'staff',
   parent = 'parent',
   child = 'child',
-  substitute = 'substitute'
+  substitute = 'substitute',
+  rent = 'rent'
 }
 
 export interface Group {
@@ -185,12 +186,8 @@ export const STATUS_COLORS: Record<string, StatusColor> = {
   // Статусы для смен
   'scheduled': 'default',
   'completed': 'success',
-  'cancelled': 'error',
-  'no_show': 'warning',
-  'confirmed': 'info',
   'late': 'primary',
   // Статусы для посещений
-  'checked_in': 'success',
   'checked_out': 'info',
   'on_break': 'warning',
   'overtime': 'secondary',
@@ -208,7 +205,6 @@ export const STATUS_COLORS: Record<string, StatusColor> = {
   'draft_payment': 'default',
   // Добавляем недостающие статусы
   'absent_shift': 'error',
-  'checked_in_shift': 'success',
   'checked_out_shift': 'info',
   'on_break_shift': 'warning',
   'overtime_shift': 'secondary',
@@ -222,11 +218,7 @@ export const STATUS_TEXT: Record<string, string> = {
   // Статусы для смен
   'scheduled': 'Запланирована',
   'completed': 'Завершена',
-  'cancelled': 'Отменена',
-  'no_show': 'Не явка',
-  'confirmed': 'Подтверждена',
   // Статусы для посещений
-  'checked_in': 'Прибыл',
   'checked_out': 'Ушёл',
   'absent': 'Отсутствует',
   // Статусы аренды и оплаты детей
@@ -243,7 +235,6 @@ export const STATUS_TEXT: Record<string, string> = {
 
   // Добавляем недостающие статусы
   'absent_shift': 'Отсутствует',
-  'checked_in_shift': 'Прибыл',
   'checked_out_shift': 'Ушёл'
 };
 
@@ -252,12 +243,9 @@ export const STATUS_TEXT: Record<string, string> = {
 export enum ShiftStatus {
   scheduled = 'scheduled',
   completed = 'completed',
-  cancelled = 'cancelled',
-  no_show = 'no_show',
-  confirmed = 'confirmed',
   absent = 'absent',
-  checked_in = 'checked_in',
-  checked_out = 'checked_out'
+  checked_out = 'checked_out',
+  in_progress='in_progress'
 }
 
 export interface Shift {
@@ -269,12 +257,15 @@ export interface Shift {
   date: string;
   startTime: string;
   endTime: string;
+  actualStart?: string;
+  actualEnd?: string;
   breakTime?: number;
   status: ShiftStatus;
   notes?: string;
   createdAt: string;
   updatedAt: string;
   alternativeStaffId?: string; // Альтернативный сотрудник для отметки посещаемости
+  
 }
 
 export interface ShiftFormData {

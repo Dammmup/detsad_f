@@ -18,24 +18,7 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
   const [isCheckInActive, setIsCheckInActive] = useState(false);
 
   // Проверка времени для активации кнопки
-  useEffect(() => {
-    const checkTime = () => {
-      const now = new Date();
-      // Переводим время в часовой пояс Астаны (UTC+5)
-      const nowAstana = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Almaty' }));
-      const hours = nowAstana.getHours();
-      const minutes = nowAstana.getMinutes();
-      
-      // Активно с 6:30 до 9:30
-      const isActive = (hours === 6 && minutes >= 30) || (hours > 6 && hours < 9) || (hours === 9 && minutes <= 30);
-      setIsCheckInActive(isActive);
-    };
-
-    checkTime();
-    const interval = setInterval(checkTime, 60000); // Проверяем каждую минуту
-
-    return () => clearInterval(interval);
-  }, []);
+  // Этот useEffect больше не нужен, так как доступность кнопки будет определяться наличием смены.
 
   // Загрузка статуса посещаемости для текущего пользователя
   useEffect(() => {
@@ -62,7 +45,7 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
       }
     };
     fetchShiftStatus();
-  }, [currentUser]);
+  }, [currentUser, onStatusChange]);
 
   const handleCheckIn = async () => {
     if (!currentUser || !currentUser.id) return;
@@ -79,11 +62,13 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
       });
       if (myShift && myShift.id) {
         await checkIn(myShift.id);
+        // После успешной отметки прихода обновляем статус локально и вызываем onStatusChange для обновления извне
         setStatus('in_progress');
         setSnackbarMessage('Отметка о приходе успешно сохранена');
         setSnackbarSeverity('success');
         setSnackbarOpen(true);
         if (onStatusChange) onStatusChange();
+        // Убираем setTimeout, чтобы избежать преждевременного обновления статуса на 'completed'
       } else {
         setSnackbarMessage('Смена не найдена на сегодня');
         setSnackbarSeverity('error');
@@ -143,10 +128,13 @@ const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusC
   let buttonAction: (() => void) | undefined = undefined;
   let buttonDisabled = false;
 
+  if (currentUser && currentUser.role === 'admin') {
+    return null; // Не отображаем кнопку для администраторов
+  }
   if (status === 'scheduled' || status === 'no_record') {
     buttonText = 'Отметить приход';
     buttonAction = handleCheckIn;
-    buttonDisabled = loading || !isCheckInActive;
+    buttonDisabled = loading || status === 'no_record';
   } else if (status === 'in_progress') {
     buttonText = 'Отметить уход';
     buttonAction = handleCheckOut;

@@ -110,10 +110,7 @@ class AuthApiClient extends BaseApiClient {
     }
   }
 
-  /**
-   * Проверка авторизации
-   * Проверяем наличие пользователя и делаем запрос на валидацию токена на сервер
-   */
+
   async isAuthenticated(): Promise<boolean> {
     const user = this.getCurrentUser();
     

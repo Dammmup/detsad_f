@@ -42,7 +42,6 @@ const sidebarStructure: SidebarItem[] = [
       { id: 'children-list', label: 'Список детей', link: '/app/children', icon: <PeopleIcon /> },
       { id: 'children-groups', label: 'Группы', link: '/app/groups', icon: <GroupIcon /> },
       { id: 'children-attendance', label: 'Посещаемость', link: '/app/children/attendance', icon: <CalendarViewWeekIcon /> },
-      { id: 'children-payments', label: 'Оплаты за посещение', link: '/app/children/payments', icon: <AssessmentIcon /> },
     ],
   },
   {
@@ -53,6 +52,9 @@ const sidebarStructure: SidebarItem[] = [
       { id: 'staff-list', label: 'Список сотрудников', link: '/app/staff', icon: <PeopleIcon /> },
       { id: 'staff-schedule', label: 'Смены', link: '/app/staff/schedule', icon: <ScheduleIcon /> },
       { id: 'staff-attendance-tracking', label: 'Учет рабочего времени', link: '/app/staff/attendance', icon: <AssignmentIndIcon /> },
+      { id: 'staff-rent', label: 'Аренда', link: '/app/rent', icon: <AssignmentIndIcon /> },
+      { id: 'children-payments', label: 'Оплаты за посещение', link: '/app/children/payments', icon: <AssessmentIcon /> },
+
     ],
     visibleFor: ['admin'] // Только для администраторов
   },

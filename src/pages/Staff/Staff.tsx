@@ -124,8 +124,7 @@ setStaff(data);
   useEffect(() => {
     if (!staff.length) return;
     
-    let filtered = [...staff];
-  console.log(currentUser?.role)
+    let filtered = staff.filter(member => member.role !== 'rent');
     // Фильтрация по поисковой строке
     if (searchTerm) {
       const search = searchTerm.toLowerCase();

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, CircularProgress, Alert, Button, useMediaQuery, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  MenuItem, Select, InputLabel, FormControl, Avatar, Tooltip, Snackbar
+  MenuItem, Select, InputLabel, FormControl, Avatar, Tooltip, Snackbar, Autocomplete
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
 import { IChildPayment, Child, Group } from '../../types/common';
@@ -35,6 +35,7 @@ const ChildPayments: React.FC = () => {
   
   // Фильтрованные платежи
   const [filteredPayments, setFilteredPayments] = useState<IChildPayment[]>([]);
+  const [childSearch, setChildSearch] = useState('');
 
   const isMobile = useMediaQuery('(max-width:900px)');
 
@@ -526,27 +527,26 @@ const ChildPayments: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Box mt={2} display="flex" flexDirection="column" gap={2}>
-            <TextField
-              select
-              label="Ребенок"
-              value={newPayment.childId}
-              onChange={(e) => setNewPayment({...newPayment, childId: e.target.value})}
-              SelectProps={{
-                native: true,
+            <Autocomplete
+              options={children}
+              getOptionLabel={(option) => {
+                const group = groups.find(g => g._id === (typeof option.groupId === 'object' ? option.groupId?._id : option.groupId));
+                return `${option.fullName} (${group ? group.name : 'Без группы'})`;
               }}
-            >
-              <option value="">Не выбран</option>
-              {children.map((child) => {
-                const groupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
-                const groupName = groupId ? getGroupName(groupId as string) : 'Без группы';
-                
-                return (
-                  <option key={child._id} value={child._id}>
-                    {child.fullName} ({groupName})
-                  </option>
-                );
-              })}
-            </TextField>
+              value={children.find(c => c._id === newPayment.childId) || null}
+              onChange={(_, newValue) => {
+                setNewPayment({ ...newPayment, childId: newValue?._id || '' });
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Ребенок"
+                  variant="outlined"
+                  onChange={(e) => setChildSearch(e.target.value)}
+                />
+              )}
+              noOptionsText="Ребенок не найден"
+            />
             <TextField
               label="Период (например, 2025-10)"
               value={newPayment.period}

@@ -34,7 +34,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [logoutInProgress, setLogoutInProgress] = useState(false);
 
-  // Проверка авторизации
   const checkAuthStatus = async () => {
     setLoading(true);
 
@@ -113,7 +112,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Проверка авторизации снаружи
   const checkAuth = useCallback(async (): Promise<boolean> => {
     try {
       const currentUser = getCurrentUser();

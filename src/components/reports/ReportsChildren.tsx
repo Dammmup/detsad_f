@@ -41,6 +41,7 @@ interface ChildReportRow {
   id: string;
   fullName: string;
   groupName: string;
+  groupId: string;
   parentName: string;
   parentPhone: string;
   attendanceRate: number; // Процент посещаемости
@@ -146,6 +147,7 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
             id: child._id,
             fullName: child.fullName,
             groupName: group?.name || 'Не указана',
+            groupId: group?._id || '',
             parentName: child.parentName || 'Не указан',
             parentPhone: child.parentPhone || 'Не указан',
             attendanceRate,
@@ -284,8 +286,8 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
 
   // Фильтрация строк по группе и поисковому запросу
   const filteredRows = rows.filter(row => {
-    const matchesGroup = !filterGroup || row.groupName === filterGroup;
-    const matchesSearch = !searchTerm || 
+    const matchesGroup = !filterGroup || row.groupId === filterGroup;
+    const matchesSearch = !searchTerm ||
       row.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       row.parentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       row.groupName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -390,7 +392,7 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
               >
                 <MenuItem value="">Все группы</MenuItem>
                 {groups.map((group: any) => (
-                  <MenuItem key={group._id} value={group.name}>{group.name}</MenuItem>
+                  <MenuItem key={group._id} value={group._id}>{group.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>

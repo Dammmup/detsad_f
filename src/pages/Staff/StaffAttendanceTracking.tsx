@@ -21,8 +21,8 @@ import { exportStaffAttendance, getCurrentPeriod } from '../../utils/excelExport
     staffId: string | undefined;
     staffName: string;
     date: string;
-    checkInTime?: string;
-    checkOutTime?: string;
+    actualStart?: string;
+    actualEnd?: string;
     status: 'checked_in' | 'checked_out' | 'on_break' | 'overtime' | 'absent';
     originalStatus?: ShiftStatus; // Добавляем оригинальный статус смены
     workDuration?: number;
@@ -75,7 +75,8 @@ const roleTranslations: Record<string, string> = {
   // Дополнительные роли
   'staff': 'Сотрудник',
   'substitute': 'Подменный сотрудник',
-  'intern': 'Стажер'
+  'intern': 'Стажер',
+  'rent': 'Аренда'
 };
 
 // Функция для перевода роли на русский
@@ -87,7 +88,7 @@ const StaffAttendanceTracking: React.FC = () => {
   const [staffList, setStaffList] = useState<any[]>([]);
   const [records, setRecords] = useState<TimeRecord[]>([]);
   const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0],
+    from: new Date().toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0]
   });
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -111,25 +112,21 @@ const StaffAttendanceTracking: React.FC = () => {
   const attendanceStatusColors = {
     scheduled: 'default',
     completed: 'success',
-    cancelled: 'error',
-    no_show: 'error',
     late: 'warning',
-    confirmed: 'success'
+    in_progress: 'primary'
   };
 
   const attendanceStatusLabels = {
     scheduled: 'Запланировано',
     completed: 'Завершено',
-    cancelled: 'Отменено',
-    no_show: 'Не явился',
-    confirmed: 'Подтверждено'
+    in_progress: 'В процессе'
   };
 
   useEffect(() => {
     const fetchStaff = async () => {
       try {
         const users = await getUsers();
-  setStaffList(users);
+  setStaffList(users.filter((user: any) => user.active === true));
       } catch {
         setStaffList([]);
       }
@@ -168,9 +165,7 @@ const StaffAttendanceTracking: React.FC = () => {
                const statusMap: Record<string, TimeRecord['status']> = {
                  'scheduled': 'absent', // Запланированная смена - сотрудник еще не пришел
                  'completed': 'checked_out',
-                 'cancelled': 'absent',
-                 'no_show': 'absent',
-                 'confirmed': 'checked_in'
+                 'in_progress': 'checked_in'
                };
                
                return {
@@ -178,8 +173,8 @@ const StaffAttendanceTracking: React.FC = () => {
                  staffId: shift.staffId,
                  staffName: shift.staffName || (shift.staffId && typeof shift.staffId === 'object' && '_id' in shift.staffId ? (shift.staffId as any).fullName : getStaffName(shift.staffId || '')),
                  date: shift.date,
-                 checkInTime: shift.startTime,
-                 checkOutTime: shift.endTime,
+                 actualStart: shift.actualStart,
+                 actualEnd: shift.actualEnd,
                  status: statusMap[shift.status] || 'checked_in',
                  originalStatus: shift.status as ShiftStatus, // Сохраняем оригинальный статус для проверки
                  workDuration: shift.startTime && shift.endTime ?
@@ -243,8 +238,8 @@ const StaffAttendanceTracking: React.FC = () => {
   const [markForm, setMarkForm] = useState({
     staffId: '',
     date: new Date().toISOString().slice(0, 10),
-    checkInTime: '',
-    checkOutTime: '',
+    actualStart: '',
+    actualEnd: '',
     status: 'checked_in',
     notes: ''
   });
@@ -298,39 +293,41 @@ const StaffAttendanceTracking: React.FC = () => {
         const lateMinutes = Math.max(0, Math.floor((now.getTime() - shiftDate.getTime()) / (1000 * 60)));
         
         // Определяем статус на основе опоздания
-        const newStatus: ShiftStatus = lateMinutes > 0 ? ShiftStatus.checked_in : ShiftStatus.checked_in;
-        
         if (myShift.id) {
-          await shiftsApi.updateStatus(myShift.id, newStatus);
+          await shiftsApi.checkIn(myShift.id);
         }
         setCheckInDialogOpen(false);
         // Обновить записи
         
-        // Также обновляем локальный стейт records
-        const updatedRecords = records.map(record => {
-          if (record.id === myShift.id) {
-            // Преобразуем статус для отображения в TimeRecord
-            const displayStatusMap: Record<string, TimeRecord['status']> = {
-              'in_progress': 'checked_in',
-              'late': 'checked_in'
-            };
-            
-            // Создаем обновленную запись с информацией об опоздании
-            const updatedRecord = {
-              ...record,
-              originalStatus: newStatus as ShiftStatus,
-              status: displayStatusMap[newStatus] || 'checked_in', // Обновляем статус для отображения
-              checkInTime: now.toTimeString().slice(0, 5) // Обновляем время прихода
-            };
-            
-            // Если сотрудник опоздал, добавляем информацию об опоздании
-            // (опоздания больше не используются)
-            
-            return updatedRecord;
-          }
-          return record;
-        });
-        setRecords(updatedRecords);
+        // Обновляем записи, чтобы отразить изменения
+        const fetchRecords = async () => {
+          let filters: any = {};
+          if (selectedStaff !== 'all') filters.staffId = selectedStaff;
+          if (dateRange.from) filters.startDate = dateRange.from;
+          if (dateRange.to) filters.endDate = dateRange.to;
+          const updatedShifts = await shiftsApi.getAll(filters);
+          const transformedRecords = updatedShifts.map((shift: Shift) => ({
+            id: shift._id || shift.id || '',
+            staffId: shift.staffId,
+            staffName: shift.staffName || (shift.staffId && typeof shift.staffId === 'object' && '_id' in shift.staffId ? (shift.staffId as any).fullName : getStaffName(shift.staffId || '')),
+            date: shift.date,
+            actualStart: shift.actualStart,
+            actualEnd: shift.actualEnd,
+            status: ({
+              'scheduled': 'absent',
+              'completed': 'checked_out',
+              'in_progress': 'checked_in'
+            } as Record<string, TimeRecord['status']>)[shift.status] || 'checked_in',
+            originalStatus: shift.status as ShiftStatus,
+            workDuration: shift.startTime && shift.endTime ?
+              calculateWorkDuration(shift.startTime, shift.endTime, 0) : 0,
+            notes: shift.notes || '',
+            penalties: { late: { minutes: 0, amount: 0 }, earlyLeave: { minutes: 0, amount: 0 }, unauthorized: { amount: 0 } },
+            bonuses: { overtime: { minutes: 0, amount: 0 }, punctuality: { amount: 0 } }
+          }));
+          setRecords(transformedRecords);
+        };
+        fetchRecords();
       }
     } catch (error) {
       console.error('Error during check-in:', error);
@@ -354,11 +351,39 @@ const StaffAttendanceTracking: React.FC = () => {
       if (myShift) {
         if (myShift.id) {
           if (myShift.id) {
-            await shiftsApi.updateStatus(myShift.id, 'completed' as ShiftStatus);
+            await shiftsApi.checkOut(myShift.id);
           }
         }
         setCheckOutDialogOpen(false);
         // Обновить записи
+        const fetchRecords = async () => {
+          let filters: any = {};
+          if (selectedStaff !== 'all') filters.staffId = selectedStaff;
+          if (dateRange.from) filters.startDate = dateRange.from;
+          if (dateRange.to) filters.endDate = dateRange.to;
+          const updatedShifts = await shiftsApi.getAll(filters);
+          const transformedRecords = updatedShifts.map((shift: Shift) => ({
+            id: shift._id || shift.id || '',
+            staffId: shift.staffId,
+            staffName: shift.staffName || (shift.staffId && typeof shift.staffId === 'object' && '_id' in shift.staffId ? (shift.staffId as any).fullName : getStaffName(shift.staffId || '')),
+            date: shift.date,
+            actualStart: shift.actualStart,
+            actualEnd: shift.actualEnd,
+            status: ({
+              'scheduled': 'absent',
+              'completed': 'checked_out',
+              'in_progress': 'checked_in'
+            } as Record<string, TimeRecord['status']>)[shift.status] || 'checked_in',
+            originalStatus: shift.status as ShiftStatus,
+            workDuration: shift.startTime && shift.endTime ?
+              calculateWorkDuration(shift.startTime, shift.endTime, 0) : 0,
+            notes: shift.notes || '',
+            penalties: { late: { minutes: 0, amount: 0 }, earlyLeave: { minutes: 0, amount: 0 }, unauthorized: { amount: 0 } },
+            bonuses: { overtime: { minutes: 0, amount: 0 }, punctuality: { amount: 0 } }
+          }));
+          setRecords(transformedRecords);
+        };
+        fetchRecords();
       }
     } catch (error) {
       console.error('Error during check-out:', error);
@@ -374,8 +399,8 @@ const StaffAttendanceTracking: React.FC = () => {
                    userId: markForm.staffId,
                    staffId: markForm.staffId,
                    date: markForm.date,
-                   startTime: markForm.checkInTime,
-                   endTime: markForm.checkOutTime,
+                   startTime: markForm.actualStart,
+                   endTime: markForm.actualEnd,
                    notes: markForm.notes
                  });
         
@@ -383,8 +408,8 @@ const StaffAttendanceTracking: React.FC = () => {
         setMarkForm({
           staffId: '',
           date: new Date().toISOString().slice(0, 10),
-          checkInTime: '',
-          checkOutTime: '',
+          actualStart: '',
+          actualEnd: '',
           status: 'checked_in',
           notes: ''
         });
@@ -403,9 +428,7 @@ const StaffAttendanceTracking: React.FC = () => {
           const statusMap: Record<string, TimeRecord['status']> = {
             'scheduled': 'absent',
             'completed': 'checked_out',
-            'cancelled': 'absent',
-            'no_show': 'absent',
-            'confirmed': 'checked_in',
+            'in_progress': 'checked_in',
             'late': 'checked_in'
           };
           
@@ -414,8 +437,8 @@ const StaffAttendanceTracking: React.FC = () => {
             staffId: shift.staffId,
             staffName: shift.staffName || getStaffName(shift.staffId || ''),
             date: shift.date,
-            checkInTime: shift.startTime,
-            checkOutTime: shift.endTime,
+            actualStart: shift.actualStart,
+            actualEnd: shift.actualEnd,
             status: statusMap[shift.status] || 'checked_in',
             originalStatus: shift.status as ShiftStatus, // Сохраняем оригинальный статус для проверки
             workDuration: shift.startTime && shift.endTime ?
@@ -483,8 +506,8 @@ const StaffAttendanceTracking: React.FC = () => {
       try {
         // Обновляем смену через API
         const updatedShift = await shiftsApi.update(selectedRecord.id, {
-          startTime: selectedRecord.checkInTime,
-          endTime: selectedRecord.checkOutTime,
+          startTime: selectedRecord.actualStart,
+          endTime: selectedRecord.actualEnd,
           notes: selectedRecord.notes,
           status: selectedRecord.originalStatus as ShiftStatus // Обновляем статус смены
         });
@@ -495,20 +518,17 @@ const StaffAttendanceTracking: React.FC = () => {
             record.id === selectedRecord.id
               ? {
                   ...record,
-                  checkInTime: updatedShift.startTime,
-                  checkOutTime: updatedShift.endTime,
+                  actualStart: updatedShift.startTime,
+                  actualEnd: updatedShift.endTime,
                   originalStatus: updatedShift.status as ShiftStatus,
                   notes: updatedShift.notes || '',
                   // Обновляем отображаемый статус в соответствии с новым оригинальным статусом
                   status: ({
                                        'scheduled': 'absent',
                                        'completed': 'checked_out',
-                                       'cancelled': 'absent',
-                                       'no_show': 'absent',
-                                       'confirmed': 'checked_in',
                                        'absent': 'absent',
-                                       'checked_in': 'checked_in',
-                                       'checked_out': 'checked_out'
+                                       'checked_out': 'checked_out',
+                                       'in_progress': 'in_progress'
                                      }[updatedShift.status] || 'checked_in') as 'checked_in' | 'checked_out' | 'absent'
                 }
               : record
@@ -541,9 +561,7 @@ const StaffAttendanceTracking: React.FC = () => {
           const statusMap: Record<string, TimeRecord['status']> = {
             'scheduled': 'absent',
             'completed': 'checked_out',
-            'cancelled': 'absent',
-            'no_show': 'absent',
-            'confirmed': 'checked_in'
+            'in_progress': 'checked_in'
           };
           
           return {
@@ -551,8 +569,8 @@ const StaffAttendanceTracking: React.FC = () => {
             staffId: shift.staffId,
             staffName: shift.staffName || getStaffName(shift.staffId || ''),
             date: shift.date,
-            checkInTime: shift.startTime,
-            checkOutTime: shift.endTime,
+            actualStart: shift.startTime,
+            actualEnd: shift.endTime,
             status: statusMap[shift.status] || 'checked_in',
             originalStatus: shift.status as ShiftStatus, // Сохраняем оригинальный статус для проверки
             workDuration: shift.startTime && shift.endTime ?
@@ -642,8 +660,8 @@ const StaffAttendanceTracking: React.FC = () => {
                                 <Box>
                                   <Typography variant="body2">Смена</Typography>
                                   <Typography variant="caption" color="text.secondary">
-                                    Приход: {record.checkInTime || '-'}<br/>
-                                    Уход: {record.checkOutTime || '-'}
+                                    Приход: {record.actualStart ? new Date(`1970-01-01T${record.actualStart}`).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '-'}<br/>
+                                    Уход: {record.actualEnd ? new Date(`1970-01-01T${record.actualEnd}`).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '-'}
                                   </Typography>
                                 </Box>
                               </TableCell>
@@ -865,9 +883,9 @@ const StaffAttendanceTracking: React.FC = () => {
           />
           <TextField
             label="Время прихода"
-            name="checkInTime"
+            name="actualStart"
             type="time"
-            value={markForm.checkInTime}
+            value={markForm.actualStart}
             onChange={handleMarkChange}
             fullWidth
             margin="normal"
@@ -875,9 +893,9 @@ const StaffAttendanceTracking: React.FC = () => {
           />
           <TextField
             label="Время ухода"
-            name="checkOutTime"
+            name="actualEnd"
             type="time"
-            value={markForm.checkOutTime}
+            value={markForm.actualEnd}
             onChange={handleMarkChange}
             fullWidth
             margin="normal"
@@ -956,8 +974,8 @@ const StaffAttendanceTracking: React.FC = () => {
                 <TextField
                   label="Время прихода"
                   type="time"
-                  value={selectedRecord.checkInTime || ''}
-                  onChange={(e) => setSelectedRecord(prev => prev ? {...prev, checkInTime: e.target.value} : null)}
+                  value={selectedRecord.actualStart || ''}
+                  onChange={(e) => setSelectedRecord(prev => prev ? {...prev, actualStart: e.target.value} : null)}
                   fullWidth
                   InputLabelProps={{ shrink: true }}
                 />
@@ -966,8 +984,8 @@ const StaffAttendanceTracking: React.FC = () => {
                 <TextField
                   label="Время ухода"
                   type="time"
-                  value={selectedRecord.checkOutTime || ''}
-                  onChange={(e) => setSelectedRecord(prev => prev ? {...prev, checkOutTime: e.target.value} : null)}
+                  value={selectedRecord.actualEnd || ''}
+                  onChange={(e) => setSelectedRecord(prev => prev ? {...prev, actualEnd: e.target.value} : null)}
                   fullWidth
                   InputLabelProps={{ shrink: true }}
                 />
