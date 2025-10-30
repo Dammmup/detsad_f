@@ -6,8 +6,8 @@ export interface ChildAttendanceRecord {
   groupId: string;
   date: string;
   status: 'present' | 'absent' | 'late' | 'sick' | 'vacation';
-  checkInTime?: string;
-  checkOutTime?: string;
+  actualStart?: string;
+  actualEnd?: string;
   notes?: string;
   markedBy?: string;
   createdAt?: string;

@@ -15,7 +15,7 @@ const Rent = () => {
     setError(null);
     getUsers()
       .then(data => {
-        const rentStaff = data.filter(user => user.role === 'rent');
+        const rentStaff = data.filter(user => user.tenant === true);
         setStaff(rentStaff);
       })
       .catch(err => setError(err?.message || 'Ошибка загрузки'))
@@ -42,7 +42,7 @@ const Rent = () => {
         <>
           {staff.length === 0  ? (
             <Alert severity="info" style={{ marginTop: 16 }}>
-              Нет сотрудников с ролью "Аренда".
+              Нет сотрудников с признаком арендатора.
             </Alert>
           ) : (
             <Table>

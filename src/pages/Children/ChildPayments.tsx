@@ -20,7 +20,10 @@ const ChildPayments: React.FC = () => {
   const [editingPayment, setEditingPayment] = useState<IChildPayment | null>(null);
   const [newPayment, setNewPayment] = useState({
     childId: '',
-    period: '',
+    period: {
+      start: '',
+      end: ''
+    },
     amount: 0,
     total: 0,
     status: 'active' as 'active' | 'overdue' | 'paid' | 'draft',
@@ -113,7 +116,7 @@ const ChildPayments: React.FC = () => {
       
       setNewPayment({
         childId: childIdValue as any || '',
-        period: payment.period || '',
+        period: payment.period || { start: '', end: '' },
         amount: payment.amount || 0,
         total: payment.total || 0,
         status: payment.status || 'active',
@@ -125,7 +128,10 @@ const ChildPayments: React.FC = () => {
       setEditingPayment(null);
       setNewPayment({
         childId: '',
-        period: '',
+        period: {
+          start: '',
+          end: ''
+        },
         amount: 0,
         total: 0,
         status: 'active' as const,
@@ -492,7 +498,9 @@ const ChildPayments: React.FC = () => {
                         : getGroupName(child.groupId as string)
                     ) : 'Не указана'}
                   </TableCell>
-                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>{payment.period}</TableCell>
+                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+                    {payment.period.start} - {payment.period.end}
+                  </TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>{payment.amount} ₸</TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>{payment.total} ₸</TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>{payment.accruals || 0} ₸</TableCell>
@@ -548,9 +556,30 @@ const ChildPayments: React.FC = () => {
               noOptionsText="Ребенок не найден"
             />
             <TextField
-              label="Период (например, 2025-10)"
-              value={newPayment.period}
-              onChange={(e) => setNewPayment({...newPayment, period: e.target.value})}
+              label="Период начала (например, 2025-10-01)"
+              type="date"
+              value={newPayment.period.start}
+              onChange={(e) => setNewPayment({
+                ...newPayment,
+                period: {
+                  ...newPayment.period,
+                  start: e.target.value
+                }
+              })}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="Период окончания (например, 2025-10-31)"
+              type="date"
+              value={newPayment.period.end}
+              onChange={(e) => setNewPayment({
+                ...newPayment,
+                period: {
+                  ...newPayment.period,
+                  end: e.target.value
+                }
+              })}
+              InputLabelProps={{ shrink: true }}
             />
             <TextField
               label="Сумма"

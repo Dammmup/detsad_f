@@ -8,8 +8,8 @@ export interface StaffAttendanceRecord {
     role: string;
   };
   date: Date;
-  checkInTime?: Date;
- checkOutTime?: Date;
+  actualStart?: Date;
+ actualEnd?: Date;
   workDuration?: number;
   breakDuration?: number;
   overtimeDuration?: number;

@@ -94,6 +94,7 @@ export interface User {
   // Добавляем поля, которые могут отсутствовать в User, но есть в других интерфейсах
   staffId?: string;
   staffName?: string;
+  tenant?: boolean; // Для арендаторов
 }
 
 export interface IRent {
@@ -117,10 +118,13 @@ export interface IRent {
 
 export interface IChildPayment {
   _id: ID;
-  id?: ID;
+ id?: ID;
   childId?: Child | string;
   userId?: User | string;
-  period: string;
+  period: {
+    start: string;
+    end: string;
+ };
   amount: number;
   total: number;
   status: 'active' | 'overdue' | 'paid' | 'draft';
