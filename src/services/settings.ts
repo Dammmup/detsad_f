@@ -12,7 +12,16 @@ interface ApiError extends Error {
   status?: number;
   data?: any;
 }
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
 
+export interface GeolocationSettings {
+  enabled: boolean;
+  coordinates: Coordinates;
+  radius: number;
+}
 // Интерфейс для настроек детского сада
 export interface KindergartenSettings {
   id?: string;
@@ -29,7 +38,11 @@ export interface KindergartenSettings {
   timezone: string;
   language: string;
   currency: string;
+  holidays?: string[];
+
+
 }
+
 
 // Интерфейс для настроек уведомлений
 export interface NotificationSettings {
@@ -104,6 +117,27 @@ const handleApiError = (error: any, context = '') => {
  * Get kindergarten settings
  * @returns {Promise<KindergartenSettings>} Kindergarten settings
  */
+
+export const settingsService = {
+  // Геолокация
+  getGeolocationSettings: () => apiClient.get<GeolocationSettings>('/settings/geolocation'),
+  updateGeolocationSettings: (data: Partial<GeolocationSettings>) => 
+    apiClient.put<GeolocationSettings>('/settings/geolocation', data),
+  updateCoordinates: (latitude: number, longitude: number) => 
+    apiClient.put<GeolocationSettings>('/settings/geolocation/coordinates', { latitude, longitude }),
+  updateRadius: (radius: number) => 
+    apiClient.put<GeolocationSettings>('/settings/geolocation/radius', { radius }),
+
+  // Настройки детского сада
+  getKindergartenSettings: () => apiClient.get<KindergartenSettings>('/settings/kindergarten'),
+  updateKindergartenSettings: (data: Partial<KindergartenSettings>) => 
+    apiClient.put<KindergartenSettings>('/settings/kindergarten', data),
+
+  // Проверка нерабочего дня
+  isNonWorkingDay: (dateStr: string) => 
+    apiClient.get<{isNonWorkingDay: boolean}>(`/settings/is-non-working-day/${dateStr}`),
+};
+
 export const getKindergartenSettings = async () => {
   try {
     console.log('Fetching kindergarten settings from API...');

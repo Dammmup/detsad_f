@@ -9,7 +9,7 @@ import React, {
 import { getCurrentUser, isAuthenticated, logout } from '../../services/auth';
 import { User } from '../../types/common';
 import { useNavigate } from 'react-router-dom';
-import { CircularProgress } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 
 // Интерфейс контекста авторизации
 interface AuthContextType {
@@ -188,8 +188,21 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }, [loading, checkAuth, navigate]);
 
   if (loading || checking) {
-    return <CircularProgress color="secondary" />
-
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+        minWidth="100vw"
+        position="fixed"
+        top="0"
+        left="0"
+        zIndex={9999}
+      >
+        <CircularProgress size={60} color="primary" />
+      </Box>
+    );
   }
 
   if (!isLoggedIn) return null;

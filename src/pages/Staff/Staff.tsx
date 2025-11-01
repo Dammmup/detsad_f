@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { getUsers, updateUser, deleteUser, usersApi } from '../../services/users';
+import { getUsers, updateUser, deleteUser, usersApi, createUser } from '../../services/users';
 import {
   Table, TableHead, TableRow, TableCell, TableBody, Paper, CircularProgress, Alert, Button, Dialog,
   DialogTitle, DialogContent, DialogActions, TextField, IconButton, InputAdornment, FormControl,
@@ -124,7 +124,7 @@ setStaff(data);
   useEffect(() => {
     if (!staff.length) return;
     
-    let filtered = staff.filter(member => member.tenant !== true);
+    let filtered = staff.filter(member => !member.tenant);
     // Фильтрация по поисковой строке
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
@@ -220,6 +220,7 @@ setStaff(data);
         handleCloseModal();
       } else {
         // Создание нового сотрудника
+        await createUser(form);
         handleCloseModal();
       }
       fetchStaff();
@@ -531,6 +532,18 @@ setStaff(data);
                   />
                 }
                 label="Активен"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={!!form.tenant}
+                    onChange={(e) => setForm({...form, tenant: e.target.checked})}
+                    name="tenant"
+                  />
+                }
+                label="Арендатор"
               />
             </Grid>
 

@@ -14,6 +14,8 @@ export * from './shifts';
 export * from './auth';
 export * from './documents';
 
+// Добавляем экспорт сервиса настроек
+
 // Утилиты API
 export { apiClient, createApiInstance, BaseApiClient, apiCache } from '../utils/api';
 

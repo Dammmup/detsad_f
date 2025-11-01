@@ -274,7 +274,17 @@ const Children: React.FC = () => {
           </Select>
         </FormControl>
       </Box>
-      {loading && <CircularProgress />}
+      {loading && (
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="200px"
+          width="100%"
+        >
+          <CircularProgress size={60} />
+        </Box>
+      )}
       {error && <Alert severity="error">{error}</Alert>}
       {!loading && children.length === 0 && (
         <Alert severity="info">Нет данных о детях</Alert>

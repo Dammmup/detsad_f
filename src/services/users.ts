@@ -237,6 +237,12 @@ class UsersApiClient extends BaseCrudApiClient<User> {
     return this.post(`${this.endpoint}/${id}/reset-password`);
   }
 
+  /**
+   * Генерация кода для привязки Telegram
+   */
+  async generateTelegramLinkCode(id: ID): Promise<{ telegramLinkCode: string }> {
+    return this.post(`${this.endpoint}/${id}/generate-telegram-code`);
+  }
 }
 
 // Экспортируем экземпляр клиента

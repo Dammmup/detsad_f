@@ -302,7 +302,17 @@ const Groups = () => {
         Добавить группу
       </Button>
       
-      {loading && <CircularProgress />}
+      {loading && (
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="200px"
+          width="100%"
+        >
+          <CircularProgress size={60} />
+        </Box>
+      )}
       {error && <Alert severity="error">{error}</Alert>}
       
       {!loading && !error && (

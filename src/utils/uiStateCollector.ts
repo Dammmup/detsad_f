@@ -55,14 +55,14 @@ export const collectUIState = (): any => {
     };
     
     // Ищем возможные ошибки в интерфейсе
-    const errors: string[] = [];
+    const uiErrors: string[] = [];
     
     // Проверяем наличие элементов с классами ошибок
     const errorElements = document.querySelectorAll('.error, .alert, .warning, .danger, .invalid');
     errorElements.forEach(el => {
       const elementText = el.textContent?.trim() || el.getAttribute('aria-label') || el.getAttribute('title') || '';
       if (elementText) {
-        errors.push(`UI Error: ${elementText}`);
+        uiErrors.push(`UI Error: ${elementText}`);
       }
     });
     
@@ -71,7 +71,7 @@ export const collectUIState = (): any => {
     invalidElements.forEach(el => {
       const errorText = el.getAttribute('data-error') || el.getAttribute('data-invalid') || el.getAttribute('aria-errormessage') || '';
       if (errorText) {
-        errors.push(`Invalid element: ${errorText}`);
+        uiErrors.push(`Invalid element: ${errorText}`);
       }
     });
     
@@ -120,7 +120,7 @@ export const collectUIState = (): any => {
     return {
       visibleText,
       componentsState,
-      errors,
+      uiErrors,
       localStorageData,
       sessionStorageData,
       domSnapshot
@@ -130,7 +130,7 @@ export const collectUIState = (): any => {
     return {
       visibleText: '',
       componentsState: { activeRoute: window.location.pathname, url: window.location.href },
-      errors: [`Ошибка сбора состояния UI: ${error}`],
+      uiErrors: [`Ошибка сбора состояния UI: ${error}`],
       localStorageData: {},
       sessionStorageData: {},
       domSnapshot: { url: window.location.href, route: window.location.pathname, timestamp: new Date().toISOString() }
@@ -175,7 +175,7 @@ export const sendUIState = async (sessionId: string, userId?: string) => {
           ...uiState.componentsState,
           currentUser
         },
-        errors: uiState.errors,
+        uiErrors: uiState.uiErrors,
         localStorageData: uiState.localStorageData,
         sessionStorageData: uiState.sessionStorageData,
         domSnapshot: uiState.domSnapshot

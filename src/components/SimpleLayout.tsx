@@ -29,7 +29,7 @@ import StaffSchedule from '../pages/Staff/StaffSchedule';
 
 import WeeklyAttendance from '../pages/Children/WeeklyAttendance';
 import ReportsSalary from './reports/ReportsSalary';
-import { logout } from '../services/auth';
+import { logout, getCurrentUser } from '../services/auth';
 import { useNavigate } from 'react-router-dom';
 import Reports from '../pages/Reports';
 import StaffAttendanceTracking from '../pages/Staff/StaffAttendanceTracking';
@@ -97,9 +97,14 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600, letterSpacing: 1 }}>
-            Система управления детским садом
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600, letterSpacing: 1 }}>
+              Система управления детским садом
+            </Typography>
+            <Typography variant="subtitle1" noWrap component="div" sx={{ fontWeight: 400, letterSpacing: 0.5, opacity: 0.9 }}>
+              {getCurrentUser()?.fullName || ''}
+            </Typography>
+          </Box>
           <Box>
             <Button variant="outlined" color="primary" onClick={() => navigate('/app/profile')} sx={{ mr: 1, borderColor: 'white', color: 'white', '&:hover': { background: 'rgba(255,255,0.08)' } }}>
               Профиль

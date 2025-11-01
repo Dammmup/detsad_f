@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, TextField, Typography, Box, Card, CardContent, CardHeader, Divider, Grid, Alert, CircularProgress, Avatar } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { authApi, getCurrentUser } from '../../services/auth';
-import { updateUser } from '../../services/users';
+import { usersApi, updateUser } from '../../services/users';
 import { User } from '../../types/common';
 
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -20,6 +20,7 @@ const ProfilePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [telegramLinkCode, setTelegramLinkCode] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     phone: '',
     fullName: '',
@@ -163,6 +164,24 @@ const ProfilePage: React.FC = () => {
       }
     } catch (err) {
       setError('Ошибка при изменении пароля');
+      console.error(err);
+    }
+  };
+
+  const handleGenerateTelegramCode = async () => {
+    if (!user || !user.id) {
+      setError('Невозможно получить ID пользователя');
+      return;
+    }
+    try {
+      const response = await usersApi.generateTelegramLinkCode(user.id);
+      if (response.telegramLinkCode) {
+        setTelegramLinkCode(response.telegramLinkCode);
+        setSuccess('Код для привязки Telegram сгенерирован. Отправьте этот код боту.');
+        setTimeout(() => setSuccess(null), 5000); // Hide after 5 seconds
+      }
+    } catch (err) {
+      setError('Ошибка при генерации кода для Telegram');
       console.error(err);
     }
   };
@@ -328,6 +347,40 @@ const ProfilePage: React.FC = () => {
             <Button variant="contained" color="primary" onClick={() => setIsEditing(true)}>
               Редактировать профиль
             </Button>
+          )}
+        </Box>
+
+        <Divider sx={{ my: 2 }} />
+
+        <Box mt={2}>
+          <Typography variant="h6" gutterBottom>
+            Интеграция с Telegram
+          </Typography>
+          {!telegramLinkCode ? (
+            <Button variant="outlined" onClick={handleGenerateTelegramCode}>
+              Привязать Telegram
+            </Button>
+          ) : (
+            <Box>
+              <Typography>
+                Отправьте следующий код вашему Telegram-боту, чтобы завершить привязку:
+              </Typography>
+              <TextField
+                fullWidth
+                value={telegramLinkCode}
+                margin="normal"
+                InputProps={{
+                  readOnly: true,
+                }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '1.2rem',
+                    fontWeight: 'bold',
+                    color: 'primary.main',
+                  },
+                }}
+              />
+            </Box>
           )}
         </Box>
 
