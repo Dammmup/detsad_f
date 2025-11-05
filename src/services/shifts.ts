@@ -51,7 +51,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
         date: shiftData.date,
         startTime: shiftData.startTime,
         endTime: shiftData.endTime,
-        breakTime: shiftData.breakTime,
         status: shiftData.status || ShiftStatus.scheduled,
         notes: shiftData.notes,
         alternativeStaffId: shiftData.alternativeStaffId
@@ -363,6 +362,19 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     this.clearCache();
     return result;
   }
+  
+  /**
+   * Запрос смены сотрудником
+   */
+  async requestShift(shiftData: Omit<ShiftFormData, 'status'>): Promise<Shift> {
+    // При запросе смены статус всегда устанавливается в 'pending_approval'
+    const result = await this.post(`${this.endpoint}/request`, {
+      ...shiftData,
+      status: 'pending_approval' as ShiftStatus
+    });
+    this.clearCache();
+    return result;
+  }
 }
 // Получить смены сотрудника по диапазону дат
 export const getStaffShifts = async ({ staffId, startDate, endDate }: { staffId: ID, startDate: string, endDate: string }) => {
@@ -387,6 +399,11 @@ export const checkIn = async (shiftId: ID) => {
 
 export const checkOut = async (shiftId: ID) => {
   return shiftsApi.checkOut(shiftId);
+};
+
+// Новый метод для запроса смены
+export const requestShift = async (shiftData: Omit<ShiftFormData, 'status'>) => {
+  return shiftsApi.requestShift(shiftData);
 };
 
 export default shiftsApi;

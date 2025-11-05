@@ -23,7 +23,7 @@ const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ onStatusChange }) => {
   const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<'scheduled' | 'in_progress' | 'completed' | 'no_record' | 'error'>('no_record');
+  const [status, setStatus] = useState<'scheduled' | 'in_progress' | 'completed' | 'late' | 'pending_approval' | 'no_record' | 'error'>('no_record');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
@@ -49,7 +49,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ on
           return s.staffId === currentUser.id;
         });
         if (myShift) {
-          setStatus(myShift.status as 'scheduled' | 'in_progress' | 'completed');
+          setStatus(myShift.status as 'scheduled' | 'in_progress' | 'completed' | 'late' | 'pending_approval');
         } else {
           setStatus('no_record');
         }
@@ -62,7 +62,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ on
   }, [currentUser, onStatusChange]);
 
   useEffect(() => {
-    settingsService.getGeolocationSettings().then(res => {
+    settingsService.getGeolocationSettings().then((res: any) => {
       if (res.data?.enabled) {
         setGeolocation({
           latitude: res.data.coordinates.latitude,
@@ -278,7 +278,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ on
   if (currentUser && currentUser.role === 'admin') {
     return null; // Не отображаем кнопку для администраторов
   }
-  if (status === 'scheduled' || status === 'no_record') {
+  if (status === 'scheduled' || status === 'late' || status === 'pending_approval' || status === 'no_record') {
     buttonText = 'Отметить приход';
     buttonAction = handleCheckIn;
     buttonDisabled = loading || status === 'no_record';
@@ -290,7 +290,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({ on
     buttonText = 'Посещение отмечено';
     buttonAction = undefined;
     buttonDisabled = true;
-  } else if (status === 'error') {
+ } else if (status === 'error') {
     buttonText = 'Ошибка загрузки';
     buttonAction = undefined;
     buttonDisabled = true;

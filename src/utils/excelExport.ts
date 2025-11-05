@@ -431,8 +431,6 @@ export const exportStaffAttendance = async (
 
   // Переводы статусов
   const statusTranslations: { [key: string]: string } = {
-    checked_in: '✓',
-    checked_out: '✓',
     completed: '✓',
     absent: 'Н',
     no_show: 'Н',

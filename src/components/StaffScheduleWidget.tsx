@@ -14,6 +14,7 @@ import {
 import { CalendarToday, AccessTime } from '@mui/icons-material';
 import { useAuth } from './context/AuthContext';
 import { getStaffShifts } from '../services/shifts';
+import { STATUS_TEXT, STATUS_COLORS } from '../types/common';
 // import { formatTime } from '../utils/format';
 
 interface StaffScheduleWidgetProps {
@@ -210,16 +211,9 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = ({ onScheduleCha
                       
                       {shift.status && (
                         <Chip
-                          label={shift.status.charAt(0).toUpperCase() + shift.status.slice(1)}
+                          label={STATUS_TEXT[shift.status as keyof typeof STATUS_TEXT] || shift.status.charAt(0).toUpperCase() + shift.status.slice(1)}
                           size="small"
-                          color={
-                            shift.status === 'scheduled' ? 'info' :
-                            shift.status === 'in_progress' ? 'warning' :
-                            shift.status === 'completed' ? 'success' :
-                            shift.status === 'cancelled' ? 'error' :
-                            shift.status === 'no_show' ? 'error' :
-                            'default'
-                          }
+                          color={STATUS_COLORS[shift.status as keyof typeof STATUS_COLORS] || 'default'}
                           variant="filled"
                           sx={{
                             fontSize: '0.7rem',

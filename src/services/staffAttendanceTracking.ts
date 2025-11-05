@@ -7,13 +7,15 @@ export interface StaffAttendanceRecord {
     fullName: string;
     role: string;
   };
+  shiftId?: string; // Добавляем поле shiftId для связи с моделью смены
   date: Date;
   actualStart?: Date;
- actualEnd?: Date;
+  actualEnd?: Date;
   workDuration?: number;
   breakDuration?: number;
   overtimeDuration?: number;
-  status: 'present' | 'absent' | 'scheduled' | 'active' | 'completed' | 'on_break' | 'overtime' | 'checked_in' | 'checked_out' | 'missed' | 'pending_approval';
+  lateMinutes?: number;
+  earlyLeaveMinutes?: number;
   penalties: {
     late: {
       minutes: number;
@@ -41,7 +43,7 @@ export interface StaffAttendanceRecord {
     };
   };
   notes?: string;
- attachments?: string[];
+  attachments?: string[];
   approvedBy?: string;
   approvedAt?: Date;
   inZone?: boolean;
@@ -49,16 +51,14 @@ export interface StaffAttendanceRecord {
   clockOutLocation?: any;
   photoClockIn?: string;
   photoClockOut?: string;
- breakStart?: Date;
-  breakEnd?: Date;
   totalHours: number;
- regularHours: number;
+  regularHours: number;
   overtimeHours: number;
   approvedAtTimeTracking?: Date;
   approvedByTimeTracking?: string;
   isManualEntry: boolean;
   createdAt: Date;
- updatedAt: Date;
+  updatedAt: Date;
 }
 
 export interface ClockInOutData {

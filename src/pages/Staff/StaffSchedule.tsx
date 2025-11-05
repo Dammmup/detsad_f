@@ -50,25 +50,13 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { Search as SearchIcon } from '@mui/icons-material';
 
 // Types and Services
-import { Shift, ShiftStatus, ShiftFormData } from '../../types/common';
+import { Shift, ShiftStatus, ShiftFormData, STATUS_TEXT, STATUS_COLORS } from '../../types/common';
 import { getShifts, createShift, updateShift, deleteShift } from '../../services/shifts';
 import { getUsers } from '../../services/users';
 import { User } from '../../types/common';
 import { getAllHolidays, createHoliday, deleteHoliday, Holiday } from '../../services/holidays';
 
-const SHIFT_STATUSES = {
- scheduled: 'Запланирована',
-  completed: 'Завершена',
-  in_progress: 'В процессе',
-  absent: 'Отсутствует'
-} as const;
-
-const STATUS_COLORS = {
-  scheduled: 'default',
- completed: 'success',
-  absent: 'error',
-  in_progress: 'primary'
-} as const;
+// Удаляем локальные определения статусов, так как используем импортированные из common.ts
 
 // Role colors and labels
 const ROLE_COLORS: Record<string, string> = {
@@ -976,7 +964,7 @@ const StaffSchedule: React.FC = () => {
                                       </Box>
                                       <Box mt={0.5}>
                                         <Chip
-                                          label={SHIFT_STATUSES[shift.status as keyof typeof SHIFT_STATUSES] || shift.status}
+                                          label={STATUS_TEXT[shift.status as keyof typeof STATUS_TEXT] || shift.status}
                                           size="small"
                                           color={STATUS_COLORS[shift.status as keyof typeof STATUS_COLORS] || 'default'}
                                         />
@@ -1131,6 +1119,8 @@ const StaffSchedule: React.FC = () => {
                       <MenuItem value="scheduled">Запланирована</MenuItem>
                       <MenuItem value="completed">Завершена</MenuItem>
                       <MenuItem value="in_progress">В процессе</MenuItem>
+                      <MenuItem value="late">Опоздание</MenuItem>
+                      <MenuItem value="pending_approval">Ожидает подтверждения</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>

@@ -191,8 +191,9 @@ export const STATUS_COLORS: Record<string, StatusColor> = {
   'scheduled': 'default',
   'completed': 'success',
   'late': 'primary',
+  'pending_approval': 'info',
+  'in_progress': 'warning',
   // Статусы для посещений
-  'checked_out': 'info',
   'on_break': 'warning',
   'overtime': 'secondary',
   'absent': 'error',
@@ -209,7 +210,6 @@ export const STATUS_COLORS: Record<string, StatusColor> = {
   'draft_payment': 'default',
   // Добавляем недостающие статусы
   'absent_shift': 'error',
-  'checked_out_shift': 'info',
   'on_break_shift': 'warning',
   'overtime_shift': 'secondary',
   'early_departure_shift': 'warning',
@@ -222,8 +222,10 @@ export const STATUS_TEXT: Record<string, string> = {
   // Статусы для смен
   'scheduled': 'Запланирована',
   'completed': 'Завершена',
+  'in_progress': 'В процессе',
+  'pending_approval': 'Ожидает подтверждения',
+  'late': 'Опоздание',
   // Статусы для посещений
-  'checked_out': 'Ушёл',
   'absent': 'Отсутствует',
   // Статусы аренды и оплаты детей
   'active_rent': 'Активна',
@@ -239,7 +241,8 @@ export const STATUS_TEXT: Record<string, string> = {
 
   // Добавляем недостающие статусы
   'absent_shift': 'Отсутствует',
-  'checked_out_shift': 'Ушёл'
+  'pending_approval_shift': 'Ожидает подтверждения',
+  'late_shift': 'Опоздание'
 };
 
 
@@ -248,8 +251,9 @@ export enum ShiftStatus {
   scheduled = 'scheduled',
   completed = 'completed',
   absent = 'absent',
-  checked_out = 'checked_out',
-  in_progress='in_progress'
+  in_progress='in_progress',
+  pending_approval = 'pending_approval',
+  late = 'late'
 }
 
 export interface Shift {
@@ -261,9 +265,6 @@ export interface Shift {
   date: string;
   startTime: string;
   endTime: string;
-  actualStart?: string;
-  actualEnd?: string;
-  breakTime?: number;
   status: ShiftStatus;
   notes?: string;
   createdAt: string;
@@ -277,10 +278,9 @@ export interface ShiftFormData {
   staffId?: string;
   staffName?: string;
   date: string;
-  startTime: string;
-  endTime: string;
-  breakTime?: number;
-  notes?: string;
+ startTime: string;
+ endTime: string;
+ notes?: string;
   status?: ShiftStatus;
   alternativeStaffId?: string; // Альтернативный сотрудник для отметки посещаемости
 }
@@ -303,3 +303,36 @@ export interface UserFilters {
   active?: boolean;
   search?: string;
 }
+
+// 🇷🇺 Переводы ролей с английского на русский
+export const ROLE_TRANSLATIONS: Record<string, string> = {
+  // Административные роли
+  'admin': 'Администратор',
+  'manager': 'Менеджер',
+  'director': 'Директор',
+  
+  // Педагогические роли
+  'teacher': 'Воспитатель',
+  'assistant': 'Помощник воспитателя',
+  'psychologist': 'Психолог',
+  'speech_therapist': 'Логопед',
+  'music_teacher': 'Музыкальный руководитель',
+  'physical_education': 'Инструктор по физкультуре',
+  
+  // Медицинские роли
+  'nurse': 'Медсестра',
+  'doctor': 'Врач',
+  
+  // Обслуживающий персонал
+  'cook': 'Повар',
+  'cleaner': 'Уборщица',
+  'security': 'Охранник',
+  'maintenance': 'Завхоз',
+  'laundry': 'Прачка',
+  
+  // Дополнительные роли
+  'staff': 'Сотрудник',
+  'substitute': 'Подменный сотрудник',
+  'intern': 'Стажер',
+  'rent': 'Аренда'
+};
