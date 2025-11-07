@@ -11,11 +11,14 @@ const defaultForm: FoodStockLog = {
   notes: '',
 };
 
+import ExportButton from '../../components/ExportButton';
+import { exportData } from '../../utils/exportUtils';
+
 const FoodStockLogPage: React.FC = () => {
   const [rows, setRows] = useState<FoodStockLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<FoodStockLog>(defaultForm);
+  const [form, setForm] = useState<Partial<FoodStockLog>>(defaultForm);
   const [editId, setEditId] = useState<string | undefined>();
 
   const fetchRows = async () => {
@@ -79,16 +82,26 @@ const FoodStockLogPage: React.FC = () => {
     }
   };
 
+  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+    await exportData('food-stock-log', exportFormat, { rows });
+  };
+
   return (
     <Box p={3}>
       <Typography variant="h4" gutterBottom>
         Журнал учета приходов, расходов и остатков ежедневных продуктов
       </Typography>
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Button variant="contained" color="primary" onClick={() => handleOpen()} sx={{ mb: 2 }}>
+      <Stack direction="row" spacing={2} mb={2}>
+        <Button variant="contained" color="primary" onClick={() => handleOpen()}>
           Добавить запись
         </Button>
-        <Table size="small">
+        <ExportButton
+          exportTypes={[{ value: 'food-stock-log', label: 'Журнал учета продуктов' }]}
+          onExport={handleExport}
+        />
+      </Stack>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Table>
           <TableHead>
             <TableRow>
               <TableCell>Дата</TableCell>

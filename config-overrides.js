@@ -1,40 +1,32 @@
+"use strict";
 const webpack = require('webpack');
-
-module.exports = function override(config, env) {
-  // Добавляем fallbacks для Node.js модулей в webpack 5
-  config.resolve.fallback = {
-    ...config.resolve.fallback,
-    "crypto": false, // Отключаем crypto модуль (не нужен в браузере)
-    "stream": false, // Отключаем stream модуль (не нужен в браузере)
-    "buffer": false, // Отключаем buffer модуль
-    "util": false,   // Отключаем util модуль
-    "assert": false, // Отключаем assert модуль
-    "http": false,   // Отключаем http модуль
-    "https": false,  // Отключаем https модуль
-    "os": false,     // Отключаем os модуль
-    "url": false,    // Отключаем url модуль
-    "zlib": false,   // Отключаем zlib модуль
-    "querystring": false, // Отключаем querystring модуль
-    "path": false,   // Отключаем path модуль
-    "fs": false,     // Отключаем fs модуль
-  };
-
-  // Добавляем плагины для игнорирования предупреждений
-  config.plugins = [
-    ...config.plugins,
-    new webpack.IgnorePlugin({
-      resourceRegExp: /^crypto$/,
-      contextRegExp: /jsonwebtoken/,
-    }),
-    new webpack.IgnorePlugin({
-      resourceRegExp: /^stream$/,
-      contextRegExp: /jws/,
-    }),
-  ];
-
-  // Отключаем предупреждения о критических зависимостях
-  config.module.unknownContextCritical = false;
-  config.module.exprContextCritical = false;
-
-  return config;
+const path = require('path');
+module.exports = function override(config) {
+    const fallback = config.resolve.fallback || {};
+    Object.assign(fallback, {
+        crypto: require.resolve('crypto-browserify'),
+        stream: require.resolve('stream-browserify'),
+        assert: require.resolve('assert'),
+        http: require.resolve('stream-http'),
+        https: require.resolve('https-browserify'),
+        os: require.resolve('os-browserify'),
+        url: require.resolve('url'),
+        vm: require.resolve('vm-browserify'),
+    });
+    config.resolve.fallback = fallback;
+    config.plugins = (config.plugins || []).concat([
+        new webpack.ProvidePlugin({
+            process: 'process/browser',
+            Buffer: ['buffer', 'Buffer'],
+        }),
+    ]);
+    const modules = config.resolve.modules;
+    config.resolve.modules = [...modules, path.resolve(__dirname, 'src')];
+    config.module.rules.push({
+        test: /\.m?js/,
+        resolve: {
+            fullySpecified: false,
+        },
+    });
+    return config;
 };

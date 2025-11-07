@@ -46,6 +46,7 @@ import {
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import apiClient from '../../utils/api';
 
 // Types and Services
 import childrenApi, { Child } from '../../services/children';
@@ -59,6 +60,7 @@ import {
 import { useAuth } from '../../components/context/AuthContext';
 import { exportChildrenAttendance, getCurrentMonthRange, getCurrentPeriod } from '../../utils/excelExport';
 import AttendanceBulkModal from '../../components/AttendanceBulkModal';
+import ExportButton from '../../components/ExportButton';
 
 // Constants
 const ATTENDANCE_STATUSES = {
@@ -99,7 +101,6 @@ const WeeklyAttendance: React.FC = () => {
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   
   // Data
@@ -108,6 +109,42 @@ const WeeklyAttendance: React.FC = () => {
   const [attendanceData, setAttendanceData] = useState<AttendanceData>({});
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
+
+  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+    if (!selectedGroup) {
+      enqueueSnackbar('Выберите группу для экспорта', { variant: 'error' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+        const group = groups.find(g => (g.id || g._id) === selectedGroup);
+        const groupName = group ? group.name : 'Unknown Group';
+
+        const { startDate: monthStartDate, endDate: monthEndDate } = getCurrentMonthRange();
+        const period = `${format(new Date(monthStartDate), 'dd.MM.yyyy')} - ${format(new Date(monthEndDate), 'dd.MM.yyyy')}`;
+
+        const attendanceRecordsForExport = await getChildAttendance({
+          groupId: selectedGroup,
+          startDate: monthStartDate,
+          endDate: monthEndDate
+        });
+
+        await exportChildrenAttendance(
+            attendanceRecordsForExport,
+            groupName,
+            period,
+            filteredChildren
+        );
+
+        enqueueSnackbar('Отчет экспортирован', { variant: 'success' });
+    } catch (e: any) {
+      setError(e?.message || 'Ошибка экспорта');
+      enqueueSnackbar('Ошибка при экспорте', { variant: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Load initial data
   useEffect(() => {
@@ -275,42 +312,6 @@ const WeeklyAttendance: React.FC = () => {
     }
   };
 
-  // Export functions
-  const handleExportClick = (event: React.MouseEvent<HTMLElement>) => {
-    setExportMenuAnchor(event.currentTarget);
-  };
-
-  const handleExportClose = () => {
-    setExportMenuAnchor(null);
-  };
-
-  const handleExportMonth = async () => {
-    if (!selectedGroup) {
-      enqueueSnackbar('Выберите группу для экспорта', { variant: 'error' });
-      return;
-    }
-
-    try {
-      const { startDate, endDate } = getCurrentMonthRange();
-      const records = await getChildAttendance({
-        groupId: selectedGroup,
-        startDate,
-        endDate
-      });
-
-      const groupName = groups.find(g => (g.id || g._id) === selectedGroup)?.name || 'Неизвестная группа';
-      const period = getCurrentPeriod();
-
-      await exportChildrenAttendance(records, groupName, period, filteredChildren);
-      enqueueSnackbar('Отчет экспортирован', { variant: 'success' });
-    } catch (err: any) {
-      console.error('Error exporting:', err);
-      enqueueSnackbar('Ошибка при экспорте', { variant: 'error' });
-    }
-    
-    handleExportClose();
-  };
-
   // Render loading state
   if (loading && Object.keys(attendanceData).length === 0) {
     return (
@@ -347,30 +348,11 @@ const WeeklyAttendance: React.FC = () => {
                   >
                     Массовое назначение
                   </Button>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<DownloadIcon />}
-                    onClick={handleExportClick}
-                    disabled={!selectedGroup}
-                  >
-                    Экспорт
-                  </Button>
-                  <FormControl sx={{ minWidth: 200 }}>
-                    <InputLabel>Группа</InputLabel>
-                    <Select
-                      value={selectedGroup}
-                      label="Группа"
-                      onChange={handleGroupChange}
-                    >
-                      <MenuItem value="">Выберите группу</MenuItem>
-                      {groups.map((group) => (
-                        <MenuItem key={group.id || group._id} value={group.id || group._id}>
-                          {group.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+
+                  <ExportButton
+                    exportTypes={[{ value: 'children-attendance', label: 'Посещаемость детей' }]}
+                    onExport={handleExport}
+                  />
                 </Box>
               </Box>
             }
@@ -404,6 +386,19 @@ const WeeklyAttendance: React.FC = () => {
               <IconButton onClick={goToNextWeek}>
                 <ArrowForwardIosIcon />
               </IconButton>
+            </Box>
+
+            <Box mb={3}>
+              <FormControl fullWidth>
+                <InputLabel>Выберите группу</InputLabel>
+                <Select value={selectedGroup} onChange={handleGroupChange}>
+                  {groups.map(group => (
+                    <MenuItem key={group.id || group._id} value={group.id || group._id}>
+                      {group.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Box>
 
             {/* Attendance Table */}
@@ -575,20 +570,6 @@ const WeeklyAttendance: React.FC = () => {
             )}
           </CardContent>
         </Card>
-
-        {/* Export Menu */}
-        <Menu
-          anchorEl={exportMenuAnchor}
-          open={Boolean(exportMenuAnchor)}
-          onClose={handleExportClose}
-        >
-          <MenuItem onClick={handleExportMonth}>
-            <ListItemIcon>
-              <DownloadIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Экспорт за текущий месяц</ListItemText>
-          </MenuItem>
-        </Menu>
       </Box>
       
       {/* Bulk Attendance Modal */}

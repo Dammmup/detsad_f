@@ -48,6 +48,9 @@ import {
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { Search as SearchIcon } from '@mui/icons-material';
+import ExportButton from '../../components/ExportButton';
+import { exportData } from '../../utils/exportUtils';
+import { exportStaffAttendance, getCurrentMonthRange } from '../../utils/excelExport';
 
 // Types and Services
 import { Shift, ShiftStatus, ShiftFormData, STATUS_TEXT, STATUS_COLORS } from '../../types/common';
@@ -120,6 +123,22 @@ const StaffSchedule: React.FC = () => {
   const [selectedHolidayDate, setSelectedHolidayDate] = useState<string | null>(null);
   const [isHolidayLoading, setIsHolidayLoading] = useState(false);
   
+  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+    const { startDate: monthStartDate, endDate: monthEndDate } = getCurrentMonthRange();
+    const period = `${format(new Date(monthStartDate), 'dd.MM.yyyy')} - ${format(new Date(monthEndDate), 'dd.MM.yyyy')}`;
+
+    // Fetch shifts for the entire month
+    const shiftsForMonth = await getShifts(monthStartDate, monthEndDate);
+
+    try {
+        await exportStaffAttendance(shiftsForMonth, period);
+        enqueueSnackbar('Отчет экспортирован', { variant: 'success' });
+    } catch (e: any) {
+        console.error('Error exporting staff schedule:', e);
+        enqueueSnackbar('Ошибка при экспорте', { variant: 'error' });
+    }
+  };
+
   // Form state
     const [formData, setFormData] = useState<ShiftFormData>({
           userId: '',
@@ -697,11 +716,16 @@ const StaffSchedule: React.FC = () => {
               <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="h5">График смен</Typography>
                 <Box>
+                  <ExportButton
+                    exportTypes={[{ value: 'staff-schedule', label: 'График смен' }]}
+                    onExport={handleExport}
+                  />
                   <Button
                     variant="contained"
                     color="primary"
                     startIcon={<AddIcon />}
                     onClick={() => setModalOpen(true)}
+                    sx={{ ml: 2 }}
                   >
                     Добавить смену
                   </Button>

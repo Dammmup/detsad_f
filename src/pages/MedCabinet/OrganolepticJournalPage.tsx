@@ -9,6 +9,8 @@ import {
   clearOrganolepticRecords,
   generateOrganolepticByMenu
 } from '../../services/organolepticJournal';
+import ExportButton from '../../components/ExportButton';
+import { exportData } from '../../utils/exportUtils';
 
 const GROUPS = ['all', 'Ясельная', 'Младшая', 'Средняя', 'Старшая', 'Подготовительная'];
 
@@ -83,43 +85,10 @@ export default function OrganolepticJournalPage() {
     }
   };
 
-  // Экспорт в Word (docx)
-  const handleExport = async () => {
-    const { Document, Packer, Paragraph, HeadingLevel, Table: DocxTable, TableRow: DocxTableRow, TableCell: DocxTableCell } = await import('docx');
-    const { saveAs } = await import('file-saver');
-    const doc = new Document({
-      sections: [
-        {
-          children: [
-            new Paragraph({ text: 'Журнал органолептической оценки качества блюд', heading: HeadingLevel.HEADING_1 }),
-            new Paragraph({ text: `Дата: ${date}` }),
-            new Paragraph({ text: `Подпись ответственного: ${responsibleSignature}` }),
-            new DocxTable({
-              rows: [
-                new DocxTableRow({
-                  children: [
-                    'Блюдо', 'Группа', 'Внешний вид', 'Вкус', 'Запах', 'Решение'
-                  ].map(h => new DocxTableCell({ children: [new Paragraph(h)] })),
-                }),
-                ...records.map(r => new DocxTableRow({
-                  children: [
-                    r.dish,
-                    r.group,
-                    r.appearance,
-                    r.taste,
-                    r.smell,
-                    r.decision
-                  ].map(val => new DocxTableCell({ children: [new Paragraph(val)] })),
-                })),
-              ],
-            }),
-          ],
-        },
-      ],
-    });
-    Packer.toBlob(doc).then(blob => {
-      saveAs(blob, 'Журнал_органолептической_оценки.docx');
-    });
+
+
+const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+    await exportData('organoleptic-journal', exportFormat, { date, group, responsibleSignature, records });
   };
 
   return (
@@ -128,7 +97,10 @@ export default function OrganolepticJournalPage() {
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
         <Button variant="contained" color="secondary" onClick={handleGenerateByMenu}>Сгенерировать по меню</Button>
         <Button variant="outlined" color="error" onClick={handleClearAll}>Очистить</Button>
-        <Button variant="outlined" onClick={handleExport}>Экспорт в Word</Button>
+        <ExportButton
+          exportTypes={[{ value: 'organoleptic-journal', label: 'Журнал органолептической оценки' }]}
+          onExport={handleExport}
+        />
       </Stack>
       <Paper sx={{ p: 2, mb: 2 }}>
         <Typography variant="h6" gutterBottom>Основная информация</Typography>

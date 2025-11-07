@@ -17,7 +17,7 @@ export enum UserRole {
   parent = 'parent',
   child = 'child',
   substitute = 'substitute',
-  rent = 'rent'
+  tenant = 'tenant'
 }
 
 export interface Group {
@@ -334,5 +334,5 @@ export const ROLE_TRANSLATIONS: Record<string, string> = {
   'staff': 'Сотрудник',
   'substitute': 'Подменный сотрудник',
   'intern': 'Стажер',
-  'rent': 'Аренда'
+  'tenant': 'Арендатор'
 };

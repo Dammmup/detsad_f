@@ -8,18 +8,18 @@ import { Add, Edit, Delete} from '@mui/icons-material';
 import childrenApi, { Child } from '../../services/children';
 import {  groupsApi } from '../../services/groups';
 import { Group } from '../../types/common';
-import { exportChildrenList } from '../../utils/excelExport';
-import ExportMenuButton from '../../components/ExportMenuButton';
-import { apiClient } from '../../utils/api';
+import apiClient from '../../utils/api';
 import ChildrenModal from '../../components/ChildrenModal';
 
+import ExportButton from '../../components/ExportButton';
+
 const Children: React.FC = () => {
- const [children, setChildren] = useState<Child[]>([]);
+  const [children, setChildren] = useState<Child[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
- const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
- const [editingChild, setEditingChild] = useState<Child | null>(null);
+  const [editingChild, setEditingChild] = useState<Child | null>(null);
   
   // Состояния для фильтрации
   const [nameFilter, setNameFilter] = useState('');
@@ -38,18 +38,24 @@ const Children: React.FC = () => {
     return groupIndex !== -1 ? colors[groupIndex % colors.length] : '#B0B0B0';
   };
 
-  // Экспорт: скачать файл
-  const handleExportDownload = () => {
-    exportChildrenList(children, undefined);
-  };
-
-  // Экспорт: отправить на email
-  const handleExportEmail = async () => {
+  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+    setLoading(true);
     try {
-      await apiClient.post('/exports/children', { action: 'email' });
-      alert('Документ отправлен на почту администратора');
-    } catch (e) {
-      alert('Ошибка отправки на почту');
+      const response = await apiClient.post('/export/children', 
+        { format: exportFormat, filters: { name: nameFilter, group: groupFilter } },
+        { responseType: 'blob' }
+      );
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `children.${exportFormat}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e: any) {
+      setError(e?.message || 'Ошибка экспорта');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -176,20 +182,20 @@ const Children: React.FC = () => {
           )}
         </Box>
         <Box mb={isMobile ? 0 : 2} display={isMobile ? 'flex' : 'block'} flexDirection={isMobile ? 'column' : 'row'} gap={isMobile ? 1 : 0}>
-          <ExportMenuButton
-            onDownload={handleExportDownload}
-            onSendEmail={handleExportEmail}
-            label="Экспортировать"
+          <ExportButton
+            exportTypes={[{ value: 'children', label: 'Список детей' }]}
+            onExport={handleExport}
           />
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => handleOpenModal()}
+            sx={{ width: isMobile ? '10%' : 'auto', mt: isMobile ? 1 : 0 }}
+          >
+            Добавить ребёнка
+          </Button>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => handleOpenModal()}
-          sx={{ width: isMobile ? '10%' : 'auto', mt: isMobile ? 1 : 0 }}
-        >
-          Добавить ребёнка
-        </Button>
+
       </Box>
       
       {/* Вкладки для активных и неактивных детей */}

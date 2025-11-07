@@ -1,57 +1,42 @@
-
-
 import React, { useState } from 'react';
 import { Box, Typography, Paper, Button, Table, TableHead, TableRow, TableCell, TableBody, Stack, TextField, Select, MenuItem, InputAdornment, IconButton } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import { exportFoodNormsToDocx } from '../../services/foodNormsControl';
+import ExportButton from '../../components/ExportButton';
+import { exportData } from '../../utils/exportUtils';
 
+const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+const GROUPS = ['Группа 1', 'Группа 2', 'Группа 3'];
+const STATUSES = ['Все', 'В норме', 'Отклонение', 'Превышение'];
 
-interface FoodNormsRow {
-  product: string;
-  norm: number;
-  actual: number;
-  deviation: number;
-  status?: string;
-}
-
-const initialRows: FoodNormsRow[] = [];
-const GROUPS = ['Без группы', 'Ясельная', 'Младшая', 'Средняя', 'Старшая', 'Подготовительная'];
-const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-const STATUSES = ['Все статусы', 'В норме', 'Отклонение', 'Превышение'];
-
-
-export default function FoodNormsControlPage() {
-  const [rows, setRows] = useState<FoodNormsRow[]>(initialRows);
-  const [note, setNote] = useState('');
-  const [month, setMonth] = useState('Сентябрь');
-  const [year, setYear] = useState('2025');
-  const [group, setGroup] = useState('Без группы');
+const FoodNormsControlPage: React.FC = () => {
+  const [rows, setRows] = useState<any[]>([]);
+  const [filteredRows, setFilteredRows] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('Все статусы');
+  const [month, setMonth] = useState(MONTHS[0]);
+  const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [group, setGroup] = useState(GROUPS[0]);
+  const [status, setStatus] = useState('Все');
+  const [note, setNote] = useState('');
 
-  // Фильтрация по поиску и статусу
-  const filteredRows = rows.filter(row =>
-    (search === '' || row.product.toLowerCase().includes(search.toLowerCase())) &&
-    (status === 'Все статусы' || row.status === status)
-  );
-
-  // Автозаполнение по меню (заглушка)
   const handleAutoFill = () => {
-    setRows([
-      { product: 'Молоко', norm: 200, actual: 190, deviation: -5, status: 'В норме' },
-      { product: 'Хлеб', norm: 50, actual: 60, deviation: 20, status: 'Превышение' },
-      { product: 'Мясо', norm: 80, actual: 70, deviation: -12, status: 'Отклонение' },
-    ]);
+    // Placeholder for auto-fill logic
   };
 
   const handleAdd = () => {
     setRows(prev => [...prev, { product: '', norm: 0, actual: 0, deviation: 0, status: 'В норме' }]);
   };
 
-  // Экспорт в docx
-  const handleExport = () => {
-    exportFoodNormsToDocx({ rows: filteredRows, note, month, year, group });
+  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+    await exportData('food-norms-control', exportFormat, { rows: filteredRows, note, month, year, group });
   };
+
+  function getStatus(norm: number, actual: number) {
+    if (!norm) return 'В норме';
+    const deviation = Math.abs(((actual - norm) / norm) * 100);
+    if (deviation <= 10) return 'В норме';
+    if (deviation <= 20) return 'Отклонение';
+    return 'Превышение';
+  }
 
   return (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
@@ -83,7 +68,10 @@ export default function FoodNormsControlPage() {
             {STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </Select>
           <Button variant="contained" size="small" onClick={handleAutoFill}>Генерировать по меню</Button>
-          <Button variant="contained" size="small" onClick={handleExport}>Экспорт в Word</Button>
+          <ExportButton
+            exportTypes={[{ value: 'food-norms-control', label: 'Ведомость контроля норм питания' }]}
+            onExport={handleExport}
+          />
         </Stack>
         <Table size="small" sx={{ minWidth: 800, overflowX: 'auto' }}>
           <TableHead>
@@ -146,12 +134,6 @@ export default function FoodNormsControlPage() {
       </Box>
     </Box>
   );
-
-  function getStatus(norm: number, actual: number) {
-    if (!norm) return 'В норме';
-    const deviation = Math.abs(((actual - norm) / norm) * 100);
-    if (deviation <= 10) return 'В норме';
-    if (deviation <= 20) return 'Отклонение';
-    return 'Превышение';
-  }
 }
+
+export default FoodNormsControlPage;

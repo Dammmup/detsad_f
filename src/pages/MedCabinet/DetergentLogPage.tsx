@@ -10,11 +10,14 @@ const defaultForm: DetergentLog = {
   notes: '',
 };
 
+import ExportButton from '../../components/ExportButton';
+import { exportData } from '../../utils/exportUtils';
+
 const DetergentLogPage: React.FC = () => {
   const [rows, setRows] = useState<DetergentLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<DetergentLog>(defaultForm);
+  const [form, setForm] = useState<Partial<DetergentLog>>(defaultForm);
   const [editId, setEditId] = useState<string | undefined>();
 
   const fetchRows = async () => {
@@ -78,16 +81,26 @@ const DetergentLogPage: React.FC = () => {
     }
   };
 
+  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+    await exportData('detergent-log', exportFormat, { rows });
+  };
+
   return (
     <Box p={3}>
       <Typography variant="h4" gutterBottom>
         Журнал учета моющих средств
       </Typography>
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Button variant="contained" color="primary" onClick={() => handleOpen()} sx={{ mb: 2 }}>
+      <Stack direction="row" spacing={2} mb={2}>
+        <Button variant="contained" color="primary" onClick={() => handleOpen()}>
           Добавить запись
         </Button>
-        <Table size="small">
+        <ExportButton
+          exportTypes={[{ value: 'detergent-log', label: 'Журнал учета моющих средств' }]}
+          onExport={handleExport}
+        />
+      </Stack>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Table>
           <TableHead>
             <TableRow>
               <TableCell>Дата</TableCell>

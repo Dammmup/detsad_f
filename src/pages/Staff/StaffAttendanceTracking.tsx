@@ -13,8 +13,8 @@ import {
 import { getUsers } from '../../services/users';
 import shiftsApi from '../../services/shifts';
 import { staffAttendanceTrackingService } from '../../services/staffAttendanceTracking';
-import { Shift, ShiftStatus, STATUS_TEXT, STATUS_COLORS, ROLE_TRANSLATIONS } from '../../types/common';
-import { exportStaffAttendance, getCurrentPeriod } from '../../utils/excelExport';
+import {ShiftStatus, STATUS_TEXT, STATUS_COLORS, ROLE_TRANSLATIONS } from '../../types/common';
+
 
 // Интерфейс для записей учета времени
 interface TimeRecord {
@@ -24,7 +24,7 @@ interface TimeRecord {
   date: string;
  actualStart?: string;
   actualEnd?: string;
-  status: 'checked_in' | 'checked_out' | 'on_break' | 'overtime' | 'absent';
+  status: 'checked_in' | 'checked_out' | 'on_break' | 'overtime' | 'absent' | 'scheduled';
   originalStatus?: ShiftStatus; // Добавляем оригинальный статус смены
   workDuration?: number;
  breakDuration?: number;
@@ -105,85 +105,173 @@ const StaffAttendanceTracking: React.FC = () => {
  }, [staffList]);
 
   // Загрузка смен сотрудников (учет посещаемости)
-       useEffect(() => {
-         const fetchRecords = async () => {
-           try {
-             let filters: any = {};
-             if (selectedStaff !== 'all') filters.staffId = selectedStaff;
-             if (dateRange.from) filters.startDate = dateRange.from;
-             if (dateRange.to) filters.endDate = dateRange.to;
-             
-             // Загружаем данные об учете посещаемости
-             const response = await staffAttendanceTrackingService.getAllRecords(filters);
-             const attendanceRecords = response.data;
-             
-             // Преобразуем данные учета посещаемости для отображения в таблице
-             const transformedRecords = attendanceRecords.map((record: any) => {
-               // Преобразуем статусы учета посещаемости в статусы TimeRecord
-               const statusMap: Record<string, TimeRecord['status']> = {
-                 'scheduled': 'absent', // Запланированная смена - сотрудник еще не пришел
-                 'completed': 'checked_out',
-                 'in_progress': 'checked_in',
-                 'late': 'absent',
-                 'pending_approval': 'absent'
-               };
-               
-               return {
-                 id: record._id || record.id || '',
-                 staffId: record.staffId._id || record.staffId,
-                 staffName: record.staffId.fullName || getStaffName(record.staffId._id || record.staffId || ''),
-                 date: record.date,
-                 actualStart: record.actualStart ? new Date(record.actualStart).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : undefined,
-                 actualEnd: record.actualEnd ? new Date(record.actualEnd).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : undefined,
-                 status: statusMap[record.status] || record.status,
-                 originalStatus: record.status as ShiftStatus, // Сохраняем оригинальный статус для проверки
-                 workDuration: record.workDuration,
-                 breakDuration: record.breakDuration,
-                 overtimeDuration: record.overtimeDuration,
-                 lateMinutes: record.lateMinutes,
-                 earlyLeaveMinutes: record.earlyLeaveMinutes,
-                 notes: record.notes || '',
-                 penalties: record.penalties || {
-                   late: { minutes: 0, amount: 0 },
-                   earlyLeave: { minutes: 0, amount: 0 },
-                   unauthorized: { amount: 0 }
-                 },
-                 bonuses: record.bonuses || {
-                   overtime: { minutes: 0, amount: 0 }, // Не добавляем сверхурочные в смену
-                   punctuality: { amount: 0 }
-                 }
-               };
-             });
-             
-             // Фильтрация по роли и имени
-             let filteredRecords = [...transformedRecords];
-             
-             // Фильтрация по поисковой строке
-             if (searchTerm) {
-               const search = searchTerm.toLowerCase();
-               filteredRecords = filteredRecords.filter(record =>
-                 record.staffName?.toLowerCase().includes(search)
-               );
-             }
-             
-             // Фильтрация по роли
-             if (filterRole.length > 0) {
-               filteredRecords = filteredRecords.filter(record => {
-                 const staff = staffList.find(s => s.id === record.staffId || (s._id === record.staffId));
-                 const russianRole = staff ? ROLE_TRANSLATIONS[staff.role as keyof typeof ROLE_TRANSLATIONS] || staff.role : '';
-                 return filterRole.includes(russianRole);
-               });
-             }
-             
-             setRecords(filteredRecords);
-           } catch (e) {
-             console.error('Error fetching records:', e);
-             setRecords([]);
-           } finally {
-           }
-         };
-         fetchRecords();
-       }, [selectedStaff, dateRange, filterRole, searchTerm, staffList, getStaffName]);
+          useEffect(() => {
+            const fetchRecords = async () => {
+              try {
+                let filters: any = {};
+                if (selectedStaff !== 'all') filters.staffId = selectedStaff;
+                if (dateRange.from) filters.startDate = dateRange.from;
+                if (dateRange.to) filters.endDate = dateRange.to;
+                
+                // Загружаем данные об учете посещаемости
+                const response = await staffAttendanceTrackingService.getAllRecords(filters);
+                const attendanceRecords = response.data;
+                
+                // Загружаем все смены в указанный период для отображения назначенных смен
+                const shifts = await shiftsApi.getAll(filters);
+                
+                // Создаем мапу для быстрого поиска записей посещаемости по дате и сотруднику
+                const attendanceMap = new Map();
+                attendanceRecords.forEach((record: any) => {
+                  const key = `${record.staffId._id || record.staffId}-${new Date(record.date).toISOString().split('T')[0]}`;
+                  attendanceMap.set(key, record);
+                });
+                
+                // Объединяем данные смен и посещаемости
+                const allRecords: TimeRecord[] = [];
+                
+                // Добавляем все смены, включая те, по которым нет данных посещаемости
+                shifts.forEach((shift: any) => {
+                  const attendanceRecord = attendanceMap.get(`${shift.staffId._id || shift.staffId}-${shift.date}`);
+                  
+                  if (attendanceRecord) {
+                    // Если есть запись посещаемости, используем её данные
+                    const statusMap: Record<string, TimeRecord['status']> = {
+                      'scheduled': 'scheduled', // Запланированная смена - сотрудник еще не пришел
+                      'completed': 'checked_out',
+                      'in_progress': 'checked_in',
+                      'late': 'absent',
+                      'pending_approval': 'absent'
+                    };
+                    
+                    allRecords.push({
+                      id: attendanceRecord._id || attendanceRecord.id || '',
+                      staffId: attendanceRecord.staffId._id || attendanceRecord.staffId,
+                      staffName: attendanceRecord.staffId.fullName || getStaffName(attendanceRecord.staffId._id || attendanceRecord.staffId || ''),
+                      date: attendanceRecord.date,
+                      actualStart: attendanceRecord.actualStart ? new Date(attendanceRecord.actualStart).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : undefined,
+                      actualEnd: attendanceRecord.actualEnd ? new Date(attendanceRecord.actualEnd).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : undefined,
+                      status: statusMap[attendanceRecord.status] || attendanceRecord.status,
+                      originalStatus: attendanceRecord.status as ShiftStatus, // Сохраняем оригинальный статус для проверки
+                      workDuration: attendanceRecord.workDuration,
+                      breakDuration: attendanceRecord.breakDuration,
+                      overtimeDuration: attendanceRecord.overtimeDuration,
+                      lateMinutes: attendanceRecord.lateMinutes,
+                      earlyLeaveMinutes: attendanceRecord.earlyLeaveMinutes,
+                      notes: attendanceRecord.notes || '',
+                      penalties: attendanceRecord.penalties || {
+                        late: { minutes: 0, amount: 0 },
+                        earlyLeave: { minutes: 0, amount: 0 },
+                        unauthorized: { amount: 0 }
+                      },
+                      bonuses: attendanceRecord.bonuses || {
+                        overtime: { minutes: 0, amount: 0 }, // Не добавляем сверхурочные в смену
+                        punctuality: { amount: 0 }
+                      }
+                    });
+                  } else {
+                    // Если нет записи посещаемости, создаем запись только на основе смены
+                    allRecords.push({
+                      id: shift._id || shift.id || '',
+                      staffId: shift.staffId._id || shift.staffId,
+                      staffName: shift.staffId.fullName || getStaffName(shift.staffId._id || shift.staffId || ''),
+                      date: shift.date,
+                      actualStart: undefined,
+                      actualEnd: undefined,
+                      status: 'scheduled', // Статус смены - запланирована
+                      originalStatus: shift.status as ShiftStatus,
+                      workDuration: undefined,
+                      breakDuration: undefined,
+                      overtimeDuration: undefined,
+                      lateMinutes: undefined,
+                      earlyLeaveMinutes: undefined,
+                      notes: `Смена: ${shift.startTime} - ${shift.endTime}`,
+                      penalties: {
+                        late: { minutes: 0, amount: 0 },
+                        earlyLeave: { minutes: 0, amount: 0 },
+                        unauthorized: { amount: 0 }
+                      },
+                      bonuses: {
+                        overtime: { minutes: 0, amount: 0 },
+                        punctuality: { amount: 0 }
+                      }
+                    });
+                  }
+                });
+                
+                // Добавляем записи посещаемости, которые не связаны с конкретными сменами (если есть)
+                attendanceRecords.forEach((record: any) => {
+                  const key = `${record.staffId._id || record.staffId}-${new Date(record.date).toISOString().split('T')[0]}`;
+                  const shiftExists = shifts.some((shift: any) =>
+                    `${shift.staffId._id || shift.staffId}-${shift.date}` === key
+                  );
+                  
+                  if (!shiftExists) {
+                    const statusMap: Record<string, TimeRecord['status']> = {
+                      'scheduled': 'scheduled', // Запланированная смена - сотрудник еще не пришел
+                      'completed': 'checked_out',
+                      'in_progress': 'checked_in',
+                      'late': 'absent',
+                      'pending_approval': 'absent'
+                    };
+                    
+                    allRecords.push({
+                      id: record._id || record.id || '',
+                      staffId: record.staffId._id || record.staffId,
+                      staffName: record.staffId.fullName || getStaffName(record.staffId._id || record.staffId || ''),
+                      date: record.date,
+                      actualStart: record.actualStart ? new Date(record.actualStart).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : undefined,
+                      actualEnd: record.actualEnd ? new Date(record.actualEnd).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : undefined,
+                      status: statusMap[record.status] || record.status,
+                      originalStatus: record.status as ShiftStatus, // Сохраняем оригинальный статус для проверки
+                      workDuration: record.workDuration,
+                      breakDuration: record.breakDuration,
+                      overtimeDuration: record.overtimeDuration,
+                      lateMinutes: record.lateMinutes,
+                      earlyLeaveMinutes: record.earlyLeaveMinutes,
+                      notes: record.notes || '',
+                      penalties: record.penalties || {
+                        late: { minutes: 0, amount: 0 },
+                        earlyLeave: { minutes: 0, amount: 0 },
+                        unauthorized: { amount: 0 }
+                      },
+                      bonuses: record.bonuses || {
+                        overtime: { minutes: 0, amount: 0 }, // Не добавляем сверхурочные в смену
+                        punctuality: { amount: 0 }
+                      }
+                    });
+                  }
+                });
+                
+                // Фильтрация по роли и имени
+                let filteredRecords = [...allRecords];
+                
+                // Фильтрация по поисковой строке
+                if (searchTerm) {
+                  const search = searchTerm.toLowerCase();
+                  filteredRecords = filteredRecords.filter(record =>
+                    record.staffName?.toLowerCase().includes(search)
+                  );
+                }
+                
+                // Фильтрация по роли
+                if (filterRole.length > 0) {
+                  filteredRecords = filteredRecords.filter(record => {
+                    const staff = staffList.find(s => s.id === record.staffId || (s._id === record.staffId));
+                    const russianRole = staff ? ROLE_TRANSLATIONS[staff.role as keyof typeof ROLE_TRANSLATIONS] || staff.role : '';
+                    return filterRole.includes(russianRole);
+                  });
+                }
+                
+                setRecords(filteredRecords);
+              } catch (e) {
+                console.error('Error fetching records:', e);
+                setRecords([]);
+              } finally {
+              }
+            };
+            fetchRecords();
+          }, [selectedStaff, dateRange, filterRole, searchTerm, staffList, getStaffName]);
   
   const calculateWorkDuration = (start: string, end: string, breakTime: number = 0) => {
     const [startHours, startMinutes] = start.split(':').map(Number);
@@ -577,10 +665,6 @@ const StaffAttendanceTracking: React.FC = () => {
       }
    };
 
-  const handleExport = () => {
-    const period = `${dateRange.from} - ${dateRange.to}`;
-    exportStaffAttendance(records, period);
-  };
 
   const renderOverviewTab = () => (
     <Box>
@@ -729,9 +813,7 @@ const StaffAttendanceTracking: React.FC = () => {
           <Button variant="contained" startIcon={<Schedule />} onClick={handleOpenMarkDialog} sx={{ mr: 1 }}>
             Создать смену
           </Button>
-          <Button variant="outlined" onClick={handleExport}>
-            Экспорт
-          </Button>
+      
         </Box>
       </Box>
 

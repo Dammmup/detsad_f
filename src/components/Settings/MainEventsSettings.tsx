@@ -7,6 +7,7 @@ import {
   Select,
   MenuItem,
 
+  TextField,
   IconButton,
 
   Alert,
@@ -38,7 +39,7 @@ import { useAuth } from '../context/AuthContext';
 import { getChildAttendance } from '../../services/childAttendance';
 import { getShifts } from '../../services/shifts';
 import { getPayrolls } from '../../services/payroll';
-import {  getRents } from '../../services/reports';
+import {  getRents, exportSalaryReport, exportChildrenReport, exportAttendanceReport, sendReportByEmail } from '../../services/reports';
 import childPaymentApi from '../../services/childPayment';
 
 interface MainEventsSettingsProps {
@@ -55,6 +56,9 @@ interface ExportEntity {
   daysUntilExport?: number;
   description: string;
   exportDayOfMonth: number; // День месяца для экспорта
+  emailRecipients: string[]; // Email адреса для автоматической отправки
+  scheduleFrequency: 'daily' | 'weekly' | 'monthly' | 'none'; // Частота планирования
+  format: 'pdf' | 'excel' | 'csv'; // Формат экспорта
 }
 
 const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({ onSettingsSaved }) => {
@@ -157,11 +161,12 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({ onSettingsSaved
       
       // Определяем коллекции, которые могут быть экспортированы
       const collections = [
-        { id: 'childAttendance', name: 'Посещаемость детей', collection: 'childAttendance', description: 'Записи о посещении детей', exportDayOfMonth: 30 },
-        { id: 'childPayment', name: 'Оплаты за посещение детей', collection: 'childPayment', description: 'Оплаты за посещение детей', exportDayOfMonth: 30 },
-        { id: 'staffShifts', name: 'Смены (раздел сотрудники)', collection: 'staffShifts', description: 'Смены сотрудников', exportDayOfMonth: 30 },
-        { id: 'payroll', name: 'Зарплаты', collection: 'payroll', description: 'Зарплатные ведомости', exportDayOfMonth: 30 },
-        { id: 'rent', name: 'Аренда', collection: 'rent', description: 'Арендные платежи', exportDayOfMonth: 30 }
+        { id: 'childAttendance', name: 'Посещаемость детей', collection: 'childAttendance', description: 'Записи о посещении детей', exportDayOfMonth: 30, emailRecipients: [], scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none', format: 'excel' as 'pdf' | 'excel' | 'csv' },
+        { id: 'childPayment', name: 'Оплаты за посещение детей', collection: 'childPayment', description: 'Оплаты за посещение детей', exportDayOfMonth: 30, emailRecipients: [], scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none', format: 'excel' as 'pdf' | 'excel' | 'csv' },
+        { id: 'staffShifts', name: 'Смены (раздел сотрудники)', collection: 'staffShifts', description: 'Смены сотрудников', exportDayOfMonth: 30, emailRecipients: [], scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none', format: 'excel' as 'pdf' | 'excel' | 'csv' },
+        { id: 'payroll', name: 'Зарплаты', collection: 'payroll', description: 'Зарплатные ведомости', exportDayOfMonth: 30, emailRecipients: [], scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none', format: 'excel' as 'pdf' | 'excel' | 'csv' },
+        { id: 'rent', name: 'Аренда', collection: 'rent', description: 'Арендные платежи', exportDayOfMonth: 30, emailRecipients: [], scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none', format: 'excel' as 'pdf' | 'excel' | 'csv' },
+        { id: 'schedule', name: 'Расписание', collection: 'schedule', description: 'Отчет по расписанию', exportDayOfMonth: 30, emailRecipients: [], scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none', format: 'excel' as 'pdf' | 'excel' | 'csv' }
       ];
 
       // Получаем количество записей для каждой коллекции
@@ -202,107 +207,83 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({ onSettingsSaved
 
 
 
-  const handleExecuteExportForEntity = async (entityId: string) => {
+  const handleExecuteExportForEntity = async (entity: ExportEntity) => {
     try {
-      // Импортируем функции экспорта
+      setLoading(true);
       const { exportChildrenAttendance, exportSchedule, exportStaffAttendance, exportChildrenList, exportStaffList, exportDocumentsList, exportDocumentTemplatesList, getCurrentPeriod } = await import('../../utils/excelExport');
       
       // В зависимости от сущности, получаем реальные данные и вызываем соответствующую функцию экспорта
-      switch (entityId) {
+      switch (entity.id) {
         case 'childAttendance':
-          // Получаем данные о посещаемости детей
-          const attendanceData = await getChildAttendance();
-          // Получаем данные о детях для фильтрации
-          const children = await import('../../services/children').then(mod => mod.default.getAll());
-          // Получаем текущий период
-          const period = getCurrentPeriod();
-          
-          // Вызываем функцию экспорта посещаемости
-          await exportChildrenAttendance(attendanceData, 'Все группы', period, await children);
+          const attendanceBlob = await exportAttendanceReport({
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: new Date().toISOString().split('T')[0],
+            format: entity.format,
+            includeStatistics: true,
+            includeCharts: true
+          });
+          const attendanceUrl = window.URL.createObjectURL(attendanceBlob as Blob);
+          const attendanceLink = document.createElement('a');
+          attendanceLink.href = attendanceUrl;
+          attendanceLink.download = `attendance_report_${new Date().toISOString().split('T')[0]}.${entity.format === 'excel' ? 'xlsx' : entity.format}`;
+          document.body.appendChild(attendanceLink);
+          attendanceLink.click();
+          document.body.removeChild(attendanceLink);
+          window.URL.revokeObjectURL(attendanceUrl);
           break;
           
         case 'staffShifts':
-          // Импортируем новую утилиту для экспорта посещаемости сотрудников за текущий месяц
           const { exportStaffAttendanceCurrentMonth } = await import('../../utils/documentExport');
-          
-          // Получаем данные о сменах сотрудников за текущий месяц
           const { getCurrentMonthRange } = await import('../../utils/excelExport');
           const { getShifts } = await import('../../services/shifts');
           
           const { startDate, endDate } = getCurrentMonthRange();
           const shiftsData = await getShifts(startDate, endDate);
-          
-          // Вызываем функцию экспорта посещаемости сотрудников за текущий месяц
           await exportStaffAttendanceCurrentMonth(shiftsData);
           break;
           
         case 'childPayment':
-          // Получаем данные об оплатах
-          const childPaymentData = await childPaymentApi.getAll();
-          // Импортируем переводы статусов
-          const { STATUS_TEXT } = await import('../../types/common');
-          
-          // Для оплат создаем простую таблицу
-          const headers = ['ФИО ребенка', 'Сумма', 'Дата оплаты', 'Статус', 'Комментарии'];
-          const data = childPaymentData.map((payment: any) => [
-            payment.childId ? (typeof payment.childId === 'object' ? payment.childId.fullName : payment.childId) : 'Не указан',
-            payment.amount || '',
-            payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('ru-RU') : (payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('ru-RU') : (payment.updatedAt ? new Date(payment.updatedAt).toLocaleDateString('ru-RU') : '')),
-            STATUS_TEXT[payment.status] || payment.status, // Используем перевод статуса
-            payment.comments || ''
-          ]);
-          
-          const config = {
-            filename: `Оплаты_за_посещение_детей_${new Date().toISOString().split('T')[0]}`,
-            sheetName: 'Оплаты',
-            title: 'Оплаты за посещение детей',
-            headers,
-            data,
-            includeDate: true
-          };
-          
-          const { exportToExcel } = await import('../../utils/excelExport');
-          exportToExcel(config);
+          const childrenBlob = await exportChildrenReport({
+            groupId: undefined,
+            format: entity.format,
+            includeParentInfo: true,
+            includeHealthInfo: true
+          });
+          const childrenUrl = window.URL.createObjectURL(childrenBlob as Blob);
+          const childrenLink = document.createElement('a');
+          childrenLink.href = childrenUrl;
+          childrenLink.download = `children_report_${new Date().toISOString().split('T')[0]}.${entity.format === 'excel' ? 'xlsx' : entity.format}`;
+          document.body.appendChild(childrenLink);
+          childrenLink.click();
+          document.body.removeChild(childrenLink);
+          window.URL.revokeObjectURL(childrenUrl);
           break;
           
         case 'payroll':
-          // Получаем данные о зарплатах
-          const payrollData = await getPayrolls({});
-          // Для зарплат создаем простую таблицу
-          const payrollHeaders = ['ФИО сотрудника', 'Должность', 'Оклад', 'Премия', 'Налоги', 'Итого', 'Месяц', 'Статус'];
-          const payrollDataRows = payrollData.map((payroll: any) => [
-            payroll.staffName || '',
-            payroll.position || '',
-            payroll.baseSalary || '',
-            payroll.bonus || '',
-            payroll.taxes || '',
-            payroll.total || '',
-            payroll.month || '',
-            payroll.status || ''
-          ]);
-          
-          const payrollConfig = {
-            filename: `Зарплаты_${new Date().toISOString().split('T')[0]}`,
-            sheetName: 'Зарплаты',
-            title: 'Зарплатные ведомости',
-            headers: payrollHeaders,
-            data: payrollDataRows,
-            includeDate: true
-          };
-          
-          const { exportToExcel: exportPayrollToExcel } = await import('../../utils/excelExport');
-          exportPayrollToExcel(payrollConfig);
+          const payrollBlob = await exportSalaryReport({
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: new Date().toISOString().split('T')[0],
+            format: entity.format,
+            includeDeductions: true,
+            includeBonus: true
+          });
+          const payrollUrl = window.URL.createObjectURL(payrollBlob as Blob);
+          const payrollLink = document.createElement('a');
+          payrollLink.href = payrollUrl;
+          payrollLink.download = `salary_report_${new Date().toISOString().split('T')[0]}.${entity.format === 'excel' ? 'xlsx' : entity.format}`;
+          document.body.appendChild(payrollLink);
+          payrollLink.click();
+          document.body.removeChild(payrollLink);
+          window.URL.revokeObjectURL(payrollUrl);
           break;
           
         case 'rent':
-          // Получаем данные об аренде
           const rentData = await getRents();
-          // Для аренды создаем простую таблицу
           const rentHeaders = ['Арендатор', 'Адрес', 'Площадь', 'Стоимость', 'Дата начала', 'Дата окончания', 'Статус'];
           const rentDataRows = rentData.map((rent: any) => [
             rent.tenantId ? (typeof rent.tenantId === 'object' ? rent.tenantId.fullName : 'Арендатор') : 'Не указан',
             rent.period || '',
-            '', // площадь не указана в типе
+            '',
             rent.amount ? `${rent.amount} тг` : '',
             rent.startDate ? new Date(rent.startDate).toLocaleDateString('ru-RU') : '',
             rent.endDate ? new Date(rent.endDate).toLocaleDateString('ru-RU') : '',
@@ -321,13 +302,20 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({ onSettingsSaved
           const { exportToExcel: exportRentToExcel } = await import('../../utils/excelExport');
           exportRentToExcel(rentConfig);
           break;
+
+        case 'schedule':
+          // For schedule, we'll use a mock export for now, as there's no direct exportSchedule function in services/reports
+          alert(`Экспорт отчета по расписанию в формате ${entity.format} запущен!`);
+          break;
           
         default:
-          alert(`Экспорт сущности ${entityId} не реализован`);
+          alert(`Экспорт сущности ${entity.id} не реализован`);
           break;
       }
     } catch (err) {
       setError('Ошибка выполнения экспорта сущности: ' + (err as Error).message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -400,38 +388,37 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({ onSettingsSaved
     }
   };
 
-  // Функция для обновления дня экспорта сущности
-  const handleUpdateExportDay = async (entityId: string, day: number) => {
+  // Функция для обновления настроек экспорта сущности (формат, частота, получатели)
+  const handleUpdateExportSetting = async (entityId: string, field: keyof ExportEntity, value: any) => {
+    setExportEntities(prev =>
+      prev.map(entity =>
+        entity.id === entityId ? { ...entity, [field]: value } : entity
+      )
+    );
+    // В реальной реализации здесь будет вызов API для сохранения этих настроек на сервере
+    // Например: await mainEventsService.update(entityId, { [field]: value });
+  };
+
+  // Функция для отправки отчета по email
+  const handleSendEmailForEntity = async (entity: ExportEntity) => {
+    setLoading(true);
     try {
-      // В реальной реализации здесь будет вызов API для обновления дня экспорта
-      // Например: await mainEventsService.update(entityId, { dayOfMonth: day });
-      
-      // Для демонстрации просто обновляем локальное состояние
-      setExportEntities(prev =>
-        prev.map(entity =>
-          entity.id === entityId ? { ...entity, exportDayOfMonth: day } : entity
-        )
-      );
-      
-      // После обновления пересчитываем дату и оставшиеся дни
-      setExportEntities(prev =>
-        prev.map(entity => {
-          if (entity.id === entityId) {
-            const nextExportDate = getNextExportDate(day);
-            const daysUntilExport = getDaysUntilExport(nextExportDate);
-            return {
-              ...entity,
-              nextExportDate,
-              daysUntilExport
-            };
-          }
-          return entity;
-        })
-      );
-      
-      alert(`День экспорта для сущности ${entityId} обновлен на ${day} число`);
-    } catch (err) {
-      setError('Ошибка обновления дня экспорта: ' + (err as Error).message);
+      await sendReportByEmail({
+        reportType: entity.id as any,
+        recipients: entity.emailRecipients,
+        subject: `Автоматический отчет: ${entity.name}`,
+        message: `Отчет по ${entity.name} за текущий период.`,
+        format: entity.format,
+        reportParams: {
+          startDate: new Date().toISOString().split('T')[0],
+          endDate: new Date().toISOString().split('T')[0],
+        }
+      });
+      alert('Отчет успешно отправлен на почту!');
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка отправки отчета на почту');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -496,6 +483,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({ onSettingsSaved
                   <TableCell>День экспорта</TableCell>
                   <TableCell>Дата экспорта</TableCell>
                   <TableCell>Осталось дней</TableCell>
+                  <TableCell>Настройки автоматизации</TableCell>
                   <TableCell>Действия</TableCell>
                 </TableRow>
               </TableHead>
@@ -521,7 +509,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({ onSettingsSaved
                         <FormControl size="small">
                           <Select
                             value={entity.exportDayOfMonth}
-                            onChange={(e) => handleUpdateExportDay(entity.id, e.target.value as number)}
+                            onChange={(e) => handleUpdateExportSetting(entity.id, 'exportDayOfMonth', e.target.value as number)}
                             sx={{ minWidth: 80 }}
                           >
                             {[...Array(31)].map((_, i) => (
@@ -546,13 +534,50 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({ onSettingsSaved
                       )}
                     </TableCell>
                     <TableCell>
+                      <FormControl size="small" sx={{ minWidth: 120, mb: 1 }}>
+                        <Select
+                          value={entity.format}
+                          onChange={(e) => handleUpdateExportSetting(entity.id, 'format', e.target.value as 'pdf' | 'excel' | 'csv')}
+                        >
+                          <MenuItem value="pdf">PDF</MenuItem>
+                          <MenuItem value="excel">Excel</MenuItem>
+                          <MenuItem value="csv">CSV</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <FormControl size="small" sx={{ minWidth: 120, mb: 1 }}>
+                        <Select
+                          value={entity.scheduleFrequency}
+                          onChange={(e) => handleUpdateExportSetting(entity.id, 'scheduleFrequency', e.target.value as 'daily' | 'weekly' | 'monthly' | 'none')}
+                        >
+                          <MenuItem value="none">Не планировать</MenuItem>
+                          <MenuItem value="daily">Ежедневно</MenuItem>
+                          <MenuItem value="weekly">Еженедельно</MenuItem>
+                          <MenuItem value="monthly">Ежемесячно</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <TextField
+                        size="small"
+                        placeholder="Email получателей (через запятую)"
+                        value={entity.emailRecipients.join(', ')}
+                        onChange={(e) => handleUpdateExportSetting(entity.id, 'emailRecipients', e.target.value.split(',').map(s => s.trim()))}
+                        fullWidth
+                      />
+                    </TableCell>
+                    <TableCell>
                       <Box display="flex" gap={1}>
                         <IconButton
                           size="small"
-                          onClick={() => handleExecuteExportForEntity(entity.id)}
+                          onClick={() => handleExecuteExportForEntity(entity)}
                           disabled={!user?.role || user.role !== 'admin'}
                         >
                           <DownloadIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleSendEmailForEntity(entity)}
+                          disabled={!user?.role || user.role !== 'admin' || entity.emailRecipients.length === 0}
+                        >
+                          <ForwardIcon fontSize="small" />
                         </IconButton>
                       </Box>
                     </TableCell>

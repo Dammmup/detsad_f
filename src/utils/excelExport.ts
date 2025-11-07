@@ -441,102 +441,88 @@ export const exportStaffAttendance = async (
     cancelled: 'X',
   };
 
-  // Группируем данные по сотрудникам
-  const staffById: { [staffId: string]: { fullName: string, role: string, group: string } } = {};
+  const allDates = Array.from(new Set(attendanceData.map(r => r.date.split('T')[0]))).sort();
 
-  attendanceData.forEach(rec => {
-    if (rec.staffId) {
-      const id = typeof rec.staffId === 'object' ? rec.staffId._id || rec.staffId.id : rec.staffId;
-      let role = '';
-      if (rec.staffId.role) role = rec.staffId.role;
-      if (rec.role) role = rec.role;
-      let group = rec.groupName || '';
-      staffById[id] = {
-        fullName: rec.staffName || rec.fullName || rec.staffId.fullName || '',
-        role,
-        group
-      };
+  const headers = [
+    "ФИО сотрудника",
+    'Группа',
+    ...allDates.map(dateStr => {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      const weekday = date.toLocaleDateString("ru-RU", { weekday: "short" });
+      return `${date.getDate()}.${date.getMonth() + 1} (${weekday})`;
+    }),
+    'Явок', 'Пропусков', 'Опозданий', 'Больничных', 'Отпусков', 'Итого часов'
+  ];
+
+  const staffVisits = new Map<string, any[]>();
+  attendanceData.forEach(item => {
+    const staffId = item.staffId._id || item.staffId;
+    if (!staffVisits.has(staffId)) {
+      staffVisits.set(staffId, []);
     }
+    staffVisits.get(staffId)!.push(item);
   });
 
-  // Группируем посещения по сотруднику
-  const staffVisits: { [staffId: string]: any[] } = {};
-  attendanceData.forEach(row => {
-    const id = typeof row.staffId === 'object' ? row.staffId._id || row.staffId.id : row.staffId;
-    if (!id) return;
-    if (!staffVisits[id]) staffVisits[id] = [];
-    staffVisits[id].push(row);
-  });
-
-  // Формируем итоговую таблицу
-  const headerRow = ['ФИО Сотрудника', 'Должность', 'Группа', 'Дата', 'День недели', 'Время прихода', 'Время ухода', 'Длительность (ч:м)', 'Статус', 'Причина/Примечание'];
   const dataRows: any[][] = [];
+  let totalCame = 0, totalAbsent = 0, totalLate = 0, totalSick = 0, totalVacation = 0, grandTotalMinutes = 0;
 
-  Object.entries(staffVisits).forEach(([id, rows]) => {
-    let countCame = 0, countAbsent = 0, countLate = 0, countSick = 0, countOther = 0, totalMinutes = 0;
-    rows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).forEach(rec => {
-      const date = new Date(rec.date);
-      const day = date.toLocaleDateString('ru-RU', { weekday: 'short' });
-      const statusRaw = rec.originalStatus || rec.status;
-      const status = statusTranslations[statusRaw] || '?';
-      let durationMins = rec.workDuration || rec.duration || 0;
-      let durationLabel = '';
-      if (rec.actualStart && rec.actualEnd) {
-        // если нет workDuration, считаем вручную
-        const start = new Date(rec.actualStart).getTime();
-        const end = new Date(rec.actualEnd).getTime();
-        if (start && end && end > start) {
-          durationMins = Math.floor((end - start) / 60000);
+  staffVisits.forEach((records, staffId) => {
+    const staffInfo = records[0];
+    const staffName = staffInfo.staffName || (staffInfo.staffId && typeof staffInfo.staffId === 'object' ? staffInfo.staffId.fullName : '');
+    const row: any[] = [staffName, staffInfo.groupName || ''];
+    let came = 0, absent = 0, late = 0, sick = 0, vacation = 0, totalMinutes = 0;
+
+    allDates.forEach(date => {
+      const record = records.find(r => r.date.split('T')[0] === date);
+      if (record) {
+        const status = statusTranslations[record.status] || '?';
+        row.push(status);
+        if (status === '✓') came++;
+        else if (status === 'Н') absent++;
+        else if (status === 'ОП') late++;
+        else if (status === 'Б') sick++;
+        else if (status === 'О') vacation++;
+
+        let durationMins = record.workDuration || record.duration || 0;
+        if (record.actualStart && record.actualEnd) {
+            const start = new Date(record.actualStart).getTime();
+            const end = new Date(record.actualEnd).getTime();
+            if (start && end && end > start) {
+              durationMins = Math.floor((end - start) / 60000);
+            }
         }
-      }
-      if (durationMins) {
         totalMinutes += durationMins;
-        const h = Math.floor(durationMins / 60), m = durationMins % 60;
-        durationLabel = `${h}:${m < 10 ? '0' : ''}${m}`;
       } else {
-        durationLabel = '';
+        row.push('');
       }
-
-      if (status === '✓') countCame++;
-      else if (status === 'Н') countAbsent++;
-      else if (status === 'ОП') countLate++;
-      else if (status === 'Б') countSick++;
-      else countOther++;
-
-      dataRows.push([
-        staffById[id]?.fullName || '',
-        staffById[id]?.role || '',
-        staffById[id]?.group || '',
-        rec.date ? formatDate(new Date(rec.date)) : '',
-        day,
-        rec.actualStart ? `${new Date(rec.actualStart).toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}` : '',
-        rec.actualEnd ? `${new Date(rec.actualEnd).toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}` : '',
-        durationLabel,
-        status,
-        rec.notes || rec.penalties?.late?.reason || rec.penalties?.earlyLeave?.reason || '',
-      ]);
     });
-    // Итого по сотруднику добавляем после его строк
-    dataRows.push([
-      staffById[id]?.fullName + ' (итого)',
-      staffById[id]?.role || '',
-      staffById[id]?.group || '',
-      '', '', '', '',
-      `${(totalMinutes / 60).toFixed(1)} ч`,
-      `✓: ${countCame}, Н: ${countAbsent}, ОП: ${countLate}, Б: ${countSick}, др.: ${countOther}`,
-      ''
-    ]);
-    // Добавляем пустую строку для разделения
-    dataRows.push(['','','','','','','','','','']);
+
+    row.push(came, absent, late, sick, vacation, (totalMinutes / 60).toFixed(1));
+    dataRows.push(row);
+
+    totalCame += came;
+    totalAbsent += absent;
+    totalLate += late;
+    totalSick += sick;
+    totalVacation += vacation;
+    grandTotalMinutes += totalMinutes;
   });
 
-  // Финальное конфигурирование экспорта
+  const summaryRow = [
+    'Итого', '', 
+    ...Array(allDates.length).fill(''), 
+    totalCame, totalAbsent, totalLate, totalSick, totalVacation, 
+    (grandTotalMinutes / 60).toFixed(1)
+  ];
+  dataRows.push(summaryRow);
+
   exportToExcel({
     filename: `Табель_рабочего_времени_${period}`,
     sheetName: 'Табель',
     title: 'Табель учета рабочего времени сотрудников',
     subtitle: `Период: ${period}\nЛегенда: ${legend.join(', ')}`,
-    headers: headerRow,
+    headers: headers,
     data: dataRows,
     includeDate: false
   });
@@ -656,4 +642,46 @@ export const exportDocumentTemplatesList = async (templates: any[]): Promise<voi
   };
   
   exportToExcel(config);
+};
+
+export const exportChildPayments = async (payments: any[], children: any[], groups: any[]): Promise<void> => {
+  const headers = [
+    'Ребенок',
+    'Группа',
+    'Период',
+    'Сумма',
+    'Всего',
+    'Надбавки',
+    'Вычеты',
+    'Статус',
+    'Комментарии'
+  ];
+
+  const data = payments.map(payment => {
+    const child = children.find(c => c._id === (typeof payment.childId === 'string' ? payment.childId : payment.childId?._id));
+    const group = child ? groups.find(g => g._id === (typeof child.groupId === 'object' ? child.groupId?._id : child.groupId)) : undefined;
+
+    return [
+      child ? child.fullName : 'Неизвестный ребенок',
+      group ? group.name : 'Группа не указана',
+      `${payment.period.start} - ${payment.period.end}`,
+      payment.amount,
+      payment.total,
+      payment.accruals || 0,
+      payment.deductions || 0,
+      payment.status === 'paid' ? 'Оплачено' :
+      payment.status === 'overdue' ? 'Просрочено' :
+      payment.status === 'active' ? 'Активно' : 'Черновик',
+      payment.comments || ''
+    ];
+  });
+
+  exportToExcel({
+    filename: 'Оплаты_за_посещение_детей',
+    sheetName: 'Оплаты',
+    title: 'Оплаты за посещение детей',
+    headers,
+    data,
+    includeDate: true
+  });
 };

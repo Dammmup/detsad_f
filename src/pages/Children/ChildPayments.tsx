@@ -9,6 +9,8 @@ import { IChildPayment, Child, Group } from '../../types/common';
 import childPaymentApi from '../../services/childPayment';
 import childrenApi from '../../services/children';
 import { groupsApi } from '../../services/groups';
+import ExportButton from '../../components/ExportButton';
+import { exportChildPayments } from '../../utils/excelExport';
 
 const ChildPayments: React.FC = () => {
   const [payments, setPayments] = useState<IChildPayment[]>([]);
@@ -245,6 +247,10 @@ const ChildPayments: React.FC = () => {
     }
   };
 
+  const handleExport = (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+    exportChildPayments(filteredPayments, children, groups);
+  };
+
   return (
     <Box>
       {/* Всплывающее сообщение при загрузке */}
@@ -281,6 +287,10 @@ const ChildPayments: React.FC = () => {
         >
           Добавить оплату
         </Button>
+        <ExportButton
+          exportTypes={[{ value: 'child-payments', label: 'Экспорт оплат' }]}
+          onExport={handleExport}
+        />
       </Box>
       
       {/* Фильтры */}

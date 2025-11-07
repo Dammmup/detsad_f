@@ -55,14 +55,12 @@ const Reports: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const { user: authUser } = useAuth();
   
   // Новые состояния для расширенного экспорта
   const [exportType, setExportType] = useState<'salary' | 'children' | 'attendance' | 'schedule'>('salary');
-  const [exportFormat, setExportFormat] = useState<'pdf' | 'excel' | 'csv'>('excel');
   const [emailRecipients, setEmailRecipients] = useState<string>('');
   const [emailSubject, setEmailSubject] = useState<string>('');
   const [emailMessage, setEmailMessage] = useState<string>('');
@@ -76,7 +74,7 @@ const Reports: React.FC = () => {
   const selectedGroupId = useRef<string>('');
 
   const [reportType, setReportType] = useState<string>('attendance');
-  const [reportFormat, setReportFormat] = useState<'pdf' | 'excel' | 'csv'>('pdf');
+  const [reportFormat, setReportFormat] = useState<'pdf' | 'excel' | 'csv'>('excel');
   const [reportTitle, setReportTitle] = useState<string>('');
   const [filters, setFilters] = useState<ReportFilters>({
     type: '',
@@ -163,14 +161,15 @@ const Reports: React.FC = () => {
     setTabValue(newValue);
   };
 
- // Обработчик экспорта отчета
+// Обработчик экспорта отчета
   const handleExport = async (reportId: string, format: 'pdf' | 'excel' | 'csv') => {
     setLoading(true);
     
     try {
-      await exportReport(reportId, format);
+      // Ограничиваем формат только Excel
+      await exportReport(reportId, 'excel');
       // В реальном приложении здесь будет скачивание файла
-      alert(`Отчет успешно экспортирован в формате ${format}`);
+      alert(`Отчет успешно экспортирован в формате Excel`);
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта отчета');
     } finally {
@@ -193,7 +192,7 @@ const Reports: React.FC = () => {
         startDate: formattedStartDate,
         endDate: formattedEndDate,
         userId: selectedUserId.current || undefined,
-        format: reportFormat,
+        format: 'excel', // Всегда используем формат Excel
         
       });
       
@@ -246,14 +245,14 @@ const Reports: React.FC = () => {
   // ===== НОВЫЕ ОБРАБОТЧИКИ ДЛЯ РАСШИРЕННОГО ЭКСПОРТА =====
   
   // Обработчик экспорта зарплат
-  const handleExportSalary = async () => {
+ const handleExportSalary = async () => {
     setLoading(true);
     try {
       const blob = await exportSalaryReport({
         startDate: startDate.current.toISOString().split('T')[0],
         endDate: endDate.current.toISOString().split('T')[0],
         userId: selectedUserId.current || undefined,
-        format: exportFormat,
+        format: 'excel', // Ограничиваем формат только Excel
         includeDeductions: true,
         includeBonus: true
       });
@@ -262,13 +261,12 @@ const Reports: React.FC = () => {
       const url = window.URL.createObjectURL(blob as Blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `salary_report_${startDate.current.toISOString().split('T')[0]}.${exportFormat === 'excel' ? 'xlsx' : exportFormat}`;
+      link.download = `salary_report_${startDate.current.toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      setExportDialogOpen(false);
       alert('Отчет по зарплатам успешно экспортирован!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта отчета по зарплатам');
@@ -277,18 +275,6 @@ const Reports: React.FC = () => {
     }
   };
 
-  // Обработчик планирования отчета
-  const handleScheduleReport = async () => {
-    setLoading(true);
-    try {
-      // В реальном приложении здесь будет запрос к API
-   
-    } catch (err: any) {
-      setError(err?.message || 'Ошибка планирования отчета');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Обработчик отправки отчета на почту
   const handleSendByEmail = async () => {
@@ -304,7 +290,7 @@ const Reports: React.FC = () => {
         recipients: emailRecipients.split(',').map(email => email.trim()),
         subject: emailSubject || `Отчет по ${exportType}`,
         message: emailMessage,
-        format: exportFormat,
+        format: 'excel', // Всегда используем формат Excel
         reportParams: {
           startDate: startDate.current.toISOString().split('T')[0],
           endDate: endDate.current.toISOString().split('T')[0],
@@ -326,6 +312,8 @@ const Reports: React.FC = () => {
 
   // Универсальный обработчик расширенного экспорта
   const handleAdvancedExport = async () => {
+    // Устанавливаем формат экспорта как Excel по умолчанию
+    
     switch (exportType) {
       case 'salary':
         return handleExportSalary();
@@ -346,7 +334,7 @@ const Reports: React.FC = () => {
     try {
       const blob = await exportChildrenReport({
         groupId: selectedGroupId.current || undefined,
-        format: exportFormat,
+        format: 'excel', // Ограничиваем формат только Excel
         includeParentInfo: true,
         includeHealthInfo: true
       });
@@ -355,13 +343,12 @@ const Reports: React.FC = () => {
       const url = window.URL.createObjectURL(blob as Blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `children_report_${new Date().toISOString().split('T')[0]}.${exportFormat === 'excel' ? 'xlsx' : exportFormat}`;
+      link.download = `children_report_${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      setExportDialogOpen(false);
       alert('Отчет по детям успешно экспортирован!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта отчета по детям');
@@ -371,37 +358,36 @@ const Reports: React.FC = () => {
  };
 
   // Обработчик экспорта отчета посещаемости
- const handleExportAttendance = async () => {
-    setLoading(true);
-    try {
-      const blob = await exportAttendanceReport({
-        startDate: startDate.current.toISOString().split('T')[0],
-        endDate: endDate.current.toISOString().split('T')[0],
-        userId: selectedUserId.current || undefined,
-        groupId: selectedGroupId.current || undefined,
-        format: exportFormat,
-        includeStatistics: true,
-        includeCharts: true
-      });
-      
-      // Скачиваем файл
-      const url = window.URL.createObjectURL(blob as Blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `attendance_report_${startDate.current.toISOString().split('T')[0]}.${exportFormat === 'excel' ? 'xlsx' : exportFormat}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      setExportDialogOpen(false);
-      alert('Отчет по посещаемости успешно экспортирован!');
-    } catch (err: any) {
-      setError(err?.message || 'Ошибка экспорта отчета по посещаемости');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleExportAttendance = async () => {
+     setLoading(true);
+     try {
+       const blob = await exportAttendanceReport({
+         startDate: startDate.current.toISOString().split('T')[0],
+         endDate: endDate.current.toISOString().split('T')[0],
+         userId: selectedUserId.current || undefined,
+         groupId: selectedGroupId.current || undefined,
+         format: 'excel', // Ограничиваем формат только Excel
+         includeStatistics: true,
+         includeCharts: true
+       });
+       
+       // Скачиваем файл
+       const url = window.URL.createObjectURL(blob as Blob);
+       const link = document.createElement('a');
+       link.href = url;
+       link.download = `attendance_report_${startDate.current.toISOString().split('T')[0]}.xlsx`;
+       document.body.appendChild(link);
+       link.click();
+       document.body.removeChild(link);
+       window.URL.revokeObjectURL(url);
+       
+       alert('Отчет по посещаемости успешно экспортирован!');
+     } catch (err: any) {
+       setError(err?.message || 'Ошибка экспорта отчета по посещаемости');
+     } finally {
+       setLoading(false);
+     }
+   };
 
   // Обработчик экспорта отчета по расписанию
   const handleExportSchedule = async () => {
@@ -409,8 +395,7 @@ const Reports: React.FC = () => {
     try {
       // В реальном приложении здесь будет вызов соответствующей функции экспорта
       // Для моковой реализации используем alert
-      alert(`Экспорт отчета по расписанию в формате ${exportFormat} запущен!`);
-      setExportDialogOpen(false);
+      alert('Экспорт отчета по расписанию в формате Excel запущен!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта отчета по расписанию');
     } finally {
@@ -532,7 +517,10 @@ const Reports: React.FC = () => {
             variant="contained"
             color="primary"
             startIcon={<Download />}
-            onClick={() => setExportDialogOpen(true)}
+            onClick={() => {
+              setExportType('salary'); // Устанавливаем тип по умолчанию
+              handleAdvancedExport();
+            }}
           >
             Экспорт
           </Button>
@@ -626,7 +614,7 @@ const Reports: React.FC = () => {
             variant="contained"
             color="primary"
             startIcon={<AttachMoney />}
-            onClick={() => { setExportType('salary'); setExportDialogOpen(true); }}
+            onClick={() => { setExportType('salary'); handleAdvancedExport(); }}
             sx={{
               '&:hover': { bgcolor: 'primary.dark' }
             }}
@@ -638,7 +626,7 @@ const Reports: React.FC = () => {
             variant="contained"
             color="primary"
             startIcon={<ChildCare />}
-            onClick={() => { setExportType('children'); setExportDialogOpen(true); }}
+            onClick={() => { setExportType('children'); handleAdvancedExport(); }}
             sx={{
               '&:hover': { bgcolor: 'primary.dark' }
             }}
@@ -650,7 +638,7 @@ const Reports: React.FC = () => {
             variant="contained"
             color="primary"
             startIcon={<People />}
-            onClick={() => { setExportType('attendance'); setExportDialogOpen(true); }}
+            onClick={() => { setExportType('attendance'); handleAdvancedExport(); }}
             sx={{
               '&:hover': { bgcolor: 'primary.dark' }
             }}
@@ -662,7 +650,7 @@ const Reports: React.FC = () => {
             variant="contained"
             color="primary"
             startIcon={<BarChart />}
-            onClick={() => { setExportType('schedule'); setExportDialogOpen(true); }}
+            onClick={() => { setExportType('schedule'); handleAdvancedExport(); }}
             sx={{
               '&:hover': { bgcolor: 'primary.dark' }
             }}
@@ -963,9 +951,9 @@ const Reports: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={report.format?.toUpperCase() || 'PDF'}
+                          label="EXCEL"
                           size="small"
-                          color={report.format === 'pdf' ? 'error' : report.format === 'excel' ? 'success' : 'primary'}
+                          color="success"
                         />
                       </TableCell>
                       <TableCell>
@@ -988,11 +976,9 @@ const Reports: React.FC = () => {
                         <Tooltip title="Скачать">
                           <IconButton
                             size="small"
-                            onClick={() => handleExport(report.id || '', report.format || 'pdf')}
+                            onClick={() => handleExport(report.id || '', 'excel')}
                           >
-                            {report.format === 'pdf' ? <PictureAsPdf fontSize="small" /> :
-                             report.format === 'excel' ? <TableChart fontSize="small" /> :
-                             <InsertDriveFile fontSize="small" />}
+                            <TableChart fontSize="small" />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Удалить">
@@ -1077,13 +1063,12 @@ const Reports: React.FC = () => {
               <FormControl fullWidth>
                 <InputLabel>Формат</InputLabel>
                 <Select
-                  value={reportFormat}
+                  value="excel" // Установлено значение Excel по умолчанию
                   onChange={(e) => setReportFormat(e.target.value as 'pdf' | 'excel' | 'csv')}
                   label="Формат"
+                  disabled // Отключено, так как формат всегда Excel
                 >
-                  <MenuItem value="pdf">PDF</MenuItem>
                   <MenuItem value="excel">Excel</MenuItem>
-                  <MenuItem value="csv">CSV</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -1102,136 +1087,6 @@ const Reports: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* ===== ДИАЛОГ НАСТРОЙКИ ЭКСПОРТА ===== */}
-      <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ 
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
-          color: 'white',
-          textAlign: 'center'
-        }}>
-          🚀 Экспорт отчета: {exportType === 'salary' ? 'Зарплаты' : exportType === 'children' ? 'Списки детей' : exportType === 'attendance' ? 'Посещаемость' : 'Расписание'}
-        </DialogTitle>
-        
-        <DialogContent sx={{ pt: 3 }}>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Формат файла</InputLabel>
-                <Select
-                  value={exportFormat}
-                  onChange={(e) => setExportFormat(e.target.value as 'pdf' | 'excel' | 'csv')}
-                  label="Формат файла"
-                >
-                  <MenuItem value="pdf">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PictureAsPdf color="error" />
-                      PDF - Для печати и просмотра
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="excel">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <TableChart color="success" />
-                      Excel - Для анализа данных
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="csv">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <InsertDriveFile color="primary" />
-                      CSV - Для импорта в другие системы
-                    </Box>
-                  </MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            {exportType === 'salary' && (
-              <>
-                <Grid item xs={12}>
-                  <Typography variant="h6" sx={{ mb: 1, color: '#667eea' }}>
-                    💰 Настройки отчета по зарплатам
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Отчет будет включать базовую зарплату, надбавки, удержания и итоговую сумму к выплате
-                  </Typography>
-                </Grid>
-              </>
-            )}
-            
-            {exportType === 'children' && (
-              <>
-                <Grid item xs={12}>
-                  <Typography variant="h6" sx={{ mb: 1, color: '#667eea' }}>
-                    👶 Настройки списка детей
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Отчет будет включать ФИО детей, возраст, группу, контактную информацию родителей и медицинские данные
-                  </Typography>
-                </Grid>
-              </>
-            )}
-            
-            {exportType === 'attendance' && (
-              <>
-                <Grid item xs={12}>
-                  <Typography variant="h6" sx={{ mb: 1, color: '#667eea' }}>
-                    📊 Настройки отчета посещаемости
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Отчет будет включать статистику посещений, опоздания, ранние уходы и графики
-                  </Typography>
-                </Grid>
-              </>
-            )}
-            
-            {exportType === 'schedule' && (
-              <>
-                <Grid item xs={12}>
-                  <Typography variant="h6" sx={{ mb: 1, color: '#667eea' }}>
-                    📅 Настройки отчета расписания
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Отчет будет включать расписание смен, количество часов и эффективность работы
-                  </Typography>
-                </Grid>
-              </>
-            )}
-          </Grid>
-        </DialogContent>
-        
-        <DialogActions sx={{ p: 3, gap: 1 }}>
-          <Button
-            onClick={() => setExportDialogOpen(false)}
-            variant="outlined"
-          >
-            Отмена
-          </Button>
-          <Button
-            onClick={() => {
-              setScheduleDialogOpen(true);
-              setExportDialogOpen(false);
-            }}
-            variant="contained"
-            color="primary"
-            startIcon={<Schedule />}
-            sx={{
-              '&:hover': { bgcolor: 'primary.dark' }
-            }}
-          >
-            Планировать
-          </Button>
-          <Button
-            onClick={handleAdvancedExport}
-            variant="contained"
-            color="primary"
-            startIcon={<GetApp />}
-            sx={{
-              '&:hover': { bgcolor: 'primary.dark' }
-            }}
-          >
-            Скачать отчет
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* ===== ДИАЛОГ ПЛАНИРОВАНИЯ ===== */}
       <Dialog open={scheduleDialogOpen} onClose={() => setScheduleDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -1312,13 +1167,11 @@ const Reports: React.FC = () => {
               <FormControl fullWidth>
                 <InputLabel>Формат файла</InputLabel>
                 <Select
-                  value={exportFormat}
-                  onChange={(e) => setExportFormat(e.target.value as 'pdf' | 'excel' | 'csv')}
+                  value="excel" // Установлено значение Excel по умолчанию
                   label="Формат файла"
+                  disabled // Отключено, так как формат всегда Excel
                 >
-                  <MenuItem value="pdf">PDF</MenuItem>
                   <MenuItem value="excel">Excel</MenuItem>
-                  <MenuItem value="csv">CSV</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -1333,7 +1186,6 @@ const Reports: React.FC = () => {
             Отмена
           </Button>
           <Button
-            onClick={handleScheduleReport}
             variant="contained"
             color="primary"
             startIcon={<Schedule />}
@@ -1398,13 +1250,11 @@ const Reports: React.FC = () => {
               <FormControl fullWidth>
                 <InputLabel>Формат файла</InputLabel>
                 <Select
-                  value={exportFormat}
-                  onChange={(e) => setExportFormat(e.target.value as 'pdf' | 'excel' | 'csv')}
+                  value="excel" // Установлено значение Excel по умолчанию
                   label="Формат файла"
+                  disabled // Отключено, так как формат всегда Excel
                 >
-                  <MenuItem value="pdf">PDF</MenuItem>
                   <MenuItem value="excel">Excel</MenuItem>
-                  <MenuItem value="csv">CSV</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

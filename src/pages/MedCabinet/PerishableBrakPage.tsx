@@ -11,11 +11,14 @@ const defaultForm: PerishableBrak = {
   notes: '',
 };
 
+import ExportButton from '../../components/ExportButton';
+import { exportData } from '../../utils/exportUtils';
+
 const PerishableBrakPage: React.FC = () => {
   const [rows, setRows] = useState<PerishableBrak[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<PerishableBrak>(defaultForm);
+  const [form, setForm] = useState<Partial<PerishableBrak>>(defaultForm);
   const [editId, setEditId] = useState<string | undefined>();
 
   const fetchRows = async () => {
@@ -79,16 +82,26 @@ const PerishableBrakPage: React.FC = () => {
     }
   };
 
+  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+    await exportData('perishable-brak', exportFormat, { rows });
+  };
+
   return (
     <Box p={3}>
       <Typography variant="h4" gutterBottom>
         Бракераж скоропортящейся продукции и полуфабрикатов
       </Typography>
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Button variant="contained" color="primary" onClick={() => handleOpen()} sx={{ mb: 2 }}>
+      <Stack direction="row" spacing={2} mb={2}>
+        <Button variant="contained" color="primary" onClick={() => handleOpen()}>
           Добавить запись
         </Button>
-        <Table size="small">
+        <ExportButton
+          exportTypes={[{ value: 'perishable-brak', label: 'Бракераж скоропортящихся' }]}
+          onExport={handleExport}
+        />
+      </Stack>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Table>
           <TableHead>
             <TableRow>
               <TableCell>Дата</TableCell>

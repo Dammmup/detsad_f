@@ -13,9 +13,8 @@ import {
 import { User as StaffMember, UserRole } from '../../types/common';
 import { getGroups } from '../../services/groups';
 import { useAuth } from '../../components/context/AuthContext';
-import ExportMenuButton from '../../components/ExportMenuButton';
-import { exportStaffList } from '../../utils/excelExport';
-import { apiClient } from '../../utils/api';
+import ExportButton from '../../components/ExportButton';
+import { exportData } from '../../utils/exportUtils';
 
 // 🇷🇺 Переводы ролей с английского на русский
 const roleTranslations: Record<string, string> = {
@@ -46,7 +45,8 @@ const roleTranslations: Record<string, string> = {
   // Дополнительные роли
   'staff': 'Сотрудник',
   'substitute': 'Подменный сотрудник',
-  'intern': 'Стажер'
+  'intern': 'Стажер',
+  'tenant': 'Арендатор'
 };
 
 // Функция для перевода роли на русский
@@ -79,7 +79,7 @@ const Staff = () => {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+ const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<StaffMember>(defaultForm);
   const [editId, setEditId] = useState<string | null>(null);
@@ -87,9 +87,18 @@ const Staff = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+ const [showRentTab, setShowRentTab] = useState(false);
   const { user: currentUser } = useAuth();
   // 🇷🇺 Список доступных ролей на русском языке (автоматически из переводов)
-  const availableRoles = Object.values(roleTranslations).sort();
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+  
+  // Обновляем доступные роли при изменении showRentTab
+  useEffect(() => {
+    const roles = showRentTab
+      ? [roleTranslations['tenant']].sort()
+      : Object.values(roleTranslations).filter(role => role !== roleTranslations['tenant']).sort();
+    setAvailableRoles(roles);
+ }, [showRentTab]);
   
   const fetchStaff = useCallback(() => {
     setLoading(true);
@@ -124,28 +133,38 @@ setStaff(data);
   useEffect(() => {
     if (!staff.length) return;
     
-    let filtered = staff.filter(member => !member.tenant);
-    // Фильтрация по поисковой строке
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(member => 
-        member.fullName?.toLowerCase().includes(search) ||
-        member.email?.toLowerCase().includes(search) ||
-        member.phone?.toLowerCase().includes(search) ||
-        translateRole(member.role || '').toLowerCase().includes(search)
-      );
-    }
+    let filtered = staff;
     
-    // 🇷🇺 Фильтрация по роли (сравниваем русские переводы)
-    if (filterRole.length > 0) {
-      filtered = filtered.filter(member => {
-        const russianRole = translateRole(member.role || '');
-        return filterRole.includes(russianRole);
-      });
+    // Если активна вкладка "Арендаторы", показываем только арендаторов
+    if (showRentTab) {
+      filtered = staff.filter(member => member.role === 'tenant');
+    } else {
+      // Иначе исключаем арендаторов из основного списка
+      filtered = staff.filter(member => member.role !== 'tenant');
+      
+      // Фильтрация поисковой строке
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        filtered = filtered.filter(member =>
+          member.fullName?.toLowerCase().includes(search) ||
+          member.email?.toLowerCase().includes(search) ||
+          member.phone?.toLowerCase().includes(search) ||
+          translateRole(member.role || '').toLowerCase().includes(search)
+        );
+      }
+      
+      // 🇷🇺 Фильтрация по роли (сравниваем русские переводы)
+      // На вкладке "Арендаторы" фильтрация по ролям не применяется, т.к. там показываются только арендаторы
+      if (filterRole.length > 0 && !showRentTab) {
+        filtered = filtered.filter(member => {
+          const russianRole = translateRole(member.role || '');
+          return filterRole.includes(russianRole) && member.tenant !== true;
+        });
+      }
     }
     
     setFilteredStaff(filtered);
-  }, [staff, searchTerm, filterRole,currentUser?.role]);
+  }, [staff, searchTerm, filterRole, showRentTab, currentUser?.role]);
 
   const handleOpenModal = (member?: StaffMember) => {
     setForm(member ? { ...member } : defaultForm);
@@ -250,17 +269,12 @@ setStaff(data);
     }
   };
 
-  const handleExportDownload = () => {
-    exportStaffList(staff);
-  };
-
-  const handleExportEmail = async () => {
-    try {
-      await apiClient.post('/exports/staff', { action: 'email' });
-      alert('Документ отправлен на почту администратора');
-    } catch (e) {
-      alert('Ошибка отправки на почту');
-    }
+  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+    // При экспорте с вкладки "Арендаторы" передаем специальный параметр
+    const params = showRentTab
+      ? { name: searchTerm, type: 'tenant' }
+      : { name: searchTerm, role: filterRole.length > 0 ? filterRole : undefined };
+    await exportData('staff', exportFormat, params);
   };
 
   return (
@@ -271,37 +285,45 @@ setStaff(data);
           <Person style={{ marginRight: 8 }} /> Сотрудники
         </Typography>
         <Box mb={2}>
-          <ExportMenuButton
-            onDownload={handleExportDownload}
-            onSendEmail={handleExportEmail}
-            label="Экспортировать"
+          <ExportButton
+            exportTypes={[{ value: 'staff', label: 'Список сотрудников' }]}
+            onExport={handleExport}
           />
         </Box>
         <Button
           variant="contained"
           color="primary"
           startIcon={<Add />}
-          onClick={() => handleOpenModal()}
+          onClick={() => {
+            if (showRentTab) {
+              // Если активна вкладка "Арендаторы", создаем арендатора
+              setForm({ ...defaultForm, role: 'tenant' as UserRole });
+              setModalOpen(true);
+            } else {
+              handleOpenModal();
+            }
+          }}
         >
-          Добавить сотрудника
+          {showRentTab ? 'Добавить арендатора' : 'Добавить сотрудника'}
         </Button>
       </Box>
       
       {/* Вкладки для активных и неактивных сотрудников */}
       <Box mb={3} display="flex" gap={1}>
         <Button
-          variant={filterRole.length === 0 && searchTerm === '' ? "contained" : "outlined"}
-          onClick={() => {setFilterRole([]); setSearchTerm('');}}
+          variant={filterRole.length === 0 && searchTerm === '' && !showRentTab ? "contained" : "outlined"}
+          onClick={() => {setFilterRole([]); setSearchTerm(''); setShowRentTab(false);}}
         >
           Все
         </Button>
         <Button
-          variant={!searchTerm && filterRole.length === 0 && filteredStaff.some(m => m.active) ? "contained" : "outlined"}
+          variant={!searchTerm && filterRole.length === 0 && !showRentTab && !filteredStaff.every(m => !m.active) ? "contained" : "outlined"}
           onClick={() => {
             setFilterRole([]);
             setSearchTerm('');
+            setShowRentTab(false);
             setTimeout(() => {
-              const activeStaff = staff.filter(member => member.active);
+              const activeStaff = staff.filter(member => member.active && member.role !== 'tenant');
               setFilteredStaff(activeStaff);
             }, 0);
           }}
@@ -309,17 +331,33 @@ setStaff(data);
           Активные
         </Button>
         <Button
-          variant={!searchTerm && filterRole.length === 0 && filteredStaff.some(m => !m.active) ? "contained" : "outlined"}
+          variant={!searchTerm && filterRole.length === 0 && !showRentTab && !filteredStaff.every(m => m.active) ? "contained" : "outlined"}
           onClick={() => {
             setFilterRole([]);
             setSearchTerm('');
+            setShowRentTab(false);
             setTimeout(() => {
-              const inactiveStaff = staff.filter(member => !member.active);
+              const inactiveStaff = staff.filter(member => !member.active && member.role !== 'tenant');
               setFilteredStaff(inactiveStaff);
             }, 0);
           }}
         >
           Неактивные
+        </Button>
+        <Button
+          variant={showRentTab ? "contained" : "outlined"}
+          onClick={() => {
+            setShowRentTab(true);
+            setFilterRole([]);
+            setSearchTerm('');
+            setTimeout(() => {
+              const rentStaff = staff.filter(member => member.role === 'tenant');
+              setFilteredStaff(rentStaff);
+            }, 0);
+          }}
+          style={{ backgroundColor: '#FF9800', color: 'white' }}
+        >
+          Арендаторы
         </Button>
       </Box>
       
@@ -491,9 +529,28 @@ setStaff(data);
                   }}
                   label="Должность"
                 >
-                  {availableRoles.map(russianRole => (
-                    <MenuItem key={russianRole} value={russianRole}>{russianRole}</MenuItem>
-                  ))}
+                  {(() => {
+                    // Если открыто модальное окно для арендаторов (редактирование арендатора),
+                    // показываем только роль rent
+                    if (form.role === 'tenant') {
+                      return (
+                        <MenuItem key={roleTranslations['tenant']} value={roleTranslations['tenant']}>
+                          {roleTranslations['tenant']}
+                        </MenuItem>
+                      );
+                    } else if (showRentTab) {
+                      // Если активна вкладка "Арендаторы", показываем только роль rent
+                      return (
+                        <MenuItem key={roleTranslations['tenant']} value={roleTranslations['tenant']}>
+                          {roleTranslations['tenant']}
+                        </MenuItem>
+                      );
+                    } else {
+                      return availableRoles.map(russianRole => (
+                        <MenuItem key={russianRole} value={russianRole}>{russianRole}</MenuItem>
+                      ));
+                    }
+                  })()}
                 </Select>
                 {formErrors.role && <FormHelperText>{formErrors.role}</FormHelperText>}
               </FormControl>
@@ -532,18 +589,6 @@ setStaff(data);
                   />
                 }
                 label="Активен"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={!!form.tenant}
-                    onChange={(e) => setForm({...form, tenant: e.target.checked})}
-                    name="tenant"
-                  />
-                }
-                label="Арендатор"
               />
             </Grid>
 

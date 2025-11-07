@@ -11,11 +11,14 @@ const defaultForm: ProductCertificate = {
   notes: '',
 };
 
+import ExportButton from '../../components/ExportButton';
+import { exportData } from '../../utils/exportUtils';
+
 const ProductCertificatePage: React.FC = () => {
   const [rows, setRows] = useState<ProductCertificate[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<ProductCertificate>(defaultForm);
+  const [form, setForm] = useState<Partial<ProductCertificate>>(defaultForm);
   const [editId, setEditId] = useState<string | undefined>();
 
   const fetchRows = async () => {
@@ -79,16 +82,26 @@ const ProductCertificatePage: React.FC = () => {
     }
   };
 
+  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+    await exportData('product-certificate', exportFormat, { rows });
+  };
+
   return (
+    <>
     <Box p={3}>
       <Typography variant="h4" gutterBottom>
         Журнал регистрации сертификатов годности продуктов питания
       </Typography>
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Button variant="contained" color="primary" onClick={() => handleOpen()} sx={{ mb: 2 }}>
+      <Stack direction="row" spacing={2} mb={2}>
+        <Button variant="contained" color="primary" onClick={() => handleOpen()}>
           Добавить запись
         </Button>
-        <Table size="small">
+        <ExportButton
+          exportTypes={[{ value: 'product-certificate', label: 'Сертификаты продуктов' }]}
+          onExport={handleExport}
+        />
+      </Stack>
+      <Paper sx={{ p: 2, mb: 2 }}>
           <TableHead>
             <TableRow>
               <TableCell>Дата</TableCell>
@@ -118,7 +131,6 @@ const ProductCertificatePage: React.FC = () => {
               </TableRow>
             ))}
           </TableBody>
-        </Table>
       </Paper>
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>{editId ? 'Редактировать запись' : 'Добавить запись'}</DialogTitle>
@@ -140,6 +152,7 @@ const ProductCertificatePage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+  </>
   );
 };
 

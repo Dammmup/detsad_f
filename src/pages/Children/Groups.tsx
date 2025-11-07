@@ -11,6 +11,8 @@ import  { Child } from '../../services/children';
 // User импорт не нужен для детей
 import { useAuth } from '../../components/context/AuthContext';
 import { SelectChangeEvent } from '@mui/material/Select';
+import apiClient from '../../utils/api';
+import ExportButton from '../../components/ExportButton';
 // import { getChildrenByGroup } from '../../services'; // больше не используем отдельный маршрут, берём детей из /groups
 interface TeacherOption {
   id: string;
@@ -55,6 +57,28 @@ const Groups = () => {
   }>({});
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
+
+  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+    setLoading(true);
+    try {
+      const response = await apiClient.post('/export/groups', 
+        { format: exportFormat },
+        { responseType: 'blob' }
+      );
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `groups.${exportFormat}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e: any) {
+      setError(e?.message || 'Ошибка экспорта');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchTeachers = async () => {
     try {
   // Для учителей оставляем getUsers, для детей используем Child
@@ -292,15 +316,20 @@ const Groups = () => {
         <Group style={{ marginRight: 8, verticalAlign: 'middle' }} />
         Группы
       </h1>
-      <Button 
-        variant="contained" 
-        color="primary" 
-        startIcon={<Add />} 
-        style={{ marginBottom: 16 }} 
-        onClick={() => handleOpenModal()}
-      >
-        Добавить группу
-      </Button>
+      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        <ExportButton
+          exportTypes={[{ value: 'groups', label: 'Список групп' }]}
+          onExport={handleExport}
+        />
+        <Button 
+          variant="contained" 
+          color="primary" 
+          startIcon={<Add />} 
+          onClick={() => handleOpenModal()}
+        >
+          Добавить группу
+        </Button>
+      </Box>
       
       {loading && (
         <Box
