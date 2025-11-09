@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from './context/AuthContext';
+import { useDate } from './context/DateContext';
 import { formatCurrency } from '../utils/format';
 import { apiClient } from '../utils/api';
 
@@ -20,6 +21,7 @@ interface FinancialStatsWidgetProps {
 
 const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChange }) => {
   const { user: currentUser } = useAuth();
+  const { currentDate } = useDate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
@@ -33,9 +35,8 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
       setLoading(true);
       setError(null);
       try {
-        const today = new Date();
-        const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
         
         const response = await apiClient.get('/reports/salary/summary', {
           params: {
@@ -72,7 +73,7 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
     };
     
     fetchFinancialStats();
-  }, [currentUser]);
+  }, [currentUser, currentDate]);
 
   // const getPriorityColor = (priority: string) => {
   //   switch (priority) {

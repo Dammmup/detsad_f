@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, startOfWeek, addDays } from 'date-fns';
+import { format, startOfWeek, addDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useSnackbar } from 'notistack';
 import {
@@ -58,6 +58,7 @@ import {
   ChildAttendanceRecord
 } from '../../services/childAttendance';
 import { useAuth } from '../../components/context/AuthContext';
+import { useDate } from '../../components/context/DateContext';
 import { exportChildrenAttendance, getCurrentMonthRange, getCurrentPeriod } from '../../utils/excelExport';
 import AttendanceBulkModal from '../../components/AttendanceBulkModal';
 import ExportButton from '../../components/ExportButton';
@@ -95,9 +96,9 @@ interface AttendanceData {
 const WeeklyAttendance: React.FC = () => {
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
+  const { currentDate, setCurrentDate } = useDate();
   
   // State
- const [selectedWeek, setSelectedWeek] = useState<Date>(new Date());
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -121,13 +122,14 @@ const WeeklyAttendance: React.FC = () => {
         const group = groups.find(g => (g.id || g._id) === selectedGroup);
         const groupName = group ? group.name : 'Unknown Group';
 
-        const { startDate: monthStartDate, endDate: monthEndDate } = getCurrentMonthRange();
-        const period = `${format(new Date(monthStartDate), 'dd.MM.yyyy')} - ${format(new Date(monthEndDate), 'dd.MM.yyyy')}`;
+        const monthStart = startOfMonth(currentDate);
+        const monthEnd = endOfMonth(currentDate);
+        const period = `${format(new Date(monthStart), 'dd.MM.yyyy')} - ${format(new Date(monthEnd), 'dd.MM.yyyy')}`;
 
         const attendanceRecordsForExport = await getChildAttendance({
           groupId: selectedGroup,
-          startDate: monthStartDate,
-          endDate: monthEndDate
+          startDate: format(monthStart, 'yyyy-MM-dd'),
+          endDate: format(monthEnd, 'yyyy-MM-dd')
         });
 
         await exportChildrenAttendance(
@@ -181,7 +183,7 @@ const WeeklyAttendance: React.FC = () => {
     fetchInitialData();
   }, [isLoggedIn, currentUser, authLoading, enqueueSnackbar]);
 
-  // Load attendance data when week or group changes
+  // Load attendance data when month or group changes
   useEffect(() => {
     const fetchAttendanceData = async () => {
       if (!selectedGroup) {
@@ -191,13 +193,13 @@ const WeeklyAttendance: React.FC = () => {
       
       setLoading(true);
       try {
-        const weekStart = startOfWeek(selectedWeek, { locale: ru });
-        const weekEnd = addDays(weekStart, 6);
+        const monthStart = startOfMonth(currentDate);
+        const monthEnd = endOfMonth(currentDate);
         
         const records = await getChildAttendance({
           groupId: selectedGroup,
-          startDate: format(weekStart, 'yyyy-MM-dd'),
-          endDate: format(weekEnd, 'yyyy-MM-dd')
+          startDate: format(monthStart, 'yyyy-MM-dd'),
+          endDate: format(monthEnd, 'yyyy-MM-dd')
         });
         
         // Convert records to attendance data format
@@ -227,19 +229,19 @@ const WeeklyAttendance: React.FC = () => {
     };
     
     fetchAttendanceData();
-  }, [selectedWeek, selectedGroup, enqueueSnackbar]);
+  }, [currentDate, selectedGroup, enqueueSnackbar]);
 
-  // Week navigation
-  const goToPreviousWeek = () => {
-    setSelectedWeek(prev => addDays(prev, -7));
+  // Month navigation
+  const goToPreviousMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   };
 
-  const goToNextWeek = () => {
-    setSelectedWeek(prev => addDays(prev, 7));
+  const goToNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
 
   const goToToday = () => {
-    setSelectedWeek(new Date());
+    setCurrentDate(new Date());
   };
 
   const handleGroupChange = (e: SelectChangeEvent<string>) => {
@@ -258,9 +260,10 @@ const WeeklyAttendance: React.FC = () => {
       })
     : [];
 
-  // Get week days
-  const weekStart = startOfWeek(selectedWeek, { locale: ru });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Get month days
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   // Get attendance for a specific child and day
   const getAttendanceForDay = (childId: string, date: Date) => {
@@ -337,7 +340,7 @@ const WeeklyAttendance: React.FC = () => {
           <CardHeader 
             title={
               <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h5">Недельная посещаемость</Typography>
+                <Typography variant="h5">Посещаемость</Typography>
                 <Box display="flex" gap={2}>
                   <Button
                     variant="contained"
@@ -359,18 +362,15 @@ const WeeklyAttendance: React.FC = () => {
           />
           <Divider />
           <CardContent>
-            {/* Week Navigation */}
+            {/* Month Navigation */}
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-              <IconButton onClick={goToPreviousWeek}>
+              <IconButton onClick={goToPreviousMonth}>
                 <ArrowBackIosIcon />
               </IconButton>
               
               <Box textAlign="center">
                 <Typography variant="h6">
-                  {format(weekStart, 'MMMM yyyy', { locale: ru })}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {format(weekStart, 'd MMM', { locale: ru })} - {format(addDays(weekStart, 6), 'd MMM', { locale: ru })}
+                  {format(currentDate, 'LLLL yyyy', { locale: ru })}
                 </Typography>
                 <Button 
                   variant="outlined" 
@@ -383,7 +383,7 @@ const WeeklyAttendance: React.FC = () => {
                 </Button>
               </Box>
               
-              <IconButton onClick={goToNextWeek}>
+              <IconButton onClick={goToNextMonth}>
                 <ArrowForwardIosIcon />
               </IconButton>
             </Box>
@@ -408,11 +408,11 @@ const WeeklyAttendance: React.FC = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell>Ребенок</TableCell>
-                      {weekDays.map(day => (
+                      {monthDays.map(day => (
                         <TableCell key={day.toString()} align="center">
                           <Box>
                             <Box>{format(day, 'EEEEEE', { locale: ru })}</Box>
-                            <Box>{format(day, 'd MMM', { locale: ru })}</Box>
+                            <Box>{format(day, 'd', { locale: ru })}</Box>
                           </Box>
                         </TableCell>
                       ))}
@@ -434,7 +434,7 @@ const WeeklyAttendance: React.FC = () => {
                             </Box>
                           </Box>
                         </TableCell>
-                        {weekDays.map(day => {
+                        {monthDays.map(day => {
                           const attendance = getAttendanceForDay(child.id!, day);
                           const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                           
@@ -579,13 +579,13 @@ const WeeklyAttendance: React.FC = () => {
         groupId={selectedGroup}
         onSuccess={() => {
           // Refresh attendance data after bulk operation
-          const weekStart = startOfWeek(selectedWeek, { locale: ru });
-          const weekEnd = addDays(weekStart, 6);
+          const monthStart = startOfMonth(currentDate);
+          const monthEnd = endOfMonth(currentDate);
           
           getChildAttendance({
             groupId: selectedGroup,
-            startDate: format(weekStart, 'yyyy-MM-dd'),
-            endDate: format(weekEnd, 'yyyy-MM-dd')
+            startDate: format(monthStart, 'yyyy-MM-dd'),
+            endDate: format(monthEnd, 'yyyy-MM-dd')
           }).then(records => {
             // Convert records to attendance data format
             const attendanceMap: AttendanceData = {};

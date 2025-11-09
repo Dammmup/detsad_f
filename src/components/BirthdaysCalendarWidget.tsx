@@ -25,6 +25,7 @@ import {
   isSameDay,
 } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { useDate } from './context/DateContext';
 import { Child } from '../types/common';
 import childrenApi from '../services/children';
 
@@ -109,7 +110,7 @@ interface BirthdaysCalendarWidgetProps {
 
 const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBirthdaysChange }) => {
   const theme = useTheme();
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const { currentDate, setCurrentDate } = useDate();
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -167,13 +168,9 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBir
     return 'Без группы';
   };
 
-  // === Смена месяца ===
-  const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
-  const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
-
   const daysWithBirthdays = getChildrenWithBirthdays(currentDate);
   const startWeekDay = (startOfMonth(currentDate).getDay() + 6) % 7; // Пн = 0
-
+  
   return (
     <Card
       sx={{
@@ -204,15 +201,6 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBir
         >
  
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton onClick={handlePrevMonth} size="small">
-              <ChevronLeft />
-            </IconButton>
-            <Typography variant="subtitle1" sx={{ minWidth: 120, textAlign: 'center' }}>
-              {format(currentDate, 'LLLL yyyy', { locale: ru })}
-            </Typography>
-            <IconButton onClick={handleNextMonth} size="small">
-              <ChevronRight />
-            </IconButton>
           </Box>
         </Box>
 

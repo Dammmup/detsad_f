@@ -685,3 +685,42 @@ export const exportChildPayments = async (payments: any[], children: any[], grou
     includeDate: true
   });
 };
+
+export const exportSalaryReport = async (payrolls: any[]): Promise<void> => {
+  const headers = [
+    'Сотрудник',
+    'Период',
+    'Оклад',
+    'Бонусы',
+    'Удержания',
+    'Итого',
+    'Статус'
+  ];
+
+  const data = payrolls.map(payroll => {
+    const staffName = payroll.staffId && typeof payroll.staffId === 'object'
+      ? payroll.staffId.fullName
+      : 'Неизвестный сотрудник';
+
+    return [
+      staffName,
+      payroll.period,
+      payroll.salary,
+      payroll.bonuses,
+      payroll.deductions,
+      payroll.total,
+      payroll.status === 'paid' ? 'Оплачено' :
+      payroll.status === 'pending' ? 'В ожидании' :
+      payroll.status === 'approved' ? 'Утверждено' : 'Черновик'
+    ];
+  });
+
+  exportToExcel({
+    filename: 'Отчет_по_зарплатам',
+    sheetName: 'Зарплаты',
+    title: 'Отчет по зарплатам',
+    headers,
+    data,
+    includeDate: true
+  });
+};

@@ -11,9 +11,12 @@ import {
   GetApp, AttachMoney, People, ChildCare, BarChart,
   Download, Refresh, Search, Sort
 } from '@mui/icons-material';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { ru } from 'date-fns/locale';
+import { useDate } from '../components/context/DateContext';
 import {
   getReports, deleteReport, exportReport, generateCustomReport,
-  exportSalaryReport, exportChildrenReport, exportAttendanceReport, sendReportByEmail,
+ exportChildrenReport, exportAttendanceReport, sendReportByEmail,
   getChildrenSummary, getAttendanceSummary,
   Report
 } from '../services/reports';
@@ -23,6 +26,13 @@ import ReportsChildren from '../components/reports/ReportsChildren';
 import { useAuth } from '../components/context/AuthContext';
 import { getUsers } from '../services/users';
 import { ID, UserRole } from '../types/common';
+import childrenApi from '../services/children';
+import { groupsApi } from '../services/groups';
+import { getChildAttendance } from '../services/childAttendance';
+import { getShifts } from '../services/shifts';
+import { exportChildrenList, exportChildrenAttendance, exportStaffAttendance, exportSalaryReport } from '../utils/excelExport';
+import { getPayrolls, getPayrollsByUsers, generatePayrollSheets } from '../services/payroll';
+import DateNavigator from '../components/DateNavigator';
 
 // Интерфейс для сотрудника
 interface StaffMember {
@@ -46,6 +56,7 @@ interface ReportFilters {
 
 
 const Reports: React.FC = () => {
+  const { currentDate } = useDate();
   // Состояния для данных
  const [reports, setReports] = useState<Report[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -68,8 +79,6 @@ const Reports: React.FC = () => {
   const [scheduleRecipients, setScheduleRecipients] = useState<string>('');
   
   // Недостающие переменные
-  const startDate = useRef<Date>(new Date());
-  const endDate = useRef<Date>(new Date());
   const selectedUserId = useRef<string>('');
   const selectedGroupId = useRef<string>('');
 
@@ -115,8 +124,8 @@ const Reports: React.FC = () => {
     fetchData();
     
     // Устанавливаем начальное название отчета
-    setReportTitle(`Отчет за ${new Date().toLocaleDateString('ru-RU')} - ${new Date().toLocaleDateString('ru-RU')}`);
-  }, []);
+    setReportTitle(`Отчет за ${currentDate.toLocaleDateString('ru-RU')} - ${currentDate.toLocaleDateString('ru-RU')}`);
+  }, [currentDate]);
 
   // Загрузка всех необходимых данных
   const fetchData = async () => {
@@ -124,6 +133,8 @@ const Reports: React.FC = () => {
     setError(null);
     
     try {
+      const startDate = startOfMonth(currentDate);
+      const endDate = endOfMonth(currentDate);
       // Получение списка отчетов
       const reportsData = await getReports();
       setReports(reportsData);
@@ -139,10 +150,12 @@ const Reports: React.FC = () => {
       // Получение сводок
       
       const [childrenSumm, attendanceSumm] = await Promise.all([
-        getChildrenSummary({}),
+        getChildrenSummary({
+          groupId: selectedGroupId.current || undefined,
+        }),
         getAttendanceSummary({
-          startDate: startDate.current.toISOString().split('T')[0],
-          endDate: endDate.current.toISOString().split('T')[0]
+          startDate: format(startOfMonth(currentDate), 'yyyy-MM-dd'),
+          endDate: format(endOfMonth(currentDate), 'yyyy-MM-dd'),
         })
       ]);
       
@@ -182,9 +195,11 @@ const Reports: React.FC = () => {
     setLoading(true);
     
     try {
+      const startDate = startOfMonth(currentDate);
+      const endDate = endOfMonth(currentDate);
       // Форматируем даты для API
-      const formattedStartDate = startDate.current.toISOString().split('T')[0];
-      const formattedEndDate = endDate.current.toISOString().split('T')[0];
+      const formattedStartDate = format(startDate, 'yyyy-MM-dd');
+      const formattedEndDate = format(endDate, 'yyyy-MM-dd');
       
       // Создаем отчет
       const newReport = await generateCustomReport({
@@ -238,35 +253,28 @@ const Reports: React.FC = () => {
       e.target.value === 'schedule' ? 'расписанию' :
       e.target.value === 'staff' ? 'персоналу' : 'пользовательский';
     
-    setReportTitle(`Отчет по ${typeText} за ${startDate.current.toLocaleDateString('ru-RU')} - ${endDate.current.toLocaleDateString('ru-RU')}`);
+    setReportTitle(`Отчет по ${typeText} за ${format(startOfMonth(currentDate), 'yyyy-MM-dd')} - ${format(endOfMonth(currentDate), 'yyyy-MM-dd')}`);
   };
 
 
   // ===== НОВЫЕ ОБРАБОТЧИКИ ДЛЯ РАСШИРЕННОГО ЭКСПОРТА =====
   
   // Обработчик экспорта зарплат
- const handleExportSalary = async () => {
+  const handleExportSalary = async () => {
     setLoading(true);
     try {
-      const blob = await exportSalaryReport({
-        startDate: startDate.current.toISOString().split('T')[0],
-        endDate: endDate.current.toISOString().split('T')[0],
+      const period = format(currentDate, 'yyyy-MM'); // YYYY-MM
+      
+      // First, generate the payroll sheets for the period
+      await generatePayrollSheets(period);
+
+      // Then, fetch the payrolls
+      const payrolls = await getPayrollsByUsers({
+        period: period,
         userId: selectedUserId.current || undefined,
-        format: 'excel', // Ограничиваем формат только Excel
-        includeDeductions: true,
-        includeBonus: true
       });
-      
-      // Скачиваем файл
-      const url = window.URL.createObjectURL(blob as Blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `salary_report_${startDate.current.toISOString().split('T')[0]}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
+
+      await exportSalaryReport(payrolls);
       alert('Отчет по зарплатам успешно экспортирован!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта отчета по зарплатам');
@@ -292,8 +300,8 @@ const Reports: React.FC = () => {
         message: emailMessage,
         format: 'excel', // Всегда используем формат Excel
         reportParams: {
-          startDate: startDate.current.toISOString().split('T')[0],
-          endDate: endDate.current.toISOString().split('T')[0],
+          startDate: format(startOfMonth(currentDate), 'yyyy-MM-dd'),
+          endDate: format(endOfMonth(currentDate), 'yyyy-MM-dd'),
           userId: selectedUserId.current || undefined
         }
       });
@@ -311,10 +319,10 @@ const Reports: React.FC = () => {
   };
 
   // Универсальный обработчик расширенного экспорта
-  const handleAdvancedExport = async () => {
+  const handleAdvancedExport = async (type: 'salary' | 'children' | 'attendance' | 'schedule') => {
     // Устанавливаем формат экспорта как Excel по умолчанию
     
-    switch (exportType) {
+    switch (type) {
       case 'salary':
         return handleExportSalary();
       case 'children':
@@ -332,76 +340,65 @@ const Reports: React.FC = () => {
   const handleExportChildren = async () => {
     setLoading(true);
     try {
-      const blob = await exportChildrenReport({
-        groupId: selectedGroupId.current || undefined,
-        format: 'excel', // Ограничиваем формат только Excel
-        includeParentInfo: true,
-        includeHealthInfo: true
-      });
-      
-      // Скачиваем файл
-      const url = window.URL.createObjectURL(blob as Blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `children_report_${new Date().toISOString().split('T')[0]}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
+      const children = await childrenApi.getAll();
+      const groups = await groupsApi.getAll();
+      await exportChildrenList(children, selectedGroupId.current || undefined);
       alert('Отчет по детям успешно экспортирован!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта отчета по детям');
     } finally {
       setLoading(false);
     }
- };
+  };
 
   // Обработчик экспорта отчета посещаемости
   const handleExportAttendance = async () => {
-     setLoading(true);
-     try {
-       const blob = await exportAttendanceReport({
-         startDate: startDate.current.toISOString().split('T')[0],
-         endDate: endDate.current.toISOString().split('T')[0],
-         userId: selectedUserId.current || undefined,
-         groupId: selectedGroupId.current || undefined,
-         format: 'excel', // Ограничиваем формат только Excel
-         includeStatistics: true,
-         includeCharts: true
-       });
-       
-       // Скачиваем файл
-       const url = window.URL.createObjectURL(blob as Blob);
-       const link = document.createElement('a');
-       link.href = url;
-       link.download = `attendance_report_${startDate.current.toISOString().split('T')[0]}.xlsx`;
-       document.body.appendChild(link);
-       link.click();
-       document.body.removeChild(link);
-       window.URL.revokeObjectURL(url);
-       
-       alert('Отчет по посещаемости успешно экспортирован!');
-     } catch (err: any) {
-       setError(err?.message || 'Ошибка экспорта отчета по посещаемости');
-     } finally {
-       setLoading(false);
-     }
-   };
+    setLoading(true);
+    try {
+      const attendanceData = await getChildAttendance({
+        startDate: format(startOfMonth(currentDate), 'yyyy-MM-dd'),
+        endDate: format(endOfMonth(currentDate), 'yyyy-MM-dd'),
+        groupId: selectedGroupId.current || undefined,
+      });
+      const allChildren = await childrenApi.getAll();
+      const children = selectedGroupId.current
+        ? allChildren.filter(c => (typeof c.groupId === 'object' ? c.groupId?._id : c.groupId) === selectedGroupId.current)
+        : allChildren;
+      const groupName = selectedGroupId.current ? staff.find(s => s.id === selectedGroupId.current)?.fullName : 'All_Groups';
+
+      await exportChildrenAttendance(
+        attendanceData,
+        groupName || 'All Groups',
+        `${format(startOfMonth(currentDate), 'yyyy-MM-dd')}_${format(endOfMonth(currentDate), 'yyyy-MM-dd')}`,
+        children
+      );
+      alert('Отчет по посещаемости успешно экспортирован!');
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка экспорта отчета по посещаемости');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Обработчик экспорта отчета по расписанию
   const handleExportSchedule = async () => {
     setLoading(true);
     try {
-      // В реальном приложении здесь будет вызов соответствующей функции экспорта
-      // Для моковой реализации используем alert
-      alert('Экспорт отчета по расписанию в формате Excel запущен!');
+      const shifts = await getShifts(
+        format(startOfMonth(currentDate), 'yyyy-MM-dd'),
+        format(endOfMonth(currentDate), 'yyyy-MM-dd')
+      );
+      await exportStaffAttendance(
+        shifts,
+        `${format(startOfMonth(currentDate), 'yyyy-MM-dd')}_${format(endOfMonth(currentDate), 'yyyy-MM-dd')}`
+      );
+      alert('Отчет по расписанию успешно экспортирован!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта отчета по расписанию');
     } finally {
       setLoading(false);
     }
- };
+  };
 
   // Получение текста для типа отчета
   const getReportTypeText = (type: 'attendance' | 'schedule' | 'staff' | 'salary' | 'children' | 'custom') => {
@@ -494,6 +491,7 @@ const Reports: React.FC = () => {
 
   return (
     <Paper sx={{ p: 3, m: 2 }}>
+      <DateNavigator />
       {/* Заголовок и кнопки управления */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h5" display="flex" alignItems="center">
@@ -517,10 +515,7 @@ const Reports: React.FC = () => {
             variant="contained"
             color="primary"
             startIcon={<Download />}
-            onClick={() => {
-              setExportType('salary'); // Устанавливаем тип по умолчанию
-              handleAdvancedExport();
-            }}
+            onClick={() => handleAdvancedExport('salary')}
           >
             Экспорт
           </Button>
@@ -614,7 +609,7 @@ const Reports: React.FC = () => {
             variant="contained"
             color="primary"
             startIcon={<AttachMoney />}
-            onClick={() => { setExportType('salary'); handleAdvancedExport(); }}
+            onClick={() => handleAdvancedExport('salary')}
             sx={{
               '&:hover': { bgcolor: 'primary.dark' }
             }}
@@ -626,7 +621,7 @@ const Reports: React.FC = () => {
             variant="contained"
             color="primary"
             startIcon={<ChildCare />}
-            onClick={() => { setExportType('children'); handleAdvancedExport(); }}
+            onClick={() => handleAdvancedExport('children')}
             sx={{
               '&:hover': { bgcolor: 'primary.dark' }
             }}
@@ -638,7 +633,7 @@ const Reports: React.FC = () => {
             variant="contained"
             color="primary"
             startIcon={<People />}
-            onClick={() => { setExportType('attendance'); handleAdvancedExport(); }}
+            onClick={() => handleAdvancedExport('attendance')}
             sx={{
               '&:hover': { bgcolor: 'primary.dark' }
             }}
@@ -650,7 +645,7 @@ const Reports: React.FC = () => {
             variant="contained"
             color="primary"
             startIcon={<BarChart />}
-            onClick={() => { setExportType('schedule'); handleAdvancedExport(); }}
+            onClick={() => handleAdvancedExport('schedule')}
             sx={{
               '&:hover': { bgcolor: 'primary.dark' }
             }}
@@ -1277,7 +1272,7 @@ const Reports: React.FC = () => {
                 label="Тема письма"
                 value={emailSubject}
                 onChange={(e) => setEmailSubject(e.target.value)}
-                placeholder={`Отчет по ${exportType} за ${startDate.current.toLocaleDateString('ru-RU')} - ${endDate.current.toLocaleDateString('ru-RU')}`}
+                placeholder={`Отчет по ${exportType} за ${format(startOfMonth(currentDate), 'yyyy-MM-dd')} - ${format(endOfMonth(currentDate), 'yyyy-MM-dd')}`}
               />
             </Grid>
             

@@ -10,10 +10,14 @@ import {
   AccessTime, Edit, Visibility, Check,
    Schedule, Person, Search as SearchIcon
 } from '@mui/icons-material';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { ru } from 'date-fns/locale';
+import { useDate } from '../../components/context/DateContext';
 import { getUsers } from '../../services/users';
 import shiftsApi from '../../services/shifts';
 import { staffAttendanceTrackingService } from '../../services/staffAttendanceTracking';
 import {ShiftStatus, STATUS_TEXT, STATUS_COLORS, ROLE_TRANSLATIONS } from '../../types/common';
+import DateNavigator from '../../components/DateNavigator';
 
 
 // Интерфейс для записей учета времени
@@ -54,12 +58,9 @@ interface TimeRecord {
 // Используем функцию translateRole из common.ts
 
 const StaffAttendanceTracking: React.FC = () => {
+  const { currentDate } = useDate();
   const [staffList, setStaffList] = useState<any[]>([]);
   const [records, setRecords] = useState<TimeRecord[]>([]);
-  const [dateRange, setDateRange] = useState({
-    from: new Date().toISOString().split('T')[0],
-    to: new Date().toISOString().split('T')[0]
-  });
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedStaff, setSelectedStaff] = useState('all');
   const [filterRole, setFilterRole] = useState<string[]>([]);
@@ -108,10 +109,13 @@ const StaffAttendanceTracking: React.FC = () => {
           useEffect(() => {
             const fetchRecords = async () => {
               try {
-                let filters: any = {};
+                const startDate = startOfMonth(currentDate);
+                const endDate = endOfMonth(currentDate);
+                let filters: any = {
+                  startDate: format(startDate, 'yyyy-MM-dd'),
+                  endDate: format(endDate, 'yyyy-MM-dd'),
+                };
                 if (selectedStaff !== 'all') filters.staffId = selectedStaff;
-                if (dateRange.from) filters.startDate = dateRange.from;
-                if (dateRange.to) filters.endDate = dateRange.to;
                 
                 // Загружаем данные об учете посещаемости
                 const response = await staffAttendanceTrackingService.getAllRecords(filters);
@@ -271,7 +275,7 @@ const StaffAttendanceTracking: React.FC = () => {
               }
             };
             fetchRecords();
-          }, [selectedStaff, dateRange, filterRole, searchTerm, staffList, getStaffName]);
+          }, [selectedStaff, currentDate, filterRole, searchTerm, staffList, getStaffName]);
   
   const calculateWorkDuration = (start: string, end: string, breakTime: number = 0) => {
     const [startHours, startMinutes] = start.split(':').map(Number);
@@ -351,10 +355,13 @@ const StaffAttendanceTracking: React.FC = () => {
         
         // Обновляем записи, чтобы отразить изменения
         const fetchRecords = async () => {
-          let filters: any = {};
+          const startDate = startOfMonth(currentDate);
+          const endDate = endOfMonth(currentDate);
+          let filters: any = {
+            startDate: format(startDate, 'yyyy-MM-dd'),
+            endDate: format(endDate, 'yyyy-MM-dd'),
+          };
           if (selectedStaff !== 'all') filters.staffId = selectedStaff;
-          if (dateRange.from) filters.startDate = dateRange.from;
-          if (dateRange.to) filters.endDate = dateRange.to;
           // Загружаем обновленные данные об учете посещаемости
           const response = await staffAttendanceTrackingService.getAllRecords(filters);
           const updatedAttendanceRecords = response.data;
@@ -414,10 +421,13 @@ const StaffAttendanceTracking: React.FC = () => {
         setCheckOutDialogOpen(false);
         // Обновить записи
         const fetchRecords = async () => {
-          let filters: any = {};
+          const startDate = startOfMonth(currentDate);
+          const endDate = endOfMonth(currentDate);
+          let filters: any = {
+            startDate: format(startDate, 'yyyy-MM-dd'),
+            endDate: format(endDate, 'yyyy-MM-dd'),
+          };
           if (selectedStaff !== 'all') filters.staffId = selectedStaff;
-          if (dateRange.from) filters.startDate = dateRange.from;
-          if (dateRange.to) filters.endDate = dateRange.to;
           // Загружаем обновленные данные об учете посещаемости
           const response = await staffAttendanceTrackingService.getAllRecords(filters);
           const updatedAttendanceRecords = response.data;
@@ -463,20 +473,14 @@ const StaffAttendanceTracking: React.FC = () => {
         } as any); // Используем as any, чтобы обойти строгую типизацию
         
         setMarkDialogOpen(false);
-        setMarkForm({
-          staffId: '',
-          date: new Date().toISOString().slice(0, 10),
-          actualStart: '',
-          actualEnd: '',
-          status: 'checked_in',
-          notes: ''
-        });
-        
         // Обновляем записи
-        let filters: any = {};
+        const startDate = startOfMonth(currentDate);
+        const endDate = endOfMonth(currentDate);
+        let filters: any = {
+          startDate: format(startDate, 'yyyy-MM-dd'),
+          endDate: format(endDate, 'yyyy-MM-dd'),
+        };
         if (selectedStaff !== 'all') filters.staffId = selectedStaff;
-        if (dateRange.from) filters.startDate = dateRange.from;
-        if (dateRange.to) filters.endDate = dateRange.to;
         
         // Загружаем данные об учете посещаемости
         const response = await staffAttendanceTrackingService.getAllRecords(filters);
@@ -613,10 +617,13 @@ const StaffAttendanceTracking: React.FC = () => {
         await staffAttendanceTrackingService.deleteRecord(id);
         
         // Обновляем записи
-        let filters: any = {};
+        const startDate = startOfMonth(currentDate);
+        const endDate = endOfMonth(currentDate);
+        let filters: any = {
+          startDate: format(startDate, 'yyyy-MM-dd'),
+          endDate: format(endDate, 'yyyy-MM-dd'),
+        };
         if (selectedStaff !== 'all') filters.staffId = selectedStaff;
-        if (dateRange.from) filters.startDate = dateRange.from;
-        if (dateRange.to) filters.endDate = dateRange.to;
         
         // Загружаем данные об учете посещаемости
         const response = await staffAttendanceTrackingService.getAllRecords(filters);
@@ -818,27 +825,8 @@ const StaffAttendanceTracking: React.FC = () => {
       </Box>
 
       <Paper sx={{ p: 2, mb: 2 }}>
+        <DateNavigator />
         <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
-          {tabValue !== 3 && tabValue !== 4 && (
-            <>
-              <TextField
-                label="Дата с"
-                type="date"
-                value={dateRange.from}
-                onChange={(e) => setDateRange({...dateRange, from: e.target.value})}
-                InputLabelProps={{ shrink: true }}
-                sx={{ minWidth: 150 }}
-              />
-              <TextField
-                label="Дата по"
-                type="date"
-                value={dateRange.to}
-                onChange={(e) => setDateRange({...dateRange, to: e.target.value})}
-                InputLabelProps={{ shrink: true }}
-                sx={{ minWidth: 150 }}
-              />
-            </>
-          )}
           {(tabValue === 3 || tabValue === 4) && (
             <TextField
               label="Дата"

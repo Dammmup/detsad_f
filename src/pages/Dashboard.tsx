@@ -11,6 +11,8 @@ import FinancialStatsWidget from '../components/FinancialStatsWidget';
 import StaffScheduleWidget from '../components/StaffScheduleWidget';
 import BirthdaysCalendarWidget from '../components/BirthdaysCalendarWidget';
 
+import DateNavigator from '../components/DateNavigator';
+
 const Dashboard = () => {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -60,7 +62,7 @@ const Dashboard = () => {
       background: 'linear-gradient(135deg, rgba(245, 247, 250, 1) 0%, rgba(235, 240, 245, 1) 100%)',
       minHeight: '100vh'
     }}>
-
+      <DateNavigator />
       {/* На мобильных список задач всегда сверху и в одну колонку */}
       {isMobile && (
         <Box sx={{ mb: 3 }}>

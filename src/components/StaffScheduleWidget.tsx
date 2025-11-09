@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { CalendarToday, AccessTime } from '@mui/icons-material';
 import { useAuth } from './context/AuthContext';
+import { useDate } from './context/DateContext';
 import { getStaffShifts } from '../services/shifts';
 import { STATUS_TEXT, STATUS_COLORS } from '../types/common';
 // import { formatTime } from '../utils/format';
@@ -23,6 +24,7 @@ interface StaffScheduleWidgetProps {
 
 const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = ({ onScheduleChange }) => {
   const { user: currentUser } = useAuth();
+  const { currentDate } = useDate();
   const [shifts, setShifts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,14 +37,12 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = ({ onScheduleCha
       setLoading(true);
       setError(null);
       try {
-        // Получаем график на ближайшие 7 дней
-        const today = new Date();
-        const endDate = new Date(today);
-        endDate.setDate(today.getDate() + 7);
+        const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
         
         const shiftList = await getStaffShifts({
           staffId: currentUser.id,
-          startDate: today.toISOString().split('T')[0],
+          startDate: startDate.toISOString().split('T')[0],
           endDate: endDate.toISOString().split('T')[0]
         });
         
@@ -53,8 +53,7 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = ({ onScheduleCha
           new Date(a.date).getTime() - new Date(b.date).getTime()
         );
         
-        // Показываем только первые 5 смен
-        setShifts(sortedShifts.slice(0, 5));
+        setShifts(sortedShifts);
       } catch (err: any) {
         // Обработка ошибки 403 - пользователь не имеет доступа к сменам
         if (err.response && err.response.status === 403) {
@@ -69,7 +68,7 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = ({ onScheduleCha
     };
     
     fetchSchedule();
-  }, [currentUser]);
+  }, [currentUser, currentDate]);
 
 
   const formatDate = (dateString: string) => {

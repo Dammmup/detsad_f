@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, startOfWeek, addDays} from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useSnackbar } from 'notistack';
 import {
@@ -51,6 +51,8 @@ import { Search as SearchIcon } from '@mui/icons-material';
 import ExportButton from '../../components/ExportButton';
 import { exportData } from '../../utils/exportUtils';
 import { exportStaffAttendance, getCurrentMonthRange } from '../../utils/excelExport';
+import { useDate } from '../../components/context/DateContext';
+import DateNavigator from '../../components/DateNavigator';
 
 // Types and Services
 import { Shift, ShiftStatus, ShiftFormData, STATUS_TEXT, STATUS_COLORS } from '../../types/common';
@@ -102,9 +104,9 @@ const ROLE_LABELS: Record<string, string> = {
 const StaffSchedule: React.FC = () => {
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
+  const { currentDate, setCurrentDate } = useDate();
   
   // State
-  const [selectedWeek, setSelectedWeek] = useState<Date>(new Date());
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -124,11 +126,12 @@ const StaffSchedule: React.FC = () => {
   const [isHolidayLoading, setIsHolidayLoading] = useState(false);
   
   const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
-    const { startDate: monthStartDate, endDate: monthEndDate } = getCurrentMonthRange();
-    const period = `${format(new Date(monthStartDate), 'dd.MM.yyyy')} - ${format(new Date(monthEndDate), 'dd.MM.yyyy')}`;
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+    const period = `${format(new Date(monthStart), 'dd.MM.yyyy')} - ${format(new Date(monthEnd), 'dd.MM.yyyy')}`;
 
     // Fetch shifts for the entire month
-    const shiftsForMonth = await getShifts(monthStartDate, monthEndDate);
+    const shiftsForMonth = await getShifts(format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'));
 
     try {
         await exportStaffAttendance(shiftsForMonth, period);
@@ -159,11 +162,11 @@ const StaffSchedule: React.FC = () => {
       setError(null);
       
       try {
-        const weekStart = startOfWeek(selectedWeek, { locale: ru });
-        const weekEnd = addDays(weekStart, 6);
+        const monthStart = startOfMonth(currentDate);
+        const monthEnd = endOfMonth(currentDate);
         const [staffData, shiftsData] = await Promise.all([
           getUsers(),
-          getShifts(format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd'))
+          getShifts(format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'))
         ]);
         
         setStaff(staffData);
@@ -178,19 +181,18 @@ const StaffSchedule: React.FC = () => {
     };
     
     fetchData();
-  }, [selectedWeek, enqueueSnackbar]);
+  }, [currentDate, enqueueSnackbar]);
   
   // Загрузка праздников
    useEffect(() => {
      const fetchHolidays = async () => {
        try {
-         const weekStart = startOfWeek(selectedWeek, { locale: ru });
-         const weekEnd = addDays(weekStart, 6);
+         const monthStart = startOfMonth(currentDate);
          
          // Загружаем праздники для текущего месяца
          const holidaysData = await getAllHolidays({
-           month: weekStart.getMonth() + 1, // Месяцы в JavaScript начинаются с 0
-           year: weekStart.getFullYear()
+           month: monthStart.getMonth() + 1, // Месяцы в JavaScript начинаются с 0
+           year: monthStart.getFullYear()
          });
          
          // Проверяем, что данные - это массив
@@ -219,7 +221,7 @@ const StaffSchedule: React.FC = () => {
      };
      
      fetchHolidays();
-   }, [selectedWeek]);
+   }, [currentDate]);
   
   // Обработчик для фильтра ролей
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
@@ -380,14 +382,14 @@ const StaffSchedule: React.FC = () => {
       console.log('Loading set to true');
       
       // Определяем текущую дату и конец текущего месяца
-      const currentDate = new Date();
-      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-      console.log('Current date:', currentDate, 'End of month:', endOfMonth);
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+      console.log('Current date:', currentDate, 'End of month:', monthEnd);
       
       // Создаем массив дат с текущего дня до конца месяца
       const dates = [];
-      let current = new Date(currentDate);
-      while (current <= endOfMonth) {
+      let current = new Date(monthStart);
+      while (current <= monthEnd) {
         dates.push(new Date(current));
         current.setDate(current.getDate() + 1);
       }
@@ -405,7 +407,7 @@ const StaffSchedule: React.FC = () => {
       console.log('Schedule blocks created, length:', scheduleBlocks.length);
       
       // Ограничиваем график до конца месяца
-      const finalSchedule = scheduleBlocks.filter(date => date <= endOfMonth);
+      const finalSchedule = scheduleBlocks.filter(date => date <= monthEnd);
       console.log('Final schedule filtered, length:', finalSchedule.length);
       
       console.log('Selected staff:', selectedStaff);
@@ -415,7 +417,7 @@ const StaffSchedule: React.FC = () => {
         console.log('Creating shifts for staff:', staffId);
         
         // Получаем существующие смены сотрудника в диапазоне дат
-        const existingShifts = await getShifts(format(currentDate, 'yyyy-MM-dd'), format(endOfMonth, 'yyyy-MM-dd'));
+        const existingShifts = await getShifts(format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'));
         const existingShiftDates = new Set(
           existingShifts
             .filter(shift => shift.staffId === staffId)
@@ -471,9 +473,9 @@ const StaffSchedule: React.FC = () => {
       enqueueSnackbar('График 5/2 успешно назначен', { variant: 'success' });
       
       // Обновляем данные
-      const weekStart = startOfWeek(selectedWeek, { locale: ru });
-      const weekEnd = addDays(weekStart, 6);
-      const shiftsData = await getShifts(format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd'));
+      const monthStartUpdated = startOfMonth(currentDate);
+      const monthEndUpdated = endOfMonth(currentDate);
+      const shiftsData = await getShifts(format(monthStartUpdated, 'yyyy-MM-dd'), format(monthEndUpdated, 'yyyy-MM-dd'));
       setShifts(shiftsData);
       
       // Сбрасываем выбранных сотрудников
@@ -488,17 +490,17 @@ const StaffSchedule: React.FC = () => {
   
   // Получаем данные пользователя
 
-  // Week navigation
-  const goToPreviousWeek = () => {
-    setSelectedWeek(prev => addDays(prev, -7));
+  // Month navigation
+  const goToPreviousMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   };
 
-  const goToNextWeek = () => {
-    setSelectedWeek(prev => addDays(prev, 7));
+  const goToNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
 
   const goToToday = () => {
-    setSelectedWeek(new Date());
+    setCurrentDate(new Date());
   };
 
   // Form handlers
@@ -617,9 +619,9 @@ const StaffSchedule: React.FC = () => {
       }
       
       // После создания смены обновляем только смены, а не весь список
-      const weekStart = startOfWeek(selectedWeek, { locale: ru });
-      const weekEnd = addDays(weekStart, 6);
-      const shiftsData = await getShifts(format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd'));
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+      const shiftsData = await getShifts(format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'));
       setShifts(shiftsData);
       
       handleCloseModal();
@@ -665,9 +667,10 @@ const StaffSchedule: React.FC = () => {
         });
   };
 
-  // Get week days
-  const weekStart = startOfWeek(selectedWeek, { locale: ru });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Get month days
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   // Get shifts for a specific day and staff
   const getShiftsForDay = (staffId: string, date: Date) => {
@@ -755,31 +758,8 @@ const StaffSchedule: React.FC = () => {
           />
           <Divider />
           <CardContent>
-            {/* Week Navigation */}
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-              <IconButton onClick={goToPreviousWeek}>
-                <ArrowBackIosIcon />
-              </IconButton>
-              
-              <Box textAlign="center">
-                <Typography variant="h6">
-                  {format(weekStart, 'MMMM yyyy', { locale: ru })}
-                </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={goToToday}
-                  startIcon={<TodayIcon />}
-                  sx={{ mt: 1 }}
-                >
-                  Сегодня
-                </Button>
-              </Box>
-              
-              <IconButton onClick={goToNextWeek}>
-                <ArrowForwardIosIcon />
-              </IconButton>
-            </Box>
+            {/* Month Navigation */}
+            <DateNavigator />
             
             {/* Фильтры */}
             <Box display="flex" flexWrap="wrap" gap={2} alignItems="center" mb={3}>
@@ -831,7 +811,7 @@ const StaffSchedule: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Сотрудник</TableCell>
-                    {weekDays.map(day => {
+                    {monthDays.map(day => {
                       const isDayHoliday = isHoliday(day);
                       return (
                         <TableCell
@@ -848,7 +828,7 @@ const StaffSchedule: React.FC = () => {
                         >
                           <Box>
                             <Box>{format(day, 'EEEEEE', { locale: ru })}</Box>
-                            <Box>{format(day, 'd MMM', { locale: ru })}</Box>
+                            <Box>{format(day, 'd', { locale: ru })}</Box>
                           </Box>
                         </TableCell>
                       );
@@ -921,7 +901,7 @@ const StaffSchedule: React.FC = () => {
                               </Box>
                             </Box>
                           </TableCell>
-                          {weekDays.map(day => {
+                          {monthDays.map(day => {
                             const isDayHoliday = isHoliday(day);
                             const dayShifts = getShiftsForDay(staffId, day);
                             return (

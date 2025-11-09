@@ -5,14 +5,19 @@ import {
   MenuItem, Select, InputLabel, FormControl, Avatar, Tooltip, Snackbar, Autocomplete
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { ru } from 'date-fns/locale';
+import { useDate } from '../../components/context/DateContext';
 import { IChildPayment, Child, Group } from '../../types/common';
 import childPaymentApi from '../../services/childPayment';
 import childrenApi from '../../services/children';
 import { groupsApi } from '../../services/groups';
 import ExportButton from '../../components/ExportButton';
 import { exportChildPayments } from '../../utils/excelExport';
+import DateNavigator from '../../components/DateNavigator';
 
 const ChildPayments: React.FC = () => {
+  const { currentDate } = useDate();
   const [payments, setPayments] = useState<IChildPayment[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -80,7 +85,7 @@ const ChildPayments: React.FC = () => {
     fetchPayments();
     fetchChildren();
     fetchGroups();
-  }, []);
+  }, [currentDate]);
 
   // Инициализация filteredPayments после загрузки данных
  useEffect(() => {
@@ -253,6 +258,7 @@ const ChildPayments: React.FC = () => {
 
   return (
     <Box>
+      <DateNavigator />
       {/* Всплывающее сообщение при загрузке */}
       <Snackbar
         open={showInitialTooltip}
