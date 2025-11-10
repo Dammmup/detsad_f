@@ -46,6 +46,7 @@ const ChildPayments: React.FC = () => {
   // Фильтрованные платежи
   const [filteredPayments, setFilteredPayments] = useState<IChildPayment[]>([]);
   const [childSearch, setChildSearch] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const isMobile = useMediaQuery('(max-width:900px)');
 
@@ -94,7 +95,14 @@ const ChildPayments: React.FC = () => {
 
   // Фильтрация платежей при изменении данных или фильтров
  useEffect(() => {
-    let result = [...payments];
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+
+    let result = payments.filter(payment => {
+      if (!payment.period || !payment.period.start) return false; // Added null/undefined check
+      const paymentDate = new Date(payment.period.start);
+      return paymentDate >= monthStart && paymentDate <= monthEnd;
+    });
     
     // Фильтрация по имени ребенка
     if (nameFilter) {
@@ -113,7 +121,25 @@ const ChildPayments: React.FC = () => {
     }
     
     setFilteredPayments(result);
- }, [payments, children, nameFilter, groupFilter]);
+
+    if (result.length === 0 && !loading && !isGenerating) {
+      // Automatically trigger generation if no payments for the current month
+      handleGeneratePayments();
+    }
+ }, [payments, children, nameFilter, groupFilter, currentDate, loading]);
+
+  const handleGeneratePayments = async () => {
+    setIsGenerating(true);
+    setError(null);
+    try {
+      await childPaymentApi.generate(currentDate);
+      await fetchPayments(); // Refetch payments after generation
+    } catch (e: any) {
+      setError(e?.message || 'Ошибка генерации оплат');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleOpenModal = (payment?: IChildPayment) => {
     if (payment) {
@@ -123,7 +149,10 @@ const ChildPayments: React.FC = () => {
       
       setNewPayment({
         childId: childIdValue as any || '',
-        period: payment.period || { start: '', end: '' },
+        period: {
+          start: payment.period?.start ? format(new Date(payment.period.start), 'yyyy-MM-dd') : '',
+          end: payment.period?.end ? format(new Date(payment.period.end), 'yyyy-MM-dd') : ''
+        },
         amount: payment.amount || 0,
         total: payment.total || 0,
         status: payment.status || 'active',
@@ -345,9 +374,9 @@ const ChildPayments: React.FC = () => {
           </Select>
         </FormControl>
       </Box>
-      {loading && <CircularProgress />}
+      {(loading || isGenerating) && <CircularProgress />}
       {error && <Alert severity="error">{error}</Alert>}
-      {!loading && payments.length === 0 && (
+      {!loading && !isGenerating && payments.length === 0 && (
         <Alert severity="info">Нет данных об оплатах</Alert>
       )}
       
@@ -515,7 +544,9 @@ const ChildPayments: React.FC = () => {
                     ) : 'Не указана'}
                   </TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-                    {payment.period.start} - {payment.period.end}
+                    {payment.period.start && payment.period.end
+                      ? `${format(new Date(payment.period.start), 'dd.MM.yyyy')} - ${format(new Date(payment.period.end), 'dd.MM.yyyy')}`
+                      : 'Не указан'}
                   </TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>{payment.amount} ₸</TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>{payment.total} ₸</TableCell>

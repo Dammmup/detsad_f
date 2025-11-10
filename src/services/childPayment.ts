@@ -26,6 +26,11 @@ const childPaymentApi = {
 
   deleteItem: async (id: string): Promise<void> => {
     await api.delete(`${API_BASE_URL}/${id}`);
+  },
+
+  generate: async (date: Date): Promise<any> => {
+    const response = await api.post(`${API_BASE_URL}/generate`, { date });
+    return response.data;
   }
 };
 
