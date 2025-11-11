@@ -19,7 +19,7 @@ const ACTIONS = {
   close: 'close',
 };
 
-function reducer(state: any, action: { type: any; options: any; }) {
+function reducer(state: any, action: { type: any; options: any }) {
   switch (action.type) {
     case ACTIONS.open:
       return {
@@ -35,9 +35,15 @@ function reducer(state: any, action: { type: any; options: any; }) {
 }
 
 const SnackbarContext = createContext({});
-let dispatchAction: (arg0: { type: any; options?: any; }) => void;
+let dispatchAction: (arg0: { type: any; options?: any }) => void;
 
-const SnackbarProvider = ({ initialValue = INITIAL_STATE, children }: { initialValue?: any; children: React.ReactNode; }) => {
+const SnackbarProvider = ({
+  initialValue = INITIAL_STATE,
+  children,
+}: {
+  initialValue?: any;
+  children: React.ReactNode;
+}) => {
   const [state, dispatch] = React.useReducer(reducer, initialValue);
   dispatchAction = dispatch as any;
 

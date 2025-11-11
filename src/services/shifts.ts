@@ -1,6 +1,11 @@
-
 import { BaseCrudApiClient, apiCache } from '../utils/api';
-import { Shift, ShiftFormData, ShiftFilters, ID, ShiftStatus } from '../types/common';
+import {
+  Shift,
+  ShiftFormData,
+  ShiftFilters,
+  ID,
+  ShiftStatus,
+} from '../types/common';
 
 /**
  * API клиент для работы со сменами
@@ -15,14 +20,14 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
    */
   async getAll(filters?: ShiftFilters): Promise<Shift[]> {
     const cacheKey = `${this.CACHE_KEY}_${JSON.stringify(filters)}`;
-    
+
     const cached = apiCache.get<Shift[]>(cacheKey);
     if (cached) {
       return cached;
     }
 
     const shifts = await super.getAll(filters);
-    
+
     apiCache.set(cacheKey, shifts, this.CACHE_DURATION);
     return shifts;
   }
@@ -30,11 +35,15 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   /**
    * Получение смен по диапазону дат
    */
-  async getByDateRange(startDate: string, endDate: string, staffId?: ID): Promise<Shift[]> {
+  async getByDateRange(
+    startDate: string,
+    endDate: string,
+    staffId?: ID,
+  ): Promise<Shift[]> {
     const filters: ShiftFilters = {
       startDate,
       endDate,
-      staffId
+      staffId,
     };
 
     return this.getAll(filters);
@@ -44,17 +53,17 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
    * Создание смены
    */
   async create(shiftData: ShiftFormData): Promise<Shift> {
-      const shift = await super.create({
-        userId: shiftData.userId,
-        staffId: shiftData.staffId,
-        staffName: shiftData.staffName,
-        date: shiftData.date,
-        startTime: shiftData.startTime,
-        endTime: shiftData.endTime,
-        status: shiftData.status || ShiftStatus.scheduled,
-        notes: shiftData.notes,
-        alternativeStaffId: shiftData.alternativeStaffId
-      });
+    const shift = await super.create({
+      userId: shiftData.userId,
+      staffId: shiftData.staffId,
+      staffName: shiftData.staffName,
+      date: shiftData.date,
+      startTime: shiftData.startTime,
+      endTime: shiftData.endTime,
+      status: shiftData.status || ShiftStatus.scheduled,
+      notes: shiftData.notes,
+      alternativeStaffId: shiftData.alternativeStaffId,
+    });
 
     this.clearCache();
     return shift;
@@ -129,7 +138,11 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   /**
    * Копирование смен на другую неделю
    */
-  async copyWeek(fromDate: string, toDate: string, staffIds?: ID[]): Promise<{
+  async copyWeek(
+    fromDate: string,
+    toDate: string,
+    staffIds?: ID[],
+  ): Promise<{
     success: number;
     failed: number;
     errors: Array<{ date: string; staffId: ID; error: string }>;
@@ -137,9 +150,9 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     const result = await this.post(`${this.endpoint}/copy-week`, {
       fromDate,
       toDate,
-      staffIds
+      staffIds,
     });
-    
+
     this.clearCache();
     return result;
   }
@@ -147,16 +160,21 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   /**
    * Получение конфликтов в расписании
    */
-  async getConflicts(startDate: string, endDate: string): Promise<Array<{
-    type: 'overlap' | 'double_booking' | 'insufficient_staff';
-    date: string;
-    staffId: ID;
-    staffName: string;
-    shifts: Shift[];
-    message: string;
-  }>> {
+  async getConflicts(
+    startDate: string,
+    endDate: string,
+  ): Promise<
+    Array<{
+      type: 'overlap' | 'double_booking' | 'insufficient_staff';
+      date: string;
+      staffId: ID;
+      staffName: string;
+      shifts: Shift[];
+      message: string;
+    }>
+  > {
     return this.get(`${this.endpoint}/conflicts`, {
-      params: { startDate, endDate }
+      params: { startDate, endDate },
     });
   }
 
@@ -209,22 +227,28 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   /**
    * Экспорт расписания
    */
-  async export(filters?: ShiftFilters, format: 'csv' | 'excel' | 'pdf' = 'excel'): Promise<Blob> {
+  async export(
+    filters?: ShiftFilters,
+    format: 'csv' | 'excel' | 'pdf' = 'excel',
+  ): Promise<Blob> {
     const params = { ...filters, format };
-    
+
     return this.get(`${this.endpoint}/export`, {
       params,
-      responseType: 'blob'
+      responseType: 'blob',
     });
   }
 
   /**
    * Импорт расписания
    */
-  async import(file: File, options?: {
-    overwrite?: boolean;
-    skipConflicts?: boolean;
-  }): Promise<{
+  async import(
+    file: File,
+    options?: {
+      overwrite?: boolean;
+      skipConflicts?: boolean;
+    },
+  ): Promise<{
     success: number;
     failed: number;
     conflicts: number;
@@ -232,15 +256,15 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   }> {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     if (options) {
       formData.append('options', JSON.stringify(options));
     }
 
     const result = await this.post(`${this.endpoint}/import`, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+        'Content-Type': 'multipart/form-data',
+      },
     });
 
     this.clearCache();
@@ -250,34 +274,38 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   /**
    * Получение шаблонов смен
    */
-  async getTemplates(): Promise<Array<{
-    id: ID;
-    name: string;
-    description?: string;
-    shifts: Array<{
-      dayOfWeek: number; // 0-6 (воскресенье-суббота)
-      startTime: string;
-      endTime: string;
-    }>;
-  }>> {
-    const cacheKey = 'shift_templates';
-    
-    const cached = apiCache.get<Array<{
+  async getTemplates(): Promise<
+    Array<{
       id: ID;
       name: string;
       description?: string;
       shifts: Array<{
-        dayOfWeek: number;
+        dayOfWeek: number; // 0-6 (воскресенье-суббота)
         startTime: string;
         endTime: string;
       }>;
-    }>>(cacheKey);
+    }>
+  > {
+    const cacheKey = 'shift_templates';
+
+    const cached = apiCache.get<
+      Array<{
+        id: ID;
+        name: string;
+        description?: string;
+        shifts: Array<{
+          dayOfWeek: number;
+          startTime: string;
+          endTime: string;
+        }>;
+      }>
+    >(cacheKey);
     if (cached) {
       return cached;
     }
 
     const templates = await this.get(`${this.endpoint}/templates`);
-    
+
     apiCache.set(cacheKey, templates, this.CACHE_DURATION * 5); // Шаблоны кэшируем дольше
     return templates;
   }
@@ -285,19 +313,22 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   /**
    * Создание смен из шаблона
    */
-  async createFromTemplate(templateId: ID, params: {
-    startDate: string;
-    endDate: string;
-    staffIds: ID[];
-  }): Promise<{
+  async createFromTemplate(
+    templateId: ID,
+    params: {
+      startDate: string;
+      endDate: string;
+      staffIds: ID[];
+    },
+  ): Promise<{
     createdShifts: Shift[];
     conflicts: Array<{ date: string; staffId: ID; message: string }>;
   }> {
     const result = await this.post(`${this.endpoint}/from-template`, {
       templateId,
-      ...params
+      ...params,
     });
-    
+
     this.clearCache();
     return result;
   }
@@ -305,34 +336,49 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   /**
    * Поиск доступных сотрудников для смены
    */
-  async findAvailableStaff(date: string, startTime: string, endTime: string): Promise<Array<{
-    staffId: ID;
-    staffName: string;
-    availability: 'available' | 'busy' | 'partial';
-    conflictingShifts?: Shift[];
-    preferredHours?: number;
-  }>> {
+  async findAvailableStaff(
+    date: string,
+    startTime: string,
+    endTime: string,
+  ): Promise<
+    Array<{
+      staffId: ID;
+      staffName: string;
+      availability: 'available' | 'busy' | 'partial';
+      conflictingShifts?: Shift[];
+      preferredHours?: number;
+    }>
+  > {
     return this.get(`${this.endpoint}/available-staff`, {
-      params: { date, startTime, endTime }
+      params: { date, startTime, endTime },
     });
   }
 
   /**
    * Получение рекомендаций по оптимизации расписания
    */
-  async getOptimizationSuggestions(startDate: string, endDate: string): Promise<Array<{
-    type: 'reduce_overtime' | 'balance_workload' | 'fill_gaps' | 'reduce_conflicts';
-    priority: 'high' | 'medium' | 'low';
-    description: string;
-    affectedShifts: ID[];
-    suggestedChanges: Array<{
-      shiftId: ID;
-      currentData: Partial<Shift>;
-      suggestedData: Partial<Shift>;
-    }>;
-  }>> {
+  async getOptimizationSuggestions(
+    startDate: string,
+    endDate: string,
+  ): Promise<
+    Array<{
+      type:
+        | 'reduce_overtime'
+        | 'balance_workload'
+        | 'fill_gaps'
+        | 'reduce_conflicts';
+      priority: 'high' | 'medium' | 'low';
+      description: string;
+      affectedShifts: ID[];
+      suggestedChanges: Array<{
+        shiftId: ID;
+        currentData: Partial<Shift>;
+        suggestedData: Partial<Shift>;
+      }>;
+    }>
+  > {
     return this.get(`${this.endpoint}/optimization-suggestions`, {
-      params: { startDate, endDate }
+      params: { startDate, endDate },
     });
   }
 
@@ -344,7 +390,7 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     apiCache.clear(); // Простое решение - очищаем весь кэш
     // В продакшене лучше использовать более точную очистку по тегам
   }
-  
+
   /**
    * Отметка прихода по смене
    */
@@ -352,8 +398,8 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     const result = await this.post(`${this.endpoint}/checkin/${shiftId}`, {});
     this.clearCache();
     return result;
- }
-  
+  }
+
   /**
    * Отметка ухода по смене
    */
@@ -362,7 +408,7 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     this.clearCache();
     return result;
   }
-  
+
   /**
    * Запрос смены сотрудником
    */
@@ -370,24 +416,35 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     // При запросе смены статус всегда устанавливается в 'pending_approval'
     const result = await this.post(`${this.endpoint}/request`, {
       ...shiftData,
-      status: 'pending_approval' as ShiftStatus
+      status: 'pending_approval' as ShiftStatus,
     });
     this.clearCache();
     return result;
   }
 }
 // Получить смены сотрудника по диапазону дат
-export const getStaffShifts = async ({ staffId, startDate, endDate }: { staffId: ID, startDate: string, endDate: string }) => {
+export const getStaffShifts = async ({
+  staffId,
+  startDate,
+  endDate,
+}: {
+  staffId: ID;
+  startDate: string;
+  endDate: string;
+}) => {
   return shiftsApi.getByDateRange(startDate, endDate, staffId);
 };
 
 // Экспортируем отдельные функции для обратной совместимости
 export const getShifts = (startDate?: string, endDate?: string) =>
   shiftsApi.getByDateRange(startDate || '', endDate || '');
-export const createShift = (shiftData: ShiftFormData) => shiftsApi.create(shiftData);
-export const updateShift = (id: ID, shiftData: Partial<Shift>) => shiftsApi.update(id, shiftData);
+export const createShift = (shiftData: ShiftFormData) =>
+  shiftsApi.create(shiftData);
+export const updateShift = (id: ID, shiftData: Partial<Shift>) =>
+  shiftsApi.update(id, shiftData);
 export const deleteShift = (id: ID) => shiftsApi.deleteItem(id);
-export const updateShiftStatus = (id: ID, status: Shift['status']) => shiftsApi.updateStatus(id, status);
+export const updateShiftStatus = (id: ID, status: Shift['status']) =>
+  shiftsApi.updateStatus(id, status);
 
 // Экспортируем экземпляр клиента
 export const shiftsApi = new ShiftsApiClient();
@@ -402,7 +459,9 @@ export const checkOut = async (shiftId: ID) => {
 };
 
 // Новый метод для запроса смены
-export const requestShift = async (shiftData: Omit<ShiftFormData, 'status'>) => {
+export const requestShift = async (
+  shiftData: Omit<ShiftFormData, 'status'>,
+) => {
   return shiftsApi.requestShift(shiftData);
 };
 

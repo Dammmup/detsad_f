@@ -8,17 +8,28 @@ const DateNavigator = () => {
   const { currentDate, setCurrentDate } = useDate();
 
   const handlePrevMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
+    );
   };
 
   const handleNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
+    );
   };
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        mb: 2,
+      }}
+    >
       <Button onClick={handlePrevMonth}>&lt;</Button>
-      <Typography variant="h6" sx={{ mx: 2 }}>
+      <Typography variant='h6' sx={{ mx: 2 }}>
         {format(currentDate, 'LLLL yyyy', { locale: ru })}
       </Typography>
       <Button onClick={handleNextMonth}>&gt;</Button>

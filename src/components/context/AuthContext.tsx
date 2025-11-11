@@ -117,19 +117,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const currentUser = getCurrentUser();
       const authenticated = await isAuthenticated();
 
-     if (currentUser && authenticated) {
-  if (!user) {
-    setUser(currentUser);
-    setIsLoggedIn(true);
-  }
-  return true;
-}
+      if (currentUser && authenticated) {
+        if (!user) {
+          setUser(currentUser);
+          setIsLoggedIn(true);
+        }
+        return true;
+      }
 
-// ❌ Не вызываем logout, просто возвращаем false
-setUser(null);
-setIsLoggedIn(false);
-return false;
-
+      // ❌ Не вызываем logout, просто возвращаем false
+      setUser(null);
+      setIsLoggedIn(false);
+      return false;
     } catch (error) {
       console.error('Ошибка проверки авторизации:', error);
       return false;
@@ -164,7 +163,6 @@ interface ProtectedRouteProps {
   children: ReactNode;
 }
 
-
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isLoggedIn, loading, checkAuth } = useAuth();
   const [checking, setChecking] = useState(true);
@@ -190,17 +188,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   if (loading || checking) {
     return (
       <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-        minWidth="100vw"
-        position="fixed"
-        top="0"
-        left="0"
+        display='flex'
+        justifyContent='center'
+        alignItems='center'
+        minHeight='100vh'
+        minWidth='100vw'
+        position='fixed'
+        top='0'
+        left='0'
         zIndex={9999}
       >
-        <CircularProgress size={60} color="primary" />
+        <CircularProgress size={60} color='primary' />
       </Box>
     );
   }
@@ -209,4 +207,3 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   return <>{children}</>;
 };
-

@@ -10,7 +10,9 @@ export interface GenerateDocumentParams {
   filename?: string;
 }
 
-export const generateAndDownloadDocument = async (params: GenerateDocumentParams) => {
+export const generateAndDownloadDocument = async (
+  params: GenerateDocumentParams,
+) => {
   const response = await apiClient.post('/documents/generate', params, {
     responseType: 'blob',
   });

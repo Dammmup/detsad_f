@@ -12,7 +12,14 @@ export interface CyclogramActivity {
   name: string;
   description?: string;
   duration: number; // в минутах
-  type: 'educational' | 'physical' | 'creative' | 'rest' | 'meal' | 'hygiene' | 'outdoor';
+  type:
+    | 'educational'
+    | 'physical'
+    | 'creative'
+    | 'rest'
+    | 'meal'
+    | 'hygiene'
+    | 'outdoor';
   ageGroup: string; // например: "3-4", "4-5", "5-6"
   materials?: string[];
   goals?: string[];
@@ -57,17 +64,16 @@ export interface CyclogramTemplate {
   createdAt?: string;
 }
 
-
 // Helper function to handle API errors
 const handleApiError = (error: any, context = '') => {
   const errorMessage = error.response?.data?.message || error.message;
   console.error(`Error ${context}:`, errorMessage);
-  
+
   // Create a more detailed error object
   const apiError = new Error(`Error ${context}: ${errorMessage}`) as ApiError;
   apiError.status = error.response?.status;
   apiError.data = error.response?.data;
-  
+
   throw apiError;
 };
 
@@ -82,7 +88,7 @@ export const getCyclograms = async (groupId?: string) => {
   try {
     const params: any = {};
     if (groupId) params.groupId = groupId;
-  const response = await apiClient.get('/cyclogram', { params });
+    const response = await apiClient.get('/cyclogram', { params });
     const cyclograms: WeeklyCyclogram[] = response.data.map((item: any) => ({
       id: item._id,
       title: item.title,
@@ -94,7 +100,7 @@ export const getCyclograms = async (groupId?: string) => {
       timeSlots: item.timeSlots,
       status: item.status,
       createdAt: item.createdAt,
-      updatedAt: item.updatedAt
+      updatedAt: item.updatedAt,
     }));
     return cyclograms;
   } catch (error) {
@@ -109,7 +115,7 @@ export const getCyclograms = async (groupId?: string) => {
  */
 export const getCyclogram = async (id: string) => {
   try {
-  const response = await apiClient.get(`/cyclogram/${id}`);
+    const response = await apiClient.get(`/cyclogram/${id}`);
     const cyclogram: WeeklyCyclogram = {
       id: response.data._id,
       title: response.data.title,
@@ -121,7 +127,7 @@ export const getCyclogram = async (id: string) => {
       timeSlots: response.data.timeSlots,
       status: response.data.status,
       createdAt: response.data.createdAt,
-      updatedAt: response.data.updatedAt
+      updatedAt: response.data.updatedAt,
     };
     return cyclogram;
   } catch (error) {
@@ -136,7 +142,7 @@ export const getCyclogram = async (id: string) => {
  */
 export const createCyclogram = async (cyclogram: WeeklyCyclogram) => {
   try {
-  const response = await apiClient.post('/cyclogram', cyclogram);
+    const response = await apiClient.post('/cyclogram', cyclogram);
     const created: WeeklyCyclogram = {
       id: response.data._id,
       title: response.data.title,
@@ -148,7 +154,7 @@ export const createCyclogram = async (cyclogram: WeeklyCyclogram) => {
       timeSlots: response.data.timeSlots,
       status: response.data.status,
       createdAt: response.data.createdAt,
-      updatedAt: response.data.updatedAt
+      updatedAt: response.data.updatedAt,
     };
     return created;
   } catch (error) {
@@ -162,9 +168,12 @@ export const createCyclogram = async (cyclogram: WeeklyCyclogram) => {
  * @param {WeeklyCyclogram} cyclogram - Updated cyclogram data
  * @returns {Promise<WeeklyCyclogram>} Updated cyclogram
  */
-export const updateCyclogram = async (id: string, cyclogram: WeeklyCyclogram) => {
+export const updateCyclogram = async (
+  id: string,
+  cyclogram: WeeklyCyclogram,
+) => {
   try {
-  const response = await apiClient.put(`/cyclogram/${id}`, cyclogram);
+    const response = await apiClient.put(`/cyclogram/${id}`, cyclogram);
     const updated: WeeklyCyclogram = {
       id: response.data._id,
       title: response.data.title,
@@ -176,7 +185,7 @@ export const updateCyclogram = async (id: string, cyclogram: WeeklyCyclogram) =>
       timeSlots: response.data.timeSlots,
       status: response.data.status,
       createdAt: response.data.createdAt,
-      updatedAt: response.data.updatedAt
+      updatedAt: response.data.updatedAt,
     };
     return updated;
   } catch (error) {
@@ -191,7 +200,7 @@ export const updateCyclogram = async (id: string, cyclogram: WeeklyCyclogram) =>
  */
 export const deleteCyclogram = async (id: string) => {
   try {
-  await apiClient.delete(`/cyclogram/${id}`);
+    await apiClient.delete(`/cyclogram/${id}`);
     return { success: true };
   } catch (error) {
     return handleApiError(error, `deleting cyclogram ${id}`);
@@ -207,8 +216,8 @@ export const getCyclogramTemplates = async (ageGroup?: string) => {
   try {
     const params: any = {};
     if (ageGroup) params.ageGroup = ageGroup;
-    
-  const response = await apiClient.get('/cyclogram/templates', { params });
+
+    const response = await apiClient.get('/cyclogram/templates', { params });
     const templates: CyclogramTemplate[] = response.data.map((item: any) => ({
       id: item._id,
       name: item.name,
@@ -216,9 +225,9 @@ export const getCyclogramTemplates = async (ageGroup?: string) => {
       ageGroup: item.ageGroup,
       timeSlots: item.timeSlots,
       isDefault: item.isDefault,
-      createdAt: item.createdAt
+      createdAt: item.createdAt,
     }));
-    
+
     return templates;
   } catch (error) {
     return handleApiError(error, 'fetching cyclogram templates');
@@ -232,17 +241,20 @@ export const getCyclogramTemplates = async (ageGroup?: string) => {
  * @returns {Promise<WeeklyCyclogram>} Created cyclogram
  */
 export const createCyclogramFromTemplate = async (
- templateId: string,
+  templateId: string,
   params: {
     title: string;
     groupId: string;
     teacherId: string;
     weekStartDate: string;
-  }
+  },
 ) => {
- try {
-  const response = await apiClient.post(`/cyclogram/templates/${templateId}/create`, params);
-    
+  try {
+    const response = await apiClient.post(
+      `/cyclogram/templates/${templateId}/create`,
+      params,
+    );
+
     const createdCyclogram: WeeklyCyclogram = {
       id: response.data._id,
       title: response.data.title,
@@ -254,9 +266,9 @@ export const createCyclogramFromTemplate = async (
       timeSlots: response.data.timeSlots,
       status: response.data.status,
       createdAt: response.data.createdAt,
-      updatedAt: response.data.updatedAt
+      updatedAt: response.data.updatedAt,
     };
-    
+
     return createdCyclogram;
   } catch (error) {
     return handleApiError(error, 'creating cyclogram from template');

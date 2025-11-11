@@ -19,7 +19,10 @@ const childPaymentApi = {
     return response.data;
   },
 
-  update: async (id: string, data: Partial<IChildPayment>): Promise<IChildPayment> => {
+  update: async (
+    id: string,
+    data: Partial<IChildPayment>,
+  ): Promise<IChildPayment> => {
     const response = await api.put(`${API_BASE_URL}/${id}`, data);
     return response.data;
   },
@@ -31,7 +34,7 @@ const childPaymentApi = {
   generate: async (date: Date): Promise<any> => {
     const response = await api.post(`${API_BASE_URL}/generate`, { date });
     return response.data;
-  }
+  },
 };
 
 export default childPaymentApi;

@@ -1,6 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Box, Typography, Button, Stack, Table, TableHead, TableRow, TableCell, TableBody, TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, CircularProgress
+  Box,
+  Typography,
+  Button,
+  Stack,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  MenuItem,
+  CircularProgress,
 } from '@mui/material';
 import { getUsers } from '../../services/users';
 import { User } from '../../types/common';
@@ -8,7 +23,7 @@ import { RiskGroupChild } from '../../types/riskGroupChild';
 import {
   getRiskGroupChildren,
   createRiskGroupChild,
-  deleteRiskGroupChild
+  deleteRiskGroupChild,
 } from '../../services/riskGroupChildren';
 
 export default function RiskGroupChildren() {
@@ -24,31 +39,43 @@ export default function RiskGroupChildren() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      getUsers().then(users => {
-        const children = users.filter(u => u.birthday && u.parentName);
+      getUsers().then((users) => {
+        const children = users.filter((u) => u.birthday && u.parentName);
         setUsers(children);
       }),
-      getRiskGroupChildren().then(setRecords)
+      getRiskGroupChildren().then(setRecords),
     ]).finally(() => setLoading(false));
   }, []);
 
   const filteredRecords = useMemo(() => {
     let filtered = [...records];
-    if (search) filtered = filtered.filter(r => r.fio.toLowerCase().includes(search.toLowerCase()));
-    if (group) filtered = filtered.filter(r => r.group === group);
-    if (reason) filtered = filtered.filter(r => r.reason.toLowerCase().includes(reason.toLowerCase()));
+    if (search)
+      filtered = filtered.filter((r) =>
+        r.fio.toLowerCase().includes(search.toLowerCase()),
+      );
+    if (group) filtered = filtered.filter((r) => r.group === group);
+    if (reason)
+      filtered = filtered.filter((r) =>
+        r.reason.toLowerCase().includes(reason.toLowerCase()),
+      );
     return filtered;
   }, [records, search, group, reason]);
 
   const handleAdd = async () => {
-    if (!newRecord.childId || !newRecord.fio || !newRecord.group || !newRecord.reason) return;
+    if (
+      !newRecord.childId ||
+      !newRecord.fio ||
+      !newRecord.group ||
+      !newRecord.reason
+    )
+      return;
     setLoading(true);
     try {
       const created = await createRiskGroupChild({
         ...newRecord,
         notes: newRecord.notes || '',
       });
-      setRecords(prev => [...prev, created]);
+      setRecords((prev) => [...prev, created]);
       setModalOpen(false);
       setNewRecord({});
     } finally {
@@ -60,21 +87,24 @@ export default function RiskGroupChildren() {
     setLoading(true);
     try {
       await deleteRiskGroupChild(id);
-      setRecords(prev => prev.filter(r => r.id !== id));
+      setRecords((prev) => prev.filter((r) => r.id !== id));
     } finally {
       setLoading(false);
     }
   };
 
   const handleChildSelect = (id: string) => {
-    const child = users.find(u => u.id === id || u._id === id);
+    const child = users.find((u) => u.id === id || u._id === id);
     if (child) {
-      setNewRecord(r => ({
+      setNewRecord((r) => ({
         ...r,
         childId: id,
         fio: child.fullName || '',
         birthdate: child.birthday || '',
-        group: typeof child.groupId === 'object' && child.groupId ? (child.groupId as any).id || (child.groupId as any)._id || '' : child.groupId || '',
+        group:
+          typeof child.groupId === 'object' && child.groupId
+            ? (child.groupId as any).id || (child.groupId as any)._id || ''
+            : child.groupId || '',
         address: child.notes || '',
       }));
     }
@@ -88,15 +118,37 @@ export default function RiskGroupChildren() {
 
   return (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
-      <Typography variant="h5" gutterBottom>Список детей группы риска</Typography>
+      <Typography variant='h5' gutterBottom>
+        Список детей группы риска
+      </Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
-        <Button variant="contained" onClick={() => setModalOpen(true)}>Новая запись</Button>
-        <TextField label="Поиск по ФИО" value={search} onChange={e => setSearch(e.target.value)} size="small" sx={{ minWidth: 180 }} />
-        <TextField label="Группа" value={group} onChange={e => setGroup(e.target.value)} size="small" sx={{ minWidth: 120 }} />
-        <TextField label="Основание" value={reason} onChange={e => setReason(e.target.value)} size="small" sx={{ minWidth: 140 }} />
+        <Button variant='contained' onClick={() => setModalOpen(true)}>
+          Новая запись
+        </Button>
+        <TextField
+          label='Поиск по ФИО'
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          size='small'
+          sx={{ minWidth: 180 }}
+        />
+        <TextField
+          label='Группа'
+          value={group}
+          onChange={(e) => setGroup(e.target.value)}
+          size='small'
+          sx={{ minWidth: 120 }}
+        />
+        <TextField
+          label='Основание'
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          size='small'
+          sx={{ minWidth: 140 }}
+        />
         <Button onClick={handleClearFilters}>Очистить фильтры</Button>
       </Stack>
-      <Table size="small" sx={{ minWidth: 900, overflowX: 'auto' }}>
+      <Table size='small' sx={{ minWidth: 900, overflowX: 'auto' }}>
         <TableHead>
           <TableRow>
             <TableCell>№</TableCell>
@@ -120,7 +172,13 @@ export default function RiskGroupChildren() {
               <TableCell>{r.reason}</TableCell>
               <TableCell>{r.notes}</TableCell>
               <TableCell>
-                <Button color="error" size="small" onClick={() => handleDelete(r.id)}>Удалить</Button>
+                <Button
+                  color='error'
+                  size='small'
+                  onClick={() => handleDelete(r.id)}
+                >
+                  Удалить
+                </Button>
               </TableCell>
             </TableRow>
           ))}
@@ -131,26 +189,51 @@ export default function RiskGroupChildren() {
         <DialogContent>
           <TextField
             select
-            label="Ребенок"
+            label='Ребенок'
             value={newRecord.childId || ''}
-            onChange={e => handleChildSelect(e.target.value)}
+            onChange={(e) => handleChildSelect(e.target.value)}
             fullWidth
-            margin="dense"
+            margin='dense'
           >
-            <MenuItem value="">—</MenuItem>
-            {users.map(child => (
-              <MenuItem key={child.id || child._id} value={child.id || child._id}>{child.fullName}</MenuItem>
+            <MenuItem value=''>—</MenuItem>
+            {users.map((child) => (
+              <MenuItem
+                key={child.id || child._id}
+                value={child.id || child._id}
+              >
+                {child.fullName}
+              </MenuItem>
             ))}
           </TextField>
-          <TextField label="Основание" value={newRecord.reason || ''} onChange={e => setNewRecord(r => ({ ...r, reason: e.target.value }))} fullWidth margin="dense" />
-          <TextField label="Примечания" value={newRecord.notes || ''} onChange={e => setNewRecord(r => ({ ...r, notes: e.target.value }))} fullWidth margin="dense" />
+          <TextField
+            label='Основание'
+            value={newRecord.reason || ''}
+            onChange={(e) =>
+              setNewRecord((r) => ({ ...r, reason: e.target.value }))
+            }
+            fullWidth
+            margin='dense'
+          />
+          <TextField
+            label='Примечания'
+            value={newRecord.notes || ''}
+            onChange={(e) =>
+              setNewRecord((r) => ({ ...r, notes: e.target.value }))
+            }
+            fullWidth
+            margin='dense'
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setModalOpen(false)}>Отмена</Button>
-          <Button onClick={handleAdd} variant="contained">Сохранить</Button>
+          <Button onClick={handleAdd} variant='contained'>
+            Сохранить
+          </Button>
         </DialogActions>
       </Dialog>
-      {loading && <CircularProgress sx={{ position: 'fixed', top: '50%', left: '50%' }} />}
+      {loading && (
+        <CircularProgress sx={{ position: 'fixed', top: '50%', left: '50%' }} />
+      )}
     </Box>
   );
 }

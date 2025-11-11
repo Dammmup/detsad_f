@@ -1,7 +1,12 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+} from 'react';
 import * as groupsApi from '../../services/groups';
 import { Group } from '../../types/common';
-
 
 interface GroupsContextType {
   groups: Group[];
@@ -20,7 +25,9 @@ interface GroupsProviderProps {
   children: ReactNode;
 }
 
-export const GroupsContext = createContext<GroupsContextType | undefined>(undefined);
+export const GroupsContext = createContext<GroupsContextType | undefined>(
+  undefined,
+);
 
 // Cache for storing groups data
 let groupsCache: Group[] | null = null;
@@ -38,7 +45,7 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
   const fetchGroups = useCallback(async (force = false) => {
     // Return cached data if it's still valid
     const now = Date.now();
-    if (!force && groupsCache && (now - cacheTimestamp) < CACHE_DURATION) {
+    if (!force && groupsCache && now - cacheTimestamp < CACHE_DURATION) {
       setGroups(groupsCache as Group[]);
       return groupsCache;
     }
@@ -46,21 +53,25 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       const data = await groupsApi.getGroups();
-      
+
       // Update cache
       groupsCache = data;
       cacheTimestamp = now;
-      
+
       setGroups(data as Group[]);
       setError(null);
       return data;
     } catch (err: any) {
       console.error('Failed to fetch groups:', err);
       if (err.response?.status === 401) {
-        console.warn('Groups API: Authentication required, user may need to re-login');
+        console.warn(
+          'Groups API: Authentication required, user may need to re-login',
+        );
         setError('Требуется повторная авторизация');
       } else {
-        setError('Не удалось загрузить список групп. Пожалуйста, попробуйте позже.');
+        setError(
+          'Не удалось загрузить список групп. Пожалуйста, попробуйте позже.',
+        );
       }
       throw err;
     } finally {
@@ -75,7 +86,7 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
       // Гарантируем, что обязательные поля есть
       if (!groupData.name) throw new Error('Название группы обязательно');
       const newGroup = await groupsApi.createGroup(groupData as Group);
-      setGroups(prevGroups => [...prevGroups, newGroup]);
+      setGroups((prevGroups) => [...prevGroups, newGroup]);
       setError(null);
       return newGroup;
     } catch (err) {
@@ -91,7 +102,9 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
     setLoading(true);
     try {
       const updatedGroup = await groupsApi.updateGroup(id, groupData);
-      setGroups(prevGroups => prevGroups.map(g => g.id === id ? updatedGroup : g));
+      setGroups((prevGroups) =>
+        prevGroups.map((g) => (g.id === id ? updatedGroup : g)),
+      );
       setError(null);
       return updatedGroup;
     } catch (err) {
@@ -107,7 +120,7 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       await groupsApi.deleteGroup(id);
-      setGroups(prevGroups => prevGroups.filter(group => group.id !== id));
+      setGroups((prevGroups) => prevGroups.filter((group) => group.id !== id));
       setError(null);
     } catch (err) {
       console.error(`Failed to delete group ${id}:`, err);

@@ -12,7 +12,7 @@ export const formatDate = (date: Date | string): string => {
   return dateObj.toLocaleDateString('ru-RU', {
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit'
+    day: '2-digit',
   });
 };
 
@@ -23,7 +23,7 @@ export const formatTime = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return dateObj.toLocaleTimeString('ru-RU', {
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 };
 
@@ -37,7 +37,7 @@ export const formatDateTime = (date: Date | string): string => {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 };
 
@@ -73,8 +73,18 @@ export const formatDateWithWeekday = (date: Date | string): string => {
 export const getCurrentPeriod = (): string => {
   const now = new Date();
   const monthNames = [
-    'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+    'Январь',
+    'Февраль',
+    'Март',
+    'Апрель',
+    'Май',
+    'Июнь',
+    'Июль',
+    'Август',
+    'Сентябрь',
+    'Октябрь',
+    'Ноябрь',
+    'Декабрь',
   ];
   return `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
 };
@@ -82,14 +92,17 @@ export const getCurrentPeriod = (): string => {
 /**
  * Получение диапазона дат текущего месяца
  */
-export const getCurrentMonthRange = (): { startDate: string; endDate: string } => {
+export const getCurrentMonthRange = (): {
+  startDate: string;
+  endDate: string;
+} => {
   const now = new Date();
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
   const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  
+
   return {
     startDate: startDate.toISOString().split('T')[0],
-    endDate: endDate.toISOString().split('T')[0]
+    endDate: endDate.toISOString().split('T')[0],
   };
 };
 
@@ -118,7 +131,7 @@ export const formatMinutesToTime = (minutes: number): string => {
 export const formatMinutesToReadable = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  
+
   if (hours === 0) {
     return `${mins}м`;
   } else if (mins === 0) {
@@ -152,7 +165,6 @@ export const getStatusText = (status: string): string => {
   return STATUS_TEXT[status] || status;
 };
 
-
 // ===== ФОРМАТИРОВАНИЕ ЧИСЕЛ И ВАЛЮТ =====
 
 /**
@@ -165,14 +177,20 @@ export const formatNumber = (num: number): string => {
 /**
  * Форматирование валюты
  */
-export const formatCurrency = (amount: number, currency: string = 'тенге'): string => {
+export const formatCurrency = (
+  amount: number,
+  currency: string = 'тенге',
+): string => {
   return `${formatNumber(amount)} ${currency}`;
 };
 
 /**
  * Форматирование процентов
  */
-export const formatPercentage = (value: number, decimals: number = 1): string => {
+export const formatPercentage = (
+  value: number,
+  decimals: number = 1,
+): string => {
   return `${value.toFixed(decimals)}%`;
 };
 
@@ -184,23 +202,26 @@ export const formatPercentage = (value: number, decimals: number = 1): string =>
 export const formatPhoneNumber = (phone: string): string => {
   // Удаляем все нецифровые символы
   const cleaned = phone.replace(/\D/g, '');
-  
+
   // Если номер начинается с 8, заменяем на +7
   let formatted = cleaned;
   if (formatted.startsWith('8') && formatted.length === 11) {
     formatted = '7' + formatted.slice(1);
   }
-  
+
   // Добавляем + если номер начинается с 7
   if (formatted.startsWith('7') && formatted.length === 11) {
     formatted = '+' + formatted;
   }
-  
+
   // Форматируем как +7 (XXX) XXX-XX-XX
   if (formatted.startsWith('+7') && formatted.length === 12) {
-    return formatted.replace(/(\+7)(\d{3})(\d{3})(\d{2})(\d{2})/, '$1 ($2) $3-$4-$5');
+    return formatted.replace(
+      /(\+7)(\d{3})(\d{3})(\d{2})(\d{2})/,
+      '$1 ($2) $3-$4-$5',
+    );
   }
-  
+
   return phone; // Возвращаем исходный номер если не удалось отформатировать
 };
 
@@ -212,7 +233,7 @@ export const formatPhoneNumber = (phone: string): string => {
 export const formatFullName = (name: string): string => {
   return name
     .split(' ')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join(' ');
 };
 
@@ -222,7 +243,7 @@ export const formatFullName = (name: string): string => {
 export const getInitials = (fullName: string): string => {
   return fullName
     .split(' ')
-    .map(name => name.charAt(0).toUpperCase())
+    .map((name) => name.charAt(0).toUpperCase())
     .join('');
 };
 
@@ -232,12 +253,13 @@ export const getInitials = (fullName: string): string => {
 export const formatShortName = (fullName: string): string => {
   const parts = fullName.trim().split(' ');
   if (parts.length < 2) return fullName;
-  
+
   const lastName = parts[0];
   const firstInitial = parts[1].charAt(0).toUpperCase();
-  const middleInitial = parts.length > 2 ? parts[2].charAt(0).toUpperCase() : '';
-  
-  return middleInitial 
+  const middleInitial =
+    parts.length > 2 ? parts[2].charAt(0).toUpperCase() : '';
+
+  return middleInitial
     ? `${lastName} ${firstInitial}.${middleInitial}.`
     : `${lastName} ${firstInitial}.`;
 };
@@ -249,11 +271,11 @@ export const formatShortName = (fullName: string): string => {
  */
 export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Б';
-  
+
   const k = 1024;
   const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
 
@@ -265,8 +287,8 @@ export const formatFileSize = (bytes: number): string => {
 export const formatAddress = (address: string): string => {
   return address
     .split(',')
-    .map(part => part.trim())
-    .filter(part => part.length > 0)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
     .join(', ');
 };
 
@@ -278,7 +300,7 @@ export const formatAddress = (address: string): string => {
 export const isToday = (date: Date | string): boolean => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   const today = new Date();
-  
+
   return dateObj.toDateString() === today.toDateString();
 };
 
@@ -289,7 +311,7 @@ export const isYesterday = (date: Date | string): boolean => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  
+
   return dateObj.toDateString() === yesterday.toDateString();
 };
 
@@ -303,7 +325,7 @@ export const getRelativeTime = (date: Date | string): string => {
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
-  
+
   if (diffMinutes < 1) {
     return 'только что';
   } else if (diffMinutes < 60) {
@@ -323,14 +345,14 @@ export const getRelativeTime = (date: Date | string): string => {
 export const calculateAge = (birthDate: Date | string): number => {
   const birth = typeof birthDate === 'string' ? new Date(birthDate) : birthDate;
   const today = new Date();
-  
+
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
-  
+
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
     age--;
   }
-  
+
   return age;
 };
 
@@ -343,19 +365,19 @@ export const formatForExport = (value: any): string => {
   if (value === null || value === undefined) {
     return '';
   }
-  
+
   if (typeof value === 'boolean') {
     return value ? 'Да' : 'Нет';
   }
-  
+
   if (typeof value === 'number') {
     return value.toString();
   }
-  
+
   if (value instanceof Date) {
     return formatDateTime(value);
   }
-  
+
   return String(value);
 };
 

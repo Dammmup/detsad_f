@@ -1,13 +1,37 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  Paper, Button, Table, TableHead, TableRow, TableCell, TableBody,
-    IconButton, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, Select, MenuItem, FormControl, InputLabel,
-  Alert, CircularProgress, Typography, Box
+  Paper,
+  Button,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Alert,
+  CircularProgress,
+  Typography,
+  Box,
 } from '@mui/material';
-import { Add, Edit, Delete, Group, Visibility, ExpandLess } from '@mui/icons-material';
+import {
+  Add,
+  Edit,
+  Delete,
+  Group,
+  Visibility,
+  ExpandLess,
+} from '@mui/icons-material';
 import { useGroups } from '../../components/context/GroupsContext';
-import  { Child } from '../../services/children';
+import { Child } from '../../services/children';
 // User импорт не нужен для детей
 import { useAuth } from '../../components/context/AuthContext';
 import { SelectChangeEvent } from '@mui/material/Select';
@@ -18,7 +42,7 @@ interface TeacherOption {
   id: string;
   fullName: string;
 }
-const options=['1','2','3','4','5','6']
+const options = ['1', '2', '3', '4', '5', '6'];
 interface GroupFormData {
   id?: string;
   name: string;
@@ -28,12 +52,12 @@ interface GroupFormData {
   teacher?: string;
 }
 
-const defaultForm: GroupFormData = { 
-  name: '', 
-  description: '', 
-  maxStudents: 20, 
+const defaultForm: GroupFormData = {
+  name: '',
+  description: '',
+  maxStudents: 20,
   ageGroup: [], // по умолчанию пустой массив
-  teacher: '' // Обязательное поле для backend
+  teacher: '', // Обязательное поле для backend
 };
 
 const Groups = () => {
@@ -51,19 +75,23 @@ const Groups = () => {
   const [expandedGroups, setExpandedGroups] = useState<{
     [groupId: string]: {
       expanded: boolean;
-  children: Child[];
+      children: Child[];
       loading: boolean;
     };
   }>({});
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
 
-  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+  const handleExport = async (
+    exportType: string,
+    exportFormat: 'pdf' | 'excel' | 'csv',
+  ) => {
     setLoading(true);
     try {
-      const response = await apiClient.post('/export/groups', 
+      const response = await apiClient.post(
+        '/export/groups',
         { format: exportFormat },
-        { responseType: 'blob' }
+        { responseType: 'blob' },
       );
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -81,27 +109,35 @@ const Groups = () => {
 
   const fetchTeachers = async () => {
     try {
-  // Для учителей оставляем getUsers, для детей используем Child
-  const users = await import('../../services/users').then(m => m.getUsers());
-  const filtered = users.filter((u: any) => ['teacher', 'assistant'].includes(u.role as any));
-  setTeacherList(filtered.map((u: any) => ({ id: u.id || u._id, fullName: u.fullName })));
+      // Для учителей оставляем getUsers, для детей используем Child
+      const users = await import('../../services/users').then((m) =>
+        m.getUsers(),
+      );
+      const filtered = users.filter((u: any) =>
+        ['teacher', 'assistant'].includes(u.role as any),
+      );
+      setTeacherList(
+        filtered.map((u: any) => ({ id: u.id || u._id, fullName: u.fullName })),
+      );
     } catch (e) {
       setTeacherList([]);
     }
   };
-    // Получение списка групп
+  // Получение списка групп
   const fetchGroups = async () => {
     setLoading(true);
     setError(null);
     try {
-      if (process.env.NODE_ENV !== 'production') console.log('Запрашиваю список групп...');
+      if (process.env.NODE_ENV !== 'production')
+        console.log('Запрашиваю список групп...');
       const data = await groupsContext.fetchGroups(true);
-      if (process.env.NODE_ENV !== 'production') console.log('Получены данные групп:', data);
-      
+      if (process.env.NODE_ENV !== 'production')
+        console.log('Получены данные групп:', data);
+
       // Преобразуем данные, если нужно
       // Приводим к типу Group
       const formattedData: any[] = Array.isArray(data)
-        ? data.map(group => ({
+        ? data.map((group) => ({
             id: group.id || group._id,
             name: group.name,
             description: group.description || '',
@@ -113,18 +149,21 @@ const Groups = () => {
                 : [],
             isActive: group.isActive ?? true,
             // сервер хранит teacherId; приводим к строке id
-            teacher: (group as any).teacherId ? String((group as any).teacherId) : '',
+            teacher: (group as any).teacherId
+              ? String((group as any).teacherId)
+              : '',
             // isActive: group.isActive, // убрано, если не используется в UI
             // createdBy: group.createdBy, // убрано, если не используется в UI
             createdAt: group.createdAt,
             updatedAt: group.updatedAt,
             maxStudents: group.maxStudents,
             // добавляем детей, если backend их уже вернул
-            children: (group as any).children || []
+            children: (group as any).children || [],
           }))
         : [];
-      
-      if (process.env.NODE_ENV !== 'production') console.log('Отформатированные данные:', formattedData);
+
+      if (process.env.NODE_ENV !== 'production')
+        console.log('Отформатированные данные:', formattedData);
       setGroups(formattedData);
     } catch (err: any) {
       console.error('Ошибка при загрузке групп:', err);
@@ -133,13 +172,14 @@ const Groups = () => {
       setLoading(false);
     }
   };
-  
+
   const fetchGroupsCallback = useCallback(fetchGroups, [groupsContext]);
-  
+
   // Загрузка групп только после успешной авторизации
   useEffect(() => {
     if (isLoggedIn && currentUser && !authLoading) {
-      if (process.env.NODE_ENV !== 'production') console.log('User authenticated, loading groups and teachers...');
+      if (process.env.NODE_ENV !== 'production')
+        console.log('User authenticated, loading groups and teachers...');
       fetchGroupsCallback();
       fetchTeachers();
     }
@@ -149,8 +189,6 @@ const Groups = () => {
 
   const teachers = teacherList.map((t) => t.fullName);
 
-
-
   // Открытие модального окна для добавления/редактирования
   const handleOpenModal = (group?: any) => {
     if (group) {
@@ -159,8 +197,12 @@ const Groups = () => {
         name: group.name,
         description: group.description || '',
         maxStudents: group.maxStudents || 20,
-        ageGroup: Array.isArray(group.ageGroup) ? group.ageGroup : typeof group.ageGroup === 'string' ? [group.ageGroup] : [],
-        teacher: (group as any).teacher || (group as any).teacherId || ''
+        ageGroup: Array.isArray(group.ageGroup)
+          ? group.ageGroup
+          : typeof group.ageGroup === 'string'
+            ? [group.ageGroup]
+            : [],
+        teacher: (group as any).teacher || (group as any).teacherId || '',
       });
       setEditId(group.id);
     } else {
@@ -181,7 +223,7 @@ const Groups = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (name) {
-      setForm(prev => ({
+      setForm((prev) => ({
         ...prev,
         [name]: name === 'maxStudents' ? Number(value) : value,
       }));
@@ -192,13 +234,13 @@ const Groups = () => {
   const handleAgeGroupChange = (e: SelectChangeEvent<string[]>) => {
     const { value } = e.target;
     const arr = typeof value === 'string' ? value.split(',') : value;
-    setForm(prev => ({ ...prev, ageGroup: arr }));
+    setForm((prev) => ({ ...prev, ageGroup: arr }));
   };
 
   // Обработка изменений в Select для teacher (single)
   const handleTeacherChange = (e: SelectChangeEvent<string>) => {
     const { value } = e.target;
-    setForm(prev => ({ ...prev, teacher: value as string }));
+    setForm((prev) => ({ ...prev, teacher: value as string }));
   };
 
   // Сохранение группы (создание или обновление)
@@ -213,12 +255,15 @@ const Groups = () => {
         // в UI держим массив строк; конвертацию в строку делает сервис groups
         ageGroup: Array.isArray(form.ageGroup) ? form.ageGroup : [],
         // backend ждёт строку id; сервис преобразует без изменений
-        teacher: typeof form.teacher === 'string' ? form.teacher : String(form.teacher || ''),
-        isActive: true
+        teacher:
+          typeof form.teacher === 'string'
+            ? form.teacher
+            : String(form.teacher || ''),
+        isActive: true,
       };
-      
+
       console.log('📤 Отправляю данные группы на backend:', groupData);
-      
+
       if (editId) {
         await groupsContext.updateGroup(editId, groupData);
       } else {
@@ -250,60 +295,63 @@ const Groups = () => {
   };
 
   // Обработка клика на "глазок" для разворачивания/сворачивания группы
-  const handleToggleGroupChildren = async (event: React.MouseEvent<HTMLElement>, groupId: string) => {
+  const handleToggleGroupChildren = async (
+    event: React.MouseEvent<HTMLElement>,
+    groupId: string,
+  ) => {
     event.preventDefault();
     event.stopPropagation();
-    
+
     const currentState = expandedGroups[groupId];
-    
+
     if (currentState?.expanded) {
       // Сворачиваем группу
-      setExpandedGroups(prev => ({
+      setExpandedGroups((prev) => ({
         ...prev,
         [groupId]: {
           ...prev[groupId],
-          expanded: false
-        }
+          expanded: false,
+        },
       }));
     } else {
       // Разворачиваем группу
-      setExpandedGroups(prev => ({
+      setExpandedGroups((prev) => ({
         ...prev,
         [groupId]: {
           expanded: true,
           children: currentState?.children || [],
-          loading: !currentState?.children?.length
-        }
+          loading: !currentState?.children?.length,
+        },
       }));
 
       // Загружаем детей, если они еще не загружены
       if (!currentState?.children?.length) {
         try {
           // сначала пробуем взять детей из уже загруженных групп
-          const group = groups.find(g => g.id === groupId);
+          const group = groups.find((g) => g.id === groupId);
           let children: Child[] = (group && (group as any).children) || [];
           if (!children.length) {
             // если в списке нет детей, запрашиваем полные данные группы
             const fullGroup = await groupsContext.getGroup(groupId);
             children = ((fullGroup as any).children || []) as Child[];
           }
-          setExpandedGroups(prev => ({
+          setExpandedGroups((prev) => ({
             ...prev,
             [groupId]: {
               expanded: true,
               children,
-              loading: false
-            }
+              loading: false,
+            },
           }));
         } catch (error) {
           console.error('Ошибка при загрузке детей группы:', error);
-          setExpandedGroups(prev => ({
+          setExpandedGroups((prev) => ({
             ...prev,
             [groupId]: {
               expanded: true,
               children: [],
-              loading: false
-            }
+              loading: false,
+            },
           }));
         }
       }
@@ -321,33 +369,35 @@ const Groups = () => {
           exportTypes={[{ value: 'groups', label: 'Список групп' }]}
           onExport={handleExport}
         />
-        <Button 
-          variant="contained" 
-          color="primary" 
-          startIcon={<Add />} 
+        <Button
+          variant='contained'
+          color='primary'
+          startIcon={<Add />}
           onClick={() => handleOpenModal()}
         >
           Добавить группу
         </Button>
       </Box>
-      
+
       {loading && (
         <Box
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          minHeight="200px"
-          width="100%"
+          display='flex'
+          justifyContent='center'
+          alignItems='center'
+          minHeight='200px'
+          width='100%'
         >
           <CircularProgress size={60} />
         </Box>
       )}
-      {error && <Alert severity="error">{error}</Alert>}
-      
+      {error && <Alert severity='error'>{error}</Alert>}
+
       {!loading && !error && (
         <>
           {groups.length === 0 ? (
-            <Alert severity="info" style={{ marginTop: 16 }}>Группы не найдены. Добавьте первую группу!</Alert>
+            <Alert severity='info' style={{ marginTop: 16 }}>
+              Группы не найдены. Добавьте первую группу!
+            </Alert>
           ) : (
             <Table>
               <TableHead>
@@ -357,7 +407,7 @@ const Groups = () => {
                   <TableCell>Возрастная группа</TableCell>
                   <TableCell>Вместимость</TableCell>
                   <TableCell>Воспитатель</TableCell>
-                  <TableCell align="right">Действия</TableCell>
+                  <TableCell align='right'>Действия</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -366,67 +416,116 @@ const Groups = () => {
                     <TableRow>
                       <TableCell>{group.name}</TableCell>
                       <TableCell>{group.description}</TableCell>
-                      <TableCell>{Array.isArray(group.ageGroup) ? group.ageGroup.join(', ') : String(group.ageGroup)}</TableCell>
+                      <TableCell>
+                        {Array.isArray(group.ageGroup)
+                          ? group.ageGroup.join(', ')
+                          : String(group.ageGroup)}
+                      </TableCell>
                       <TableCell>{group.maxStudents}</TableCell>
-                      <TableCell>{teacherList.find(t => t.id === group.teacher)?.fullName || '—'}</TableCell>
-                      <TableCell align="right">
+                      <TableCell>
+                        {teacherList.find((t) => t.id === group.teacher)
+                          ?.fullName || '—'}
+                      </TableCell>
+                      <TableCell align='right'>
                         <IconButton
-                          onClick={(e) => handleToggleGroupChildren(e, group.id)}
-                          title="Просмотреть детей группы"
+                          onClick={(e) =>
+                            handleToggleGroupChildren(e, group.id)
+                          }
+                          title='Просмотреть детей группы'
                         >
-                          {expandedGroups[group.id]?.expanded ? <ExpandLess color="primary" /> : <Visibility color="primary" />}
+                          {expandedGroups[group.id]?.expanded ? (
+                            <ExpandLess color='primary' />
+                          ) : (
+                            <Visibility color='primary' />
+                          )}
                         </IconButton>
                         <IconButton onClick={() => handleOpenModal(group)}>
                           <Edit />
                         </IconButton>
                         <IconButton onClick={() => handleDelete(group.id)}>
-                          <Delete color="error" />
+                          <Delete color='error' />
                         </IconButton>
                       </TableCell>
                     </TableRow>
                     {/* Разворачивающаяся строка с детьми */}
                     {expandedGroups[group.id]?.expanded && (
                       <TableRow>
-                        <TableCell colSpan={6} sx={{ paddingTop: 0, paddingBottom: 0 }}>
+                        <TableCell
+                          colSpan={6}
+                          sx={{ paddingTop: 0, paddingBottom: 0 }}
+                        >
                           <Box sx={{ margin: 1 }}>
-                            <Typography variant="h6" gutterBottom component="div" sx={{ color: '#1890ff' }}>
+                            <Typography
+                              variant='h6'
+                              gutterBottom
+                              component='div'
+                              sx={{ color: '#1890ff' }}
+                            >
                               Дети группы "{group.name}"
                             </Typography>
                             {expandedGroups[group.id]?.loading ? (
-                              <Box display="flex" justifyContent="center" alignItems="center" py={2}>
+                              <Box
+                                display='flex'
+                                justifyContent='center'
+                                alignItems='center'
+                                py={2}
+                              >
                                 <CircularProgress size={24} />
-                                <Typography variant="body2" sx={{ ml: 2 }}>
+                                <Typography variant='body2' sx={{ ml: 2 }}>
                                   Загрузка детей...
                                 </Typography>
                               </Box>
-                            ) : expandedGroups[group.id]?.children?.length === 0 ? (
-                              <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                            ) : expandedGroups[group.id]?.children?.length ===
+                              0 ? (
+                              <Typography
+                                variant='body2'
+                                color='text.secondary'
+                                sx={{ py: 2 }}
+                              >
                                 В группе нет детей
                               </Typography>
                             ) : (
-                              <Table size="small" sx={{ backgroundColor: '#f8f9fa' }}>
+                              <Table
+                                size='small'
+                                sx={{ backgroundColor: '#f8f9fa' }}
+                              >
                                 <TableHead>
                                   <TableRow>
-                                    <TableCell><strong>Имя ребенка</strong></TableCell>
-                                    <TableCell><strong>Родитель</strong></TableCell>
-                                    <TableCell><strong>Телефон</strong></TableCell>
-                                    <TableCell><strong>Дата рождения</strong></TableCell>
+                                    <TableCell>
+                                      <strong>Имя ребенка</strong>
+                                    </TableCell>
+                                    <TableCell>
+                                      <strong>Родитель</strong>
+                                    </TableCell>
+                                    <TableCell>
+                                      <strong>Телефон</strong>
+                                    </TableCell>
+                                    <TableCell>
+                                      <strong>Дата рождения</strong>
+                                    </TableCell>
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                  {expandedGroups[group.id]?.children?.map((child, index) => (
-                                    <TableRow key={child.id || index}>
-                                      <TableCell>{child.fullName}</TableCell>
-                                      <TableCell>{child.parentName || '—'}</TableCell>
-                                      <TableCell>{child.parentPhone || '—'}</TableCell>
-                                      <TableCell>
-                                        {child.birthday
-                                          ? new Date(child.birthday).toLocaleDateString('ru-RU')
-                                          : '—'
-                                        }
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
+                                  {expandedGroups[group.id]?.children?.map(
+                                    (child, index) => (
+                                      <TableRow key={child.id || index}>
+                                        <TableCell>{child.fullName}</TableCell>
+                                        <TableCell>
+                                          {child.parentName || '—'}
+                                        </TableCell>
+                                        <TableCell>
+                                          {child.parentPhone || '—'}
+                                        </TableCell>
+                                        <TableCell>
+                                          {child.birthday
+                                            ? new Date(
+                                                child.birthday,
+                                              ).toLocaleDateString('ru-RU')
+                                            : '—'}
+                                        </TableCell>
+                                      </TableRow>
+                                    ),
+                                  )}
                                 </TableBody>
                               </Table>
                             )}
@@ -443,36 +542,41 @@ const Groups = () => {
       )}
 
       {/* Модальное окно для добавления/редактирования группы */}
-      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+      <Dialog
+        open={modalOpen}
+        onClose={handleCloseModal}
+        maxWidth='sm'
+        fullWidth
+      >
         <DialogTitle>
           {editId ? 'Редактировать' : 'Добавить'} группу
         </DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
-            margin="dense"
-            label="Название группы"
-            type="text"
-            name="name"
+            margin='dense'
+            label='Название группы'
+            type='text'
+            name='name'
             fullWidth
             value={form.name}
             onChange={handleChange}
           />
           <TextField
-            margin="dense"
-            label="Описание"
-            type="text"
-            name="description"
+            margin='dense'
+            label='Описание'
+            type='text'
+            name='description'
             fullWidth
             value={form.description}
             onChange={handleChange}
           />
-          <FormControl fullWidth margin="dense">
+          <FormControl fullWidth margin='dense'>
             <InputLabel>Возрастная группа</InputLabel>
             <Select
               value={form.ageGroup}
-              label="Возрастная группа"
-              name="ageGroup"
+              label='Возрастная группа'
+              name='ageGroup'
               onChange={handleAgeGroupChange}
               multiple
             >
@@ -484,43 +588,44 @@ const Groups = () => {
             </Select>
           </FormControl>
           <TextField
-            margin="normal"
-            label="Вместимость"
-            type="number"
-            name="maxStudents"
+            margin='normal'
+            label='Вместимость'
+            type='number'
+            name='maxStudents'
             fullWidth
             value={form.maxStudents}
             onChange={handleChange}
           />
           {teachers.length > 0 && (
-          <FormControl fullWidth margin="dense">
-            <InputLabel>Воспитатель</InputLabel>
-            <Select
-              value={form.teacher || ''}
-              label="Воспитатель"
-              name="teacher"
-              onChange={handleTeacherChange}
-            >
-              {teacherList.map((t) => (
-                <MenuItem key={t.id} value={t.id}>{t.fullName}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+            <FormControl fullWidth margin='dense'>
+              <InputLabel>Воспитатель</InputLabel>
+              <Select
+                value={form.teacher || ''}
+                label='Воспитатель'
+                name='teacher'
+                onChange={handleTeacherChange}
+              >
+                {teacherList.map((t) => (
+                  <MenuItem key={t.id} value={t.id}>
+                    {t.fullName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseModal}>Отмена</Button>
-          <Button 
-            onClick={handleSave} 
-            variant="contained" 
-            color="primary" 
+          <Button
+            onClick={handleSave}
+            variant='contained'
+            color='primary'
             disabled={saving || !form.name}
           >
             {editId ? 'Сохранить' : 'Добавить'}
           </Button>
         </DialogActions>
       </Dialog>
-
     </Paper>
   );
 };

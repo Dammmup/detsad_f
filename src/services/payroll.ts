@@ -7,11 +7,11 @@ export interface Payroll {
     _id: string;
     fullName: string;
     role: string;
- };
+  };
   period: string;
   baseSalary: number;
   bonuses: number;
- deductions: number;
+  deductions: number;
   total: number;
   status: 'draft' | 'approved' | 'paid';
   paymentDate?: Date;
@@ -64,7 +64,7 @@ export interface VirtualPayroll {
   accruals: number;
   penalties: number;
   baseSalaryType: string;
- shiftRate?: number;
+  shiftRate?: number;
   latePenalties?: number;
   absencePenalties?: number;
   userFines?: number;
@@ -88,20 +88,20 @@ export interface PayrollFilters {
 
 // API Error interface
 interface ApiError extends Error {
- status?: number;
- data?: any;
+  status?: number;
+  data?: any;
 }
 
 // Helper function to handle API errors
 const handleApiError = (error: any, context = '') => {
   const errorMessage = error.response?.data?.message || error.message;
   console.error(`Error ${context}:`, errorMessage);
-  
+
   // Create a more detailed error object
- const apiError = new Error(`Error ${context}: ${errorMessage}`) as ApiError;
+  const apiError = new Error(`Error ${context}: ${errorMessage}`) as ApiError;
   apiError.status = error.response?.status;
- apiError.data = error.response?.data;
-  
+  apiError.data = error.response?.data;
+
   throw apiError;
 };
 
@@ -113,7 +113,9 @@ const handleApiError = (error: any, context = '') => {
  */
 export const getPayrollsByUsers = async (filters: PayrollFilters) => {
   try {
-    const response = await apiClient.get('/payroll/by-users', { params: filters });
+    const response = await apiClient.get('/payroll/by-users', {
+      params: filters,
+    });
     return response.data;
   } catch (error) {
     return handleApiError(error, 'fetching payrolls by users');
@@ -168,7 +170,10 @@ export const createPayroll = async (payrollData: Partial<Payroll>) => {
  * @param {Partial<Payroll>} payrollData - Updated payroll data
  * @returns {Promise<Payroll>} Updated payroll
  */
-export const updatePayroll = async (id: string, payrollData: Partial<Payroll>) => {
+export const updatePayroll = async (
+  id: string,
+  payrollData: Partial<Payroll>,
+) => {
   try {
     const response = await apiClient.put(`/payroll/${id}`, payrollData);
     return response.data;
@@ -220,48 +225,59 @@ export const markPayrollAsPaid = async (id: string) => {
 };
 
 /**
-  * Calculate payroll for a staff member
-  * @param {string} staffId - Staff member ID
+ * Calculate payroll for a staff member
+ * @param {string} staffId - Staff member ID
  * @param {string} month - Month in YYYY-MM format
-  * @returns {Promise<Payroll>} Calculated payroll
-  */
- export const calculatePayroll = async (staffId: string, month: string) => {
-   try {
-     const response = await apiClient.post('/payroll/calculate', { staffId, month });
-     return response.data;
-   } catch (error) {
-     return handleApiError(error, 'calculating payroll');
-   }
- };
+ * @returns {Promise<Payroll>} Calculated payroll
+ */
+export const calculatePayroll = async (staffId: string, month: string) => {
+  try {
+    const response = await apiClient.post('/payroll/calculate', {
+      staffId,
+      month,
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, 'calculating payroll');
+  }
+};
 
 /**
-  * Generate payroll sheets for all staff members
-  * @param {string} period - Period in YYYY-MM format
-  * @returns {Promise<any>} Success response
-  */
- export const generatePayrollSheets = async (period: string) => {
-   try {
-     const response = await apiClient.post('/payroll/generate-sheets', { period }, {
-       timeout: 60000 // 60 seconds for payroll sheet generation
-     });
-     return response.data;
-   } catch (error) {
-     return handleApiError(error, 'generating payroll sheets');
-   }
- };
+ * Generate payroll sheets for all staff members
+ * @param {string} period - Period in YYYY-MM format
+ * @returns {Promise<any>} Success response
+ */
+export const generatePayrollSheets = async (period: string) => {
+  try {
+    const response = await apiClient.post(
+      '/payroll/generate-sheets',
+      { period },
+      {
+        timeout: 60000, // 60 seconds for payroll sheet generation
+      },
+    );
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, 'generating payroll sheets');
+  }
+};
 
- /**
-   * Generate rent sheets for all tenants
-   * @param {string} period - Period in YYYY-MM format
-   * @returns {Promise<any>} Success response
-   */
-  export const generateRentSheets = async (period: string) => {
-    try {
-      const response = await apiClient.post('/rent/generate-sheets', { period }, {
-        timeout: 60000 // 60 seconds for rent sheet generation
-      });
-      return response.data;
-    } catch (error) {
-      return handleApiError(error, 'generating rent sheets');
-    }
-  };
+/**
+ * Generate rent sheets for all tenants
+ * @param {string} period - Period in YYYY-MM format
+ * @returns {Promise<any>} Success response
+ */
+export const generateRentSheets = async (period: string) => {
+  try {
+    const response = await apiClient.post(
+      '/rent/generate-sheets',
+      { period },
+      {
+        timeout: 60000, // 60 seconds for rent sheet generation
+      },
+    );
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, 'generating rent sheets');
+  }
+};

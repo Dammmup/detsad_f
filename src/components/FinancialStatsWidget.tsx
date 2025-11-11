@@ -7,9 +7,18 @@ import {
   CircularProgress,
   Alert,
   Grid,
-  Chip
+  Chip,
 } from '@mui/material';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 import { useAuth } from './context/AuthContext';
 import { useDate } from './context/DateContext';
 import { formatCurrency } from '../utils/format';
@@ -19,7 +28,9 @@ interface FinancialStatsWidgetProps {
   onStatsChange?: () => void; // Callback для обновления статистики
 }
 
-const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChange }) => {
+const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
+  onStatsChange,
+}) => {
   const { user: currentUser } = useAuth();
   const { currentDate } = useDate();
   const [loading, setLoading] = useState(true);
@@ -35,35 +46,58 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
       setLoading(true);
       setError(null);
       try {
-        const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-        
+        const startDate = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth(),
+          1,
+        );
+        const endDate = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth() + 1,
+          0,
+        );
+
         const response = await apiClient.get('/reports/salary/summary', {
           params: {
             startDate: startDate.toISOString().split('T')[0],
             endDate: endDate.toISOString().split('T')[0],
-            userId: currentUser.id
-          }
+            userId: currentUser.id,
+          },
         });
-        
-        const statsData = response.data;
-        
 
-        
+        const statsData = response.data;
+
         setStats(statsData);
-        
+
         // Подготовка данных для графика
         const chartDataArray = [
-          { name: 'Начисления', value: statsData.totalAccruals || 0, color: '#4caf50' },
-          { name: 'Штрафы', value: statsData.totalPenalties || 0, color: '#f44336' },
-          { name: 'К выплате', value: statsData.totalPayout || 0, color: '#ff9800' }
+          {
+            name: 'Начисления',
+            value: statsData.totalAccruals || 0,
+            color: '#4caf50',
+          },
+          {
+            name: 'Штрафы',
+            value: statsData.totalPenalties || 0,
+            color: '#f44336',
+          },
+          {
+            name: 'К выплате',
+            value: statsData.totalPayout || 0,
+            color: '#ff9800',
+          },
         ];
-        
+
         setChartData(chartDataArray);
       } catch (err: any) {
         let friendlyError = err.message;
-        if (friendlyError && (friendlyError.includes('Unexpected token') || friendlyError.includes('<'))) {
-          friendlyError = 'Ошибка соединения с сервером или некорректный ответ API.';
+        if (
+          friendlyError &&
+          (friendlyError.includes('Unexpected token') ||
+            friendlyError.includes('<'))
+        ) {
+          friendlyError =
+            'Ошибка соединения с сервером или некорректный ответ API.';
         }
         setError(friendlyError);
         console.error('Error fetching financial stats:', err);
@@ -71,7 +105,7 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
         setLoading(false);
       }
     };
-    
+
     fetchFinancialStats();
   }, [currentUser, currentDate]);
 
@@ -90,118 +124,156 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
   // };
 
   return (
-    <Card sx={{
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      backgroundColor: 'transparent',
-      border: 'none',
-      borderRadius: 0,
-      boxShadow: 'none'
-    }}>
-      <CardContent sx={{
-        flexGrow: 1,
+    <Card
+      sx={{
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        p: 2,
-        '&:last-child': {
-          pb: 2
-        }
-      }}>
-        <Box sx={{
+        backgroundColor: 'transparent',
+        border: 'none',
+        borderRadius: 0,
+        boxShadow: 'none',
+      }}
+    >
+      <CardContent
+        sx={{
+          flexGrow: 1,
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 2,
-          pb: 1,
-          borderBottom: '1px solid #dee2e6'
-        }}>
-       
-        </Box>
+          flexDirection: 'column',
+          p: 2,
+          '&:last-child': {
+            pb: 2,
+          },
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
+            pb: 1,
+            borderBottom: '1px solid #dee2e6',
+          }}
+        ></Box>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity='error' sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
         {currentUser?.role !== 'admin' ? (
-          <Box sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            flexGrow: 1,
-            textAlign: 'center'
-          }}>
-            <Typography color="text.secondary">
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexGrow: 1,
+              textAlign: 'center',
+            }}
+          >
+            <Typography color='text.secondary'>
               Финансовая статистика доступна только администраторам
             </Typography>
           </Box>
         ) : loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexGrow: 1,
+            }}
+          >
             <CircularProgress size={24} />
           </Box>
         ) : !stats ? (
-          <Box sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            flexGrow: 1,
-            textAlign: 'center'
-          }}>
-            <Typography color="text.secondary">
-              Нет данных
-            </Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexGrow: 1,
+              textAlign: 'center',
+            }}
+          >
+            <Typography color='text.secondary'>Нет данных</Typography>
           </Box>
         ) : (
           <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
             {/* Основные метрики */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
               <Grid item xs={6} sm={3}>
-                <Card sx={{
-                  height: '100%',
-                  backgroundColor: '#e8f5e9',
-                  border: '1px solid #c8e6c9'
-                }}>
+                <Card
+                  sx={{
+                    height: '100%',
+                    backgroundColor: '#e8f5e9',
+                    border: '1px solid #c8e6c9',
+                  }}
+                >
                   <CardContent>
-                    <Typography variant="h6" align="center" color="success.main">
+                    <Typography
+                      variant='h6'
+                      align='center'
+                      color='success.main'
+                    >
                       {formatCurrency(stats.totalAccruals || 0)}
                     </Typography>
-                    <Typography variant="body2" align="center" color="text.secondary">
+                    <Typography
+                      variant='body2'
+                      align='center'
+                      color='text.secondary'
+                    >
                       Начисления
                     </Typography>
                   </CardContent>
                 </Card>
               </Grid>
+              <Grid item xs={6} sm={3}></Grid>
               <Grid item xs={6} sm={3}>
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <Card sx={{
-                  height: '100%',
-                  backgroundColor: '#ffebee',
-                  border: '1px solid #ffcdd2'
-                }}>
+                <Card
+                  sx={{
+                    height: '100%',
+                    backgroundColor: '#ffebee',
+                    border: '1px solid #ffcdd2',
+                  }}
+                >
                   <CardContent>
-                    <Typography variant="h6" align="center" color="error.main">
+                    <Typography variant='h6' align='center' color='error.main'>
                       {formatCurrency(stats.totalPenalties || 0)}
                     </Typography>
-                    <Typography variant="body2" align="center" color="text.secondary">
+                    <Typography
+                      variant='body2'
+                      align='center'
+                      color='text.secondary'
+                    >
                       Штрафы
                     </Typography>
                   </CardContent>
                 </Card>
               </Grid>
               <Grid item xs={6} sm={3}>
-                <Card sx={{
-                  height: '10%',
-                  backgroundColor: '#fff3e0',
-                  border: '1px solid #ffe0b2'
-                }}>
+                <Card
+                  sx={{
+                    height: '10%',
+                    backgroundColor: '#fff3e0',
+                    border: '1px solid #ffe0b2',
+                  }}
+                >
                   <CardContent>
-                    <Typography variant="h6" align="center" color="warning.main">
+                    <Typography
+                      variant='h6'
+                      align='center'
+                      color='warning.main'
+                    >
                       {formatCurrency(stats.totalPayout || 0)}
                     </Typography>
-                    <Typography variant="body2" align="center" color="text.secondary">
+                    <Typography
+                      variant='body2'
+                      align='center'
+                      color='text.secondary'
+                    >
                       К выплате
                     </Typography>
                   </CardContent>
@@ -211,55 +283,60 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({ onStatsChan
 
             {/* График */}
             <Box sx={{ flexGrow: 1, minHeight: 200 }}>
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width='100%' height='100%'>
                 <BarChart
                   data={chartData}
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
+                  <CartesianGrid strokeDasharray='3 3' />
+                  <XAxis dataKey='name' />
                   <YAxis />
-                  <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'Сумма']} />
+                  <Tooltip
+                    formatter={(value) => [
+                      formatCurrency(Number(value)),
+                      'Сумма',
+                    ]}
+                  />
                   <Legend />
-                  <Bar dataKey="value" fill="#8884d8" />
+                  <Bar dataKey='value' fill='#8884d8' />
                 </BarChart>
               </ResponsiveContainer>
             </Box>
 
             {/* Детализация по типам */}
             <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+              <Typography variant='subtitle2' sx={{ mb: 1, fontWeight: 600 }}>
                 Детализация:
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 <Chip
                   label={`Сотрудников: ${stats.totalEmployees || 0}`}
-                  size="small"
-                  color="primary"
-                  variant="outlined"
+                  size='small'
+                  color='primary'
+                  variant='outlined'
                   sx={{
                     fontSize: '0.7rem',
-                    height: 20
+                    height: 20,
                   }}
                 />
                 <Chip
                   label={`Начислений: ${stats.totalAccrualsCount || 0}`}
-                  size="small"
-                  color="success"
-                  variant="outlined"
+                  size='small'
+                  color='success'
+                  variant='outlined'
                   sx={{
                     fontSize: '0.7rem',
-                    height: 20
+                    height: 20,
                   }}
                 />
                 <Chip
                   label={`Штрафов: ${stats.totalPenaltiesCount || 0}`}
-                  size="small"
-                  color="error"
-                  variant="outlined"
+                  size='small'
+                  color='error'
+                  variant='outlined'
                   sx={{
                     fontSize: '0.7rem',
-                    height: 20
+                    height: 20,
                   }}
                 />
               </Box>

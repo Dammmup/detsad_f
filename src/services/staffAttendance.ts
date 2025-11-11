@@ -12,12 +12,12 @@ export interface StaffAttendance {
   startTime: string; // HH:MM format
   endTime: string; // HH:MM format
   actualStart?: string; // HH:MM format
- actualEnd?: string; // HH:MM format
+  actualEnd?: string; // HH:MM format
   workDuration?: number;
   overtimeMinutes?: number;
   lateMinutes?: number;
   earlyLeaveMinutes?: number;
-  status: 'scheduled' | 'in_progress' | 'completed' | 'absent' ;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'absent';
   penalties: {
     late: {
       minutes: number;
@@ -48,7 +48,7 @@ export interface StaffAttendance {
   attachments?: string[];
   approvedBy?: string;
   approvedAt?: Date;
- inZone?: boolean;
+  inZone?: boolean;
   clockInLocation?: any;
   clockOutLocation?: any;
   photoClockIn?: string;
@@ -63,8 +63,8 @@ export interface StaffAttendance {
   isManualEntry: boolean;
   alternativeStaffId?: string; // Альтернативный сотрудник для отметки посещаемости
   createdBy: string;
- createdAt: Date;
- updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ClockInOutData {
@@ -76,65 +76,124 @@ export interface ClockInOutData {
 
 export const staffAttendanceService = {
   // Clock in/out
-  checkIn: (data: ClockInOutData) => apiClient.post('/attendance/clock-in', data),
-  checkOut: (data: ClockInOutData) => apiClient.post('/attendance/clock-out', data),
+  checkIn: (data: ClockInOutData) =>
+    apiClient.post('/attendance/clock-in', data),
+  checkOut: (data: ClockInOutData) =>
+    apiClient.post('/attendance/clock-out', data),
 
   // Break management
   startBreak: () => apiClient.post('/attendance/start-break'),
   endBreak: () => apiClient.post('/attendance/end-break'),
 
   // Get records
-  getEntries: (params?: { page?: number; limit?: number; startDate?: string; endDate?: string; status?: string }) => 
-    apiClient.get('/attendance/entries', { params }),
-  getSummary: (startDate: string, endDate: string) => 
+  getEntries: (params?: {
+    page?: number;
+    limit?: number;
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+  }) => apiClient.get('/attendance/entries', { params }),
+  getSummary: (startDate: string, endDate: string) =>
     apiClient.get(`/attendance/summary`, { params: { startDate, endDate } }),
-  getAllRecords: (params?: { staffId?: string; date?: string; status?: string; startDate?: string; endDate?: string; groupId?: string }) =>
-    apiClient.get('/attendance', { params }),
+  getAllRecords: (params?: {
+    staffId?: string;
+    date?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    groupId?: string;
+  }) => apiClient.get('/attendance', { params }),
   getRecordById: (id: string) => apiClient.get(`/attendance/${id}`),
-  getByStaffId: (staffId: string, params?: { date?: string; status?: string; startDate?: string; endDate?: string; groupId?: string }) =>
-    apiClient.get(`/attendance/staff/${staffId}`, { params }),
-  getByDateRange: (startDate: string, endDate: string, params?: { staffId?: string; status?: string; groupId?: string }) =>
-    apiClient.get(`/attendance/range`, { params: { startDate, endDate, ...params } }),
+  getByStaffId: (
+    staffId: string,
+    params?: {
+      date?: string;
+      status?: string;
+      startDate?: string;
+      endDate?: string;
+      groupId?: string;
+    },
+  ) => apiClient.get(`/attendance/staff/${staffId}`, { params }),
+  getByDateRange: (
+    startDate: string,
+    endDate: string,
+    params?: { staffId?: string; status?: string; groupId?: string },
+  ) =>
+    apiClient.get(`/attendance/range`, {
+      params: { startDate, endDate, ...params },
+    }),
 
   // Record management
-  createRecord: (data: Partial<StaffAttendance>) => apiClient.post('/attendance', data),
-  updateRecord: (id: string, data: Partial<StaffAttendance>) => apiClient.put(`/attendance/${id}`, data),
+  createRecord: (data: Partial<StaffAttendance>) =>
+    apiClient.post('/attendance', data),
+  updateRecord: (id: string, data: Partial<StaffAttendance>) =>
+    apiClient.put(`/attendance/${id}`, data),
   deleteRecord: (id: string) => apiClient.delete(`/attendance/${id}`),
- updateRecordStatus: (id: string, status: string) => apiClient.patch(`/attendance/${id}/status`, { status }),
-  addRecordNotes: (id: string, notes: string) => apiClient.patch(`/attendance/${id}/notes`, { notes }),
-  approveRecord: (id: string, approvedBy: string) => apiClient.patch(`/attendance/${id}/approve`, { approvedBy }),
-  updateAdjustments: (id: string, data: { penalties: any; bonuses: any; notes: string }) => 
-    apiClient.put(`/attendance/${id}/adjustments`, data),
+  updateRecordStatus: (id: string, status: string) =>
+    apiClient.patch(`/attendance/${id}/status`, { status }),
+  addRecordNotes: (id: string, notes: string) =>
+    apiClient.patch(`/attendance/${id}/notes`, { notes }),
+  approveRecord: (id: string, approvedBy: string) =>
+    apiClient.patch(`/attendance/${id}/approve`, { approvedBy }),
+  updateAdjustments: (
+    id: string,
+    data: { penalties: any; bonuses: any; notes: string },
+  ) => apiClient.put(`/attendance/${id}/adjustments`, data),
 
   // Approvals
   getPendingApprovals: () => apiClient.get('/attendance/approvals/pending'),
   getApprovedRecords: () => apiClient.get('/attendance/records/approved'),
   getRejectedRecords: () => apiClient.get('/attendance/records/rejected'),
-  approveAttendance: (id: string) => apiClient.patch(`/attendance/${id}/approve-time`),
-  rejectAttendance: (id: string, reason?: string) => apiClient.patch(`/attendance/${id}/reject`, { reason }),
+  approveAttendance: (id: string) =>
+    apiClient.patch(`/attendance/${id}/approve-time`),
+  rejectAttendance: (id: string, reason?: string) =>
+    apiClient.patch(`/attendance/${id}/reject`, { reason }),
 
   // Statistics and analytics
   getStatistics: () => apiClient.get('/attendance/statistics'),
-  getLateArrivals: (threshold?: number) => apiClient.get('/attendance/arrivals/late', { params: { threshold } }),
-  getEarlyLeaves: (threshold?: number) => apiClient.get('/attendance/leaves/early', { params: { threshold } }),
-  getOvertimeRecords: (threshold?: number) => apiClient.get('/attendance/overtime', { params: { threshold } }),
+  getLateArrivals: (threshold?: number) =>
+    apiClient.get('/attendance/arrivals/late', { params: { threshold } }),
+  getEarlyLeaves: (threshold?: number) =>
+    apiClient.get('/attendance/leaves/early', { params: { threshold } }),
+  getOvertimeRecords: (threshold?: number) =>
+    apiClient.get('/attendance/overtime', { params: { threshold } }),
   getAbsenteeismRecords: () => apiClient.get('/attendance/absenteeism'),
-  getWorkDurationStats: (startDate: string, endDate: string) => 
+  getWorkDurationStats: (startDate: string, endDate: string) =>
     apiClient.get('/attendance/stats/work', { params: { startDate, endDate } }),
-  getBreakDurationStats: (startDate: string, endDate: string) => 
-    apiClient.get('/attendance/stats/break', { params: { startDate, endDate } }),
-  getAttendanceRate: (startDate: string, endDate: string) => 
-    apiClient.get('/attendance/rate/attendance', { params: { startDate, endDate } }),
-  getLateArrivalRate: (startDate: string, endDate: string, threshold?: number) => 
-    apiClient.get('/attendance/rate/late', { params: { startDate, endDate, threshold } }),
-  getEarlyLeaveRate: (startDate: string, endDate: string, threshold?: number) => 
-    apiClient.get('/attendance/rate/early', { params: { startDate, endDate, threshold } }),
- getOvertimeRate: (startDate: string, endDate: string, threshold?: number) =>
-    apiClient.get('/attendance/rate/overtime', { params: { startDate, endDate, threshold } }),
+  getBreakDurationStats: (startDate: string, endDate: string) =>
+    apiClient.get('/attendance/stats/break', {
+      params: { startDate, endDate },
+    }),
+  getAttendanceRate: (startDate: string, endDate: string) =>
+    apiClient.get('/attendance/rate/attendance', {
+      params: { startDate, endDate },
+    }),
+  getLateArrivalRate: (
+    startDate: string,
+    endDate: string,
+    threshold?: number,
+  ) =>
+    apiClient.get('/attendance/rate/late', {
+      params: { startDate, endDate, threshold },
+    }),
+  getEarlyLeaveRate: (startDate: string, endDate: string, threshold?: number) =>
+    apiClient.get('/attendance/rate/early', {
+      params: { startDate, endDate, threshold },
+    }),
+  getOvertimeRate: (startDate: string, endDate: string, threshold?: number) =>
+    apiClient.get('/attendance/rate/overtime', {
+      params: { startDate, endDate, threshold },
+    }),
   getAbsenteeismRate: (startDate: string, endDate: string) =>
-    apiClient.get('/attendance/rate/absenteeism', { params: { startDate, endDate } }),
-  
+    apiClient.get('/attendance/rate/absenteeism', {
+      params: { startDate, endDate },
+    }),
+
   // Time tracking
-  getTimeTracking: (params?: { staffId?: string; startDate?: string; endDate?: string; groupId?: string }) =>
-    apiClient.get('/attendance/timetracking', { params }),
+  getTimeTracking: (params?: {
+    staffId?: string;
+    startDate?: string;
+    endDate?: string;
+    groupId?: string;
+  }) => apiClient.get('/attendance/timetracking', { params }),
 };

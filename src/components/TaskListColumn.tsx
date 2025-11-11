@@ -17,12 +17,19 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Alert
+  Alert,
 } from '@mui/material';
 import { Add, Delete } from '@mui/icons-material';
 import { User } from '../types/common';
 import { useAuth } from './context/AuthContext';
-import { getTaskList, createTask, deleteTask, toggleTaskStatus, markTaskAsCompleted, markTaskAsCancelled } from '../services/taskList';
+import {
+  getTaskList,
+  createTask,
+  deleteTask,
+  toggleTaskStatus,
+  markTaskAsCompleted,
+  markTaskAsCancelled,
+} from '../services/taskList';
 import { TaskList } from '../types/taskList';
 import { getUsers } from '../services/users';
 
@@ -31,24 +38,27 @@ interface TaskListColumnProps {
 }
 
 const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
- const { user: currentUser } = useAuth();
+  const { user: currentUser } = useAuth();
   const [tasks, setTasks] = useState<TaskList[]>([]);
   const [loading, setLoading] = useState(true);
- const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
-  const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
+  const [newTaskPriority, setNewTaskPriority] = useState<
+    'low' | 'medium' | 'high' | 'urgent'
+  >('medium');
   const [newTaskCategory, setNewTaskCategory] = useState('');
-  const [newTaskAssignedToSpecificUser, setNewTaskAssignedToSpecificUser] = useState<string>('');
+  const [newTaskAssignedToSpecificUser, setNewTaskAssignedToSpecificUser] =
+    useState<string>('');
   const [showAddTaskDialog, setShowAddTaskDialog] = useState(false);
- const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
 
   // Загрузка задач и пользователей
   useEffect(() => {
     const fetchTasks = async () => {
       if (!currentUser) return;
-      
+
       setLoading(true);
       setError(null);
       try {
@@ -64,7 +74,6 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
     };
 
     const fetchUsers = async () => {
-      
       try {
         const userList = await getUsers();
         setUsers(userList);
@@ -78,7 +87,6 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
     fetchUsers();
   }, [currentUser]);
 
-
   const handleAddTask = async () => {
     if (!newTaskTitle.trim() || !currentUser || !currentUser.id) return;
 
@@ -91,7 +99,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
         priority: newTaskPriority,
         status: 'pending' as const, // Начальный статус задачи
         category: newTaskCategory,
-        assignedToSpecificUser: newTaskAssignedToSpecificUser || undefined  // Добавляем новое поле, если оно выбрано
+        assignedToSpecificUser: newTaskAssignedToSpecificUser || undefined, // Добавляем новое поле, если оно выбрано
       };
 
       const createdTask = await createTask(newTask);
@@ -100,9 +108,9 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
       setNewTaskDescription('');
       setNewTaskPriority('medium');
       setNewTaskCategory('');
-      setNewTaskAssignedToSpecificUser('');  // Сбрасываем выбор сотрудника
+      setNewTaskAssignedToSpecificUser(''); // Сбрасываем выбор сотрудника
       setShowAddTaskDialog(false);
-      
+
       if (onTaskChange) onTaskChange();
     } catch (err: any) {
       setError(err.message);
@@ -117,7 +125,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
 
     try {
       let updatedTask: TaskList;
-      
+
       // В зависимости от текущего статуса, меняем на противоположный
       if (task.status === 'completed') {
         // Если задача выполнена, возвращаем в статус pending
@@ -126,37 +134,41 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
         // Если задача не выполнена, отмечаем как выполненную
         updatedTask = await markTaskAsCompleted(taskId, currentUser.id);
       }
-      
+
       // Обновляем список задач
-      setTasks(tasks.map(t => t._id === taskId ? updatedTask : t));
-      
+      setTasks(tasks.map((t) => (t._id === taskId ? updatedTask : t)));
+
       if (onTaskChange) onTaskChange();
     } catch (err: any) {
       setError(err.message);
       console.error('Error toggling task:', err);
     }
- };
+  };
 
   const handleDeleteTask = async (id: string) => {
     try {
       await deleteTask(id);
-      setTasks(tasks.filter(task => task._id !== id));
+      setTasks(tasks.filter((task) => task._id !== id));
       setTaskToDelete(null);
-      
+
       if (onTaskChange) onTaskChange();
     } catch (err: any) {
       setError(err.message);
       console.error('Error deleting task:', err);
     }
- };
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent':
-      case 'high': return 'error';
-      case 'medium': return 'warning';
-      case 'low': return 'success';
-      default: return 'default';
+      case 'high':
+        return 'error';
+      case 'medium':
+        return 'warning';
+      case 'low':
+        return 'success';
+      default:
+        return 'default';
     }
   };
 
@@ -166,45 +178,54 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
   };
 
   return (
-    <Card sx={{
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      backgroundColor: 'transparent',
-      border: 'none',
-      borderRadius: 0,
-      boxShadow: 'none'
-    }}>
-      <CardContent sx={{
-        flexGrow: 1,
+    <Card
+      sx={{
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        p: 2,
-        '&:last-child': {
-          pb: 2
-        }
-      }}>
-        <Box sx={{
+        backgroundColor: 'transparent',
+        border: 'none',
+        borderRadius: 0,
+        boxShadow: 'none',
+      }}
+    >
+      <CardContent
+        sx={{
+          flexGrow: 1,
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 2,
-          pb: 1,
-          borderBottom: '1px solid #dee2e6',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          padding: '12px 16px',
-          borderRadius: '8px 8px 0 0',
-          marginLeft: '-16px',
-          marginRight: '-16px',
-          marginTop: '-16px'
-        }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+          flexDirection: 'column',
+          p: 2,
+          '&:last-child': {
+            pb: 2,
+          },
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
+            pb: 1,
+            borderBottom: '1px solid #dee2e6',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            padding: '12px 16px',
+            borderRadius: '8px 8px 0 0',
+            marginLeft: '-16px',
+            marginRight: '-16px',
+            marginTop: '-16px',
+          }}
+        >
+          <Typography
+            variant='h6'
+            sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}
+          >
             📋 Уведомления
           </Typography>
           <Button
-            variant="contained"
-            size="small"
+            variant='contained'
+            size='small'
             startIcon={<Add />}
             onClick={() => setShowAddTaskDialog(true)}
             sx={{
@@ -212,8 +233,8 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(255,255,0.3)',
               '&:hover': {
-                backgroundColor: 'rgba(255,255,0.3)'
-              }
+                backgroundColor: 'rgba(255,255,0.3)',
+              },
             }}
           >
             Добавить
@@ -221,33 +242,42 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
         </Box>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity='error' sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexGrow: 1,
+            }}
+          >
             <Typography>Загрузка уведомлений...</Typography>
           </Box>
         ) : tasks.length === 0 ? (
-          <Box sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            flexGrow: 1,
-            textAlign: 'center'
-          }}>
-            <Typography color="text.secondary">
-              Нет уведомлений
-            </Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexGrow: 1,
+              textAlign: 'center',
+            }}
+          >
+            <Typography color='text.secondary'>Нет уведомлений</Typography>
           </Box>
         ) : (
-          <Box sx={{
-            flexGrow: 1,
-            overflowY: 'auto',
-            maxHeight: 400
-          }}>
+          <Box
+            sx={{
+              flexGrow: 1,
+              overflowY: 'auto',
+              maxHeight: 400,
+            }}
+          >
             {tasks.map((task) => (
               <Box
                 key={task._id}
@@ -258,31 +288,39 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                   borderRadius: 2,
                   boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
                   borderLeft: `4px solid ${
-                    task.priority === 'high' ? '#dc3545' :
-                    task.priority === 'medium' ? '#ffc107' :
-                    '#28a745'
+                    task.priority === 'high'
+                      ? '#dc3545'
+                      : task.priority === 'medium'
+                        ? '#ffc107'
+                        : '#28a745'
                   }`,
                   transition: 'all 0.3s ease-in-out',
                   '&:hover': {
                     boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
-                    transform: 'translateY(-2px)'
-                  }
+                    transform: 'translateY(-2px)',
+                  },
                 }}
               >
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  mb: 1
-                }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    mb: 1,
+                  }}
+                >
                   <Typography
                     sx={{
                       fontWeight: task.status === 'completed' ? 500 : 600,
-                      textDecoration: task.status === 'completed' ? 'line-through' : 'none',
-                      color: task.status === 'completed' ? 'text.disabled' : '#212529',
+                      textDecoration:
+                        task.status === 'completed' ? 'line-through' : 'none',
+                      color:
+                        task.status === 'completed'
+                          ? 'text.disabled'
+                          : '#212529',
                       fontSize: '0.95rem',
                       flexGrow: 1,
-                      pr: 2
+                      pr: 2,
                     }}
                   >
                     {task.title}
@@ -290,25 +328,26 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                   <Checkbox
                     checked={task.status === 'completed'}
                     onChange={() => handleToggleTask(task)}
-                    size="small"
+                    size='small'
                     sx={{
                       ml: 1,
-                      color: task.status === 'completed' ? '#28a745' : undefined,
+                      color:
+                        task.status === 'completed' ? '#28a745' : undefined,
                       '&.Mui-checked': {
-                        color: '#28a745'
-                      }
+                        color: '#28a745',
+                      },
                     }}
                   />
                 </Box>
-                
+
                 {task.description && (
                   <Typography
-                    variant="body2"
-                    color="text.secondary"
+                    variant='body2'
+                    color='text.secondary'
                     sx={{
                       mb: 1,
                       fontSize: '0.85rem',
-                      lineHeight: 1.4
+                      lineHeight: 1.4,
                     }}
                   >
                     {task.description}
@@ -316,97 +355,147 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                 )}
 
                 {task.status === 'completed' && task.completedBy && (
-                  <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary', fontStyle: 'italic' }}>
-                    Выполнено: {task.completedBy ? (typeof task.completedBy === 'object' ? task.completedBy.fullName : users.find(u => u._id === task.completedBy)?.fullName) : 'Пользователь'} {task.completedAt ? `(${formatDate(task.completedAt)})` : ''}
+                  <Typography
+                    variant='caption'
+                    sx={{
+                      display: 'block',
+                      mt: 1,
+                      color: 'text.secondary',
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    Выполнено:{' '}
+                    {task.completedBy
+                      ? typeof task.completedBy === 'object'
+                        ? task.completedBy.fullName
+                        : users.find((u) => u._id === task.completedBy)
+                            ?.fullName
+                      : 'Пользователь'}{' '}
+                    {task.completedAt
+                      ? `(${formatDate(task.completedAt)})`
+                      : ''}
                   </Typography>
                 )}
-                
+
                 {task.status === 'cancelled' && task.cancelledBy && (
-                  <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary', fontStyle: 'italic' }}>
-                    Отменено: {task.cancelledBy ? (typeof task.cancelledBy === 'object' ? task.cancelledBy.fullName : users.find(u => u._id === task.cancelledBy)?.fullName) : 'Пользователь'} {task.cancelledAt ? `(${formatDate(task.cancelledAt)})` : ''}
+                  <Typography
+                    variant='caption'
+                    sx={{
+                      display: 'block',
+                      mt: 1,
+                      color: 'text.secondary',
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    Отменено:{' '}
+                    {task.cancelledBy
+                      ? typeof task.cancelledBy === 'object'
+                        ? task.cancelledBy.fullName
+                        : users.find((u) => u._id === task.cancelledBy)
+                            ?.fullName
+                      : 'Пользователь'}{' '}
+                    {task.cancelledAt
+                      ? `(${formatDate(task.cancelledAt)})`
+                      : ''}
                   </Typography>
                 )}
-                
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: 1,
-                  mt: 1
-                }}>
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                    mt: 1,
+                  }}
+                >
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     {task.category && (
                       <Chip
                         label={task.category}
-                        size="small"
-                        variant="outlined"
+                        size='small'
+                        variant='outlined'
                         sx={{
                           fontSize: '0.7rem',
                           height: 20,
                           borderColor: 'rgba(0,0,0,0.1)',
-                          color: 'text.secondary'
+                          color: 'text.secondary',
                         }}
                       />
                     )}
                     <Chip
-                      label={task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                      size="small"
+                      label={
+                        task.priority.charAt(0).toUpperCase() +
+                        task.priority.slice(1)
+                      }
+                      size='small'
                       color={getPriorityColor(task.priority) as any}
-                      variant="filled"
+                      variant='filled'
                       sx={{
                         fontSize: '0.7rem',
                         height: 20,
-                        fontWeight: 600
+                        fontWeight: 600,
                       }}
                     />
                   </Box>
-                  
+
                   <IconButton
-                    size="small"
+                    size='small'
                     onClick={() => setTaskToDelete(task._id!)}
                     sx={{
                       color: '#6c757d',
                       '&:hover': {
                         color: '#dc3545',
-                        backgroundColor: 'rgba(220,53,69,0.1)'
-                      }
+                        backgroundColor: 'rgba(220,53,69,0.1)',
+                      },
                     }}
                   >
-                    <Delete fontSize="small" />
+                    <Delete fontSize='small' />
                   </IconButton>
                 </Box>
-                
+
                 {task.dueDate && (
                   <Typography
-                    variant="caption"
+                    variant='caption'
                     sx={{
                       display: 'block',
                       mt: 1,
-                      color: task.priority === 'high' ? '#dc3545' :
-                             task.priority === 'medium' ? '#ffc107' :
-                             '#28a745',
-                      fontWeight: 500
+                      color:
+                        task.priority === 'high'
+                          ? '#dc3545'
+                          : task.priority === 'medium'
+                            ? '#ffc107'
+                            : '#28a745',
+                      fontWeight: 500,
                     }}
                   >
                     📅 Срок: {formatDate(task.dueDate)}
                   </Typography>
                 )}
-                
+
                 {/* Отображение информации о назначенном пользователе - только для администраторов */}
-                {currentUser?.role === 'admin' && task.assignedToSpecificUser && (
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      display: 'block',
-                      mt: 0.5,
-                      color: '#6c757d',
-                      fontStyle: 'italic'
-                    }}
-                  >
-                    🎯 Назначено: {task.assignedToSpecificUser ? (typeof task.assignedToSpecificUser === 'object' ? task.assignedToSpecificUser.fullName : users.find(u => u.id === task.assignedToSpecificUser)?.fullName) : 'Сотрудник'}
-                  </Typography>
-                )}
+                {currentUser?.role === 'admin' &&
+                  task.assignedToSpecificUser && (
+                    <Typography
+                      variant='caption'
+                      sx={{
+                        display: 'block',
+                        mt: 0.5,
+                        color: '#6c757d',
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      🎯 Назначено:{' '}
+                      {task.assignedToSpecificUser
+                        ? typeof task.assignedToSpecificUser === 'object'
+                          ? task.assignedToSpecificUser.fullName
+                          : users.find(
+                              (u) => u.id === task.assignedToSpecificUser,
+                            )?.fullName
+                        : 'Сотрудник'}
+                    </Typography>
+                  )}
               </Box>
             ))}
           </Box>
@@ -417,41 +506,43 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
       <Dialog
         open={showAddTaskDialog}
         onClose={() => setShowAddTaskDialog(false)}
-        maxWidth="sm"
+        maxWidth='sm'
         fullWidth
         sx={{
           '& .MuiDialog-paper': {
             borderRadius: 3,
-            boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
-          }
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+          },
         }}
       >
-        <DialogTitle sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          textAlign: 'center',
-          fontWeight: 600,
-          fontSize: '1.5rem'
-        }}>
+        <DialogTitle
+          sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            textAlign: 'center',
+            fontWeight: 600,
+            fontSize: '1.5rem',
+          }}
+        >
           📝 Добавить новое уведомление
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <TextField
             autoFocus
-            margin="dense"
-            label="Заголовок уведомления"
+            margin='dense'
+            label='Заголовок уведомления'
             fullWidth
-            variant="outlined"
+            variant='outlined'
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
             sx={{ mb: 2 }}
             required
           />
           <TextField
-            margin="dense"
-            label="Описание"
+            margin='dense'
+            label='Описание'
             fullWidth
-            variant="outlined"
+            variant='outlined'
             multiline
             rows={3}
             value={newTaskDescription}
@@ -463,36 +554,42 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
               <InputLabel>Приоритет</InputLabel>
               <Select
                 value={newTaskPriority}
-                label="Приоритет"
-                onChange={(e) => setNewTaskPriority(e.target.value as 'low' | 'medium' | 'high' | 'urgent')}
+                label='Приоритет'
+                onChange={(e) =>
+                  setNewTaskPriority(
+                    e.target.value as 'low' | 'medium' | 'high' | 'urgent',
+                  )
+                }
               >
-                <MenuItem value="low">🟢 Низкий</MenuItem>
-                <MenuItem value="medium">🟡 Средний</MenuItem>
-                <MenuItem value="high">🔴 Высокий</MenuItem>
-                <MenuItem value="urgent">🚨 Срочный</MenuItem>
+                <MenuItem value='low'>🟢 Низкий</MenuItem>
+                <MenuItem value='medium'>🟡 Средний</MenuItem>
+                <MenuItem value='high'>🔴 Высокий</MenuItem>
+                <MenuItem value='urgent'>🚨 Срочный</MenuItem>
               </Select>
             </FormControl>
             <TextField
-              margin="dense"
-              label="Категория"
+              margin='dense'
+              label='Категория'
               fullWidth
-              variant="outlined"
+              variant='outlined'
               value={newTaskCategory}
               onChange={(e) => setNewTaskCategory(e.target.value)}
             />
           </Box>
-          
+
           {/* Выбор сотрудника для назначения задачи - только для администраторов */}
           {currentUser?.role === 'admin' && (
             <FormControl fullWidth sx={{ mb: 2 }}>
               <InputLabel>Назначить конкретному сотруднику</InputLabel>
               <Select
                 value={newTaskAssignedToSpecificUser}
-                label="Назначить конкретному сотруднику"
-                onChange={(e) => setNewTaskAssignedToSpecificUser(e.target.value as string)}
+                label='Назначить конкретному сотруднику'
+                onChange={(e) =>
+                  setNewTaskAssignedToSpecificUser(e.target.value as string)
+                }
                 sx={{ backgroundColor: 'white' }}
               >
-                <MenuItem value="">
+                <MenuItem value=''>
                   <em>Для всех</em>
                 </MenuItem>
                 {users.map((user) => (
@@ -504,26 +601,28 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
             </FormControl>
           )}
         </DialogContent>
-        <DialogActions sx={{
-          backgroundColor: '#f8f9fa',
-          borderTop: '1px solid #dee2e6',
-          p: 2,
-          justifyContent: 'space-between'
-        }}>
+        <DialogActions
+          sx={{
+            backgroundColor: '#f8f9fa',
+            borderTop: '1px solid #dee2e6',
+            p: 2,
+            justifyContent: 'space-between',
+          }}
+        >
           <Button
             onClick={() => setShowAddTaskDialog(false)}
             sx={{
               color: '#6c757d',
               '&:hover': {
-                backgroundColor: '#e9ecef'
-              }
+                backgroundColor: '#e9ecef',
+              },
             }}
           >
             Отмена
           </Button>
           <Button
             onClick={handleAddTask}
-            variant="contained"
+            variant='contained'
             disabled={!newTaskTitle.trim()}
             sx={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -535,11 +634,11 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
               transition: 'all 0.3s ease-in-out',
               '&:hover': {
                 transform: 'translateY(-2px)',
-                boxShadow: '0 6px 20px rgba(0,0,0,0.2)'
+                boxShadow: '0 6px 20px rgba(0,0,0,0.2)',
               },
               '&:disabled': {
-                background: 'linear-gradient(135deg, #cccccc 0%, #999999 100%)'
-              }
+                background: 'linear-gradient(135deg, #cccccc 0%, #999999 100%)',
+              },
             }}
           >
             Добавить уведомление
@@ -551,51 +650,57 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
       <Dialog
         open={!!taskToDelete}
         onClose={() => setTaskToDelete(null)}
-        maxWidth="xs"
+        maxWidth='xs'
         fullWidth
         sx={{
           '& .MuiDialog-paper': {
             borderRadius: 3,
-            boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
-          }
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+          },
         }}
       >
-        <DialogTitle sx={{
-          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-          color: 'white',
-          textAlign: 'center',
-          fontWeight: 600,
-          fontSize: '1.5rem'
-        }}>
+        <DialogTitle
+          sx={{
+            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            color: 'white',
+            textAlign: 'center',
+            fontWeight: 600,
+            fontSize: '1.5rem',
+          }}
+        >
           ❌ Подтверждение удаления
         </DialogTitle>
         <DialogContent sx={{ pt: 3, textAlign: 'center' }}>
-          <Typography variant="h6" sx={{ mb: 1 }}>Вы уверены?</Typography>
-          <Typography color="text.secondary">
+          <Typography variant='h6' sx={{ mb: 1 }}>
+            Вы уверены?
+          </Typography>
+          <Typography color='text.secondary'>
             Вы уверены, что хотите удалить это уведомление?
           </Typography>
         </DialogContent>
-        <DialogActions sx={{
-          backgroundColor: '#f8f9fa',
-          borderTop: '1px solid #dee2e6',
-          p: 2,
-          justifyContent: 'space-between'
-        }}>
+        <DialogActions
+          sx={{
+            backgroundColor: '#f8f9fa',
+            borderTop: '1px solid #dee2e6',
+            p: 2,
+            justifyContent: 'space-between',
+          }}
+        >
           <Button
             onClick={() => setTaskToDelete(null)}
             sx={{
               color: '#6c757d',
               '&:hover': {
-                backgroundColor: '#e9ecef'
-              }
+                backgroundColor: '#e9ecef',
+              },
             }}
           >
             Отмена
           </Button>
           <Button
             onClick={() => taskToDelete && handleDeleteTask(taskToDelete)}
-            variant="contained"
-            color="error"
+            variant='contained'
+            color='error'
             sx={{
               background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
               padding: '10px 24px',
@@ -606,8 +711,8 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
               transition: 'all 0.3s ease-in-out',
               '&:hover': {
                 transform: 'translateY(-2px)',
-                boxShadow: '0 6px 20px rgba(0,0,0,0.2)'
-              }
+                boxShadow: '0 6px 20px rgba(0,0,0,0.2)',
+              },
             }}
           >
             Удалить

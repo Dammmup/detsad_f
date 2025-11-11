@@ -26,12 +26,12 @@ export interface Shift {
 const handleApiError = (error: any, context = '') => {
   const errorMessage = error.response?.data?.message || error.message;
   console.error(`Error ${context}:`, errorMessage);
-  
+
   // Create a more detailed error object
   const apiError = new Error(`Error ${context}: ${errorMessage}`) as ApiError;
   apiError.status = error.response?.status;
- apiError.data = error.response?.data;
-  
+  apiError.data = error.response?.data;
+
   throw apiError;
 };
 
@@ -55,7 +55,7 @@ export const getSchedules = async (groupId?: string, userId?: string) => {
       date: schedule.date,
       startTime: schedule.startTime,
       endTime: schedule.endTime,
-      notes: schedule.notes
+      notes: schedule.notes,
     }));
     console.log('Schedules data:', schedules);
     return schedules;
@@ -82,7 +82,7 @@ export const getShift = async (id: string) => {
       endTime: response.data.endTime,
       type: response.data.type,
       notes: response.data.notes,
-      status: response.data.status
+      status: response.data.status,
     };
     return shift;
   } catch (error) {
@@ -103,7 +103,7 @@ export const createSchedule = async (record: Shift) => {
       date: record.date,
       startTime: record.startTime,
       endTime: record.endTime,
-      notes: record.notes
+      notes: record.notes,
     });
     const createdRecord: Shift = {
       id: response.data._id,
@@ -135,7 +135,7 @@ export const updateSchedule = async (id: string, record: Shift) => {
       date: record.date,
       startTime: record.startTime,
       endTime: record.endTime,
-      notes: record.notes
+      notes: record.notes,
     });
     const updatedRecord: Shift = {
       id: response.data._id,
@@ -167,7 +167,6 @@ export const deleteSchedule = async (id: string) => {
   }
 };
 
-
 /**
  * Generate mock shifts for testing
  * @param {string} startDate - Start date in YYYY-MM-DD format
@@ -175,4 +174,3 @@ export const deleteSchedule = async (id: string) => {
  * @param {string} userId - Optional user ID to filter shifts
  * @returns {Shift[]} List of mock shifts
  */
-

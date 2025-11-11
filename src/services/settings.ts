@@ -39,10 +39,7 @@ export interface KindergartenSettings {
   language: string;
   currency: string;
   holidays?: string[];
-
-
 }
-
 
 // Интерфейс для настроек уведомлений
 export interface NotificationSettings {
@@ -103,15 +100,14 @@ export interface User {
 const handleApiError = (error: any, context = '') => {
   const errorMessage = error.response?.data?.message || error.message;
   console.error(`Error ${context}:`, errorMessage);
-  
+
   // Create a more detailed error object
   const apiError = new Error(`Error ${context}: ${errorMessage}`) as ApiError;
   apiError.status = error.response?.status;
   apiError.data = error.response?.data;
-  
+
   throw apiError;
 };
-
 
 /**
  * Get kindergarten settings
@@ -120,30 +116,39 @@ const handleApiError = (error: any, context = '') => {
 
 export const settingsService = {
   // Геолокация
-  getGeolocationSettings: () => apiClient.get<GeolocationSettings>('/settings/geolocation'),
-  updateGeolocationSettings: (data: Partial<GeolocationSettings>) => 
+  getGeolocationSettings: () =>
+    apiClient.get<GeolocationSettings>('/settings/geolocation'),
+  updateGeolocationSettings: (data: Partial<GeolocationSettings>) =>
     apiClient.put<GeolocationSettings>('/settings/geolocation', data),
-  updateCoordinates: (latitude: number, longitude: number) => 
-    apiClient.put<GeolocationSettings>('/settings/geolocation/coordinates', { latitude, longitude }),
-  updateRadius: (radius: number) => 
-    apiClient.put<GeolocationSettings>('/settings/geolocation/radius', { radius }),
+  updateCoordinates: (latitude: number, longitude: number) =>
+    apiClient.put<GeolocationSettings>('/settings/geolocation/coordinates', {
+      latitude,
+      longitude,
+    }),
+  updateRadius: (radius: number) =>
+    apiClient.put<GeolocationSettings>('/settings/geolocation/radius', {
+      radius,
+    }),
 
   // Настройки детского сада
-  getKindergartenSettings: () => apiClient.get<KindergartenSettings>('/settings/kindergarten'),
-  updateKindergartenSettings: (data: Partial<KindergartenSettings>) => 
+  getKindergartenSettings: () =>
+    apiClient.get<KindergartenSettings>('/settings/kindergarten'),
+  updateKindergartenSettings: (data: Partial<KindergartenSettings>) =>
     apiClient.put<KindergartenSettings>('/settings/kindergarten', data),
 
   // Проверка нерабочего дня
-  isNonWorkingDay: (dateStr: string) => 
-    apiClient.get<{isNonWorkingDay: boolean}>(`/settings/is-non-working-day/${dateStr}`),
+  isNonWorkingDay: (dateStr: string) =>
+    apiClient.get<{ isNonWorkingDay: boolean }>(
+      `/settings/is-non-working-day/${dateStr}`,
+    ),
 };
 
 export const getKindergartenSettings = async () => {
   try {
     console.log('Fetching kindergarten settings from API...');
-    
-  const response = await apiClient.get('/settings/kindergarten');
-    
+
+    const response = await apiClient.get('/settings/kindergarten');
+
     const settings: KindergartenSettings = {
       id: response.data._id,
       name: response.data.name,
@@ -153,14 +158,14 @@ export const getKindergartenSettings = async () => {
       director: response.data.director,
       workingHours: {
         start: response.data.workingHours?.start || '08:00',
-        end: response.data.workingHours?.end || '18:00'
+        end: response.data.workingHours?.end || '18:00',
       },
       workingDays: response.data.workingDays || [],
       timezone: response.data.timezone,
       language: response.data.language,
-      currency: response.data.currency
+      currency: response.data.currency,
     };
-    
+
     console.log('Kindergarten settings data:', settings);
     return settings;
   } catch (error) {
@@ -174,9 +179,11 @@ export const getKindergartenSettings = async () => {
  * @param {KindergartenSettings} settings - Updated settings
  * @returns {Promise<KindergartenSettings>} Updated settings
  */
-export const updateKindergartenSettings = async (settings: KindergartenSettings) => {
+export const updateKindergartenSettings = async (
+  settings: KindergartenSettings,
+) => {
   try {
-  const response = await apiClient.put('/settings/kindergarten', {
+    const response = await apiClient.put('/settings/kindergarten', {
       name: settings.name,
       address: settings.address,
       phone: settings.phone,
@@ -186,9 +193,9 @@ export const updateKindergartenSettings = async (settings: KindergartenSettings)
       workingDays: settings.workingDays,
       timezone: settings.timezone,
       language: settings.language,
-      currency: settings.currency
+      currency: settings.currency,
     });
-    
+
     const updatedSettings: KindergartenSettings = {
       id: response.data._id,
       name: response.data.name,
@@ -198,14 +205,14 @@ export const updateKindergartenSettings = async (settings: KindergartenSettings)
       director: response.data.director,
       workingHours: {
         start: response.data.workingHours?.start || '08:00',
-        end: response.data.workingHours?.end || '18:00'
+        end: response.data.workingHours?.end || '18:00',
       },
       workingDays: response.data.workingDays || [],
       timezone: response.data.timezone,
       language: response.data.language,
-      currency: response.data.currency
+      currency: response.data.currency,
     };
-    
+
     return updatedSettings;
   } catch (error) {
     return handleApiError(error, 'updating kindergarten settings');
@@ -218,8 +225,8 @@ export const updateKindergartenSettings = async (settings: KindergartenSettings)
  */
 export const getNotificationSettings = async () => {
   try {
-  const response = await apiClient.get('/settings/notifications');
-    
+    const response = await apiClient.get('/settings/notifications');
+
     const settings: NotificationSettings = {
       id: response.data._id,
       emailNotifications: response.data.emailNotifications ?? true,
@@ -228,9 +235,9 @@ export const getNotificationSettings = async () => {
       lateArrivalAlert: response.data.lateArrivalAlert ?? true,
       absenceAlert: response.data.absenceAlert ?? true,
       overtimeAlert: response.data.overtimeAlert ?? true,
-      reportReminders: response.data.reportReminders ?? true
+      reportReminders: response.data.reportReminders ?? true,
     };
-    
+
     return settings;
   } catch (error) {
     return handleApiError(error, 'fetching notification settings');
@@ -242,10 +249,12 @@ export const getNotificationSettings = async () => {
  * @param {NotificationSettings} settings - Updated settings
  * @returns {Promise<NotificationSettings>} Updated settings
  */
-export const updateNotificationSettings = async (settings: NotificationSettings) => {
+export const updateNotificationSettings = async (
+  settings: NotificationSettings,
+) => {
   try {
-  const response = await apiClient.put('/settings/notifications', settings);
-    
+    const response = await apiClient.put('/settings/notifications', settings);
+
     const updatedSettings: NotificationSettings = {
       id: response.data._id,
       emailNotifications: response.data.emailNotifications ?? true,
@@ -254,9 +263,9 @@ export const updateNotificationSettings = async (settings: NotificationSettings)
       lateArrivalAlert: response.data.lateArrivalAlert ?? true,
       absenceAlert: response.data.absenceAlert ?? true,
       overtimeAlert: response.data.overtimeAlert ?? true,
-      reportReminders: response.data.reportReminders ?? true
+      reportReminders: response.data.reportReminders ?? true,
     };
-    
+
     return updatedSettings;
   } catch (error) {
     return handleApiError(error, 'updating notification settings');
@@ -269,23 +278,26 @@ export const updateNotificationSettings = async (settings: NotificationSettings)
  */
 export const getSecuritySettings = async () => {
   try {
-  const response = await apiClient.get('/settings/security');
-    
+    const response = await apiClient.get('/settings/security');
+
     const settings: SecuritySettings = {
       id: response.data._id,
       passwordPolicy: {
         minLength: response.data.passwordPolicy?.minLength ?? 8,
-        requireUppercase: response.data.passwordPolicy?.requireUppercase ?? true,
-        requireLowercase: response.data.passwordPolicy?.requireLowercase ?? true,
+        requireUppercase:
+          response.data.passwordPolicy?.requireUppercase ?? true,
+        requireLowercase:
+          response.data.passwordPolicy?.requireLowercase ?? true,
         requireNumbers: response.data.passwordPolicy?.requireNumbers ?? true,
-        requireSpecialChars: response.data.passwordPolicy?.requireSpecialChars ?? false
+        requireSpecialChars:
+          response.data.passwordPolicy?.requireSpecialChars ?? false,
       },
       sessionTimeout: response.data.sessionTimeout ?? 60,
       twoFactorAuth: response.data.twoFactorAuth ?? false,
       ipWhitelist: response.data.ipWhitelist || [],
-      maxLoginAttempts: response.data.maxLoginAttempts ?? 5
+      maxLoginAttempts: response.data.maxLoginAttempts ?? 5,
     };
-    
+
     return settings;
   } catch (error) {
     return handleApiError(error, 'fetching security settings');
@@ -299,23 +311,26 @@ export const getSecuritySettings = async () => {
  */
 export const updateSecuritySettings = async (settings: SecuritySettings) => {
   try {
-  const response = await apiClient.put('/settings/security', settings);
-    
+    const response = await apiClient.put('/settings/security', settings);
+
     const updatedSettings: SecuritySettings = {
       id: response.data._id,
       passwordPolicy: {
         minLength: response.data.passwordPolicy?.minLength ?? 8,
-        requireUppercase: response.data.passwordPolicy?.requireUppercase ?? true,
-        requireLowercase: response.data.passwordPolicy?.requireLowercase ?? true,
+        requireUppercase:
+          response.data.passwordPolicy?.requireUppercase ?? true,
+        requireLowercase:
+          response.data.passwordPolicy?.requireLowercase ?? true,
         requireNumbers: response.data.passwordPolicy?.requireNumbers ?? true,
-        requireSpecialChars: response.data.passwordPolicy?.requireSpecialChars ?? false
+        requireSpecialChars:
+          response.data.passwordPolicy?.requireSpecialChars ?? false,
       },
       sessionTimeout: response.data.sessionTimeout ?? 60,
       twoFactorAuth: response.data.twoFactorAuth ?? false,
       ipWhitelist: response.data.ipWhitelist || [],
-      maxLoginAttempts: response.data.maxLoginAttempts ?? 5
+      maxLoginAttempts: response.data.maxLoginAttempts ?? 5,
     };
-    
+
     return updatedSettings;
   } catch (error) {
     return handleApiError(error, 'updating security settings');
@@ -328,21 +343,21 @@ export const updateSecuritySettings = async (settings: SecuritySettings) => {
  */
 export const getGeolocationSettings = async () => {
   try {
-  const response = await apiClient.get('/settings/geolocation');
-    
+    const response = await apiClient.get('/settings/geolocation');
+
     const settings: GeolocationSettings = {
       id: response.data._id,
       enabled: response.data.enabled ?? false,
       radius: response.data.radius ?? 100,
       coordinates: {
         latitude: response.data.coordinates?.latitude ?? 0,
-        longitude: response.data.coordinates?.longitude ?? 0
+        longitude: response.data.coordinates?.longitude ?? 0,
       },
       yandexApiKey: response.data.yandexApiKey,
       strictMode: response.data.strictMode ?? false,
-      allowedDevices: response.data.allowedDevices || []
+      allowedDevices: response.data.allowedDevices || [],
     };
-    
+
     return settings;
   } catch (error) {
     return handleApiError(error, 'fetching geolocation settings');
@@ -354,25 +369,27 @@ export const getGeolocationSettings = async () => {
  * @param {GeolocationSettings} settings - Updated settings
  * @returns {Promise<GeolocationSettings>} Updated settings
  */
-export const updateGeolocationSettings = async (settings: GeolocationSettings) => {
+export const updateGeolocationSettings = async (
+  settings: GeolocationSettings,
+) => {
   try {
-  const response = await apiClient.put('/settings/geolocation', {
-      ...settings
+    const response = await apiClient.put('/settings/geolocation', {
+      ...settings,
     });
-    
+
     const updatedSettings: GeolocationSettings = {
       id: response.data._id,
       enabled: response.data.enabled ?? false,
       radius: response.data.radius ?? 100,
       coordinates: {
         latitude: response.data.coordinates?.latitude ?? 0,
-        longitude: response.data.coordinates?.longitude ?? 0
+        longitude: response.data.coordinates?.longitude ?? 0,
       },
       yandexApiKey: response.data.yandexApiKey,
       strictMode: response.data.strictMode ?? false,
-      allowedDevices: response.data.allowedDevices || []
+      allowedDevices: response.data.allowedDevices || [],
     };
-    
+
     return updatedSettings;
   } catch (error) {
     return handleApiError(error, 'updating geolocation settings');
@@ -385,8 +402,8 @@ export const updateGeolocationSettings = async (settings: GeolocationSettings) =
  */
 export const getAllUsers = async () => {
   try {
-  const response = await apiClient.get('/users');
-    
+    const response = await apiClient.get('/users');
+
     const users: User[] = response.data.map((user: any) => ({
       id: user._id,
       username: user.username,
@@ -396,9 +413,9 @@ export const getAllUsers = async () => {
       isActive: user.active,
       lastLogin: user.lastLogin,
       createdAt: user.createdAt,
-      permissions: [] // В реальном приложении здесь будут реальные разрешения
+      permissions: [], // В реальном приложении здесь будут реальные разрешения
     }));
-    
+
     return users;
   } catch (error) {
     return handleApiError(error, 'fetching users');
@@ -412,8 +429,8 @@ export const getAllUsers = async () => {
  */
 export const createUser = async (user: User) => {
   try {
-  const response = await apiClient.post('/users', user);
-    
+    const response = await apiClient.post('/users', user);
+
     const newUser: User = {
       id: response.data._id,
       username: response.data.username,
@@ -423,9 +440,9 @@ export const createUser = async (user: User) => {
       isActive: response.data.active,
       lastLogin: response.data.lastLogin,
       createdAt: response.data.createdAt,
-      permissions: []
+      permissions: [],
     };
-    
+
     return newUser;
   } catch (error) {
     return handleApiError(error, 'creating user');
@@ -440,8 +457,8 @@ export const createUser = async (user: User) => {
  */
 export const updateUser = async (id: string, user: User) => {
   try {
-  const response = await apiClient.put(`/users/${id}`, user);
-    
+    const response = await apiClient.put(`/users/${id}`, user);
+
     const updatedUser: User = {
       id: response.data._id,
       username: response.data.username,
@@ -451,9 +468,9 @@ export const updateUser = async (id: string, user: User) => {
       isActive: response.data.active,
       lastLogin: response.data.lastLogin,
       createdAt: response.data.createdAt,
-      permissions: []
+      permissions: [],
     };
-    
+
     return updatedUser;
   } catch (error) {
     return handleApiError(error, `updating user ${id}`);
@@ -467,7 +484,7 @@ export const updateUser = async (id: string, user: User) => {
  */
 export const deleteUser = async (id: string) => {
   try {
-  await apiClient.delete(`/users/${id}`);
+    await apiClient.delete(`/users/${id}`);
     return { success: true };
   } catch (error) {
     return handleApiError(error, `deleting user ${id}`);

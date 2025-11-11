@@ -8,30 +8,30 @@ import { shiftsApi } from '../services/shifts';
  */
 export const exportStaffAttendanceByPeriod = async (
   startDate: string,
- endDate: string,
-  attendanceData?: any[]
+  endDate: string,
+  attendanceData?: any[],
 ): Promise<void> => {
   const period = `${startDate} - ${endDate}`;
-  
+
   try {
     let dataToExport = attendanceData;
-    
+
     // Если данные не предоставлены, загружаем их из API
     if (!dataToExport) {
       // Получаем все смены за указанный период
       dataToExport = await shiftsApi.getAll({
         startDate,
-        endDate
+        endDate,
       });
     }
-    
+
     // Фильтруем данные, чтобы включить только записи в диапазоне указанных дат
-    const filteredData = dataToExport.filter(record => {
+    const filteredData = dataToExport.filter((record) => {
       return record.date >= startDate && record.date <= endDate;
     });
-    
+
     await exportStaffAttendance(filteredData, period);
- } catch (error) {
+  } catch (error) {
     console.error('Ошибка при экспорте посещаемости сотрудников:', error);
     throw error;
   }
@@ -41,7 +41,9 @@ export const exportStaffAttendanceByPeriod = async (
  * Экспорт посещаемости сотрудников за текущий месяц
  * Используется на странице Settings с фиксированным диапазоном дат
  */
-export const exportStaffAttendanceCurrentMonth = async (attendanceData?: any[]): Promise<void> => {
+export const exportStaffAttendanceCurrentMonth = async (
+  attendanceData?: any[],
+): Promise<void> => {
   const { startDate, endDate } = getCurrentMonthRange();
   await exportStaffAttendanceByPeriod(startDate, endDate, attendanceData);
 };

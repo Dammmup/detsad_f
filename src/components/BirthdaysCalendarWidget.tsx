@@ -11,7 +11,7 @@ import {
   Chip,
   Paper,
   IconButton,
-  useTheme
+  useTheme,
 } from '@mui/material';
 import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import {
@@ -34,7 +34,10 @@ interface BirthdayAvatarProps {
   currentYear: number;
 }
 
-const BirthdayAvatar: React.FC<BirthdayAvatarProps> = ({ child, currentYear }) => {
+const BirthdayAvatar: React.FC<BirthdayAvatarProps> = ({
+  child,
+  currentYear,
+}) => {
   const [open, setOpen] = useState(false);
 
   const handleTooltipClose = () => {
@@ -71,12 +74,13 @@ const BirthdayAvatar: React.FC<BirthdayAvatarProps> = ({ child, currentYear }) =
           disableTouchListener
           title={
             <Box>
-              <Typography variant="body2">{child.fullName}</Typography>
-              <Typography variant="caption" color="textSecondary">
+              <Typography variant='body2'>{child.fullName}</Typography>
+              <Typography variant='caption' color='textSecondary'>
                 Группа: {getGroupName(child.groupId)}
               </Typography>
-              <Typography variant="caption" color="textSecondary">
-                Исполнится: {calculateAge(child.birthday as any, currentYear)} лет
+              <Typography variant='caption' color='textSecondary'>
+                Исполнится: {calculateAge(child.birthday as any, currentYear)}{' '}
+                лет
               </Typography>
             </Box>
           }
@@ -92,7 +96,7 @@ const BirthdayAvatar: React.FC<BirthdayAvatarProps> = ({ child, currentYear }) =
               border: '1px solid white',
               fontSize: '0.6rem',
               mb: 0.3,
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             {!child.photo && child.fullName?.charAt(0)}
@@ -101,14 +105,15 @@ const BirthdayAvatar: React.FC<BirthdayAvatarProps> = ({ child, currentYear }) =
       </div>
     </ClickAwayListener>
   );
-}
-
+};
 
 interface BirthdaysCalendarWidgetProps {
   onBirthdaysChange?: () => void;
 }
 
-const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBirthdaysChange }) => {
+const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({
+  onBirthdaysChange,
+}) => {
   const theme = useTheme();
   const { currentDate, setCurrentDate } = useDate();
   const [children, setChildren] = useState<Child[]>([]);
@@ -155,7 +160,10 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBir
   };
 
   // === Расчёт возраста (на следующий день рождения) ===
-  const calculateAge = (birthday: string, year: number = new Date().getFullYear()) => {
+  const calculateAge = (
+    birthday: string,
+    year: number = new Date().getFullYear(),
+  ) => {
     const birthDate = new Date(birthday);
     return year - birthDate.getFullYear();
   };
@@ -170,7 +178,7 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBir
 
   const daysWithBirthdays = getChildrenWithBirthdays(currentDate);
   const startWeekDay = (startOfMonth(currentDate).getDay() + 6) % 7; // Пн = 0
-  
+
   return (
     <Card
       sx={{
@@ -187,7 +195,9 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBir
         borderRadius: 2,
       }}
     >
-      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
+      <CardContent
+        sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2 }}
+      >
         {/* === Заголовок === */}
         <Box
           sx={{
@@ -199,20 +209,32 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBir
             borderBottom: '1px solid #dee2e6',
           }}
         >
- 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}></Box>
         </Box>
 
         {/* === Ошибка / загрузка === */}
         {error && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
-            <Typography color="error">{error}</Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexGrow: 1,
+            }}
+          >
+            <Typography color='error'>{error}</Typography>
           </Box>
         )}
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexGrow: 1,
+            }}
+          >
             <Typography>Загрузка...</Typography>
           </Box>
         ) : (
@@ -221,7 +243,11 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBir
             <Grid container spacing={0.5} sx={{ mb: 1 }}>
               {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((day, index) => (
                 <Grid item xs={12 / 7} key={index} sx={{ textAlign: 'center' }}>
-                  <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 'bold' }}>
+                  <Typography
+                    variant='caption'
+                    color='textSecondary'
+                    sx={{ fontWeight: 'bold' }}
+                  >
                     {day}
                   </Typography>
                 </Grid>
@@ -253,17 +279,23 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBir
                           justifyContent: 'flex-start',
                           p: 0.5,
                           backgroundColor: hasBirthdays ? '#e8f5e9' : 'inherit',
-                          border: hasBirthdays ? '2px solid #4caf50' : '1px solid #e0e0e0',
+                          border: hasBirthdays
+                            ? '2px solid #4caf50'
+                            : '1px solid #e0e0e0',
                           borderRadius: 1,
                           opacity: isCurrentMonth ? 1 : 0.5,
                           position: 'relative',
                         }}
                       >
                         <Typography
-                          variant="caption"
+                          variant='caption'
                           sx={{
-                            fontWeight: isSameDay(day, new Date()) ? 'bold' : 'normal',
-                            color: isSameDay(day, new Date()) ? 'primary.main' : 'inherit',
+                            fontWeight: isSameDay(day, new Date())
+                              ? 'bold'
+                              : 'normal',
+                            color: isSameDay(day, new Date())
+                              ? 'primary.main'
+                              : 'inherit',
                             alignSelf: 'flex-start',
                             mb: 0.5,
                           }}
@@ -272,15 +304,26 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBir
                         </Typography>
 
                         {/* Фото детей */}
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            width: '100%',
+                          }}
+                        >
                           {dayData.children.slice(0, 3).map((child) => (
-                            <BirthdayAvatar key={child._id || child.id} child={child} currentYear={currentDate.getFullYear()} />
+                            <BirthdayAvatar
+                              key={child._id || child.id}
+                              child={child}
+                              currentYear={currentDate.getFullYear()}
+                            />
                           ))}
 
                           {dayData.children.length > 3 && (
                             <Chip
                               label={`+${dayData.children.length - 3}`}
-                              size="small"
+                              size='small'
                               sx={{
                                 height: 16,
                                 fontSize: '0.5rem',
@@ -304,7 +347,7 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBir
                             }}
                           >
                             <Typography
-                              variant="caption"
+                              variant='caption'
                               sx={{
                                 fontSize: '0.6rem',
                                 color: '#4caf50',
@@ -321,8 +364,6 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({ onBir
                 })}
               </Grid>
             </Box>
-
-      
           </Box>
         )}
       </CardContent>

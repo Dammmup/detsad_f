@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
-import { Box, Card, CardContent, TextField, Typography, Button, CircularProgress, InputAdornment, Alert } from '@mui/material';
+import {
+  Box,
+  Card,
+  CardContent,
+  TextField,
+  Typography,
+  Button,
+  CircularProgress,
+  InputAdornment,
+  Alert,
+} from '@mui/material';
 import { Phone, Lock } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/context/AuthContext';
 import { User } from '../types/common';
 import { authApi } from '../services/auth';
-
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -34,9 +43,9 @@ const Login: React.FC = () => {
         email: authResponse.user.phone || phone,
         active: authResponse.user.active ?? true,
         createdAt: authResponse.user.createdAt || new Date().toISOString(),
-        updatedAt: authResponse.user.updatedAt || new Date().toISOString()
+        updatedAt: authResponse.user.updatedAt || new Date().toISOString(),
       };
-      
+
       // Use AuthContext login method to properly update context
       const token = authResponse.token;
       if (!token) {
@@ -53,33 +62,60 @@ const Login: React.FC = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)', p: 2 }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)',
+        p: 2,
+      }}
+    >
       <Card elevation={12} sx={{ maxWidth: 400, width: '100%' }}>
         <CardContent sx={{ p: 4 }}>
-          <Typography variant="h5" sx={{ mb: 3, textAlign: 'center' }}>Вход в систему</Typography>
+          <Typography variant='h5' sx={{ mb: 3, textAlign: 'center' }}>
+            Вход в систему
+          </Typography>
 
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          {error && (
+            <Alert severity='error' sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
 
           <TextField
             fullWidth
-            label="Номер телефона"
+            label='Номер телефона'
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             sx={{ mb: 2 }}
-            InputProps={{ startAdornment: <InputAdornment position="start"><Phone /></InputAdornment> }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position='start'>
+                  <Phone />
+                </InputAdornment>
+              ),
+            }}
           />
           <TextField
             fullWidth
-            type="password"
-            label="Пароль"
+            type='password'
+            label='Пароль'
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             sx={{ mb: 3 }}
-            InputProps={{ startAdornment: <InputAdornment position="start"><Lock /></InputAdornment> }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position='start'>
+                  <Lock />
+                </InputAdornment>
+              ),
+            }}
           />
           <Button
             fullWidth
-            variant="contained"
+            variant='contained'
             disabled={loading}
             onClick={handleLogin}
             startIcon={loading ? <CircularProgress size={20} /> : null}

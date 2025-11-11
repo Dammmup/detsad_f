@@ -1,8 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, FormControl, InputLabel,
-  Select, MenuItem, SelectChangeEvent, Checkbox, ListItemText,
-  Box, Typography, Alert, CircularProgress, TextField, Grid
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+  Checkbox,
+  ListItemText,
+  Box,
+  Typography,
+  Alert,
+  CircularProgress,
+  TextField,
+  Grid,
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -15,44 +30,51 @@ interface AttendanceBulkModalProps {
   open: boolean;
   onClose: () => void;
   groupId: string;
- onSuccess: () => void;
+  onSuccess: () => void;
 }
 
 const ATTENDANCE_STATUSES = {
   present: 'Присутствует',
   absent: 'Отсутствует',
   sick: 'Болеет',
-  vacation: 'Отпуск'
+  vacation: 'Отпуск',
 } as const;
 
 type AttendanceStatus = keyof typeof ATTENDANCE_STATUSES;
 
-const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({ 
-  open, 
-  onClose, 
-  groupId, 
-  onSuccess 
+const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
+  open,
+  onClose,
+  groupId,
+  onSuccess,
 }) => {
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildren, setSelectedChildren] = useState<string[]>([]);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [selectedStatus, setSelectedStatus] = useState<AttendanceStatus>('present');
-  const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({ start: null, end: null });
+  const [selectedStatus, setSelectedStatus] =
+    useState<AttendanceStatus>('present');
+  const [dateRange, setDateRange] = useState<{
+    start: Date | null;
+    end: Date | null;
+  }>({ start: null, end: null });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const fetchChildren = useCallback(async () => {
     try {
       const childrenList = await childrenApi.getAll();
-      const filteredChildren = childrenList.filter(child => {
+      const filteredChildren = childrenList.filter((child) => {
         if (typeof child.groupId === 'object' && child.groupId !== null) {
-          return (child.groupId as any)._id === groupId || (child.groupId as any).id === groupId;
+          return (
+            (child.groupId as any)._id === groupId ||
+            (child.groupId as any).id === groupId
+          );
         } else {
           return child.groupId === groupId;
         }
       });
       setChildren(filteredChildren);
-      setSelectedChildren(filteredChildren.map(child => child.id!));
+      setSelectedChildren(filteredChildren.map((child) => child.id!));
     } catch (err: any) {
       setError('Не удалось загрузить список детей');
       console.error('Error fetching children:', err);
@@ -64,11 +86,9 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
     }
   }, [open, groupId]);
 
-
-
   const handleChildToggle = (childId: string) => {
     if (selectedChildren.includes(childId)) {
-      setSelectedChildren(selectedChildren.filter(id => id !== childId));
+      setSelectedChildren(selectedChildren.filter((id) => id !== childId));
     } else {
       setSelectedChildren([...selectedChildren, childId]);
     }
@@ -78,7 +98,7 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
     if (selectedChildren.length === children.length) {
       setSelectedChildren([]);
     } else {
-      setSelectedChildren(children.map(child => child.id!));
+      setSelectedChildren(children.map((child) => child.id!));
     }
   };
 
@@ -86,12 +106,12 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
     if (dateRange.start && dateRange.end) {
       const dates: Date[] = [];
       const currentDate = new Date(dateRange.start);
-      
+
       while (currentDate <= dateRange.end) {
         dates.push(new Date(currentDate));
         currentDate.setDate(currentDate.getDate() + 1);
       }
-      
+
       setSelectedDates(dates);
     }
   };
@@ -110,13 +130,13 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
     setError(null);
 
     try {
-      const records = selectedChildren.flatMap(childId => {
-        return selectedDates.map(date => {
+      const records = selectedChildren.flatMap((childId) => {
+        return selectedDates.map((date) => {
           return {
             childId,
             date: date.toISOString().split('T')[0],
             status: selectedStatus,
-            notes: notes || undefined
+            notes: notes || undefined,
           };
         });
       });
@@ -146,13 +166,13 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
     <Dialog
       open={open}
       onClose={handleClose}
-      maxWidth="md"
+      maxWidth='md'
       fullWidth
       sx={{
         '& .MuiDialog-paper': {
           borderRadius: 3,
-          boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
-        }
+          boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+        },
       }}
     >
       <DialogTitle
@@ -161,66 +181,86 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
           color: 'white',
           textAlign: 'center',
           fontWeight: 600,
-          fontSize: '1.5rem'
+          fontSize: '1.5rem',
         }}
       >
         Массовое назначение посещаемости
       </DialogTitle>
       <DialogContent sx={{ pt: 3 }}>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        
+        {error && (
+          <Alert severity='error' sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} md={6}>
               <DatePicker<Date>
-                label="Начальная дата"
+                label='Начальная дата'
                 value={dateRange.start}
-                onChange={(newValue: Date | null) => setDateRange({ ...dateRange, start: newValue })}
+                onChange={(newValue: Date | null) =>
+                  setDateRange({ ...dateRange, start: newValue })
+                }
                 renderInput={(params) => <TextField {...params} fullWidth />}
               />
             </Grid>
             <Grid item xs={12} md={6}>
               <DatePicker<Date>
-                label="Конечная дата"
+                label='Конечная дата'
                 value={dateRange.end}
-                onChange={(newValue: Date | null) => setDateRange({ ...dateRange, end: newValue })}
+                onChange={(newValue: Date | null) =>
+                  setDateRange({ ...dateRange, end: newValue })
+                }
                 renderInput={(params) => <TextField {...params} fullWidth />}
               />
             </Grid>
           </Grid>
-          
-          <Button 
+
+          <Button
             onClick={handleDateRangeChange}
-            variant="outlined" 
+            variant='outlined'
             sx={{ mb: 2 }}
             disabled={!dateRange.start || !dateRange.end}
           >
             Применить диапазон дат
           </Button>
-          
+
           <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" sx={{ mb: 1 }}>Выбранные даты:</Typography>
+            <Typography variant='h6' sx={{ mb: 1 }}>
+              Выбранные даты:
+            </Typography>
             {selectedDates.length > 0 ? (
-              <Box sx={{ maxHeight: 150, overflow: 'auto', border: '1px solid #ccc', borderRadius: 1, p: 1 }}>
+              <Box
+                sx={{
+                  maxHeight: 150,
+                  overflow: 'auto',
+                  border: '1px solid #ccc',
+                  borderRadius: 1,
+                  p: 1,
+                }}
+              >
                 {selectedDates.map((date, index) => (
-                  <Typography key={index} variant="body2">
+                  <Typography key={index} variant='body2'>
                     {date.toLocaleDateString('ru-RU')}
                   </Typography>
                 ))}
               </Box>
             ) : (
-              <Typography variant="body2" color="text.secondary">Даты не выбраны</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Даты не выбраны
+              </Typography>
             )}
           </Box>
         </LocalizationProvider>
-        
-        <FormControl fullWidth margin="dense" sx={{ mb: 2 }}>
+
+        <FormControl fullWidth margin='dense' sx={{ mb: 2 }}>
           <InputLabel>Статус посещаемости</InputLabel>
           <Select
             value={selectedStatus}
             onChange={handleStatusChange}
-            label="Статус посещаемости"
-            variant="outlined"
+            label='Статус посещаемости'
+            variant='outlined'
           >
             {Object.entries(ATTENDANCE_STATUSES).map(([key, value]) => (
               <MenuItem key={key} value={key}>
@@ -229,36 +269,51 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
             ))}
           </Select>
         </FormControl>
-        
+
         <TextField
-          margin="dense"
-          label="Примечания"
+          margin='dense'
+          label='Примечания'
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           fullWidth
           multiline
           rows={3}
           sx={{ mb: 2 }}
-          variant="outlined"
+          variant='outlined'
         />
-        
+
         <Box sx={{ mb: 2 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-            <Typography variant="h6">Дети</Typography>
-            <Button onClick={handleSelectAllChildren} size="small">
-              {selectedChildren.length === children.length ? 'Снять выделение' : 'Выделить всех'}
+          <Box
+            display='flex'
+            justifyContent='space-between'
+            alignItems='center'
+            sx={{ mb: 1 }}
+          >
+            <Typography variant='h6'>Дети</Typography>
+            <Button onClick={handleSelectAllChildren} size='small'>
+              {selectedChildren.length === children.length
+                ? 'Снять выделение'
+                : 'Выделить всех'}
             </Button>
           </Box>
-          
-          <Box sx={{ maxHeight: 300, overflow: 'auto', border: '1px solid #ccc', borderRadius: 1, p: 1 }}>
+
+          <Box
+            sx={{
+              maxHeight: 300,
+              overflow: 'auto',
+              border: '1px solid #ccc',
+              borderRadius: 1,
+              p: 1,
+            }}
+          >
             {children.map((child) => (
-              <Box 
-                key={child.id} 
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+              <Box
+                key={child.id}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
                   py: 0.5,
-                  borderBottom: '1px solid #eee'
+                  borderBottom: '1px solid #eee',
                 }}
               >
                 <Checkbox
@@ -271,13 +326,13 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
           </Box>
         </Box>
       </DialogContent>
-      
+
       <DialogActions
         sx={{
           background: '#f8f9fa',
           borderTop: '1px solid #e9ecef',
           p: 2,
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
         }}
       >
         <Button
@@ -286,17 +341,21 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
           sx={{
             color: '#6c757d',
             '&:hover': {
-              backgroundColor: '#e9ecef'
-            }
+              backgroundColor: '#e9ecef',
+            },
           }}
         >
           Отмена
         </Button>
-        
+
         <Button
           onClick={handleSave}
-          variant="contained"
-          disabled={loading || selectedChildren.length === 0 || selectedDates.length === 0}
+          variant='contained'
+          disabled={
+            loading ||
+            selectedChildren.length === 0 ||
+            selectedDates.length === 0
+          }
           sx={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             padding: '10px 24px',
@@ -307,14 +366,18 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
             transition: 'all 0.3s ease-in-out',
             '&:hover': {
               transform: 'translateY(-2px)',
-              boxShadow: '0 6px 20px rgba(0,0,0,0.2)'
+              boxShadow: '0 6px 20px rgba(0,0,0,0.2)',
             },
             '&:disabled': {
-              background: 'linear-gradient(135deg, #cccccc 0%, #999999 100%)'
-            }
+              background: 'linear-gradient(135deg, #cccccc 0%, #999999 100%)',
+            },
           }}
         >
-          {loading ? <CircularProgress size={24} sx={{ color: 'white' }} /> : 'Сохранить'}
+          {loading ? (
+            <CircularProgress size={24} sx={{ color: 'white' }} />
+          ) : (
+            'Сохранить'
+          )}
         </Button>
       </DialogActions>
     </Dialog>

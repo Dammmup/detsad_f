@@ -1,7 +1,15 @@
-
-
 import React, { useState } from 'react';
-import { Drawer, Typography, List, ListItem, ListItemText, ListItemIcon, Collapse, Box, Fade } from '@mui/material';
+import {
+  Drawer,
+  Typography,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Collapse,
+  Box,
+  Fade,
+} from '@mui/material';
 import { ExpandMore } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -14,20 +22,25 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-
-export const Sidebar = ({ location, structure = [], variant = 'permanent', open = true, onClose }: SidebarProps) => {
-  const [openMenus, setOpenMenus] = useState<{[key: string]: boolean}>({});
+export const Sidebar = ({
+  location,
+  structure = [],
+  variant = 'permanent',
+  open = true,
+  onClose,
+}: SidebarProps) => {
+  const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({});
   const { user: currentUser } = useAuth();
 
   const handleToggle = (label: string) => {
-    setOpenMenus(prev => ({ ...prev, [label]: !prev[label] }));
+    setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
   // Функция для проверки видимости элемента меню
   const isItemVisible = (item: any): boolean => {
     // Если у элемента нет ограничений по ролям, он виден всем
     if (!item.visibleFor) return true;
-    
+
     // Проверяем, есть ли роль текущего пользователя в списке разрешенных ролей
     const userRole = currentUser?.role || 'staff';
     return item.visibleFor.includes(userRole);
@@ -35,13 +48,14 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
 
   // Рекурсивный рендер пунктов меню с красивым дизайном
   const renderMenuItems = (items: any[], level = 0) => (
-    <List component="div" disablePadding>
+    <List component='div' disablePadding>
       {items
-        .filter(item => isItemVisible(item)) // Фильтруем элементы по ролям
+        .filter((item) => isItemVisible(item)) // Фильтруем элементы по ролям
         .map((item, idx) => {
-          const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+          const hasChildren =
+            Array.isArray(item.children) && item.children.length > 0;
           const isOpen = openMenus[item.label];
-          
+
           // Проверяем, является ли текущий элемент активным
           // Определяем активный элемент по точному совпадению пути
           let isActive = false;
@@ -60,7 +74,9 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
                 button
                 component={item.link ? Link : 'div'}
                 to={item.link || undefined}
-                onClick={hasChildren ? () => handleToggle(item.label) : undefined}
+                onClick={
+                  hasChildren ? () => handleToggle(item.label) : undefined
+                }
                 sx={{
                   mx: 1,
                   my: 0.5,
@@ -73,7 +89,8 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
                   position: 'relative',
                   overflow: 'hidden',
                   ...(isActive && {
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background:
+                      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     color: 'white',
                     boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
                     transform: 'translateY(-1px)',
@@ -84,26 +101,28 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
                       top: 0,
                       bottom: 0,
                       width: 4,
-                      background: 'linear-gradient(180deg, #fff 0%, rgba(255,255,0.7) 100%)',
-                      borderRadius: '0 2px 2px 0'
-                    }
+                      background:
+                        'linear-gradient(180deg, #fff 0%, rgba(255,255,0.7) 100%)',
+                      borderRadius: '0 2px 2px 0',
+                    },
                   }),
                   '&:hover': {
                     ...(!isActive && {
                       bgcolor: 'rgba(102, 126, 234, 0.08)',
                       transform: 'translateX(4px)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                     }),
                     ...(isActive && {
                       boxShadow: '0 6px 20px rgba(102, 126, 234, 0.5)',
-                      transform: 'translateY(-2px)'
-                    })
+                      transform: 'translateY(-2px)',
+                    }),
                   },
-                  ...(hasChildren && level === 0 && {
-                    fontWeight: 600,
-                    fontSize: '0.95rem',
-                    color: isActive ? 'white' : '#374151'
-                  }),
+                  ...(hasChildren &&
+                    level === 0 && {
+                      fontWeight: 600,
+                      fontSize: '0.95rem',
+                      color: isActive ? 'white' : '#374151',
+                    }),
                   ...(level > 0 && {
                     fontSize: '0.875rem',
                     color: isActive ? 'white' : '#6B7280',
@@ -117,9 +136,9 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
                       height: 6,
                       borderRadius: '50%',
                       bgcolor: isActive ? 'rgba(255,255,255,0.7)' : '#D1D5DB',
-                      transform: 'translateY(-50%)'
-                    }
-                  })
+                      transform: 'translateY(-50%)',
+                    },
+                  }),
                 }}
               >
                 {item.icon && (
@@ -128,7 +147,7 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
                       color: 'inherit',
                       minWidth: 40,
                       transition: 'transform 0.2s ease',
-                      transform: isOpen ? 'scale(1.1)' : 'scale(1)'
+                      transform: isOpen ? 'scale(1.1)' : 'scale(1)',
                     }}
                   >
                     {item.icon}
@@ -138,7 +157,7 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
                   primary={item.label}
                   primaryTypographyProps={{
                     fontWeight: hasChildren && level === 0 ? 600 : 500,
-                    fontSize: level === 0 ? '0.95rem' : '0.875rem'
+                    fontSize: level === 0 ? '0.95rem' : '0.875rem',
                   }}
                 />
                 {hasChildren && (
@@ -147,7 +166,7 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
                       display: 'flex',
                       alignItems: 'center',
                       transition: 'transform 0.3s ease',
-                      transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                      transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                     }}
                   >
                     <ExpandMore sx={{ fontSize: 20 }} />
@@ -157,9 +176,7 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
               {hasChildren && (
                 <Collapse in={isOpen} timeout={300} unmountOnExit>
                   <Fade in={isOpen} timeout={200}>
-                    <Box>
-                      {renderMenuItems(item.children, level + 1)}
-                    </Box>
+                    <Box>{renderMenuItems(item.children, level + 1)}</Box>
                   </Fade>
                 </Collapse>
               )}
@@ -182,7 +199,7 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
           boxSizing: 'border-box',
           background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
           borderRight: '1px solid #e2e8f0',
-          boxShadow: '4px 0 24px rgba(0, 0, 0, 0.06)'
+          boxShadow: '4px 0 24px rgba(0, 0, 0, 0.06)',
         },
       }}
     >
@@ -201,18 +218,19 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
             right: 0,
             bottom: 0,
             left: 0,
-            background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Cpath d="m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-            opacity: 0.1
-          }
+            background:
+              'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Cpath d="m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+            opacity: 0.1,
+          },
         }}
       >
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            fontWeight: 700, 
+        <Typography
+          variant='h5'
+          sx={{
+            fontWeight: 700,
             position: 'relative',
             zIndex: 1,
-            textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            textShadow: '0 2px 4px rgba(0,0,0,0.1)',
           }}
         >
           🏫 Детсад CRM
@@ -239,14 +257,18 @@ export const Sidebar = ({ location, structure = [], variant = 'permanent', open 
           p: 2,
           mt: 'auto',
           borderTop: '1px solid #e2e8f0',
-          background: 'rgba(255, 255, 255, 0.7)'
+          background: 'rgba(255, 255, 255, 0.7)',
         }}
       >
-        <Typography variant="caption" color="text.secondary" align="center" display="block">
+        <Typography
+          variant='caption'
+          color='text.secondary'
+          align='center'
+          display='block'
+        >
           v1.0.0 • Clockster System
         </Typography>
       </Box>
     </Drawer>
   );
-}
-
+};

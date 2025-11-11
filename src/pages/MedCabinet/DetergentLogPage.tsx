@@ -1,5 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Table, TableHead, TableRow, TableCell, TableBody, Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Button,
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+} from '@mui/material';
 import { detergentLogApi, DetergentLog } from '../../services/detergentLog';
 
 const defaultForm: DetergentLog = {
@@ -81,21 +97,30 @@ const DetergentLogPage: React.FC = () => {
     }
   };
 
-  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+  const handleExport = async (
+    exportType: string,
+    exportFormat: 'pdf' | 'excel' | 'csv',
+  ) => {
     await exportData('detergent-log', exportFormat, { rows });
   };
 
   return (
     <Box p={3}>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant='h4' gutterBottom>
         Журнал учета моющих средств
       </Typography>
-      <Stack direction="row" spacing={2} mb={2}>
-        <Button variant="contained" color="primary" onClick={() => handleOpen()}>
+      <Stack direction='row' spacing={2} mb={2}>
+        <Button
+          variant='contained'
+          color='primary'
+          onClick={() => handleOpen()}
+        >
           Добавить запись
         </Button>
         <ExportButton
-          exportTypes={[{ value: 'detergent-log', label: 'Журнал учета моющих средств' }]}
+          exportTypes={[
+            { value: 'detergent-log', label: 'Журнал учета моющих средств' },
+          ]}
           onExport={handleExport}
         />
       </Stack>
@@ -120,9 +145,17 @@ const DetergentLogPage: React.FC = () => {
                 <TableCell>{row.responsible}</TableCell>
                 <TableCell>{row.notes}</TableCell>
                 <TableCell>
-                  <Stack direction="row" spacing={1}>
-                    <Button size="small" onClick={() => handleOpen(row)}>Редактировать</Button>
-                    <Button size="small" color="error" onClick={() => handleDelete(row._id)}>Удалить</Button>
+                  <Stack direction='row' spacing={1}>
+                    <Button size='small' onClick={() => handleOpen(row)}>
+                      Редактировать
+                    </Button>
+                    <Button
+                      size='small'
+                      color='error'
+                      onClick={() => handleDelete(row._id)}
+                    >
+                      Удалить
+                    </Button>
                   </Stack>
                 </TableCell>
               </TableRow>
@@ -130,20 +163,55 @@ const DetergentLogPage: React.FC = () => {
           </TableBody>
         </Table>
       </Paper>
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>{editId ? 'Редактировать запись' : 'Добавить запись'}</DialogTitle>
+      <Dialog open={open} onClose={handleClose} maxWidth='sm' fullWidth>
+        <DialogTitle>
+          {editId ? 'Редактировать запись' : 'Добавить запись'}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
-            <TextField label="Дата" name="date" type="date" value={form.date} onChange={handleChange} InputLabelProps={{ shrink: true }} fullWidth />
-            <TextField label="Моющее средство" name="detergent" value={form.detergent} onChange={handleChange} fullWidth />
-            <TextField label="Количество" name="quantity" type="number" value={form.quantity} onChange={handleChange} fullWidth />
-            <TextField label="Ответственный" name="responsible" value={form.responsible} onChange={handleChange} fullWidth />
-            <TextField label="Примечания" name="notes" value={form.notes} onChange={handleChange} fullWidth />
+            <TextField
+              label='Дата'
+              name='date'
+              type='date'
+              value={form.date}
+              onChange={handleChange}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+            <TextField
+              label='Моющее средство'
+              name='detergent'
+              value={form.detergent}
+              onChange={handleChange}
+              fullWidth
+            />
+            <TextField
+              label='Количество'
+              name='quantity'
+              type='number'
+              value={form.quantity}
+              onChange={handleChange}
+              fullWidth
+            />
+            <TextField
+              label='Ответственный'
+              name='responsible'
+              value={form.responsible}
+              onChange={handleChange}
+              fullWidth
+            />
+            <TextField
+              label='Примечания'
+              name='notes'
+              value={form.notes}
+              onChange={handleChange}
+              fullWidth
+            />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Отмена</Button>
-          <Button onClick={handleSave} variant="contained" disabled={loading}>
+          <Button onClick={handleSave} variant='contained' disabled={loading}>
             Сохранить
           </Button>
         </DialogActions>

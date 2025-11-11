@@ -64,161 +64,161 @@ interface ApiError extends Error {
   data?: any;
 }
 
-
 // Helper function to handle API errors
 const handleApiError = (error: any, context = '') => {
   const errorMessage = error.response?.data?.message || error.message;
   console.error(`Error ${context}:`, errorMessage);
-  
+
   // Create a more detailed error object
   const apiError = new Error(`Error ${context}: ${errorMessage}`) as ApiError;
   apiError.status = error.response?.status;
   apiError.data = error.response?.data;
-  
+
   throw apiError;
 };
 
 // Add delay between requests to prevent rate limiting
-const delay = (ms: number | undefined) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number | undefined) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
-  * Get all reports
-  * @returns {Promise<Report[]>} List of reports
-  */
- export const getReports = async () => {
-   try {
-     console.log('Fetching reports from API...');
-     
-   const response = await apiClient.get('/reports', {
-       timeout: 30000 // 30 seconds for fetching reports
-     });
-     
-     const reports: Report[] = response.data.map((report: any) => ({
-       id: report._id,
-       title: report.title,
-       type: report.type,
-       description: report.description,
-       dateRange: {
-         startDate: report.dateRange.startDate,
-         endDate: report.dateRange.endDate
-       },
-       filters: report.filters,
-       data: report.data,
-       format: report.format,
-       status: report.status,
-       filePath: report.filePath,
-       fileSize: report.fileSize,
-       generatedAt: report.generatedAt,
-       scheduledFor: report.scheduledFor,
-       emailRecipients: report.emailRecipients,
-       createdBy: report.createdBy,
-       createdAt: report.createdAt,
-       updatedAt: report.updatedAt
-     }));
-     
-     console.log('Reports data:', reports);
-     return reports;
-   } catch (error) {
-     console.error('Error in getReports:', error);
-     return handleApiError(error, 'fetching reports');
-   }
- };
+ * Get all reports
+ * @returns {Promise<Report[]>} List of reports
+ */
+export const getReports = async () => {
+  try {
+    console.log('Fetching reports from API...');
+
+    const response = await apiClient.get('/reports', {
+      timeout: 30000, // 30 seconds for fetching reports
+    });
+
+    const reports: Report[] = response.data.map((report: any) => ({
+      id: report._id,
+      title: report.title,
+      type: report.type,
+      description: report.description,
+      dateRange: {
+        startDate: report.dateRange.startDate,
+        endDate: report.dateRange.endDate,
+      },
+      filters: report.filters,
+      data: report.data,
+      format: report.format,
+      status: report.status,
+      filePath: report.filePath,
+      fileSize: report.fileSize,
+      generatedAt: report.generatedAt,
+      scheduledFor: report.scheduledFor,
+      emailRecipients: report.emailRecipients,
+      createdBy: report.createdBy,
+      createdAt: report.createdAt,
+      updatedAt: report.updatedAt,
+    }));
+
+    console.log('Reports data:', reports);
+    return reports;
+  } catch (error) {
+    console.error('Error in getReports:', error);
+    return handleApiError(error, 'fetching reports');
+  }
+};
 
 /**
-  * Get a single report by ID
-  * @param {string} id - Report ID
-  * @returns {Promise<Report>} Report data
-  */
- export const getReport = async (id: string) => {
-   try {
-   const response = await apiClient.get(`/reports/${id}`, {
-       timeout: 30000 // 30 seconds for fetching report
-     });
-     
-     const report: Report = {
-       id: response.data._id,
-       title: response.data.title,
-       type: response.data.type,
-       description: response.data.description,
-       dateRange: {
-         startDate: response.data.dateRange.startDate,
-         endDate: response.data.dateRange.endDate
-       },
-       filters: response.data.filters,
-       data: response.data.data,
-       format: response.data.format,
-       status: response.data.status,
-       filePath: response.data.filePath,
-       fileSize: response.data.fileSize,
-       generatedAt: response.data.generatedAt,
-       scheduledFor: response.data.scheduledFor,
-       emailRecipients: response.data.emailRecipients,
-       createdBy: response.data.createdBy,
-       createdAt: response.data.createdAt,
-       updatedAt: response.data.updatedAt
-     };
-     
-     return report;
-   } catch (error) {
-     return handleApiError(error, `fetching report ${id}`);
-   }
- };
+ * Get a single report by ID
+ * @param {string} id - Report ID
+ * @returns {Promise<Report>} Report data
+ */
+export const getReport = async (id: string) => {
+  try {
+    const response = await apiClient.get(`/reports/${id}`, {
+      timeout: 30000, // 30 seconds for fetching report
+    });
+
+    const report: Report = {
+      id: response.data._id,
+      title: response.data.title,
+      type: response.data.type,
+      description: response.data.description,
+      dateRange: {
+        startDate: response.data.dateRange.startDate,
+        endDate: response.data.dateRange.endDate,
+      },
+      filters: response.data.filters,
+      data: response.data.data,
+      format: response.data.format,
+      status: response.data.status,
+      filePath: response.data.filePath,
+      fileSize: response.data.fileSize,
+      generatedAt: response.data.generatedAt,
+      scheduledFor: response.data.scheduledFor,
+      emailRecipients: response.data.emailRecipients,
+      createdBy: response.data.createdBy,
+      createdAt: response.data.createdAt,
+      updatedAt: response.data.updatedAt,
+    };
+
+    return report;
+  } catch (error) {
+    return handleApiError(error, `fetching report ${id}`);
+  }
+};
 
 /**
-  * Create a new report
-  * @param {Report} report - Report data to create
-  * @returns {Promise<Report>} Created report
-  */
- export const createReport = async (report: Report) => {
-   try {
-   const response = await apiClient.post('/reports', report, {
-       timeout: 30000 // 30 seconds for creating report
-     });
-     
-     const createdReport: Report = {
-       id: response.data._id,
-       title: response.data.title,
-       type: response.data.type,
-       description: response.data.description,
-       dateRange: {
-         startDate: response.data.dateRange.startDate,
-         endDate: response.data.dateRange.endDate
-       },
-       filters: response.data.filters,
-       data: response.data.data,
-       format: response.data.format,
-       status: response.data.status,
-       filePath: response.data.filePath,
-       fileSize: response.data.fileSize,
-       generatedAt: response.data.generatedAt,
-       scheduledFor: response.data.scheduledFor,
-       emailRecipients: response.data.emailRecipients,
-       createdBy: response.data.createdBy,
-       createdAt: response.data.createdAt,
-       updatedAt: response.data.updatedAt
-     };
-     
-     return createdReport;
-   } catch (error) {
-     return handleApiError(error, 'creating report');
-   }
- };
+ * Create a new report
+ * @param {Report} report - Report data to create
+ * @returns {Promise<Report>} Created report
+ */
+export const createReport = async (report: Report) => {
+  try {
+    const response = await apiClient.post('/reports', report, {
+      timeout: 30000, // 30 seconds for creating report
+    });
+
+    const createdReport: Report = {
+      id: response.data._id,
+      title: response.data.title,
+      type: response.data.type,
+      description: response.data.description,
+      dateRange: {
+        startDate: response.data.dateRange.startDate,
+        endDate: response.data.dateRange.endDate,
+      },
+      filters: response.data.filters,
+      data: response.data.data,
+      format: response.data.format,
+      status: response.data.status,
+      filePath: response.data.filePath,
+      fileSize: response.data.fileSize,
+      generatedAt: response.data.generatedAt,
+      scheduledFor: response.data.scheduledFor,
+      emailRecipients: response.data.emailRecipients,
+      createdBy: response.data.createdBy,
+      createdAt: response.data.createdAt,
+      updatedAt: response.data.updatedAt,
+    };
+
+    return createdReport;
+  } catch (error) {
+    return handleApiError(error, 'creating report');
+  }
+};
 
 /**
-  * Delete a report
-  * @param {string} id - Report ID
-  * @returns {Promise<void>}
-  */
- export const deleteReport = async (id: string) => {
-   try {
-   await apiClient.delete(`/reports/${id}`, {
-       timeout: 30000 // 30 seconds for deleting report
-     });
-     return { success: true };
-   } catch (error) {
-     return handleApiError(error, `deleting report ${id}`);
-   }
- };
+ * Delete a report
+ * @param {string} id - Report ID
+ * @returns {Promise<void>}
+ */
+export const deleteReport = async (id: string) => {
+  try {
+    await apiClient.delete(`/reports/${id}`, {
+      timeout: 30000, // 30 seconds for deleting report
+    });
+    return { success: true };
+  } catch (error) {
+    return handleApiError(error, `deleting report ${id}`);
+  }
+};
 
 /**
  * Generate attendance statistics for a specific date range
@@ -227,16 +227,20 @@ const delay = (ms: number | undefined) => new Promise(resolve => setTimeout(reso
  * @param {string} userId - Optional user ID to filter statistics
  * @returns {Promise<AttendanceStats>} Attendance statistics
  */
-export const getAttendanceStatistics = async (startDate: string, endDate: string, userId?: string) => {
+export const getAttendanceStatistics = async (
+  startDate: string,
+  endDate: string,
+  userId?: string,
+) => {
   try {
     await delay(500);
-    
+
     // В реальном приложении здесь будет запрос к API
-  const response = await apiClient.get('/reports/attendance-statistics', {
+    const response = await apiClient.get('/reports/attendance-statistics', {
       params: { startDate, endDate, userId },
-      timeout: 30000 // 30 seconds for attendance statistics
+      timeout: 30000, // 30 seconds for attendance statistics
     });
-    
+
     return response.data;
   } catch (error) {
     return handleApiError(error, 'fetching attendance statistics');
@@ -250,16 +254,20 @@ export const getAttendanceStatistics = async (startDate: string, endDate: string
  * @param {string} userId - Optional user ID to filter statistics
  * @returns {Promise<ScheduleStats>} Schedule statistics
  */
-export const getScheduleStatistics = async (startDate: string, endDate: string, userId?: string) => {
+export const getScheduleStatistics = async (
+  startDate: string,
+  endDate: string,
+  userId?: string,
+) => {
   try {
     await delay(500);
-    
+
     // В реальном приложении здесь будет запрос к API
-  const response = await apiClient.get('/reports/schedule-statistics', {
+    const response = await apiClient.get('/reports/schedule-statistics', {
       params: { startDate, endDate, userId },
-      timeout: 30000 // 30 seconds for schedule statistics
+      timeout: 30000, // 30 seconds for schedule statistics
     });
-    
+
     return response.data;
   } catch (error) {
     return handleApiError(error, 'fetching schedule statistics');
@@ -267,31 +275,37 @@ export const getScheduleStatistics = async (startDate: string, endDate: string, 
 };
 
 /**
-  * Export report to file
-  * @param {string} reportId - Report ID
-  * @param {string} format - Export format (pdf, excel, csv)
-  * @returns {Promise<Blob>} File blob
-  */
- export const exportReport = async (reportId: string, format: 'pdf' | 'excel' | 'csv') => {
-   try {
-   const response = await apiClient.get(`/reports/${reportId}/export`, {
-       params: { format },
-       responseType: 'blob',
-       timeout: 60000 // 60 seconds for exporting report
-     });
-     
-     // Создаем blob для скачивания
-     const blob = new Blob([response.data], {
-       type: format === 'pdf' ? 'application/pdf' :
-            format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
-            'text/csv'
-     });
-     
-     return blob;
+ * Export report to file
+ * @param {string} reportId - Report ID
+ * @param {string} format - Export format (pdf, excel, csv)
+ * @returns {Promise<Blob>} File blob
+ */
+export const exportReport = async (
+  reportId: string,
+  format: 'pdf' | 'excel' | 'csv',
+) => {
+  try {
+    const response = await apiClient.get(`/reports/${reportId}/export`, {
+      params: { format },
+      responseType: 'blob',
+      timeout: 60000, // 60 seconds for exporting report
+    });
+
+    // Создаем blob для скачивания
+    const blob = new Blob([response.data], {
+      type:
+        format === 'pdf'
+          ? 'application/pdf'
+          : format === 'excel'
+            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            : 'text/csv',
+    });
+
+    return blob;
   } catch (error) {
-     return handleApiError(error, `exporting report ${reportId}`);
-   }
- };
+    return handleApiError(error, `exporting report ${reportId}`);
+  }
+};
 
 // ===== РАСШИРЕННЫЕ ФУНКЦИИ ЭКСПОРТА ОТЧЕТОВ =====
 
@@ -309,22 +323,34 @@ export const exportSalaryReport = async (params: {
   includeBonus?: boolean;
 }) => {
   try {
-    console.log('[exportSalaryReport] Отправка запроса на экспорт зарплат:', params);
+    console.log(
+      '[exportSalaryReport] Отправка запроса на экспорт зарплат:',
+      params,
+    );
     const response = await apiClient.post('/reports/salary/export', params, {
       responseType: 'blob',
-      timeout: 60000 // 60 seconds for salary report export
+      timeout: 60000, // 60 seconds for salary report export
     });
     const blob = new Blob([response.data], {
-      type: params.format === 'pdf' ? 'application/pdf' :
-        params.format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
-        'text/csv'
+      type:
+        params.format === 'pdf'
+          ? 'application/pdf'
+          : params.format === 'excel'
+            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            : 'text/csv',
     });
     return blob;
   } catch (error: any) {
     if (error.response) {
       // Логируем подробности ответа с ошибкой
-      console.error('[exportSalaryReport] Ошибка:', error.response.status, error.response.data);
-      alert(`Ошибка экспорта зарплат: ${error.response.status} ${JSON.stringify(error.response.data)}`);
+      console.error(
+        '[exportSalaryReport] Ошибка:',
+        error.response.status,
+        error.response.data,
+      );
+      alert(
+        `Ошибка экспорта зарплат: ${error.response.status} ${JSON.stringify(error.response.data)}`,
+      );
     } else {
       console.error('[exportSalaryReport] Неизвестная ошибка:', error);
       alert('Неизвестная ошибка экспорта зарплат');
@@ -338,7 +364,7 @@ export const getSalarySummary = async (month: string) => {
   try {
     const response = await apiClient.get('/reports/salary/summary', {
       params: { month },
-      timeout: 30000 // 30 seconds for salary summary
+      timeout: 30000, // 30 seconds for salary summary
     });
     return response.data;
   } catch (error) {
@@ -359,17 +385,20 @@ export const exportChildrenReport = async (params: {
   includeHealthInfo?: boolean;
 }) => {
   try {
-  const response = await apiClient.post('/reports/children/export', params, {
+    const response = await apiClient.post('/reports/children/export', params, {
       responseType: 'blob',
-      timeout: 60000 // 60 seconds for children report export
+      timeout: 60000, // 60 seconds for children report export
     });
-    
+
     const blob = new Blob([response.data], {
-      type: params.format === 'pdf' ? 'application/pdf' :
-           params.format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
-           'text/csv'
+      type:
+        params.format === 'pdf'
+          ? 'application/pdf'
+          : params.format === 'excel'
+            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            : 'text/csv',
     });
-    
+
     return blob;
   } catch (error) {
     return handleApiError(error, 'exporting children report');
@@ -391,17 +420,24 @@ export const exportAttendanceReport = async (params: {
   includeCharts?: boolean;
 }) => {
   try {
-  const response = await apiClient.post('/reports/attendance/export', params, {
-      responseType: 'blob',
-      timeout: 60000 // 60 seconds for attendance report export
-    });
-    
+    const response = await apiClient.post(
+      '/reports/attendance/export',
+      params,
+      {
+        responseType: 'blob',
+        timeout: 60000, // 60 seconds for attendance report export
+      },
+    );
+
     const blob = new Blob([response.data], {
-      type: params.format === 'pdf' ? 'application/pdf' :
-           params.format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
-           'text/csv'
+      type:
+        params.format === 'pdf'
+          ? 'application/pdf'
+          : params.format === 'excel'
+            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            : 'text/csv',
     });
-    
+
     return blob;
   } catch (error) {
     return handleApiError(error, 'exporting attendance report');
@@ -422,8 +458,8 @@ export const sendReportByEmail = async (params: {
   reportParams?: any;
 }) => {
   try {
-  const response = await apiClient.post('/reports/send-email', params, {
-      timeout: 30000 // 30 seconds for email sending
+    const response = await apiClient.post('/reports/send-email', params, {
+      timeout: 30000, // 30 seconds for email sending
     });
     return response.data;
   } catch (error) {
@@ -445,8 +481,8 @@ export const scheduleReport = async (params: {
   startDate?: string;
 }) => {
   try {
-  const response = await apiClient.post('/reports/schedule', params, {
-      timeout: 30000 // 30 seconds for report scheduling
+    const response = await apiClient.post('/reports/schedule', params, {
+      timeout: 30000, // 30 seconds for report scheduling
     });
     return response.data;
   } catch (error) {
@@ -455,40 +491,43 @@ export const scheduleReport = async (params: {
 };
 
 /**
-  * Download report file directly
-  * @param {string} reportId - Report ID
-  * @param {string} format - File format
-  * @returns {Promise<void>} Triggers download
-  */
- export const downloadReport = async (reportId: string, format: 'pdf' | 'excel' | 'csv') => {
-   try {
-   const response = await apiClient.get(`/reports/${reportId}/download`, {
-       params: { format },
-       responseType: 'blob',
-       timeout: 60000 // 60 seconds for downloading report
-     });
-     
-     // Создаем ссылку для скачивания
-     const blob = new Blob([response.data]);
-     const url = window.URL.createObjectURL(blob);
-     const link = document.createElement('a');
-     link.href = url;
-     
-     // Определяем имя файла
-     const fileExtension = format === 'excel' ? 'xlsx' : format;
-     link.download = `report_${reportId}.${fileExtension}`;
-     
-     // Запускаем скачивание
-     document.body.appendChild(link);
-     link.click();
-     document.body.removeChild(link);
-     window.URL.revokeObjectURL(url);
-     
-     return { success: true, message: 'Файл успешно скачан' };
-   } catch (error) {
-     return handleApiError(error, `downloading report ${reportId}`);
-   }
- };
+ * Download report file directly
+ * @param {string} reportId - Report ID
+ * @param {string} format - File format
+ * @returns {Promise<void>} Triggers download
+ */
+export const downloadReport = async (
+  reportId: string,
+  format: 'pdf' | 'excel' | 'csv',
+) => {
+  try {
+    const response = await apiClient.get(`/reports/${reportId}/download`, {
+      params: { format },
+      responseType: 'blob',
+      timeout: 60000, // 60 seconds for downloading report
+    });
+
+    // Создаем ссылку для скачивания
+    const blob = new Blob([response.data]);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+
+    // Определяем имя файла
+    const fileExtension = format === 'excel' ? 'xlsx' : format;
+    link.download = `report_${reportId}.${fileExtension}`;
+
+    // Запускаем скачивание
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    return { success: true, message: 'Файл успешно скачан' };
+  } catch (error) {
+    return handleApiError(error, `downloading report ${reportId}`);
+  }
+};
 
 /**
  * Generate a custom report
@@ -504,10 +543,10 @@ export const generateCustomReport = async (params: {
   format?: 'pdf' | 'excel' | 'csv';
 }) => {
   try {
-  const response = await apiClient.post('/reports/generate', params, {
-      timeout: 60000 // 60 seconds for custom report generation
+    const response = await apiClient.post('/reports/generate', params, {
+      timeout: 60000, // 60 seconds for custom report generation
     });
-    
+
     const report: Report = {
       id: response.data._id,
       title: response.data.title,
@@ -515,7 +554,7 @@ export const generateCustomReport = async (params: {
       description: response.data.description,
       dateRange: {
         startDate: response.data.dateRange.startDate,
-        endDate: response.data.dateRange.endDate
+        endDate: response.data.dateRange.endDate,
       },
       filters: response.data.filters,
       data: response.data.data,
@@ -528,9 +567,9 @@ export const generateCustomReport = async (params: {
       emailRecipients: response.data.emailRecipients,
       createdBy: response.data.createdBy,
       createdAt: response.data.createdAt,
-      updatedAt: response.data.updatedAt
+      updatedAt: response.data.updatedAt,
     };
-    
+
     return report;
   } catch (error) {
     return handleApiError(error, 'generating custom report');
@@ -540,129 +579,133 @@ export const generateCustomReport = async (params: {
 // ===== ФУНКЦИИ ДЛЯ РАБОТЫ С АРЕНДОЙ =====
 
 /**
-  * Get all rents
-  * @param {object} params - Filter parameters
-  * @returns {Promise<any>} List of rents
-  */
- export const getRents = async (params: any = {}) => {
-   try {
-     const response = await apiClient.get('/rent', {
-       params,
-       timeout: 30000 // 30 seconds for fetching rents
-     });
-     return response.data;
-   } catch (error) {
-     return handleApiError(error, 'fetching rents');
-   }
- };
+ * Get all rents
+ * @param {object} params - Filter parameters
+ * @returns {Promise<any>} List of rents
+ */
+export const getRents = async (params: any = {}) => {
+  try {
+    const response = await apiClient.get('/rent', {
+      params,
+      timeout: 30000, // 30 seconds for fetching rents
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, 'fetching rents');
+  }
+};
 
 /**
-  * Update rent
-  * @param {string} id - Rent ID
-  * @param {object} data - Rent data to update
-  * @returns {Promise<any>} Updated rent
-  */
- export const updateRent = async (id: string, data: any) => {
-   try {
-     const response = await apiClient.put(`/rent/${id}`, data, {
-       timeout: 30000 // 30 seconds for updating rent
-     });
-     return response.data;
-   } catch (error) {
-     return handleApiError(error, `updating rent ${id}`);
-   }
- };
+ * Update rent
+ * @param {string} id - Rent ID
+ * @param {object} data - Rent data to update
+ * @returns {Promise<any>} Updated rent
+ */
+export const updateRent = async (id: string, data: any) => {
+  try {
+    const response = await apiClient.put(`/rent/${id}`, data, {
+      timeout: 30000, // 30 seconds for updating rent
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, `updating rent ${id}`);
+  }
+};
 
 /**
-  * Delete rent
-  * @param {string} id - Rent ID
-  * @returns {Promise<void>}
-  */
- export const deleteRent = async (id: string) => {
-   try {
-     await apiClient.delete(`/rent/${id}`, {
-       timeout: 30000 // 30 seconds for deleting rent
-     });
-     return { success: true };
-   } catch (error) {
-     return handleApiError(error, `deleting rent ${id}`);
-   }
- };
+ * Delete rent
+ * @param {string} id - Rent ID
+ * @returns {Promise<void>}
+ */
+export const deleteRent = async (id: string) => {
+  try {
+    await apiClient.delete(`/rent/${id}`, {
+      timeout: 30000, // 30 seconds for deleting rent
+    });
+    return { success: true };
+  } catch (error) {
+    return handleApiError(error, `deleting rent ${id}`);
+  }
+};
 
 /**
-  * Mark rent as paid
-  * @param {string} id - Rent ID
-  * @returns {Promise<any>} Updated rent
-  */
- export const markRentAsPaid = async (id: string) => {
-   try {
-     const response = await apiClient.patch(`/rent/${id}/mark-paid`, {}, {
-       timeout: 30000 // 30 seconds for marking rent as paid
-     });
-     return response.data;
-   } catch (error) {
-     return handleApiError(error, `marking rent ${id} as paid`);
-   }
- };
+ * Mark rent as paid
+ * @param {string} id - Rent ID
+ * @returns {Promise<any>} Updated rent
+ */
+export const markRentAsPaid = async (id: string) => {
+  try {
+    const response = await apiClient.patch(
+      `/rent/${id}/mark-paid`,
+      {},
+      {
+        timeout: 30000, // 30 seconds for marking rent as paid
+      },
+    );
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, `marking rent ${id} as paid`);
+  }
+};
 
 /**
-  * Generate rent sheets for specific tenants
-  * @param {object} params - Generation parameters
-  * @returns {Promise<any>} Success response
-  */
- export const generateRentSheets = async (params: {
-   period: string;
-   tenantIds?: string[];
- }) => {
-   try {
-     const response = await apiClient.post('/rent/generate-sheets', params, {
-       timeout: 120000 // 120 seconds for rent sheet generation (may take longer than payroll)
-     });
-     return response.data;
-   } catch (error) {
-     return handleApiError(error, 'generating rent sheets');
-   }
- };
+ * Generate rent sheets for specific tenants
+ * @param {object} params - Generation parameters
+ * @returns {Promise<any>} Success response
+ */
+export const generateRentSheets = async (params: {
+  period: string;
+  tenantIds?: string[];
+}) => {
+  try {
+    const response = await apiClient.post('/rent/generate-sheets', params, {
+      timeout: 120000, // 120 seconds for rent sheet generation (may take longer than payroll)
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, 'generating rent sheets');
+  }
+};
 
 // ===== ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ СВОДОК =====
 
 /**
-  * Get children summary
-  * @param {object} params - Filter parameters
-  * @returns {Promise<any>} Children summary
-  */
- export const getChildrenSummary = async (params?: { groupId?: string }) => {
-   try {
-     const response = await apiClient.get('/reports/children/summary', {
-       params,
-       timeout: 30000 // 30 seconds for fetching children summary
-     });
-     return response.data;
-   } catch (error) {
-     return handleApiError(error, 'fetching children summary');
-   }
- };
+ * Get children summary
+ * @param {object} params - Filter parameters
+ * @returns {Promise<any>} Children summary
+ */
+export const getChildrenSummary = async (params?: { groupId?: string }) => {
+  try {
+    const response = await apiClient.get('/reports/children/summary', {
+      params,
+      timeout: 30000, // 30 seconds for fetching children summary
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, 'fetching children summary');
+  }
+};
 
 /**
-  * Get attendance summary
-  * @param {object} params - Filter parameters
-  * @returns {Promise<any>} Attendance summary
-  */
- export const getAttendanceSummary = async (params: {
-   startDate: string;
-   endDate: string;
-   groupId?: string
- }) => {
-   try {
-     const response = await apiClient.get('/reports/attendance/summary', {
-       params,
-       timeout: 30000 // 30 seconds for fetching attendance summary
-     });
-     return response.data;
-   } catch (error) {
-     return handleApiError(error, 'fetching attendance summary');
-   }
- };
+ * Get attendance summary
+ * @param {object} params - Filter parameters
+ * @returns {Promise<any>} Attendance summary
+ */
+export const getAttendanceSummary = async (params: {
+  startDate: string;
+  endDate: string;
+  groupId?: string;
+}) => {
+  try {
+    const response = await apiClient.get('/reports/attendance/summary', {
+      params,
+      timeout: 30000, // 30 seconds for fetching attendance summary
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, 'fetching attendance summary');
+  }
+};
 
 const reportsService = {
   // Reports
@@ -671,36 +714,35 @@ const reportsService = {
   createReport,
   deleteReport,
   downloadReport,
-  
+
   // Stats
   getAttendanceStatistics,
   getScheduleStatistics,
-  
+
   // Export
   exportReport,
   exportSalaryReport,
   exportChildrenReport,
   exportAttendanceReport,
-  
+
   // Email
   sendReportByEmail,
-  
+
   // Schedule
   scheduleReport,
-  
+
   // Generate
   generateCustomReport,
-  
+
   // Rent functions
   getRents,
   updateRent,
   deleteRent,
   markRentAsPaid,
   generateRentSheets,
-  
+
   // Summary functions
   getChildrenSummary,
-  getAttendanceSummary
+  getAttendanceSummary,
 };
 export default reportsService;
- 

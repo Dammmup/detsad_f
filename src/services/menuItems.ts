@@ -19,12 +19,17 @@ export const getMenuItems = async (): Promise<MenuItem[]> => {
   return data;
 };
 
-export const createMenuItem = async (item: Partial<MenuItem>): Promise<MenuItem> => {
+export const createMenuItem = async (
+  item: Partial<MenuItem>,
+): Promise<MenuItem> => {
   const { data } = await api.post('/menu-items', item);
   return data;
 };
 
-export const updateMenuItem = async (id: string, item: Partial<MenuItem>): Promise<MenuItem> => {
+export const updateMenuItem = async (
+  id: string,
+  item: Partial<MenuItem>,
+): Promise<MenuItem> => {
   const { data } = await api.put(`/menu-items/${id}`, item);
   return data;
 };

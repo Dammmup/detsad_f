@@ -1,6 +1,12 @@
 import React from 'react';
 import { Typography, Box } from '@mui/material';
-import { YMaps, Map, Circle, ZoomControl, GeolocationControl } from '@pbe/react-yandex-maps';
+import {
+  YMaps,
+  Map,
+  Circle,
+  ZoomControl,
+  GeolocationControl,
+} from '@pbe/react-yandex-maps';
 
 interface YandexMapProps {
   center: { lat: number; lng: number };
@@ -10,14 +16,13 @@ interface YandexMapProps {
   apiKey: string;
 }
 
-const YandexMap: React.FC<YandexMapProps> = ({ 
-  center, 
-  radius, 
-  onRadiusChange, 
+const YandexMap: React.FC<YandexMapProps> = ({
+  center,
+  radius,
+  onRadiusChange,
   onCenterChange,
-  apiKey
+  apiKey,
 }) => {
-
   const handleDragEnd = (e: any) => {
     const newCoords = e.get('target').geometry.getCoordinates();
     if (newCoords) {
@@ -43,15 +48,28 @@ const YandexMap: React.FC<YandexMapProps> = ({
     <YMaps query={{ apikey: apiKey, lang: 'ru_RU' }}>
       <Box>
         {!apiKey && (
-          <Box sx={{ mb: 2, p: 2, bgcolor: '#d4edda', border: '1px solid #c3e6cb', borderRadius: 1 }}>
-            <Typography color="success.main">
+          <Box
+            sx={{
+              mb: 2,
+              p: 2,
+              bgcolor: '#d4edda',
+              border: '1px solid #c3e6cb',
+              borderRadius: 1,
+            }}
+          >
+            <Typography color='success.main'>
               Используется API ключ из настроек сервера.
             </Typography>
           </Box>
         )}
         <Map
           state={{ center: [center.lat, center.lng], zoom: 15 }}
-          style={{ width: '100%', height: 400, marginBottom: '16px', border: '1px solid #ccc' }}
+          style={{
+            width: '100%',
+            height: 400,
+            marginBottom: '16px',
+            border: '1px solid #ccc',
+          }}
           onClick={handleMapClick}
         >
           <Circle
@@ -72,9 +90,9 @@ const YandexMap: React.FC<YandexMapProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography>Радиус (метры):</Typography>
           <input
-            type="range"
-            min="10"
-            max="1000"
+            type='range'
+            min='10'
+            max='1000'
             value={radius}
             onChange={handleRadiusSliderChange}
             style={{ width: 200 }}

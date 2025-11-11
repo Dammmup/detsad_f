@@ -40,8 +40,10 @@ class MainEventsService {
     if (enabled !== undefined) {
       params.append('enabled', enabled.toString());
     }
-    
-    const response = await apiClient.get<MainEvent[]>(`/main-events?${params.toString()}`);
+
+    const response = await apiClient.get<MainEvent[]>(
+      `/main-events?${params.toString()}`,
+    );
     return response.data;
   }
 
@@ -65,13 +67,18 @@ class MainEventsService {
 
   // Удалить событие
   async delete(id: string): Promise<{ message: string }> {
-    const response = await apiClient.delete<{ message: string }>(`/main-events/${id}`);
+    const response = await apiClient.delete<{ message: string }>(
+      `/main-events/${id}`,
+    );
     return response.data;
   }
 
   // Переключить активность события
   async toggleEnabled(id: string, enabled: boolean): Promise<MainEvent> {
-    const response = await apiClient.patch<MainEvent>(`/main-events/${id}/toggle-enabled`, { enabled });
+    const response = await apiClient.patch<MainEvent>(
+      `/main-events/${id}/toggle-enabled`,
+      { enabled },
+    );
     return response.data;
   }
 
@@ -83,7 +90,9 @@ class MainEventsService {
 
   // Выполнить проверку и выполнение всех активных событий
   async executeScheduled(): Promise<any> {
-    const response = await apiClient.post<any>('/main-events/execute-scheduled');
+    const response = await apiClient.post<any>(
+      '/main-events/execute-scheduled',
+    );
     return response.data;
   }
 }

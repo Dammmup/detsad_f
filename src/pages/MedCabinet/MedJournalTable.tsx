@@ -1,17 +1,28 @@
 import React from 'react';
-import { Box, Typography, Table, TableHead, TableRow, TableCell, TableBody, Paper, Button, Stack } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Paper,
+  Button,
+  Stack,
+} from '@mui/material';
 import { MedJournalConfig } from './medJournals.config';
 
 interface Props {
   config: MedJournalConfig;
 }
 
-export const MedJournalTable=({ config }: Props)=> {
+export const MedJournalTable = ({ config }: Props) => {
   const [rows, setRows] = React.useState<any[]>([]);
 
   // Добавить пустую строку для ввода
   const handleAdd = () => {
-    setRows(prev => [...prev, {}]);
+    setRows((prev) => [...prev, {}]);
   };
 
   // Заглушка экспорта: просто выводит alert (реализация — далее)
@@ -22,19 +33,34 @@ export const MedJournalTable=({ config }: Props)=> {
 
   return (
     <Paper sx={{ p: { xs: 1, md: 2 } }}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={1} mb={1}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        justifyContent='space-between'
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        spacing={1}
+        mb={1}
+      >
         <Box>
-          <Typography variant="h6" gutterBottom>{config.title}</Typography>
-          <Typography variant="body2" color="text.secondary" gutterBottom>{config.description}</Typography>
+          <Typography variant='h6' gutterBottom>
+            {config.title}
+          </Typography>
+          <Typography variant='body2' color='text.secondary' gutterBottom>
+            {config.description}
+          </Typography>
         </Box>
-        <Button variant="contained" size="small" onClick={handleExport} sx={{ minWidth: 140 }}>
+        <Button
+          variant='contained'
+          size='small'
+          onClick={handleExport}
+          sx={{ minWidth: 140 }}
+        >
           Экспорт в Word
         </Button>
       </Stack>
-      <Table size="small" sx={{ minWidth: 600, overflowX: 'auto' }}>
+      <Table size='small' sx={{ minWidth: 600, overflowX: 'auto' }}>
         <TableHead>
           <TableRow>
-            {config.fields.map(f => (
+            {config.fields.map((f) => (
               <TableCell key={f.key}>{f.label}</TableCell>
             ))}
           </TableRow>
@@ -42,14 +68,18 @@ export const MedJournalTable=({ config }: Props)=> {
         <TableBody>
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={config.fields.length} align="center" sx={{ color: 'text.disabled' }}>
+              <TableCell
+                colSpan={config.fields.length}
+                align='center'
+                sx={{ color: 'text.disabled' }}
+              >
                 Нет записей
               </TableCell>
             </TableRow>
           )}
           {rows.map((row, idx) => (
             <TableRow key={idx}>
-              {config.fields.map(f => (
+              {config.fields.map((f) => (
                 <TableCell key={f.key}>{row[f.key] || ''}</TableCell>
               ))}
             </TableRow>
@@ -57,8 +87,10 @@ export const MedJournalTable=({ config }: Props)=> {
         </TableBody>
       </Table>
       <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
-        <Button variant="outlined" size="small" onClick={handleAdd}>Добавить запись</Button>
+        <Button variant='outlined' size='small' onClick={handleAdd}>
+          Добавить запись
+        </Button>
       </Box>
     </Paper>
   );
-}
+};

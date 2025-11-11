@@ -14,31 +14,45 @@ export function formatFileSize(bytes: number): string {
 export function getFileIcon(fileName: string) {
   const ext = fileName.split('.').pop()?.toLowerCase();
   switch (ext) {
-    case 'pdf': return <PdfIcon color="error" />;
+    case 'pdf':
+      return <PdfIcon color='error' />;
     case 'xlsx':
-    case 'xls': return <ExcelIcon color="success" />;
+    case 'xls':
+      return <ExcelIcon color='success' />;
     case 'doc':
-    case 'docx': return <FileIcon color="primary" />;
-    default: return <FileIcon />;
+    case 'docx':
+      return <FileIcon color='primary' />;
+    default:
+      return <FileIcon />;
   }
 }
 
 export function getTypeText(type: string): string {
   switch (type) {
-    case 'contract': return 'Договор';
-    case 'report': return 'Отчет';
-    case 'certificate': return 'Справка';
-    case 'policy': return 'Политика';
-    default: return 'Другое';
+    case 'contract':
+      return 'Договор';
+    case 'report':
+      return 'Отчет';
+    case 'certificate':
+      return 'Справка';
+    case 'policy':
+      return 'Политика';
+    default:
+      return 'Другое';
   }
 }
 
 export function getCategoryText(category: string): string {
   switch (category) {
-    case 'staff': return 'Сотрудники';
-    case 'children': return 'Дети';
-    case 'financial': return 'Финансы';
-    case 'administrative': return 'Администрация';
-    default: return 'Другое';
+    case 'staff':
+      return 'Сотрудники';
+    case 'children':
+      return 'Дети';
+    case 'financial':
+      return 'Финансы';
+    case 'administrative':
+      return 'Администрация';
+    default:
+      return 'Другое';
   }
 }

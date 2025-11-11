@@ -1,6 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Table, TableHead, TableRow, TableCell, TableBody, Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
-import { productCertificateApi, ProductCertificate } from '../../services/productCertificate';
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Button,
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+} from '@mui/material';
+import {
+  productCertificateApi,
+  ProductCertificate,
+} from '../../services/productCertificate';
 
 const defaultForm: ProductCertificate = {
   date: '',
@@ -82,26 +101,35 @@ const ProductCertificatePage: React.FC = () => {
     }
   };
 
-  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+  const handleExport = async (
+    exportType: string,
+    exportFormat: 'pdf' | 'excel' | 'csv',
+  ) => {
     await exportData('product-certificate', exportFormat, { rows });
   };
 
   return (
     <>
-    <Box p={3}>
-      <Typography variant="h4" gutterBottom>
-        Журнал регистрации сертификатов годности продуктов питания
-      </Typography>
-      <Stack direction="row" spacing={2} mb={2}>
-        <Button variant="contained" color="primary" onClick={() => handleOpen()}>
-          Добавить запись
-        </Button>
-        <ExportButton
-          exportTypes={[{ value: 'product-certificate', label: 'Сертификаты продуктов' }]}
-          onExport={handleExport}
-        />
-      </Stack>
-      <Paper sx={{ p: 2, mb: 2 }}>
+      <Box p={3}>
+        <Typography variant='h4' gutterBottom>
+          Журнал регистрации сертификатов годности продуктов питания
+        </Typography>
+        <Stack direction='row' spacing={2} mb={2}>
+          <Button
+            variant='contained'
+            color='primary'
+            onClick={() => handleOpen()}
+          >
+            Добавить запись
+          </Button>
+          <ExportButton
+            exportTypes={[
+              { value: 'product-certificate', label: 'Сертификаты продуктов' },
+            ]}
+            onExport={handleExport}
+          />
+        </Stack>
+        <Paper sx={{ p: 2, mb: 2 }}>
           <TableHead>
             <TableRow>
               <TableCell>Дата</TableCell>
@@ -123,36 +151,86 @@ const ProductCertificatePage: React.FC = () => {
                 <TableCell>{row.expiry}</TableCell>
                 <TableCell>{row.notes}</TableCell>
                 <TableCell>
-                  <Stack direction="row" spacing={1}>
-                    <Button size="small" onClick={() => handleOpen(row)}>Редактировать</Button>
-                    <Button size="small" color="error" onClick={() => handleDelete(row._id)}>Удалить</Button>
+                  <Stack direction='row' spacing={1}>
+                    <Button size='small' onClick={() => handleOpen(row)}>
+                      Редактировать
+                    </Button>
+                    <Button
+                      size='small'
+                      color='error'
+                      onClick={() => handleDelete(row._id)}
+                    >
+                      Удалить
+                    </Button>
                   </Stack>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
-      </Paper>
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>{editId ? 'Редактировать запись' : 'Добавить запись'}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} mt={1}>
-            <TextField label="Дата" name="date" type="date" value={form.date} onChange={handleChange} InputLabelProps={{ shrink: true }} fullWidth />
-            <TextField label="Продукт" name="product" value={form.product} onChange={handleChange} fullWidth />
-            <TextField label="Номер сертификата" name="certificateNumber" value={form.certificateNumber} onChange={handleChange} fullWidth />
-            <TextField label="Кем выдан" name="issuedBy" value={form.issuedBy} onChange={handleChange} fullWidth />
-            <TextField label="Срок годности" name="expiry" type="date" value={form.expiry} onChange={handleChange} InputLabelProps={{ shrink: true }} fullWidth />
-            <TextField label="Примечания" name="notes" value={form.notes} onChange={handleChange} fullWidth />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Отмена</Button>
-          <Button onClick={handleSave} variant="contained" disabled={loading}>
-            Сохранить
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
-  </>
+        </Paper>
+        <Dialog open={open} onClose={handleClose} maxWidth='sm' fullWidth>
+          <DialogTitle>
+            {editId ? 'Редактировать запись' : 'Добавить запись'}
+          </DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} mt={1}>
+              <TextField
+                label='Дата'
+                name='date'
+                type='date'
+                value={form.date}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+              />
+              <TextField
+                label='Продукт'
+                name='product'
+                value={form.product}
+                onChange={handleChange}
+                fullWidth
+              />
+              <TextField
+                label='Номер сертификата'
+                name='certificateNumber'
+                value={form.certificateNumber}
+                onChange={handleChange}
+                fullWidth
+              />
+              <TextField
+                label='Кем выдан'
+                name='issuedBy'
+                value={form.issuedBy}
+                onChange={handleChange}
+                fullWidth
+              />
+              <TextField
+                label='Срок годности'
+                name='expiry'
+                type='date'
+                value={form.expiry}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+              />
+              <TextField
+                label='Примечания'
+                name='notes'
+                value={form.notes}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleClose}>Отмена</Button>
+            <Button onClick={handleSave} variant='contained' disabled={loading}>
+              Сохранить
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
+    </>
   );
 };
 

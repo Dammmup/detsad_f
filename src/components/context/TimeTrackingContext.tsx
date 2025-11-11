@@ -1,9 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
 import { toast } from 'react-toastify';
 import { apiClient } from '../../utils/api';
-
-
-
 
 interface GeolocationPosition {
   coords: {
@@ -22,12 +25,16 @@ interface TimeTrackingContextType {
   getCurrentLocation: () => Promise<GeolocationPosition>;
 }
 
-const TimeTrackingContext = createContext<TimeTrackingContextType | undefined>(undefined);
+const TimeTrackingContext = createContext<TimeTrackingContextType | undefined>(
+  undefined,
+);
 
 export const useTimeTracking = (): TimeTrackingContextType => {
   const context = useContext(TimeTrackingContext);
   if (!context) {
-    throw new Error('useTimeTracking must be used within a TimeTrackingProvider');
+    throw new Error(
+      'useTimeTracking must be used within a TimeTrackingProvider',
+    );
   }
   return context;
 };
@@ -36,10 +43,11 @@ interface TimeTrackingProviderProps {
   children: React.ReactNode;
 }
 
-export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) => {
-
- const [timeStatus, setTimeStatus] = useState<string | null>(null);
- // setTimeStatus is used in the fetchTimeStatus function below
+export const TimeTrackingProvider = ({
+  children,
+}: TimeTrackingProviderProps) => {
+  const [timeStatus, setTimeStatus] = useState<string | null>(null);
+  // setTimeStatus is used in the fetchTimeStatus function below
   const [loading, setLoading] = useState<boolean>(false);
   const [location, setLocation] = useState<GeolocationPosition | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -85,8 +93,8 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
         {
           enableHighAccuracy: true,
           timeout: 10000,
-          maximumAge: 300000 // 5 minutes
-        }
+          maximumAge: 300000, // 5 minutes
+        },
       );
     });
   }, []);
@@ -107,85 +115,100 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
   }, []);
 
   // Clock in
-  const clockIn = useCallback(async (options: Record<string, any> = {}) => {
-    try {
-      setLoading(true);
-      
-      // Get current location if not provided
-      let currentLocation = location;
-      if (!currentLocation) {
-        currentLocation = await getCurrentLocation();
+  const clockIn = useCallback(
+    async (options: Record<string, any> = {}) => {
+      try {
+        setLoading(true);
+
+        // Get current location if not provided
+        let currentLocation = location;
+        if (!currentLocation) {
+          currentLocation = await getCurrentLocation();
+        }
+
+        const requestData = {
+          latitude: currentLocation?.coords.latitude,
+          longitude: currentLocation?.coords.longitude,
+        };
+
+        const response = await apiClient.post(
+          '/time-tracking/clock-in',
+          requestData,
+        );
+
+        // // Update status
+        // await fetchTimeStatus();
+
+        toast.success('Успешно отмечен приход на работу');
+        return response.data;
+      } catch (error) {
+        console.error('Clock in error:', error);
+        const errorMessage =
+          (error as any).response?.data?.error || 'Ошибка при отметке прихода';
+        toast.error(errorMessage);
+        throw error;
+      } finally {
+        setLoading(false);
       }
-
-      const requestData = {
-        latitude: currentLocation?.coords.latitude,
-        longitude: currentLocation?.coords.longitude,
-      };
-
-      const response = await apiClient.post('/time-tracking/clock-in', requestData);
-      
-      // // Update status
-      // await fetchTimeStatus();
-      
-      toast.success('Успешно отмечен приход на работу');
-      return response.data;
-    } catch (error) {
-      console.error('Clock in error:', error);
-      const errorMessage = (error as any).response?.data?.error || 'Ошибка при отметке прихода';
-      toast.error(errorMessage);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [location, getCurrentLocation]);
+    },
+    [location, getCurrentLocation],
+  );
 
   // Clock out
-  const clockOut = useCallback(async (options: Record<string, any> = {}) => {
-    try {
-      setLoading(true);
-      
-      // Get current location if not provided
-      let currentLocation = location;
-      if (!currentLocation) {
-        currentLocation = await getCurrentLocation();
+  const clockOut = useCallback(
+    async (options: Record<string, any> = {}) => {
+      try {
+        setLoading(true);
+
+        // Get current location if not provided
+        let currentLocation = location;
+        if (!currentLocation) {
+          currentLocation = await getCurrentLocation();
+        }
+
+        const requestData = {
+          latitude: currentLocation?.coords.latitude,
+          longitude: currentLocation?.coords.longitude,
+        };
+
+        const response = await apiClient.post(
+          '/time-tracking/clock-out',
+          requestData,
+        );
+
+        // // Update status
+        // await fetchTimeStatus();
+
+        toast.success('Успешно отмечен уход с работы');
+        return response.data;
+      } catch (error) {
+        console.error('Clock out error:', error);
+        const errorMessage =
+          (error as any).response?.data?.error || 'Ошибка при отметке ухода';
+        toast.error(errorMessage);
+        throw error;
+      } finally {
+        setLoading(false);
       }
-
-      const requestData = {
-        latitude: currentLocation?.coords.latitude,
-        longitude: currentLocation?.coords.longitude,
-      };
-
-      const response = await apiClient.post('/time-tracking/clock-out', requestData);
-      
-      // // Update status
-      // await fetchTimeStatus();
-      
-      toast.success('Успешно отмечен уход с работы');
-      return response.data;
-    } catch (error) {
-      console.error('Clock out error:', error);
-      const errorMessage = (error as any).response?.data?.error || 'Ошибка при отметке ухода';
-      toast.error(errorMessage);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [location, getCurrentLocation]);
+    },
+    [location, getCurrentLocation],
+  );
 
   // Start break
   const startBreak = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiClient.post('/time-tracking/break-start');
-      
+
       // // Update status
       // await fetchTimeStatus();
-      
+
       toast.success('Перерыв начат');
       return response.data;
     } catch (error) {
       console.error('Start break error:', error);
-      const errorMessage = (error as any).response?.data?.error || 'Ошибка при начале перерыва';
+      const errorMessage =
+        (error as any).response?.data?.error || 'Ошибка при начале перерыва';
       toast.error(errorMessage);
       throw error;
     } finally {
@@ -198,15 +221,17 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
     try {
       setLoading(true);
       const response = await apiClient.post('/time-tracking/break-end');
-      
+
       // // Update status
       // await fetchTimeStatus();
-      
+
       toast.success('Перерыв завершен');
       return response.data;
     } catch (error) {
       console.error('End break error:', error);
-      const errorMessage = (error as any).response?.data?.error || 'Ошибка при завершении перерыва';
+      const errorMessage =
+        (error as any).response?.data?.error ||
+        'Ошибка при завершении перерыва';
       toast.error(errorMessage);
       throw error;
     } finally {
@@ -215,37 +240,50 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
   }, []);
 
   // Get time entries
-  const getTimeEntries = useCallback(async (params: Record<string, any> = {}) => {
-    try {
-      const queryParams = new URLSearchParams({
-        ...params
-      });
+  const getTimeEntries = useCallback(
+    async (params: Record<string, any> = {}) => {
+      try {
+        const queryParams = new URLSearchParams({
+          ...params,
+        });
 
-      const response = await apiClient.get(`/time-tracking/entries?${queryParams}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching time entries:', error);
-      toast.error('Ошибка загрузки записей рабочего времени');
-      throw error;
-    }
-  }, []);
+        const response = await apiClient.get(
+          `/time-tracking/entries?${queryParams}`,
+        );
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching time entries:', error);
+        toast.error('Ошибка загрузки записей рабочего времени');
+        throw error;
+      }
+    },
+    [],
+  );
 
   // Get time summary
-  const getTimeSummary = useCallback(async (startDate: { toISOString: () => any; }, endDate: { toISOString: () => any; }) => {
-    try {
-      const params = new URLSearchParams({
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
-      });
+  const getTimeSummary = useCallback(
+    async (
+      startDate: { toISOString: () => any },
+      endDate: { toISOString: () => any },
+    ) => {
+      try {
+        const params = new URLSearchParams({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        });
 
-      const response = await apiClient.get(`/time-tracking/summary?${params}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching time summary:', error);
-      toast.error('Ошибка загрузки сводки рабочего времени');
-      throw error;
-    }
-  }, []);
+        const response = await apiClient.get(
+          `/time-tracking/summary?${params}`,
+        );
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching time summary:', error);
+        toast.error('Ошибка загрузки сводки рабочего времени');
+        throw error;
+      }
+    },
+    [],
+  );
 
   // Initialize location on mount
   useEffect(() => {
@@ -271,7 +309,7 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
     loading,
     location,
     locationError,
-    
+
     // Actions
     fetchTimeStatus,
     getCurrentLocation,
@@ -281,16 +319,16 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
     endBreak,
     getTimeEntries,
     getTimeSummary,
-    
+
     // Helper functions
     formatTime: (date: string | number | Date) => {
       return new Date(date).toLocaleTimeString('ru-RU', {
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit'
+        second: '2-digit',
       });
     },
-    
+
     formatDuration: (startTime: string | number | Date) => {
       const now = new Date();
       const diff = now.getTime() - new Date(startTime).getTime();
@@ -298,10 +336,10 @@ export const TimeTrackingProvider = ({ children }: TimeTrackingProviderProps) =>
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       return `${hours}ч ${minutes}м`;
     },
-    
+
     formatHours: (hours: number) => {
       return `${hours.toFixed(2)}ч`;
-    }
+    },
   };
 
   return (

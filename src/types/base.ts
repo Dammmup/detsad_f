@@ -7,5 +7,5 @@ export interface IBaseEntity {
 
 export interface IBaseEntityWithId {
   _id?: string;
- id?: string;
+  id?: string;
 }

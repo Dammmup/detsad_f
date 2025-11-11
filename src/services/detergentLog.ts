@@ -1,4 +1,3 @@
-
 import { BaseCrudApiClient } from '../utils/api';
 
 export interface DetergentLog {

@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { Button, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import {
+  Button,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+} from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import UploadIcon from '@mui/icons-material/Upload';
 import EmailIcon from '@mui/icons-material/Email';
@@ -10,7 +16,11 @@ interface ExportMenuButtonProps {
   label?: string;
 }
 
-const ExportMenuButton: React.FC<ExportMenuButtonProps> = ({ onDownload, onSendEmail, label }) => {
+const ExportMenuButton: React.FC<ExportMenuButtonProps> = ({
+  onDownload,
+  onSendEmail,
+  label,
+}) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -34,25 +44,25 @@ const ExportMenuButton: React.FC<ExportMenuButtonProps> = ({ onDownload, onSendE
   return (
     <>
       <Button
-        variant="outlined"
-        color="primary"
+        variant='outlined'
+        color='primary'
         onClick={handleClick}
         startIcon={<UploadIcon />}
       >
         {label || 'Экспорт'}
       </Button>
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleClose}
-      >
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
         <MenuItem onClick={handleDownload}>
-          <ListItemIcon><DownloadIcon fontSize="small" /></ListItemIcon>
-          <ListItemText primary="Скачать файл" />
+          <ListItemIcon>
+            <DownloadIcon fontSize='small' />
+          </ListItemIcon>
+          <ListItemText primary='Скачать файл' />
         </MenuItem>
         <MenuItem onClick={handleSendEmail}>
-          <ListItemIcon><EmailIcon fontSize="small" /></ListItemIcon>
-          <ListItemText primary="Отправить на почту" />
+          <ListItemIcon>
+            <EmailIcon fontSize='small' />
+          </ListItemIcon>
+          <ListItemText primary='Отправить на почту' />
         </MenuItem>
       </Menu>
     </>

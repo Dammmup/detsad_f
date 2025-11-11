@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addDays } from 'date-fns';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  addDays,
+} from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useSnackbar } from 'notistack';
 import {
@@ -20,7 +26,7 @@ import {
   Grid,
   IconButton,
   InputLabel,
- MenuItem,
+  MenuItem,
   Paper,
   Popover,
   Select,
@@ -37,29 +43,48 @@ import {
   OutlinedInput,
   InputAdornment,
   Checkbox,
-  ListItemText
+  ListItemText,
 } from '@mui/material';
 import {
   Add as AddIcon,
   ArrowBackIos as ArrowBackIosIcon,
   ArrowForwardIos as ArrowForwardIosIcon,
-  Today as TodayIcon
+  Today as TodayIcon,
 } from '@mui/icons-material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { Search as SearchIcon } from '@mui/icons-material';
 import ExportButton from '../../components/ExportButton';
 import { exportData } from '../../utils/exportUtils';
-import { exportStaffAttendance, getCurrentMonthRange } from '../../utils/excelExport';
+import {
+  exportStaffAttendance,
+  getCurrentMonthRange,
+} from '../../utils/excelExport';
 import { useDate } from '../../components/context/DateContext';
 import DateNavigator from '../../components/DateNavigator';
 
 // Types and Services
-import { Shift, ShiftStatus, ShiftFormData, STATUS_TEXT, STATUS_COLORS } from '../../types/common';
-import { getShifts, createShift, updateShift, deleteShift } from '../../services/shifts';
+import {
+  Shift,
+  ShiftStatus,
+  ShiftFormData,
+  STATUS_TEXT,
+  STATUS_COLORS,
+} from '../../types/common';
+import {
+  getShifts,
+  createShift,
+  updateShift,
+  deleteShift,
+} from '../../services/shifts';
 import { getUsers } from '../../services/users';
 import { User } from '../../types/common';
-import { getAllHolidays, createHoliday, deleteHoliday, Holiday } from '../../services/holidays';
+import {
+  getAllHolidays,
+  createHoliday,
+  deleteHoliday,
+  Holiday,
+} from '../../services/holidays';
 
 // Удаляем локальные определения статусов, так как используем импортированные из common.ts
 
@@ -95,7 +120,7 @@ const ROLE_LABELS: Record<string, string> = {
   physical_teacher: 'Инструктор по физкультуре',
   staff: 'Персонал',
   doctor: 'Врач',
-  intern: 'Стажер'
+  intern: 'Стажер',
 };
 
 // Удаляем локальное определение интерфейса ShiftFormData,
@@ -105,7 +130,7 @@ const StaffSchedule: React.FC = () => {
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
   const { currentDate, setCurrentDate } = useDate();
-  
+
   // State
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
@@ -114,61 +139,72 @@ const StaffSchedule: React.FC = () => {
   const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Data
   const [staff, setStaff] = useState<User[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
-  
+
   // Holiday state
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [selectedHolidayDate, setSelectedHolidayDate] = useState<string | null>(null);
+  const [selectedHolidayDate, setSelectedHolidayDate] = useState<string | null>(
+    null,
+  );
   const [isHolidayLoading, setIsHolidayLoading] = useState(false);
-  
-  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+
+  const handleExport = async (
+    exportType: string,
+    exportFormat: 'pdf' | 'excel' | 'csv',
+  ) => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     const period = `${format(new Date(monthStart), 'dd.MM.yyyy')} - ${format(new Date(monthEnd), 'dd.MM.yyyy')}`;
 
     // Fetch shifts for the entire month
-    const shiftsForMonth = await getShifts(format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'));
+    const shiftsForMonth = await getShifts(
+      format(monthStart, 'yyyy-MM-dd'),
+      format(monthEnd, 'yyyy-MM-dd'),
+    );
 
     try {
-        await exportStaffAttendance(shiftsForMonth, period);
-        enqueueSnackbar('Отчет экспортирован', { variant: 'success' });
+      await exportStaffAttendance(shiftsForMonth, period);
+      enqueueSnackbar('Отчет экспортирован', { variant: 'success' });
     } catch (e: any) {
-        console.error('Error exporting staff schedule:', e);
-        enqueueSnackbar('Ошибка при экспорте', { variant: 'error' });
+      console.error('Error exporting staff schedule:', e);
+      enqueueSnackbar('Ошибка при экспорте', { variant: 'error' });
     }
   };
 
   // Form state
-    const [formData, setFormData] = useState<ShiftFormData>({
-          userId: '',
-          staffId: '',
-          staffName: '',
-          date: format(new Date(), 'yyyy-MM-dd'),
-          startTime: '07:30',
-          endTime: '18:30',
-          notes: '',
-          status: ShiftStatus.scheduled,
-          alternativeStaffId: ''
-        });
+  const [formData, setFormData] = useState<ShiftFormData>({
+    userId: '',
+    staffId: '',
+    staffName: '',
+    date: format(new Date(), 'yyyy-MM-dd'),
+    startTime: '07:30',
+    endTime: '18:30',
+    notes: '',
+    status: ShiftStatus.scheduled,
+    alternativeStaffId: '',
+  });
 
   // Load data
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         const monthStart = startOfMonth(currentDate);
         const monthEnd = endOfMonth(currentDate);
         const [staffData, shiftsData] = await Promise.all([
           getUsers(),
-          getShifts(format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'))
+          getShifts(
+            format(monthStart, 'yyyy-MM-dd'),
+            format(monthEnd, 'yyyy-MM-dd'),
+          ),
         ]);
-        
+
         setStaff(staffData);
         setShifts(shiftsData);
       } catch (err: any) {
@@ -179,146 +215,184 @@ const StaffSchedule: React.FC = () => {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, [currentDate, enqueueSnackbar]);
-  
+
   // Загрузка праздников
-   useEffect(() => {
-     const fetchHolidays = async () => {
-       try {
-         const monthStart = startOfMonth(currentDate);
-         
-         // Загружаем праздники для текущего месяца
-         const holidaysData = await getAllHolidays({
-           month: monthStart.getMonth() + 1, // Месяцы в JavaScript начинаются с 0
-           year: monthStart.getFullYear()
-         });
-         
-         // Проверяем, что данные - это массив
-         if (Array.isArray(holidaysData)) {
-           // Убираем дубликаты праздников
-           const uniqueHolidays = holidaysData.filter((holiday, index, self) =>
-             index === self.findIndex(h =>
-               h.day === holiday.day &&
-               h.month === holiday.month &&
-               (h.isRecurring || holiday.isRecurring || h.year === holiday.year)
-             )
-           );
-           
-           console.log('Fetched holidays:', holidaysData);
-           console.log('Unique holidays:', uniqueHolidays);
-           
-           setHolidays(uniqueHolidays);
-         } else {
-           console.error('Holidays data is not an array:', holidaysData);
-           setHolidays([]);
-         }
-       } catch (err) {
-         console.error('Error loading holidays:', err);
-         setHolidays([]);
-       }
-     };
-     
-     fetchHolidays();
-   }, [currentDate]);
-  
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      try {
+        const monthStart = startOfMonth(currentDate);
+
+        // Загружаем праздники для текущего месяца
+        const holidaysData = await getAllHolidays({
+          month: monthStart.getMonth() + 1, // Месяцы в JavaScript начинаются с 0
+          year: monthStart.getFullYear(),
+        });
+
+        // Проверяем, что данные - это массив
+        if (Array.isArray(holidaysData)) {
+          // Убираем дубликаты праздников
+          const uniqueHolidays = holidaysData.filter(
+            (holiday, index, self) =>
+              index ===
+              self.findIndex(
+                (h) =>
+                  h.day === holiday.day &&
+                  h.month === holiday.month &&
+                  (h.isRecurring ||
+                    holiday.isRecurring ||
+                    h.year === holiday.year),
+              ),
+          );
+
+          console.log('Fetched holidays:', holidaysData);
+          console.log('Unique holidays:', uniqueHolidays);
+
+          setHolidays(uniqueHolidays);
+        } else {
+          console.error('Holidays data is not an array:', holidaysData);
+          setHolidays([]);
+        }
+      } catch (err) {
+        console.error('Error loading holidays:', err);
+        setHolidays([]);
+      }
+    };
+
+    fetchHolidays();
+  }, [currentDate]);
+
   // Обработчик для фильтра ролей
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
     const { value } = event.target;
     setFilterRole(typeof value === 'string' ? value.split(',') : value);
   };
-  
+
   // Функция для проверки, является ли дата праздничной
-       const isHoliday = (date: Date): boolean => {
-         // Проверяем, что holidays определен и является массивом
-         if (!holidays || !Array.isArray(holidays)) {
-           console.log('Holidays is not available or not an array:', holidays);
-           return false;
-         }
-         
-         const day = date.getDate();
-         const month = date.getMonth() + 1; // Месяцы в JavaScript начинаются с 0
-         const year = date.getFullYear();
-         
-         console.log(`Checking if ${day}.${month}.${year} is holiday. Total holidays: ${holidays.length}`);
-         console.log('Holidays array:', holidays);
-         
-         // Проверяем, есть ли праздник в этот день
-         const holiday = holidays.find(h =>
-           h.day === day && h.month === month &&
-           (h.isRecurring || h.year === year)
-         );
-         
-         console.log(`Holiday found: ${holiday ? holiday.name : 'None'}`);
-         
-         return holiday !== undefined;
-       };
-  
+  const isHoliday = (date: Date): boolean => {
+    // Проверяем, что holidays определен и является массивом
+    if (!holidays || !Array.isArray(holidays)) {
+      console.log('Holidays is not available or not an array:', holidays);
+      return false;
+    }
+
+    const day = date.getDate();
+    const month = date.getMonth() + 1; // Месяцы в JavaScript начинаются с 0
+    const year = date.getFullYear();
+
+    console.log(
+      `Checking if ${day}.${month}.${year} is holiday. Total holidays: ${holidays.length}`,
+    );
+    console.log('Holidays array:', holidays);
+
+    // Проверяем, есть ли праздник в этот день
+    const holiday = holidays.find(
+      (h) =>
+        h.day === day &&
+        h.month === month &&
+        (h.isRecurring || h.year === year),
+    );
+
+    console.log(`Holiday found: ${holiday ? holiday.name : 'None'}`);
+
+    return holiday !== undefined;
+  };
+
   // Функция для проверки, является ли день выходным (суббота или воскресенье)
   const isWeekend = (date: Date): boolean => {
     const dayOfWeek = date.getDay();
     return dayOfWeek === 0 || dayOfWeek === 6; // 0 - воскресенье, 6 - суббота
   };
-  
+
   // Обработчик клика по заголовку дня
-  const handleDayHeaderClick = (event: React.MouseEvent<HTMLElement>, date: Date) => {
+  const handleDayHeaderClick = (
+    event: React.MouseEvent<HTMLElement>,
+    date: Date,
+  ) => {
     setAnchorEl(event.currentTarget);
     setSelectedHolidayDate(format(date, 'yyyy-MM-dd'));
   };
-  
+
   // Обработчик изменения статуса праздника
- const handleHolidayToggle = async () => {
+  const handleHolidayToggle = async () => {
     if (!selectedHolidayDate) return;
-    
+
     setIsHolidayLoading(true);
-    
+
     try {
       const date = new Date(selectedHolidayDate);
       const day = date.getDate();
       const month = date.getMonth() + 1; // Месяцы в JavaScript начинаются с 0
       const year = date.getFullYear();
-      
+
       console.log(`Toggling holiday for date: ${day}.${month}.${year}`);
       console.log('Current holidays array:', holidays);
-      
+
       // Проверяем, есть ли уже праздник в этот день
-      const existingHoliday = holidays && Array.isArray(holidays) ?
-        holidays.find(h =>
-          h.day === day && h.month === month &&
-          (h.isRecurring || h.year === year)
-        ) : undefined;
-      
-      console.log(`Existing holiday: ${existingHoliday ? existingHoliday.name : 'None'}`);
-      
+      const existingHoliday =
+        holidays && Array.isArray(holidays)
+          ? holidays.find(
+              (h) =>
+                h.day === day &&
+                h.month === month &&
+                (h.isRecurring || h.year === year),
+            )
+          : undefined;
+
+      console.log(
+        `Existing holiday: ${existingHoliday ? existingHoliday.name : 'None'}`,
+      );
+
       if (existingHoliday) {
         // Удаляем праздник
         await deleteHoliday(existingHoliday._id);
-        setHolidays(prev => Array.isArray(prev) ? prev.filter(h => h._id !== existingHoliday._id) : []);
-        
+        setHolidays((prev) =>
+          Array.isArray(prev)
+            ? prev.filter((h) => h._id !== existingHoliday._id)
+            : [],
+        );
+
         // Удаляем все смены для этого дня с помощью DELETE-запроса
-        const shiftsToDelete = shifts.filter(shift => shift.date === selectedHolidayDate);
+        const shiftsToDelete = shifts.filter(
+          (shift) => shift.date === selectedHolidayDate,
+        );
         for (const shift of shiftsToDelete) {
           await deleteShift(shift.id!); // Используем DELETE-запрос вместо PUT
         }
         // Обновляем локальный список смен
-        setShifts(shifts.filter(shift => shift.date !== selectedHolidayDate));
-        
-        enqueueSnackbar(`День ${selectedHolidayDate} больше не является праздником`, { variant: 'info' });
+        setShifts(shifts.filter((shift) => shift.date !== selectedHolidayDate));
+
+        enqueueSnackbar(
+          `День ${selectedHolidayDate} больше не является праздником`,
+          { variant: 'info' },
+        );
       } else {
         // Проверяем, не существует ли уже такой праздник (избегаем дубликатов)
-        const duplicateHoliday = holidays && Array.isArray(holidays) ?
-          holidays.find(h =>
-            h.day === day && h.month === month && h.year === year && !h.isRecurring
-          ) : undefined;
-        
-        console.log(`Duplicate holiday: ${duplicateHoliday ? duplicateHoliday.name : 'None'}`);
-        
+        const duplicateHoliday =
+          holidays && Array.isArray(holidays)
+            ? holidays.find(
+                (h) =>
+                  h.day === day &&
+                  h.month === month &&
+                  h.year === year &&
+                  !h.isRecurring,
+              )
+            : undefined;
+
+        console.log(
+          `Duplicate holiday: ${duplicateHoliday ? duplicateHoliday.name : 'None'}`,
+        );
+
         if (duplicateHoliday) {
-          enqueueSnackbar(`День ${selectedHolidayDate} уже отмечен как праздник`, { variant: 'warning' });
+          enqueueSnackbar(
+            `День ${selectedHolidayDate} уже отмечен как праздник`,
+            { variant: 'warning' },
+          );
           return;
         }
-        
+
         // Создаем праздник
         const newHoliday = await createHoliday({
           name: `Праздник ${selectedHolidayDate}`,
@@ -326,19 +400,20 @@ const StaffSchedule: React.FC = () => {
           month,
           year,
           isRecurring: false,
-          description: `Праздничный день ${selectedHolidayDate}`
+          description: `Праздничный день ${selectedHolidayDate}`,
         });
-        
+
         // Добавляем новый праздник к списку, обновляя состояние
-        setHolidays(prev => {
+        setHolidays((prev) => {
           if (Array.isArray(prev)) {
             // Проверяем, не добавился ли уже такой праздник
-            const alreadyExists = prev.some(h =>
-              h.day === newHoliday.day &&
-              h.month === newHoliday.month &&
-              (h.isRecurring || h.year === newHoliday.year)
+            const alreadyExists = prev.some(
+              (h) =>
+                h.day === newHoliday.day &&
+                h.month === newHoliday.month &&
+                (h.isRecurring || h.year === newHoliday.year),
             );
-            
+
             if (!alreadyExists) {
               return [...prev, newHoliday];
             } else {
@@ -348,44 +423,50 @@ const StaffSchedule: React.FC = () => {
             return [newHoliday];
           }
         });
-        
+
         // Удаляем все смены для этого дня с помощью DELETE-запроса
-        const shiftsToDelete = shifts.filter(shift => shift.date === selectedHolidayDate);
+        const shiftsToDelete = shifts.filter(
+          (shift) => shift.date === selectedHolidayDate,
+        );
         for (const shift of shiftsToDelete) {
           await deleteShift(shift.id!); // Используем DELETE-запрос вместо PUT
         }
         // Обновляем локальный список смен
-        setShifts(shifts.filter(shift => shift.date !== selectedHolidayDate));
-        
-        enqueueSnackbar(`День ${selectedHolidayDate} отмечен как праздник`, { variant: 'success' });
+        setShifts(shifts.filter((shift) => shift.date !== selectedHolidayDate));
+
+        enqueueSnackbar(`День ${selectedHolidayDate} отмечен как праздник`, {
+          variant: 'success',
+        });
       }
     } catch (err) {
       console.error('Error toggling holiday:', err);
-      enqueueSnackbar('Ошибка при изменении статуса праздника', { variant: 'error' });
+      enqueueSnackbar('Ошибка при изменении статуса праздника', {
+        variant: 'error',
+      });
     } finally {
       setIsHolidayLoading(false);
       setAnchorEl(null);
       setSelectedHolidayDate(null);
     }
   };
-  
+
   // Закрытие popover
   const handleClosePopover = () => {
     setAnchorEl(null);
     setSelectedHolidayDate(null);
   };
-  
+
   const assignFiveTwoSchedule = async () => {
     console.log('assignFiveTwoSchedule called');
     try {
       setLoading(true);
       console.log('Loading set to true');
-      
+
       // Определяем текущую дату и конец текущего месяца
       const monthStart = startOfMonth(currentDate);
       const monthEnd = endOfMonth(currentDate);
       console.log('Current date:', currentDate, 'End of month:', monthEnd);
-      
+
       // Создаем массив дат с текущего дня до конца месяца
       const dates = [];
       let current = new Date(monthStart);
@@ -394,109 +475,144 @@ const StaffSchedule: React.FC = () => {
         current.setDate(current.getDate() + 1);
       }
       console.log('Dates array created, length:', dates.length);
-      
+
       // Фильтруем рабочие дни (понедельник-пятница)
-      const workDays = dates.filter(date => {
+      const workDays = dates.filter((date) => {
         const dayOfWeek = date.getDay();
         return dayOfWeek !== 0 && dayOfWeek !== 6; // Не воскресенье и не суббота
       });
       console.log('Work days filtered, length:', workDays.length);
-      
+
       // Берем только рабочие дни, исключаем выходные
       const scheduleBlocks = workDays;
       console.log('Schedule blocks created, length:', scheduleBlocks.length);
-      
+
       // Ограничиваем график до конца месяца
-      const finalSchedule = scheduleBlocks.filter(date => date <= monthEnd);
+      const finalSchedule = scheduleBlocks.filter((date) => date <= monthEnd);
       console.log('Final schedule filtered, length:', finalSchedule.length);
-      
+
       console.log('Selected staff:', selectedStaff);
-      
+
       // Для каждого выбранного сотрудника создаем смены
       for (const staffId of selectedStaff) {
         console.log('Creating shifts for staff:', staffId);
-        
+
         // Получаем существующие смены сотрудника в диапазоне дат
-        const existingShifts = await getShifts(format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'));
+        const existingShifts = await getShifts(
+          format(monthStart, 'yyyy-MM-dd'),
+          format(monthEnd, 'yyyy-MM-dd'),
+        );
         const existingShiftDates = new Set(
           existingShifts
-            .filter(shift => shift.staffId === staffId)
-            .map(shift => shift.date)
+            .filter((shift) => shift.staffId === staffId)
+            .map((shift) => shift.date),
         );
-        
+
         // Создаем отдельный список для отслеживания созданных смен в процессе выполнения
         const createdShiftDates = new Set<string>();
-        
+
         for (const date of finalSchedule) {
           const dateStr = format(date, 'yyyy-MM-dd');
-          
+
           // Пропускаем дату, если уже есть смена (из базы данных или созданная в этом запуске)
-          if (existingShiftDates.has(dateStr) || createdShiftDates.has(dateStr)) {
+          if (
+            existingShiftDates.has(dateStr) ||
+            createdShiftDates.has(dateStr)
+          ) {
             console.log('Skipping existing shift for', staffId, 'on', dateStr);
             continue;
           }
-          
+
           try {
             // Для рабочих дней создаем смену типа "full"
             // (выходные дни уже исключены из массива finalSchedule)
             console.log('Creating full shift for', staffId, 'on', date);
             await createShift({
-                            userId: staffId,
-                            staffId: staffId,
-                            staffName: staff.find(s => (s.id || s._id) === staffId)?.fullName || '',
-                            date: dateStr,
-                            startTime: '07:30',
-                            endTime: '18:30',
-                            notes: 'Рабочий день по графику 5/2',
-                            status: ShiftStatus.scheduled
-                          });
-            
+              userId: staffId,
+              staffId: staffId,
+              staffName:
+                staff.find((s) => (s.id || s._id) === staffId)?.fullName || '',
+              date: dateStr,
+              startTime: '07:30',
+              endTime: '18:30',
+              notes: 'Рабочий день по графику 5/2',
+              status: ShiftStatus.scheduled,
+            });
+
             // Добавляем дату в список созданных, чтобы избежать дубликатов в этой же итерации
             createdShiftDates.add(dateStr);
           } catch (error: any) {
             // Если ошибка связана с дубликатом, просто продолжаем
-            const errorMessage = error.response?.data?.error || error.message || error.response?.data;
-            if (errorMessage && typeof errorMessage === 'string' && errorMessage.includes('У сотрудника уже есть смена в этот день')) {
-              console.log('Skipping duplicate shift for', staffId, 'on', dateStr);
+            const errorMessage =
+              error.response?.data?.error ||
+              error.message ||
+              error.response?.data;
+            if (
+              errorMessage &&
+              typeof errorMessage === 'string' &&
+              errorMessage.includes('У сотрудника уже есть смена в этот день')
+            ) {
+              console.log(
+                'Skipping duplicate shift for',
+                staffId,
+                'on',
+                dateStr,
+              );
               // Добавляем дату в список существующих, чтобы избежать попыток создать снова
               existingShiftDates.add(dateStr);
               continue; // Пропускаем и продолжаем выполнение
             } else {
-              console.error('Error creating shift for', staffId, 'on', dateStr, ':', error);
+              console.error(
+                'Error creating shift for',
+                staffId,
+                'on',
+                dateStr,
+                ':',
+                error,
+              );
               // Продолжаем выполнение, но логируем ошибку
               continue;
             }
           }
         }
       }
-      
+
       enqueueSnackbar('График 5/2 успешно назначен', { variant: 'success' });
-      
+
       // Обновляем данные
       const monthStartUpdated = startOfMonth(currentDate);
       const monthEndUpdated = endOfMonth(currentDate);
-      const shiftsData = await getShifts(format(monthStartUpdated, 'yyyy-MM-dd'), format(monthEndUpdated, 'yyyy-MM-dd'));
+      const shiftsData = await getShifts(
+        format(monthStartUpdated, 'yyyy-MM-dd'),
+        format(monthEndUpdated, 'yyyy-MM-dd'),
+      );
       setShifts(shiftsData);
-      
+
       // Сбрасываем выбранных сотрудников
       setSelectedStaff([]);
     } catch (err: any) {
       console.error('Error assigning 5/2 schedule:', err);
-      enqueueSnackbar('Ошибка при назначении графика 5/2', { variant: 'error' });
+      enqueueSnackbar('Ошибка при назначении графика 5/2', {
+        variant: 'error',
+      });
     } finally {
       setLoading(false);
     }
   };
-  
+
   // Получаем данные пользователя
 
   // Month navigation
   const goToPreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
+    );
   };
 
   const goToNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
+    );
   };
 
   const goToToday = () => {
@@ -504,51 +620,53 @@ const StaffSchedule: React.FC = () => {
   };
 
   // Form handlers
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: checked
+      [name]: checked,
     }));
   };
 
   const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleDateChange = (date: Date | null) => {
     if (date) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        date: format(date, 'yyyy-MM-dd')
+        date: format(date, 'yyyy-MM-dd'),
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        date: ''
+        date: '',
       }));
     }
   };
 
   const handleStaffSelect = (e: SelectChangeEvent<string>) => {
     const staffId = e.target.value;
-    const selectedStaff = staff.find(s => (s.id || s._id) === staffId);
-    setFormData(prev => ({
+    const selectedStaff = staff.find((s) => (s.id || s._id) === staffId);
+    setFormData((prev) => ({
       ...prev,
       staffId,
-      staffName: selectedStaff?.fullName || ''
+      staffName: selectedStaff?.fullName || '',
     }));
   };
 
@@ -563,7 +681,9 @@ const StaffSchedule: React.FC = () => {
       return false;
     }
     if (!formData.startTime || !formData.endTime) {
-      enqueueSnackbar('Укажите время начала и окончания смены', { variant: 'error' });
+      enqueueSnackbar('Укажите время начала и окончания смены', {
+        variant: 'error',
+      });
       return false;
     }
     return true;
@@ -572,58 +692,63 @@ const StaffSchedule: React.FC = () => {
   // CRUD operations
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setLoading(true);
-    
+
     try {
-          const shiftData: Shift = {
-                          _id: editingShift?._id || '',
-                          id: editingShift?.id || '',
-                          userId: formData.staffId || '',
-                          staffId: formData.staffId || '',
-                          staffName: formData.staffName || '',
-                          date: formData.date,
-                          startTime: formData.startTime,
-                          endTime: formData.endTime,
-                          notes: formData.notes || '',
-                          status: formData.status || ShiftStatus.scheduled,
-                          createdAt: editingShift?.createdAt || new Date().toISOString(),
-                          updatedAt: new Date().toISOString()
-                        };
-      
+      const shiftData: Shift = {
+        _id: editingShift?._id || '',
+        id: editingShift?.id || '',
+        userId: formData.staffId || '',
+        staffId: formData.staffId || '',
+        staffName: formData.staffName || '',
+        date: formData.date,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        notes: formData.notes || '',
+        status: formData.status || ShiftStatus.scheduled,
+        createdAt: editingShift?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
       if (editingShift) {
-              // Update existing shift
-              if (editingShift.id) {
-                // Обновляем смену через API
-                const updatedShift = await updateShift(editingShift.id, {
-                  ...shiftData,
-                  alternativeStaffId: formData.alternativeStaffId
-                });
-                setShifts(prev =>
-                  prev.map(s => s.id === editingShift.id ? updatedShift : s)
-                );
-                enqueueSnackbar('Смена успешно обновлена', { variant: 'success' });
-              } else {
-                enqueueSnackbar('Ошибка: ID смены не определен', { variant: 'error' });
-              }
+        // Update existing shift
+        if (editingShift.id) {
+          // Обновляем смену через API
+          const updatedShift = await updateShift(editingShift.id, {
+            ...shiftData,
+            alternativeStaffId: formData.alternativeStaffId,
+          });
+          setShifts((prev) =>
+            prev.map((s) => (s.id === editingShift.id ? updatedShift : s)),
+          );
+          enqueueSnackbar('Смена успешно обновлена', { variant: 'success' });
+        } else {
+          enqueueSnackbar('Ошибка: ID смены не определен', {
+            variant: 'error',
+          });
+        }
       } else {
         // Create new shift
         const newShift = await createShift({
           ...shiftData,
-          alternativeStaffId: formData.alternativeStaffId
+          alternativeStaffId: formData.alternativeStaffId,
         });
-        setShifts(prev => [...prev, newShift]);
+        setShifts((prev) => [...prev, newShift]);
         enqueueSnackbar('Смена успешно создана', { variant: 'success' });
       }
-      
+
       // После создания смены обновляем только смены, а не весь список
       const monthStart = startOfMonth(currentDate);
       const monthEnd = endOfMonth(currentDate);
-      const shiftsData = await getShifts(format(monthStart, 'yyyy-MM-dd'), format(monthEnd, 'yyyy-MM-dd'));
+      const shiftsData = await getShifts(
+        format(monthStart, 'yyyy-MM-dd'),
+        format(monthEnd, 'yyyy-MM-dd'),
+      );
       setShifts(shiftsData);
-      
+
       handleCloseModal();
     } catch (err) {
       console.error('Error saving shift:', err);
@@ -634,37 +759,35 @@ const StaffSchedule: React.FC = () => {
   };
 
   const handleEditShift = (shift: Shift) => {
-      setFormData({
-              userId: (shift.staffId as any)?._id || shift.staffId || '',
-              staffId: (shift.staffId as any)?._id || shift.staffId || '',
-              staffName: shift.staffName || '',
-              date: shift.date,
-              startTime: shift.startTime,
-              endTime: shift.endTime,
-              status: shift.status,
-              notes: shift.notes || '',
-              alternativeStaffId: shift.alternativeStaffId || ''
-            });
-      setEditingShift(shift);
-      setModalOpen(true);
-    };
-
- 
+    setFormData({
+      userId: (shift.staffId as any)?._id || shift.staffId || '',
+      staffId: (shift.staffId as any)?._id || shift.staffId || '',
+      staffName: shift.staffName || '',
+      date: shift.date,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      status: shift.status,
+      notes: shift.notes || '',
+      alternativeStaffId: shift.alternativeStaffId || '',
+    });
+    setEditingShift(shift);
+    setModalOpen(true);
+  };
 
   const handleCloseModal = () => {
     setModalOpen(false);
     setEditingShift(null);
     setFormData({
-          userId: '',
-          staffId: '',
-          staffName: '',
-          date: format(new Date(), 'yyyy-MM-dd'),
-          startTime: '07:30',
-          endTime: '18:30',
-           status: 'scheduled' as ShiftStatus,
-          notes: '',
-          alternativeStaffId: ''
-        });
+      userId: '',
+      staffId: '',
+      staffName: '',
+      date: format(new Date(), 'yyyy-MM-dd'),
+      startTime: '07:30',
+      endTime: '18:30',
+      status: 'scheduled' as ShiftStatus,
+      notes: '',
+      alternativeStaffId: '',
+    });
   };
 
   // Get month days
@@ -674,7 +797,7 @@ const StaffSchedule: React.FC = () => {
 
   // Get shifts for a specific day and staff
   const getShiftsForDay = (staffId: string, date: Date) => {
-    return shifts.filter(shift => {
+    return shifts.filter((shift) => {
       // Проверяем, что staffId не null и не undefined
       if (!shift.staffId) return false;
       // Проверяем тип и сравниваем
@@ -687,7 +810,9 @@ const StaffSchedule: React.FC = () => {
         // Для объекта проверяем наличие _id и сравниваем
         const shiftDate = shift.date.split('T')[0]; // Берем только дату, без времени
         const compareDate = format(date, 'yyyy-MM-dd');
-        return (shift.staffId as any)._id === staffId && shiftDate === compareDate;
+        return (
+          (shift.staffId as any)._id === staffId && shiftDate === compareDate
+        );
       }
     });
   };
@@ -695,7 +820,12 @@ const StaffSchedule: React.FC = () => {
   // Render loading state
   if (loading && shifts.length === 0) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+      <Box
+        display='flex'
+        justifyContent='center'
+        alignItems='center'
+        minHeight='200px'
+      >
         <CircularProgress />
       </Box>
     );
@@ -705,7 +835,7 @@ const StaffSchedule: React.FC = () => {
   if (error) {
     return (
       <Box p={3}>
-        <Typography color="error">{error}</Typography>
+        <Typography color='error'>{error}</Typography>
       </Box>
     );
   }
@@ -716,16 +846,22 @@ const StaffSchedule: React.FC = () => {
         <Card>
           <CardHeader
             title={
-              <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h5">График смен</Typography>
+              <Box
+                display='flex'
+                justifyContent='space-between'
+                alignItems='center'
+              >
+                <Typography variant='h5'>График смен</Typography>
                 <Box>
                   <ExportButton
-                    exportTypes={[{ value: 'staff-schedule', label: 'График смен' }]}
+                    exportTypes={[
+                      { value: 'staff-schedule', label: 'График смен' },
+                    ]}
                     onExport={handleExport}
                   />
                   <Button
-                    variant="contained"
-                    color="primary"
+                    variant='contained'
+                    color='primary'
                     startIcon={<AddIcon />}
                     onClick={() => setModalOpen(true)}
                     sx={{ ml: 2 }}
@@ -733,17 +869,22 @@ const StaffSchedule: React.FC = () => {
                     Добавить смену
                   </Button>
                   <Button
-                    variant="contained"
-                    color="secondary"
+                    variant='contained'
+                    color='secondary'
                     sx={{ ml: 2 }}
                     onClick={() => {
                       console.log('5/2 button clicked');
-                      console.log('Selected staff length:', selectedStaff.length);
+                      console.log(
+                        'Selected staff length:',
+                        selectedStaff.length,
+                      );
                       console.log('Selected staff:', selectedStaff);
                       // Логика для назначения графика 5/2
                       if (selectedStaff.length === 0) {
                         console.log('No staff selected');
-                        enqueueSnackbar('Пожалуйста, выберите сотрудников', { variant: 'warning' });
+                        enqueueSnackbar('Пожалуйста, выберите сотрудников', {
+                          variant: 'warning',
+                        });
                         return;
                       }
                       console.log('Calling assignFiveTwoSchedule');
@@ -760,47 +901,57 @@ const StaffSchedule: React.FC = () => {
           <CardContent>
             {/* Month Navigation */}
             <DateNavigator />
-            
+
             {/* Фильтры */}
-            <Box display="flex" flexWrap="wrap" gap={2} alignItems="center" mb={3}>
+            <Box
+              display='flex'
+              flexWrap='wrap'
+              gap={2}
+              alignItems='center'
+              mb={3}
+            >
               <TextField
-                placeholder="Поиск по имени..."
-                variant="outlined"
-                size="small"
+                placeholder='Поиск по имени...'
+                variant='outlined'
+                size='small'
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 sx={{ flexGrow: 1, minWidth: '200px' }}
                 InputProps={{
                   startAdornment: (
-                    <InputAdornment position="start">
+                    <InputAdornment position='start'>
                       <SearchIcon />
                     </InputAdornment>
                   ),
                 }}
               />
-              
-              <FormControl size="small" sx={{ minWidth: '200px' }}>
-                <InputLabel id="role-filter-label">Фильтр по должности</InputLabel>
+
+              <FormControl size='small' sx={{ minWidth: '200px' }}>
+                <InputLabel id='role-filter-label'>
+                  Фильтр по должности
+                </InputLabel>
                 <Select
-                  labelId="role-filter-label"
+                  labelId='role-filter-label'
                   multiple
                   value={filterRole}
                   onChange={handleFilterRoleChange}
-                  input={<OutlinedInput label="Фильтр по должности" />}
+                  input={<OutlinedInput label='Фильтр по должности' />}
                   renderValue={(selected) => (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {selected.map((value) => (
-                        <Chip key={value} label={value} size="small" />
+                        <Chip key={value} label={value} size='small' />
                       ))}
                     </Box>
                   )}
                 >
-                  {Object.values(ROLE_LABELS).sort().map((role) => (
-                    <MenuItem key={role} value={role}>
-                      <Checkbox checked={filterRole.indexOf(role) > -1} />
-                      <ListItemText primary={role} />
-                    </MenuItem>
-                  ))}
+                  {Object.values(ROLE_LABELS)
+                    .sort()
+                    .map((role) => (
+                      <MenuItem key={role} value={role}>
+                        <Checkbox checked={filterRole.indexOf(role) > -1} />
+                        <ListItemText primary={role} />
+                      </MenuItem>
+                    ))}
                 </Select>
               </FormControl>
             </Box>
@@ -811,19 +962,23 @@ const StaffSchedule: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Сотрудник</TableCell>
-                    {monthDays.map(day => {
+                    {monthDays.map((day) => {
                       const isDayHoliday = isHoliday(day);
                       return (
                         <TableCell
                           key={day.toString()}
-                          align="center"
+                          align='center'
                           onClick={(e) => handleDayHeaderClick(e, day)}
                           sx={{
                             cursor: 'pointer',
-                            backgroundColor: isDayHoliday ? 'error.light' : 'inherit',
+                            backgroundColor: isDayHoliday
+                              ? 'error.light'
+                              : 'inherit',
                             '&:hover': {
-                              backgroundColor: isDayHoliday ? 'error.light' : 'action.hover'
-                            }
+                              backgroundColor: isDayHoliday
+                                ? 'error.light'
+                                : 'action.hover',
+                            },
                           }}
                         >
                           <Box>
@@ -837,19 +992,25 @@ const StaffSchedule: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {staff
-                    .filter(staffMember => {
+                    .filter((staffMember) => {
                       // Фильтрация по поисковой строке
-                      const matchesSearch = !searchTerm ||
-                        staffMember.fullName.toLowerCase().includes(searchTerm.toLowerCase());
-                      
+                      const matchesSearch =
+                        !searchTerm ||
+                        staffMember.fullName
+                          .toLowerCase()
+                          .includes(searchTerm.toLowerCase());
+
                       // Фильтрация по роли
-                      const roleLabel = ROLE_LABELS[staffMember.role as string] || staffMember.role;
-                      const matchesRole = filterRole.length === 0 ||
+                      const roleLabel =
+                        ROLE_LABELS[staffMember.role as string] ||
+                        staffMember.role;
+                      const matchesRole =
+                        filterRole.length === 0 ||
                         filterRole.includes(roleLabel);
-                      
+
                       return matchesSearch && matchesRole;
                     })
-                    .map(staffMember => {
+                    .map((staffMember) => {
                       const staffId = staffMember.id || staffMember._id;
                       if (!staffId) return null;
                       const isSelected = selectedStaff.includes(staffId);
@@ -857,63 +1018,88 @@ const StaffSchedule: React.FC = () => {
                         <TableRow
                           key={staffMember.id}
                           sx={{
-                            backgroundColor: isSelected ? 'action.selected' : 'inherit',
+                            backgroundColor: isSelected
+                              ? 'action.selected'
+                              : 'inherit',
                             '&:hover': {
-                              backgroundColor: 'action.hover'
-                            }
+                              backgroundColor: 'action.hover',
+                            },
                           }}
                         >
                           <TableCell
                             onClick={() => {
-                              console.log('Staff cell clicked, staffId:', staffId);
+                              console.log(
+                                'Staff cell clicked, staffId:',
+                                staffId,
+                              );
                               if (selectedStaff.includes(staffId)) {
                                 console.log('Removing staff from selection');
-                                const newSelectedStaff = selectedStaff.filter(id => id !== staffId);
+                                const newSelectedStaff = selectedStaff.filter(
+                                  (id) => id !== staffId,
+                                );
                                 setSelectedStaff(newSelectedStaff);
-                                console.log('Selected staff after removal:', newSelectedStaff);
+                                console.log(
+                                  'Selected staff after removal:',
+                                  newSelectedStaff,
+                                );
                               } else {
                                 console.log('Adding staff to selection');
-                                const newSelectedStaff = [...selectedStaff, staffId];
+                                const newSelectedStaff = [
+                                  ...selectedStaff,
+                                  staffId,
+                                ];
                                 setSelectedStaff(newSelectedStaff);
-                                console.log('Selected staff after addition:', newSelectedStaff);
+                                console.log(
+                                  'Selected staff after addition:',
+                                  newSelectedStaff,
+                                );
                               }
                             }}
                             sx={{
                               cursor: 'pointer',
-                              userSelect: 'none'
+                              userSelect: 'none',
                             }}
                           >
-                            <Box display="flex" alignItems="center">
+                            <Box display='flex' alignItems='center'>
                               <Box
                                 sx={{
                                   width: 12,
                                   height: 12,
                                   borderRadius: '50%',
-                                  bgcolor: ROLE_COLORS[staffMember.role as string] || '#9e9e9e',
-                                  mr: 1
+                                  bgcolor:
+                                    ROLE_COLORS[staffMember.role as string] ||
+                                    '#9e9e9e',
+                                  mr: 1,
                                 }}
                               />
                               <Box>
                                 {staffMember.fullName}
-                                <Box sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
-                                  {ROLE_LABELS[staffMember.role as string] || staffMember.role}
+                                <Box
+                                  sx={{
+                                    fontSize: '0.8em',
+                                    color: 'text.secondary',
+                                  }}
+                                >
+                                  {ROLE_LABELS[staffMember.role as string] ||
+                                    staffMember.role}
                                 </Box>
                               </Box>
                             </Box>
                           </TableCell>
-                          {monthDays.map(day => {
+                          {monthDays.map((day) => {
                             const isDayHoliday = isHoliday(day);
                             const dayShifts = getShiftsForDay(staffId, day);
                             return (
                               <TableCell
                                 key={day.toString()}
                                 onClick={() => {
-                                  if (!isDayHoliday && !isWeekend(day)) { // Не открываем модальное окно для праздничных дней и выходных
+                                  if (!isDayHoliday && !isWeekend(day)) {
+                                    // Не открываем модальное окно для праздничных дней и выходных
                                     setFormData({
                                       ...formData,
                                       staffId: staffId,
                                       staffName: staffMember.fullName,
-                                      date: format(day, 'yyyy-MM-dd')
+                                      date: format(day, 'yyyy-MM-dd'),
                                     });
                                     setModalOpen(true);
                                   }
@@ -922,26 +1108,41 @@ const StaffSchedule: React.FC = () => {
                                   minHeight: '100px',
                                   border: '1px solid',
                                   borderColor: 'divider',
-                                  backgroundColor: isDayHoliday ? 'error.light' : isWeekend(day) ? 'grey.100' : 'inherit',
+                                  backgroundColor: isDayHoliday
+                                    ? 'error.light'
+                                    : isWeekend(day)
+                                      ? 'grey.100'
+                                      : 'inherit',
                                   '&:hover': {
-                                    backgroundColor: isDayHoliday ? 'error.light' : isWeekend(day) ? 'grey.200' : 'action.hover',
-                                    cursor: (isDayHoliday || isWeekend(day)) ? 'not-allowed' : 'pointer'
-                                  }
+                                    backgroundColor: isDayHoliday
+                                      ? 'error.light'
+                                      : isWeekend(day)
+                                        ? 'grey.200'
+                                        : 'action.hover',
+                                    cursor:
+                                      isDayHoliday || isWeekend(day)
+                                        ? 'not-allowed'
+                                        : 'pointer',
+                                  },
                                 }}
                               >
                                 {isDayHoliday || isWeekend(day) ? (
                                   <Box
-                                    display="flex"
-                                    alignItems="center"
-                                    justifyContent="center"
-                                    height="100%"
-                                    color={isDayHoliday ? "error.main" : "text.secondary"}
-                                    fontSize="0.8rem"
+                                    display='flex'
+                                    alignItems='center'
+                                    justifyContent='center'
+                                    height='100%'
+                                    color={
+                                      isDayHoliday
+                                        ? 'error.main'
+                                        : 'text.secondary'
+                                    }
+                                    fontSize='0.8rem'
                                   >
-                                    {isDayHoliday ? "Праздник" : "Выходной"}
+                                    {isDayHoliday ? 'Праздник' : 'Выходной'}
                                   </Box>
                                 ) : (
-                                  dayShifts.map(shift => (
+                                  dayShifts.map((shift) => (
                                     <Box
                                       key={shift.id}
                                       sx={{
@@ -951,14 +1152,17 @@ const StaffSchedule: React.FC = () => {
                                         bgcolor: 'background.paper',
                                         borderLeft: `4px solid ${theme.palette.primary.main}`,
                                         '&:hover': {
-                                          bgcolor: 'action.selected'
-                                        }
+                                          bgcolor: 'action.selected',
+                                        },
                                       }}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         // Проверяем, не является ли день праздничным или выходным перед редактированием
                                         const shiftDate = new Date(shift.date);
-                                        if (!isHoliday(shiftDate) && !isWeekend(shiftDate)) {
+                                        if (
+                                          !isHoliday(shiftDate) &&
+                                          !isWeekend(shiftDate)
+                                        ) {
                                           handleEditShift(shift);
                                         }
                                       }}
@@ -968,9 +1172,17 @@ const StaffSchedule: React.FC = () => {
                                       </Box>
                                       <Box mt={0.5}>
                                         <Chip
-                                          label={STATUS_TEXT[shift.status as keyof typeof STATUS_TEXT] || shift.status}
-                                          size="small"
-                                          color={STATUS_COLORS[shift.status as keyof typeof STATUS_COLORS] || 'default'}
+                                          label={
+                                            STATUS_TEXT[
+                                              shift.status as keyof typeof STATUS_TEXT
+                                            ] || shift.status
+                                          }
+                                          size='small'
+                                          color={
+                                            STATUS_COLORS[
+                                              shift.status as keyof typeof STATUS_COLORS
+                                            ] || 'default'
+                                          }
                                         />
                                       </Box>
                                     </Box>
@@ -985,7 +1197,7 @@ const StaffSchedule: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            
+
             {/* Popover для установки праздника */}
             <Popover
               open={Boolean(anchorEl)}
@@ -1004,12 +1216,16 @@ const StaffSchedule: React.FC = () => {
                 <FormControlLabel
                   control={
                     <Checkbox
-                      checked={selectedHolidayDate ? isHoliday(new Date(selectedHolidayDate)) : false}
+                      checked={
+                        selectedHolidayDate
+                          ? isHoliday(new Date(selectedHolidayDate))
+                          : false
+                      }
                       onChange={handleHolidayToggle}
                       disabled={isHolidayLoading}
                     />
                   }
-                  label="Является праздником"
+                  label='Является праздником'
                 />
               </Box>
             </Popover>
@@ -1017,7 +1233,12 @@ const StaffSchedule: React.FC = () => {
         </Card>
 
         {/* Shift Form Modal */}
-        <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+        <Dialog
+          open={modalOpen}
+          onClose={handleCloseModal}
+          maxWidth='sm'
+          fullWidth
+        >
           <form onSubmit={handleSubmit}>
             <DialogTitle>
               {editingShift ? 'Редактировать смену' : 'Добавить новую смену'}
@@ -1028,28 +1249,36 @@ const StaffSchedule: React.FC = () => {
                   <FormControl fullWidth required>
                     <InputLabel>Сотрудник</InputLabel>
                     <Select
-                      name="staffId"
+                      name='staffId'
                       value={formData.staffId}
                       onChange={handleStaffSelect}
-                      label="Сотрудник"
+                      label='Сотрудник'
                       required
                     >
-                      {staff.map(staffMember => (
+                      {staff.map((staffMember) => (
                         <MenuItem key={staffMember.id} value={staffMember.id}>
-                          <Box display="flex" alignItems="center">
+                          <Box display='flex' alignItems='center'>
                             <Box
                               sx={{
                                 width: 10,
                                 height: 10,
                                 borderRadius: '50%',
-                                bgcolor: ROLE_COLORS[staffMember.role as string] || '#9e9e9e',
-                                mr: 1
+                                bgcolor:
+                                  ROLE_COLORS[staffMember.role as string] ||
+                                  '#9e9e9e',
+                                mr: 1,
                               }}
                             />
                             <Box>
                               {staffMember.fullName}
-                              <Box sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
-                                {ROLE_LABELS[staffMember.role as string] || staffMember.role}
+                              <Box
+                                sx={{
+                                  fontSize: '0.8em',
+                                  color: 'text.secondary',
+                                }}
+                              >
+                                {ROLE_LABELS[staffMember.role as string] ||
+                                  staffMember.role}
                               </Box>
                             </Box>
                           </Box>
@@ -1058,12 +1287,15 @@ const StaffSchedule: React.FC = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+                    <LocalizationProvider
+                      dateAdapter={AdapterDateFns}
+                      adapterLocale={ru}
+                    >
                       <DatePicker
-                        label="Дата смены"
+                        label='Дата смены'
                         value={formData.date ? new Date(formData.date) : null}
                         onChange={handleDateChange}
                         renderInput={(params) => (
@@ -1073,12 +1305,12 @@ const StaffSchedule: React.FC = () => {
                     </LocalizationProvider>
                   </FormControl>
                 </Grid>
-                
+
                 <Grid item xs={6} sm={3}>
                   <TextField
-                    label="Начало"
-                    type="time"
-                    name="startTime"
+                    label='Начало'
+                    type='time'
+                    name='startTime'
                     value={formData.startTime}
                     onChange={handleInputChange}
                     fullWidth
@@ -1087,16 +1319,16 @@ const StaffSchedule: React.FC = () => {
                       shrink: true,
                     }}
                     inputProps={{
-                      step: 300 // 5 min
+                      step: 300, // 5 min
                     }}
                   />
                 </Grid>
-                
+
                 <Grid item xs={6} sm={3}>
                   <TextField
-                    label="Окончание"
-                    type="time"
-                    name="endTime"
+                    label='Окончание'
+                    type='time'
+                    name='endTime'
                     value={formData.endTime}
                     onChange={handleInputChange}
                     fullWidth
@@ -1105,58 +1337,75 @@ const StaffSchedule: React.FC = () => {
                       shrink: true,
                     }}
                     inputProps={{
-                      step: 300 // 5 min
+                      step: 300, // 5 min
                     }}
                   />
                 </Grid>
-           
+
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth required>
                     <InputLabel>Статус</InputLabel>
                     <Select
-                      name="status"
+                      name='status'
                       value={formData.status}
                       onChange={handleSelectChange}
-                      label="Статус"
+                      label='Статус'
                       required
                     >
-                      <MenuItem value="scheduled">Запланирована</MenuItem>
-                      <MenuItem value="completed">Завершена</MenuItem>
-                      <MenuItem value="in_progress">В процессе</MenuItem>
-                      <MenuItem value="late">Опоздание</MenuItem>
-                      <MenuItem value="pending_approval">Ожидает подтверждения</MenuItem>
+                      <MenuItem value='scheduled'>Запланирована</MenuItem>
+                      <MenuItem value='completed'>Завершена</MenuItem>
+                      <MenuItem value='in_progress'>В процессе</MenuItem>
+                      <MenuItem value='late'>Опоздание</MenuItem>
+                      <MenuItem value='pending_approval'>
+                        Ожидает подтверждения
+                      </MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
                     <InputLabel>Альтернативный сотрудник</InputLabel>
                     <Select
-                      name="alternativeStaffId"
+                      name='alternativeStaffId'
                       value={formData.alternativeStaffId || ''}
                       onChange={handleSelectChange}
-                      label="Альтернативный сотрудник"
+                      label='Альтернативный сотрудник'
                     >
-                      <MenuItem value="">Нет альтернативного сотрудника</MenuItem>
+                      <MenuItem value=''>
+                        Нет альтернативного сотрудника
+                      </MenuItem>
                       {staff
-                        .filter(s => s.role !== 'parent' && s.role !== 'child') // Исключаем родителей и детей
-                        .map(staffMember => (
-                          <MenuItem key={staffMember.id} value={staffMember.id || staffMember._id}>
-                            <Box display="flex" alignItems="center">
+                        .filter(
+                          (s) => s.role !== 'parent' && s.role !== 'child',
+                        ) // Исключаем родителей и детей
+                        .map((staffMember) => (
+                          <MenuItem
+                            key={staffMember.id}
+                            value={staffMember.id || staffMember._id}
+                          >
+                            <Box display='flex' alignItems='center'>
                               <Box
                                 sx={{
                                   width: 10,
                                   height: 10,
                                   borderRadius: '50%',
-                                  bgcolor: ROLE_COLORS[staffMember.role as string] || '#9e9e9e',
-                                  mr: 1
+                                  bgcolor:
+                                    ROLE_COLORS[staffMember.role as string] ||
+                                    '#9e9e9e',
+                                  mr: 1,
                                 }}
                               />
                               <Box>
                                 {staffMember.fullName}
-                                <Box sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
-                                  {ROLE_LABELS[staffMember.role as string] || staffMember.role}
+                                <Box
+                                  sx={{
+                                    fontSize: '0.8em',
+                                    color: 'text.secondary',
+                                  }}
+                                >
+                                  {ROLE_LABELS[staffMember.role as string] ||
+                                    staffMember.role}
                                 </Box>
                               </Box>
                             </Box>
@@ -1165,11 +1414,11 @@ const StaffSchedule: React.FC = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6}>
                   <TextField
-                    label="Примечания"
-                    name="notes"
+                    label='Примечания'
+                    name='notes'
                     value={formData.notes}
                     onChange={handleInputChange}
                     fullWidth
@@ -1180,13 +1429,13 @@ const StaffSchedule: React.FC = () => {
               </Grid>
             </DialogContent>
             <DialogActions sx={{ p: 2 }}>
-              <Button onClick={handleCloseModal} color="inherit">
+              <Button onClick={handleCloseModal} color='inherit'>
                 Отмена
               </Button>
-              <Button 
-                type="submit" 
-                variant="contained" 
-                color="primary"
+              <Button
+                type='submit'
+                variant='contained'
+                color='primary'
                 disabled={loading}
                 startIcon={loading ? <CircularProgress size={20} /> : null}
               >

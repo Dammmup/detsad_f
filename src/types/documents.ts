@@ -1,11 +1,31 @@
 // ===== ТИПЫ ДЛЯ ДОКУМЕНТОВ =====
 
 // Базовые типы
-export type DocumentType = 'contract' | 'certificate' | 'report' | 'policy' | 'other';
-export type DocumentCategory = 'staff' | 'children' | 'financial' | 'administrative' | 'other';
+export type DocumentType =
+  | 'contract'
+  | 'certificate'
+  | 'report'
+  | 'policy'
+  | 'other';
+export type DocumentCategory =
+  | 'staff'
+  | 'children'
+  | 'financial'
+  | 'administrative'
+  | 'other';
 export type DocumentStatus = 'active' | 'archived';
-export type TemplateType = 'contract' | 'certificate' | 'report' | 'policy' | 'other';
-export type TemplateCategory = 'staff' | 'children' | 'financial' | 'administrative' | 'other';
+export type TemplateType =
+  | 'contract'
+  | 'certificate'
+  | 'report'
+  | 'policy'
+  | 'other';
+export type TemplateCategory =
+  | 'staff'
+  | 'children'
+  | 'financial'
+  | 'administrative'
+  | 'other';
 
 // ===== ИНТЕРФЕЙСЫ =====
 
@@ -22,10 +42,10 @@ export interface Document {
   filePath: string;
   uploadDate?: string; // ISODateString
   uploader?: {
-      id: string;
-      fullName: string;
-      email: string;
-    };
+    id: string;
+    fullName: string;
+    email: string;
+  };
   relatedId?: string;
   relatedType?: 'staff' | 'child' | 'group';
   status: DocumentStatus;
@@ -33,7 +53,7 @@ export interface Document {
   version: string;
   expiryDate?: string; // ISODateString
   createdAt?: string; // ISODateString
-    updatedAt?: string; // ISODateString
+  updatedAt?: string; // ISODateString
 }
 
 // Шаблон документа
@@ -52,7 +72,7 @@ export interface DocumentTemplate {
   tags: string[];
   usageCount: number;
   createdAt?: string; // ISODateString
-    updatedAt?: string; // ISODateString
+  updatedAt?: string; // ISODateString
 }
 
 // ===== ПАРАМЕТРЫ API =====
@@ -205,7 +225,7 @@ export const DOCUMENT_TYPE_TEXT: Record<DocumentType, string> = {
   certificate: 'Справка',
   report: 'Отчет',
   policy: 'Политика',
-  other: 'Другое'
+  other: 'Другое',
 };
 
 // Маппинг категорий документов на русский текст
@@ -214,13 +234,13 @@ export const DOCUMENT_CATEGORY_TEXT: Record<DocumentCategory, string> = {
   children: 'Дети',
   financial: 'Финансы',
   administrative: 'Администрация',
-  other: 'Другое'
+  other: 'Другое',
 };
 
 // Маппинг статусов документов на русский текст
 export const DOCUMENT_STATUS_TEXT: Record<DocumentStatus, string> = {
   active: 'Активен',
-  archived: 'Архивирован'
+  archived: 'Архивирован',
 };
 
 // Маппинг типов шаблонов на русский текст
@@ -229,7 +249,7 @@ export const TEMPLATE_TYPE_TEXT: Record<TemplateType, string> = {
   certificate: 'Справка',
   report: 'Отчет',
   policy: 'Политика',
-  other: 'Другое'
+  other: 'Другое',
 };
 
 // Маппинг категорий шаблонов на русский текст
@@ -238,5 +258,5 @@ export const TEMPLATE_CATEGORY_TEXT: Record<TemplateCategory, string> = {
   children: 'Дети',
   financial: 'Финансы',
   administrative: 'Администрация',
-  other: 'Другое'
+  other: 'Другое',
 };

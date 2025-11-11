@@ -13,7 +13,7 @@ export enum UserRole {
   parent = 'parent',
   child = 'child',
   substitute = 'substitute',
-  rent = 'rent'
+  rent = 'rent',
 }
 
 export type ID = string;

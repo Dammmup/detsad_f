@@ -5,7 +5,7 @@ import {
   TextField,
   Autocomplete,
   Typography,
-  IconButton
+  IconButton,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { getUsers } from '../../services/users';
@@ -27,7 +27,7 @@ interface RentTenantSelectorProps {
 const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
   selectedTenantIds,
   onTenantSelect,
-  disabled = false
+  disabled = false,
 }) => {
   const [allTenants, setAllTenants] = useState<User[]>([]);
   const [selectedTenants, setSelectedTenants] = useState<User[]>([]);
@@ -38,11 +38,13 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
       try {
         const users = await getUsers();
         // Фильтруем, чтобы получить только арендаторов (не администраторов)
-        const tenants = users.filter(user => user.role !== 'admin');
+        const tenants = users.filter((user) => user.role !== 'admin');
         setAllTenants(tenants);
-        
+
         // Обновляем выбранных арендаторов на основе переданных ID
-        const selected = tenants.filter(tenant => tenant._id && selectedTenantIds.includes(tenant._id));
+        const selected = tenants.filter(
+          (tenant) => tenant._id && selectedTenantIds.includes(tenant._id),
+        );
         setSelectedTenants(selected);
       } catch (error) {
         console.error('Ошибка загрузки арендаторов:', error);
@@ -55,21 +57,30 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
   // Обработчик изменения выбранных арендаторов
   const handleTenantChange = (event: any, newValue: User[]) => {
     setSelectedTenants(newValue);
-    onTenantSelect(newValue.map(tenant => tenant._id).filter((id): id is string => id !== undefined));
+    onTenantSelect(
+      newValue
+        .map((tenant) => tenant._id)
+        .filter((id): id is string => id !== undefined),
+    );
   };
 
- // Фильтруем арендаторов для отображения в автозаполнении
- const filteredTenants = allTenants.filter(tenant =>
-   tenant._id && !selectedTenants.some(selected => selected._id === tenant._id) &&
-   tenant.fullName.toLowerCase().includes('')
- );
+  // Фильтруем арендаторов для отображения в автозаполнении
+  const filteredTenants = allTenants.filter(
+    (tenant) =>
+      tenant._id &&
+      !selectedTenants.some((selected) => selected._id === tenant._id) &&
+      tenant.fullName.toLowerCase().includes(''),
+  );
 
   return (
     <Box sx={{ mb: 3 }}>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
+      <Typography
+        variant='h6'
+        sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}
+      >
         Выберите арендаторов для генерации расчетных листов
       </Typography>
-      
+
       <Autocomplete
         multiple
         options={filteredTenants}
@@ -81,9 +92,9 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
         renderInput={(params) => (
           <TextField
             {...params}
-            label="Арендаторы"
-            placeholder="Выберите арендаторов"
-            variant="outlined"
+            label='Арендаторы'
+            placeholder='Выберите арендаторов'
+            variant='outlined'
           />
         )}
         renderTags={(value, getTagProps) => (
@@ -93,34 +104,34 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
               return (
                 <Chip
                   label={option.fullName}
-                  size="small"
+                  size='small'
                   {...tagProps}
                   onDelete={disabled ? undefined : tagProps.onDelete}
                   deleteIcon={disabled ? undefined : <CloseIcon />}
-                  color="primary"
-                  variant="outlined"
+                  color='primary'
+                  variant='outlined'
                 />
               );
             })}
           </Box>
         )}
       />
-      
+
       {selectedTenants.length > 0 && (
         <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant='body2' color='text.secondary'>
             Выбрано арендаторов: {selectedTenants.length}
           </Typography>
           <IconButton
-            size="small"
+            size='small'
             onClick={() => {
               setSelectedTenants([]);
               onTenantSelect([]);
             }}
             disabled={disabled}
-            color="primary"
+            color='primary'
           >
-            <CloseIcon fontSize="small" />
+            <CloseIcon fontSize='small' />
           </IconButton>
         </Box>
       )}

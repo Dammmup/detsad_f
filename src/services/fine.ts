@@ -1,11 +1,11 @@
 import { BaseCrudApiClient } from '../utils/api';
- interface Fine {
+interface Fine {
   _id: string;
   staffId: string;
   date: string;
   amount: number;
   reason: string;
- createdAt?: string;
+  createdAt?: string;
   updatedAt?: string;
 }
 

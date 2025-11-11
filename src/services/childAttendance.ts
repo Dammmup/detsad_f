@@ -46,22 +46,28 @@ export const getChildAttendance = async (params?: {
   status?: string;
 }): Promise<ChildAttendanceRecord[]> => {
   try {
-const response = await apiClient.get('/child-attendance', { params });
+    const response = await apiClient.get('/child-attendance', { params });
     return response.data;
   } catch (error: any) {
     console.error('Error fetching child attendance:', error);
-    throw new Error(error.response?.data?.error || 'Ошибка получения посещаемости');
+    throw new Error(
+      error.response?.data?.error || 'Ошибка получения посещаемости',
+    );
   }
 };
 
 // Create or update single attendance record
-export const saveChildAttendance = async (record: Omit<ChildAttendanceRecord, '_id' | 'createdAt' | 'updatedAt'>): Promise<ChildAttendanceRecord> => {
+export const saveChildAttendance = async (
+  record: Omit<ChildAttendanceRecord, '_id' | 'createdAt' | 'updatedAt'>,
+): Promise<ChildAttendanceRecord> => {
   try {
-  const response = await apiClient.post('/child-attendance', record);
+    const response = await apiClient.post('/child-attendance', record);
     return response.data;
   } catch (error: any) {
     console.error('Error saving child attendance:', error);
-    throw new Error(error.response?.data?.error || 'Ошибка сохранения посещаемости');
+    throw new Error(
+      error.response?.data?.error || 'Ошибка сохранения посещаемости',
+    );
   }
 };
 
@@ -73,17 +79,19 @@ export const bulkSaveChildAttendance = async (
     status: 'present' | 'absent' | 'late' | 'sick' | 'vacation';
     notes?: string;
   }>,
-  groupId: string
+  groupId: string,
 ): Promise<BulkAttendanceResponse> => {
   try {
-  const response = await apiClient.post('/child-attendance/bulk', {
+    const response = await apiClient.post('/child-attendance/bulk', {
       records,
-      groupId
+      groupId,
     });
     return response.data;
   } catch (error: any) {
     console.error('Error bulk saving attendance:', error);
-    throw new Error(error.response?.data?.error || 'Ошибка массового сохранения');
+    throw new Error(
+      error.response?.data?.error || 'Ошибка массового сохранения',
+    );
   }
 };
 
@@ -94,18 +102,20 @@ export const getAttendanceStats = async (params?: {
   endDate?: string;
 }): Promise<AttendanceStats> => {
   try {
-  const response = await apiClient.get('/child-attendance/stats', { params });
+    const response = await apiClient.get('/child-attendance/stats', { params });
     return response.data;
   } catch (error: any) {
     console.error('Error fetching attendance stats:', error);
-    throw new Error(error.response?.data?.error || 'Ошибка получения статистики');
+    throw new Error(
+      error.response?.data?.error || 'Ошибка получения статистики',
+    );
   }
 };
 
 // Delete attendance record
 export const deleteChildAttendance = async (id: string): Promise<void> => {
   try {
-  await apiClient.delete(`/child-attendance/${id}`);
+    await apiClient.delete(`/child-attendance/${id}`);
   } catch (error: any) {
     console.error('Error deleting attendance:', error);
     throw new Error(error.response?.data?.error || 'Ошибка удаления записи');
@@ -115,19 +125,21 @@ export const deleteChildAttendance = async (id: string): Promise<void> => {
 // Debug function to check database status
 export const debugChildAttendance = async (): Promise<any> => {
   try {
-  const response = await apiClient.get('/child-attendance/debug');
+    const response = await apiClient.get('/child-attendance/debug');
     console.log('🔍 Debug info:', response.data);
     return response.data;
   } catch (error: any) {
     console.error('Debug error:', error);
-    throw new Error(error.response?.data?.error || 'Ошибка получения debug информации');
+    throw new Error(
+      error.response?.data?.error || 'Ошибка получения debug информации',
+    );
   }
 };
 
 // Helper function to convert attendance grid to bulk records
 export const convertGridToBulkRecords = (
   attendanceGrid: { [childId: string]: { [date: string]: boolean } },
-  comments: { [childId: string]: { [date: string]: string } } = {}
+  comments: { [childId: string]: { [date: string]: string } } = {},
 ) => {
   const records: Array<{
     childId: string;
@@ -142,7 +154,7 @@ export const convertGridToBulkRecords = (
         childId,
         date,
         status: isPresent ? 'present' : 'absent',
-        notes: comments[childId]?.[date] || undefined
+        notes: comments[childId]?.[date] || undefined,
       });
     });
   });

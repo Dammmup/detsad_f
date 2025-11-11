@@ -39,9 +39,24 @@ const sidebarStructure: SidebarItem[] = [
     label: 'Дети',
     icon: <ChildCareIcon />,
     children: [
-      { id: 'children-list', label: 'Список детей', link: '/app/children', icon: <PeopleIcon /> },
-      { id: 'children-groups', label: 'Группы', link: '/app/groups', icon: <GroupIcon /> },
-      { id: 'children-attendance', label: 'Посещаемость', link: '/app/children/attendance', icon: <CalendarViewWeekIcon /> },
+      {
+        id: 'children-list',
+        label: 'Список детей',
+        link: '/app/children',
+        icon: <PeopleIcon />,
+      },
+      {
+        id: 'children-groups',
+        label: 'Группы',
+        link: '/app/groups',
+        icon: <GroupIcon />,
+      },
+      {
+        id: 'children-attendance',
+        label: 'Посещаемость',
+        link: '/app/children/attendance',
+        icon: <CalendarViewWeekIcon />,
+      },
     ],
   },
   {
@@ -49,20 +64,44 @@ const sidebarStructure: SidebarItem[] = [
     label: 'Сотрудники',
     icon: <PeopleIcon />,
     children: [
-      { id: 'staff-list', label: 'Список сотрудников', link: '/app/staff', icon: <PeopleIcon /> },
-      { id: 'staff-schedule', label: 'Смены', link: '/app/staff/schedule', icon: <ScheduleIcon /> },
-      { id: 'staff-attendance-tracking', label: 'Учет рабочего времени', link: '/app/staff/attendance', icon: <AssignmentIndIcon /> },
-      { id: 'children-payments', label: 'Оплаты за посещение', link: '/app/children/payments', icon: <AssessmentIcon /> },
-
+      {
+        id: 'staff-list',
+        label: 'Список сотрудников',
+        link: '/app/staff',
+        icon: <PeopleIcon />,
+      },
+      {
+        id: 'staff-schedule',
+        label: 'Смены',
+        link: '/app/staff/schedule',
+        icon: <ScheduleIcon />,
+      },
+      {
+        id: 'staff-attendance-tracking',
+        label: 'Учет рабочего времени',
+        link: '/app/staff/attendance',
+        icon: <AssignmentIndIcon />,
+      },
+      {
+        id: 'children-payments',
+        label: 'Оплаты за посещение',
+        link: '/app/children/payments',
+        icon: <AssessmentIcon />,
+      },
     ],
-    visibleFor: ['admin'] // Только для администраторов
+    visibleFor: ['admin'], // Только для администраторов
   },
   {
     id: 'documents',
     label: 'Документы',
     icon: <InsertDriveFileIcon />,
     children: [
-      { id: 'documents-all', label: 'Все документы', link: '/app/documents', icon: <InsertDriveFileIcon /> },
+      {
+        id: 'documents-all',
+        label: 'Все документы',
+        link: '/app/documents',
+        icon: <InsertDriveFileIcon />,
+      },
     ],
   },
   {
@@ -70,35 +109,63 @@ const sidebarStructure: SidebarItem[] = [
     label: 'Отчеты',
     icon: <AssessmentIcon />,
     children: [
-      { id: 'reports-all', label: 'Все отчеты', link: '/app/reports', icon: <AssessmentIcon /> },
-      { id: 'reports-payroll', label: 'Зарплаты', link: '/app/reports/payroll', icon: <AssessmentIcon /> },
-      { id: 'reports-rent', label: 'Аренда', link: '/app/reports/rent', icon: <AssessmentIcon /> },
-     
+      {
+        id: 'reports-all',
+        label: 'Все отчеты',
+        link: '/app/reports',
+        icon: <AssessmentIcon />,
+      },
+      {
+        id: 'reports-payroll',
+        label: 'Зарплаты',
+        link: '/app/reports/payroll',
+        icon: <AssessmentIcon />,
+      },
+      {
+        id: 'reports-rent',
+        label: 'Аренда',
+        link: '/app/reports/rent',
+        icon: <AssessmentIcon />,
+      },
     ],
-    visibleFor: ['admin'] // Только для администраторов
+    visibleFor: ['admin'], // Только для администраторов
   },
   {
     id: 'organization',
     label: 'Организация',
     icon: <SettingsIcon />,
     children: [
-      { id: 'organization-cyclogram', label: 'Циклограммы', link: '/app/cyclogram', icon: <ScheduleIcon /> },
-      { id: 'organization-settings', label: 'Настройки', link: '/app/settings', icon: <SettingsIcon /> },
+      {
+        id: 'organization-cyclogram',
+        label: 'Циклограммы',
+        link: '/app/cyclogram',
+        icon: <ScheduleIcon />,
+      },
+      {
+        id: 'organization-settings',
+        label: 'Настройки',
+        link: '/app/settings',
+        icon: <SettingsIcon />,
+      },
     ],
-    visibleFor: ['admin'] // Только для администраторов
+    visibleFor: ['admin'], // Только для администраторов
   },
   medicalSidebarSection,
 ];
 
 // Функция для фильтрации структуры боковой панели в зависимости от роли пользователя
-export const getFilteredSidebarStructure = (userRole: string = 'staff'): SidebarItem[] => {
+export const getFilteredSidebarStructure = (
+  userRole: string = 'staff',
+): SidebarItem[] => {
   return sidebarStructure
-    .filter(item => !item.visibleFor || item.visibleFor.includes(userRole))
-    .map(item => {
+    .filter((item) => !item.visibleFor || item.visibleFor.includes(userRole))
+    .map((item) => {
       if (item.children) {
         return {
           ...item,
-          children: item.children.filter(child => !child.visibleFor || child.visibleFor.includes(userRole))
+          children: item.children.filter(
+            (child) => !child.visibleFor || child.visibleFor.includes(userRole),
+          ),
         };
       }
       return item;

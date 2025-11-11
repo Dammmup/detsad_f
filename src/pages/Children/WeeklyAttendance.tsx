@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { format, startOfWeek, addDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import {
+  format,
+  startOfWeek,
+  addDays,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+} from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useSnackbar } from 'notistack';
 import {
@@ -29,7 +36,7 @@ import {
   Tooltip,
   Menu,
   ListItemIcon,
-  ListItemText
+  ListItemText,
 } from '@mui/material';
 import {
   ArrowBackIos as ArrowBackIosIcon,
@@ -42,7 +49,7 @@ import {
   Sick,
   BeachAccess,
   Schedule,
-  EventNote as EventNoteIcon
+  EventNote as EventNoteIcon,
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -55,11 +62,15 @@ import { getGroups } from '../../services/groups';
 import {
   getChildAttendance,
   bulkSaveChildAttendance,
-  ChildAttendanceRecord
+  ChildAttendanceRecord,
 } from '../../services/childAttendance';
 import { useAuth } from '../../components/context/AuthContext';
 import { useDate } from '../../components/context/DateContext';
-import { exportChildrenAttendance, getCurrentMonthRange, getCurrentPeriod } from '../../utils/excelExport';
+import {
+  exportChildrenAttendance,
+  getCurrentMonthRange,
+  getCurrentPeriod,
+} from '../../utils/excelExport';
 import AttendanceBulkModal from '../../components/AttendanceBulkModal';
 import ExportButton from '../../components/ExportButton';
 
@@ -69,17 +80,15 @@ const ATTENDANCE_STATUSES = {
   absent: 'Отсутствует',
   sick: 'Болеет',
   vacation: 'Отпуск',
-  late: 'Опоздание'
+  late: 'Опоздание',
 } as const;
-
-
 
 const STATUS_ICONS = {
   present: CheckCircle,
   absent: Cancel,
   sick: Sick,
   vacation: BeachAccess,
-  late: Schedule
+  late: Schedule,
 };
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'sick' | 'vacation';
@@ -97,13 +106,13 @@ const WeeklyAttendance: React.FC = () => {
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
   const { currentDate, setCurrentDate } = useDate();
-  
+
   // State
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
-  
+
   // Data
   const [groups, setGroups] = useState<any[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
@@ -111,7 +120,10 @@ const WeeklyAttendance: React.FC = () => {
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
 
-  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+  const handleExport = async (
+    exportType: string,
+    exportFormat: 'pdf' | 'excel' | 'csv',
+  ) => {
     if (!selectedGroup) {
       enqueueSnackbar('Выберите группу для экспорта', { variant: 'error' });
       return;
@@ -119,27 +131,27 @@ const WeeklyAttendance: React.FC = () => {
 
     setLoading(true);
     try {
-        const group = groups.find(g => (g.id || g._id) === selectedGroup);
-        const groupName = group ? group.name : 'Unknown Group';
+      const group = groups.find((g) => (g.id || g._id) === selectedGroup);
+      const groupName = group ? group.name : 'Unknown Group';
 
-        const monthStart = startOfMonth(currentDate);
-        const monthEnd = endOfMonth(currentDate);
-        const period = `${format(new Date(monthStart), 'dd.MM.yyyy')} - ${format(new Date(monthEnd), 'dd.MM.yyyy')}`;
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+      const period = `${format(new Date(monthStart), 'dd.MM.yyyy')} - ${format(new Date(monthEnd), 'dd.MM.yyyy')}`;
 
-        const attendanceRecordsForExport = await getChildAttendance({
-          groupId: selectedGroup,
-          startDate: format(monthStart, 'yyyy-MM-dd'),
-          endDate: format(monthEnd, 'yyyy-MM-dd')
-        });
+      const attendanceRecordsForExport = await getChildAttendance({
+        groupId: selectedGroup,
+        startDate: format(monthStart, 'yyyy-MM-dd'),
+        endDate: format(monthEnd, 'yyyy-MM-dd'),
+      });
 
-        await exportChildrenAttendance(
-            attendanceRecordsForExport,
-            groupName,
-            period,
-            filteredChildren
-        );
+      await exportChildrenAttendance(
+        attendanceRecordsForExport,
+        groupName,
+        period,
+        filteredChildren,
+      );
 
-        enqueueSnackbar('Отчет экспортирован', { variant: 'success' });
+      enqueueSnackbar('Отчет экспортирован', { variant: 'success' });
     } catch (e: any) {
       setError(e?.message || 'Ошибка экспорта');
       enqueueSnackbar('Ошибка при экспорте', { variant: 'error' });
@@ -152,21 +164,24 @@ const WeeklyAttendance: React.FC = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       if (!isLoggedIn || !currentUser || authLoading) return;
-      
+
       setLoading(true);
       setError(null);
-      
+
       try {
         const [groupsData, childrenList] = await Promise.all([
           getGroups(),
-          childrenApi.getAll()
+          childrenApi.getAll(),
         ]);
         setGroups(groupsData || []);
         setChildren(childrenList);
-        
+
         // Auto-select group for teachers
-        if (currentUser.role === 'teacher' || currentUser.role === 'assistant') {
-          const myGroup = groupsData.find(g => g.teacher === currentUser.id);
+        if (
+          currentUser.role === 'teacher' ||
+          currentUser.role === 'assistant'
+        ) {
+          const myGroup = groupsData.find((g) => g.teacher === currentUser.id);
           if (myGroup && (myGroup.id || myGroup._id)) {
             setSelectedGroup(myGroup.id || myGroup._id || '');
           }
@@ -179,7 +194,7 @@ const WeeklyAttendance: React.FC = () => {
         setLoading(false);
       }
     };
-    
+
     fetchInitialData();
   }, [isLoggedIn, currentUser, authLoading, enqueueSnackbar]);
 
@@ -190,54 +205,60 @@ const WeeklyAttendance: React.FC = () => {
         setAttendanceData({});
         return;
       }
-      
+
       setLoading(true);
       try {
         const monthStart = startOfMonth(currentDate);
         const monthEnd = endOfMonth(currentDate);
-        
+
         const records = await getChildAttendance({
           groupId: selectedGroup,
           startDate: format(monthStart, 'yyyy-MM-dd'),
-          endDate: format(monthEnd, 'yyyy-MM-dd')
+          endDate: format(monthEnd, 'yyyy-MM-dd'),
         });
-        
+
         // Convert records to attendance data format
         const attendanceMap: AttendanceData = {};
         records.forEach((record: ChildAttendanceRecord) => {
           const childId = record.childId;
           const date = record.date.split('T')[0];
-          
+
           if (!attendanceMap[childId]) {
             attendanceMap[childId] = {};
           }
-          
+
           attendanceMap[childId][date] = {
             status: record.status,
-            notes: record.notes
+            notes: record.notes,
           };
         });
-        
+
         setAttendanceData(attendanceMap);
       } catch (err: any) {
         console.error('Error loading attendance data:', err);
         setError('Не удалось загрузить данные посещаемости');
-        enqueueSnackbar('Ошибка при загрузке данных посещаемости', { variant: 'error' });
+        enqueueSnackbar('Ошибка при загрузке данных посещаемости', {
+          variant: 'error',
+        });
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchAttendanceData();
   }, [currentDate, selectedGroup, enqueueSnackbar]);
 
   // Month navigation
   const goToPreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
+    );
   };
 
   const goToNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
+    );
   };
 
   const goToToday = () => {
@@ -250,10 +271,13 @@ const WeeklyAttendance: React.FC = () => {
 
   // Get filtered children for selected group
   const filteredChildren = selectedGroup
-    ? children.filter(child => {
+    ? children.filter((child) => {
         // Проверяем, является ли groupId объектом или строкой
         if (typeof child.groupId === 'object' && child.groupId !== null) {
-          return (child.groupId as any)._id === selectedGroup || (child.groupId as any).id === selectedGroup;
+          return (
+            (child.groupId as any)._id === selectedGroup ||
+            (child.groupId as any).id === selectedGroup
+          );
         } else {
           return child.groupId === selectedGroup;
         }
@@ -275,10 +299,17 @@ const WeeklyAttendance: React.FC = () => {
   const handleAttendanceClick = async (child: Child, date: Date) => {
     const dateString = format(date, 'yyyy-MM-dd');
     const existingAttendance = getAttendanceForDay(child.id!, date);
-    
+
     // Cycle through statuses: present -> absent -> sick -> vacation -> late -> present
-    const statusCycle: AttendanceStatus[] = ['present', 'absent', 'sick', 'vacation'];
-    const currentIndex = existingAttendance ? statusCycle.indexOf(existingAttendance.status) : -1;
+    const statusCycle: AttendanceStatus[] = [
+      'present',
+      'absent',
+      'sick',
+      'vacation',
+    ];
+    const currentIndex = existingAttendance
+      ? statusCycle.indexOf(existingAttendance.status)
+      : -1;
     const nextStatus = statusCycle[(currentIndex + 1) % statusCycle.length];
 
     try {
@@ -291,24 +322,26 @@ const WeeklyAttendance: React.FC = () => {
         childId: child.id!,
         date: dateString,
         status: nextStatus,
-        notes: existingAttendance?.notes || ''
+        notes: existingAttendance?.notes || '',
       };
 
       await bulkSaveChildAttendance([record], selectedGroup);
-      
+
       // Update local state
-      setAttendanceData(prev => ({
+      setAttendanceData((prev) => ({
         ...prev,
         [child.id!]: {
           ...prev[child.id!],
           [dateString]: {
             status: nextStatus,
-            notes: existingAttendance?.notes || ''
-          }
-        }
+            notes: existingAttendance?.notes || '',
+          },
+        },
       }));
 
-      enqueueSnackbar(`${child.fullName}: ${ATTENDANCE_STATUSES[nextStatus]}`, { variant: 'success' });
+      enqueueSnackbar(`${child.fullName}: ${ATTENDANCE_STATUSES[nextStatus]}`, {
+        variant: 'success',
+      });
     } catch (err: any) {
       console.error('Error saving attendance:', err);
       enqueueSnackbar('Ошибка при сохранении', { variant: 'error' });
@@ -318,7 +351,12 @@ const WeeklyAttendance: React.FC = () => {
   // Render loading state
   if (loading && Object.keys(attendanceData).length === 0) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+      <Box
+        display='flex'
+        justifyContent='center'
+        alignItems='center'
+        minHeight='200px'
+      >
         <CircularProgress />
       </Box>
     );
@@ -328,7 +366,7 @@ const WeeklyAttendance: React.FC = () => {
   if (error) {
     return (
       <Box p={3}>
-        <Typography color="error">{error}</Typography>
+        <Typography color='error'>{error}</Typography>
       </Box>
     );
   }
@@ -337,14 +375,18 @@ const WeeklyAttendance: React.FC = () => {
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
       <Box p={3}>
         <Card>
-          <CardHeader 
+          <CardHeader
             title={
-              <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h5">Посещаемость</Typography>
-                <Box display="flex" gap={2}>
+              <Box
+                display='flex'
+                justifyContent='space-between'
+                alignItems='center'
+              >
+                <Typography variant='h5'>Посещаемость</Typography>
+                <Box display='flex' gap={2}>
                   <Button
-                    variant="contained"
-                    color="primary"
+                    variant='contained'
+                    color='primary'
                     startIcon={<EventNoteIcon />}
                     onClick={() => setBulkModalOpen(true)}
                     disabled={!selectedGroup}
@@ -353,7 +395,12 @@ const WeeklyAttendance: React.FC = () => {
                   </Button>
 
                   <ExportButton
-                    exportTypes={[{ value: 'children-attendance', label: 'Посещаемость детей' }]}
+                    exportTypes={[
+                      {
+                        value: 'children-attendance',
+                        label: 'Посещаемость детей',
+                      },
+                    ]}
                     onExport={handleExport}
                   />
                 </Box>
@@ -363,18 +410,23 @@ const WeeklyAttendance: React.FC = () => {
           <Divider />
           <CardContent>
             {/* Month Navigation */}
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Box
+              display='flex'
+              justifyContent='space-between'
+              alignItems='center'
+              mb={3}
+            >
               <IconButton onClick={goToPreviousMonth}>
                 <ArrowBackIosIcon />
               </IconButton>
-              
-              <Box textAlign="center">
-                <Typography variant="h6">
+
+              <Box textAlign='center'>
+                <Typography variant='h6'>
                   {format(currentDate, 'LLLL yyyy', { locale: ru })}
                 </Typography>
-                <Button 
-                  variant="outlined" 
-                  size="small" 
+                <Button
+                  variant='outlined'
+                  size='small'
                   onClick={goToToday}
                   startIcon={<TodayIcon />}
                   sx={{ mt: 1 }}
@@ -382,7 +434,7 @@ const WeeklyAttendance: React.FC = () => {
                   Сегодня
                 </Button>
               </Box>
-              
+
               <IconButton onClick={goToNextMonth}>
                 <ArrowForwardIosIcon />
               </IconButton>
@@ -392,8 +444,11 @@ const WeeklyAttendance: React.FC = () => {
               <FormControl fullWidth>
                 <InputLabel>Выберите группу</InputLabel>
                 <Select value={selectedGroup} onChange={handleGroupChange}>
-                  {groups.map(group => (
-                    <MenuItem key={group.id || group._id} value={group.id || group._id}>
+                  {groups.map((group) => (
+                    <MenuItem
+                      key={group.id || group._id}
+                      value={group.id || group._id}
+                    >
                       {group.name}
                     </MenuItem>
                   ))}
@@ -408,8 +463,8 @@ const WeeklyAttendance: React.FC = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell>Ребенок</TableCell>
-                      {monthDays.map(day => (
-                        <TableCell key={day.toString()} align="center">
+                      {monthDays.map((day) => (
+                        <TableCell key={day.toString()} align='center'>
                           <Box>
                             <Box>{format(day, 'EEEEEE', { locale: ru })}</Box>
                             <Box>{format(day, 'd', { locale: ru })}</Box>
@@ -419,63 +474,88 @@ const WeeklyAttendance: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredChildren.map(child => (
+                    {filteredChildren.map((child) => (
                       <TableRow key={child.id}>
                         <TableCell>
-                          <Box display="flex" alignItems="center">
-                            <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                          <Box display='flex' alignItems='center'>
+                            <PersonIcon
+                              sx={{ mr: 1, color: 'text.secondary' }}
+                            />
                             <Box>
                               {child.fullName}
                               {child.parentName && (
-                                <Box sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
+                                <Box
+                                  sx={{
+                                    fontSize: '0.8em',
+                                    color: 'text.secondary',
+                                  }}
+                                >
                                   Родитель: {child.parentName}
                                 </Box>
                               )}
                             </Box>
                           </Box>
                         </TableCell>
-                        {monthDays.map(day => {
-                          const attendance = getAttendanceForDay(child.id!, day);
-                          const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-                          
+                        {monthDays.map((day) => {
+                          const attendance = getAttendanceForDay(
+                            child.id!,
+                            day,
+                          );
+                          const isWeekend =
+                            day.getDay() === 0 || day.getDay() === 6;
+
                           return (
                             <TableCell
                               key={day.toString()}
-                              align="center"
+                              align='center'
                               sx={{
                                 minHeight: '80px',
                                 border: '1px solid',
                                 borderColor: 'divider',
-                                backgroundColor: isWeekend ? 'action.hover' : 'inherit',
+                                backgroundColor: isWeekend
+                                  ? 'action.hover'
+                                  : 'inherit',
                                 cursor: isWeekend ? 'not-allowed' : 'pointer',
                                 '&:hover': {
-                                  backgroundColor: isWeekend ? 'action.hover' : 'action.selected'
-                                }
+                                  backgroundColor: isWeekend
+                                    ? 'action.hover'
+                                    : 'action.selected',
+                                },
                               }}
                             >
                               {isWeekend ? (
-                                <Typography variant="body2" color="text.disabled" align="center">
+                                <Typography
+                                  variant='body2'
+                                  color='text.disabled'
+                                  align='center'
+                                >
                                   Выходной
                                 </Typography>
                               ) : attendance ? (
                                 <Tooltip
                                   title={
                                     <Box>
-                                      <Typography variant="body2">
+                                      <Typography variant='body2'>
                                         {child.fullName}
                                       </Typography>
-                                      <Typography variant="body2">
-                                        {format(day, 'd MMMM yyyy', { locale: ru })}
+                                      <Typography variant='body2'>
+                                        {format(day, 'd MMMM yyyy', {
+                                          locale: ru,
+                                        })}
                                       </Typography>
-                                      <Typography variant="body2">
-                                        Статус: {ATTENDANCE_STATUSES[attendance.status]}
+                                      <Typography variant='body2'>
+                                        Статус:{' '}
+                                        {ATTENDANCE_STATUSES[attendance.status]}
                                       </Typography>
                                       {attendance.notes && (
-                                        <Typography variant="body2">
+                                        <Typography variant='body2'>
                                           Примечание: {attendance.notes}
                                         </Typography>
                                       )}
-                                      <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
+                                      <Typography
+                                        variant='caption'
+                                        sx={{ mt: 1, display: 'block' }}
+                                      >
                                         Нажмите для изменения статуса
                                       </Typography>
                                     </Box>
@@ -483,29 +563,42 @@ const WeeklyAttendance: React.FC = () => {
                                   arrow
                                 >
                                   <Box
-                                    onClick={() => handleAttendanceClick(child, day)}
+                                    onClick={() =>
+                                      handleAttendanceClick(child, day)
+                                    }
                                     sx={{
                                       p: 1,
                                       borderRadius: 1,
                                       bgcolor: 'background.paper',
                                       borderLeft: `4px solid ${
-                                        attendance.status === 'present' ? theme.palette.success.main :
-                                        attendance.status === 'sick' ? theme.palette.warning.main :
-                                        attendance.status === 'vacation' ? theme.palette.info.main :
-                                        attendance.status === 'late' ? theme.palette.warning.main :
-                                        theme.palette.error.main
+                                        attendance.status === 'present'
+                                          ? theme.palette.success.main
+                                          : attendance.status === 'sick'
+                                            ? theme.palette.warning.main
+                                            : attendance.status === 'vacation'
+                                              ? theme.palette.info.main
+                                              : attendance.status === 'late'
+                                                ? theme.palette.warning.main
+                                                : theme.palette.error.main
                                       }`,
                                       cursor: 'pointer',
                                       '&:hover': {
-                                        bgcolor: 'action.selected'
-                                      }
+                                        bgcolor: 'action.selected',
+                                      },
                                     }}
                                   >
                                     <Chip
-                                      label={ATTENDANCE_STATUSES[attendance.status]}
-                                      size="small"
-                                      color={STATUS_COLORS[attendance.status] as any}
-                                      icon={React.createElement(STATUS_ICONS[attendance.status], { fontSize: 'small' })}
+                                      label={
+                                        ATTENDANCE_STATUSES[attendance.status]
+                                      }
+                                      size='small'
+                                      color={
+                                        STATUS_COLORS[attendance.status] as any
+                                      }
+                                      icon={React.createElement(
+                                        STATUS_ICONS[attendance.status],
+                                        { fontSize: 'small' },
+                                      )}
                                     />
                                   </Box>
                                 </Tooltip>
@@ -513,19 +606,29 @@ const WeeklyAttendance: React.FC = () => {
                                 <Tooltip
                                   title={
                                     <Box>
-                                      <Typography variant="body2">
+                                      <Typography variant='body2'>
                                         {child.fullName}
                                       </Typography>
-                                      <Typography variant="body2">
-                                        {format(day, 'd MMMM yyyy', { locale: ru })}
+                                      <Typography variant='body2'>
+                                        {format(day, 'd MMMM yyyy', {
+                                          locale: ru,
+                                        })}
                                       </Typography>
-                                      <Typography variant="caption">
+                                      <Typography variant='caption'>
                                         Нажмите для отметки посещаемости
                                       </Typography>
                                       {/* Показываем информацию о возможности отметки альтернативным сотрудником */}
                                       {selectedGroup && (
-                                        <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'warning.main' }}>
-                                          Может быть отмечено альтернативным сотрудником
+                                        <Typography
+                                          variant='caption'
+                                          sx={{
+                                            mt: 1,
+                                            display: 'block',
+                                            color: 'warning.main',
+                                          }}
+                                        >
+                                          Может быть отмечено альтернативным
+                                          сотрудником
                                         </Typography>
                                       )}
                                     </Box>
@@ -533,7 +636,9 @@ const WeeklyAttendance: React.FC = () => {
                                   arrow
                                 >
                                   <Box
-                                    onClick={() => handleAttendanceClick(child, day)}
+                                    onClick={() =>
+                                      handleAttendanceClick(child, day)
+                                    }
                                     sx={{
                                       p: 1,
                                       borderRadius: 1,
@@ -543,11 +648,14 @@ const WeeklyAttendance: React.FC = () => {
                                       cursor: 'pointer',
                                       '&:hover': {
                                         bgcolor: 'action.selected',
-                                        borderColor: 'primary.main'
-                                      }
+                                        borderColor: 'primary.main',
+                                      },
                                     }}
                                   >
-                                    <Typography variant="caption" color="text.secondary">
+                                    <Typography
+                                      variant='caption'
+                                      color='text.secondary'
+                                    >
                                       Нажмите для отметки
                                     </Typography>
                                   </Box>
@@ -562,8 +670,8 @@ const WeeklyAttendance: React.FC = () => {
                 </Table>
               </TableContainer>
             ) : (
-              <Box textAlign="center" py={4}>
-                <Typography variant="h6" color="text.secondary">
+              <Box textAlign='center' py={4}>
+                <Typography variant='h6' color='text.secondary'>
                   Выберите группу для просмотра посещаемости
                 </Typography>
               </Box>
@@ -571,7 +679,7 @@ const WeeklyAttendance: React.FC = () => {
           </CardContent>
         </Card>
       </Box>
-      
+
       {/* Bulk Attendance Modal */}
       <AttendanceBulkModal
         open={bulkModalOpen}
@@ -581,34 +689,40 @@ const WeeklyAttendance: React.FC = () => {
           // Refresh attendance data after bulk operation
           const monthStart = startOfMonth(currentDate);
           const monthEnd = endOfMonth(currentDate);
-          
+
           getChildAttendance({
             groupId: selectedGroup,
             startDate: format(monthStart, 'yyyy-MM-dd'),
-            endDate: format(monthEnd, 'yyyy-MM-dd')
-          }).then(records => {
-            // Convert records to attendance data format
-            const attendanceMap: AttendanceData = {};
-            records.forEach((record: ChildAttendanceRecord) => {
-              const childId = record.childId;
-              const date = record.date.split('T')[0];
-              
-              if (!attendanceMap[childId]) {
-                attendanceMap[childId] = {};
-              }
-              
-              attendanceMap[childId][date] = {
-                status: record.status,
-                notes: record.notes
-              };
+            endDate: format(monthEnd, 'yyyy-MM-dd'),
+          })
+            .then((records) => {
+              // Convert records to attendance data format
+              const attendanceMap: AttendanceData = {};
+              records.forEach((record: ChildAttendanceRecord) => {
+                const childId = record.childId;
+                const date = record.date.split('T')[0];
+
+                if (!attendanceMap[childId]) {
+                  attendanceMap[childId] = {};
+                }
+
+                attendanceMap[childId][date] = {
+                  status: record.status,
+                  notes: record.notes,
+                };
+              });
+
+              setAttendanceData(attendanceMap);
+              enqueueSnackbar('Посещаемость успешно обновлена', {
+                variant: 'success',
+              });
+            })
+            .catch((err) => {
+              console.error('Error refreshing attendance data:', err);
+              enqueueSnackbar('Ошибка при обновлении данных', {
+                variant: 'error',
+              });
             });
-            
-            setAttendanceData(attendanceMap);
-            enqueueSnackbar('Посещаемость успешно обновлена', { variant: 'success' });
-          }).catch(err => {
-            console.error('Error refreshing attendance data:', err);
-            enqueueSnackbar('Ошибка при обновлении данных', { variant: 'error' });
-          });
         }}
       />
     </LocalizationProvider>

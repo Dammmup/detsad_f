@@ -1,6 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Table, TableHead, TableRow, TableCell, TableBody, Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
-import { foodStaffHealthApi, FoodStaffHealth } from '../../services/foodStaffHealth';
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Button,
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+} from '@mui/material';
+import {
+  foodStaffHealthApi,
+  FoodStaffHealth,
+} from '../../services/foodStaffHealth';
 
 const defaultForm: FoodStaffHealth = {
   date: '',
@@ -80,21 +99,30 @@ const FoodStaffHealthPage: React.FC = () => {
     }
   };
 
-  const handleExport = async (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => {
+  const handleExport = async (
+    exportType: string,
+    exportFormat: 'pdf' | 'excel' | 'csv',
+  ) => {
     await exportData('food-staff-health', exportFormat, { rows });
   };
 
   return (
     <Box p={3}>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant='h4' gutterBottom>
         Журнал регистрации состояния здоровья работников пищеблока
       </Typography>
-      <Stack direction="row" spacing={2} mb={2}>
-        <Button variant="contained" color="primary" onClick={() => handleOpen()}>
+      <Stack direction='row' spacing={2} mb={2}>
+        <Button
+          variant='contained'
+          color='primary'
+          onClick={() => handleOpen()}
+        >
           Добавить запись
         </Button>
         <ExportButton
-          exportTypes={[{ value: 'food-staff-health', label: 'Журнал здоровья работников' }]}
+          exportTypes={[
+            { value: 'food-staff-health', label: 'Журнал здоровья работников' },
+          ]}
           onExport={handleExport}
         />
       </Stack>
@@ -117,9 +145,17 @@ const FoodStaffHealthPage: React.FC = () => {
                 <TableCell>{row.healthStatus}</TableCell>
                 <TableCell>{row.notes}</TableCell>
                 <TableCell>
-                  <Stack direction="row" spacing={1}>
-                    <Button size="small" onClick={() => handleOpen(row)}>Редактировать</Button>
-                    <Button size="small" color="error" onClick={() => handleDelete(row._id)}>Удалить</Button>
+                  <Stack direction='row' spacing={1}>
+                    <Button size='small' onClick={() => handleOpen(row)}>
+                      Редактировать
+                    </Button>
+                    <Button
+                      size='small'
+                      color='error'
+                      onClick={() => handleDelete(row._id)}
+                    >
+                      Удалить
+                    </Button>
                   </Stack>
                 </TableCell>
               </TableRow>
@@ -127,19 +163,47 @@ const FoodStaffHealthPage: React.FC = () => {
           </TableBody>
         </Table>
       </Paper>
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>{editId ? 'Редактировать запись' : 'Добавить запись'}</DialogTitle>
+      <Dialog open={open} onClose={handleClose} maxWidth='sm' fullWidth>
+        <DialogTitle>
+          {editId ? 'Редактировать запись' : 'Добавить запись'}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
-            <TextField label="Дата" name="date" type="date" value={form.date} onChange={handleChange} InputLabelProps={{ shrink: true }} fullWidth />
-            <TextField label="ФИО работника" name="staffName" value={form.staffName} onChange={handleChange} fullWidth />
-            <TextField label="Состояние здоровья" name="healthStatus" value={form.healthStatus} onChange={handleChange} fullWidth />
-            <TextField label="Примечания" name="notes" value={form.notes} onChange={handleChange} fullWidth />
+            <TextField
+              label='Дата'
+              name='date'
+              type='date'
+              value={form.date}
+              onChange={handleChange}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+            <TextField
+              label='ФИО работника'
+              name='staffName'
+              value={form.staffName}
+              onChange={handleChange}
+              fullWidth
+            />
+            <TextField
+              label='Состояние здоровья'
+              name='healthStatus'
+              value={form.healthStatus}
+              onChange={handleChange}
+              fullWidth
+            />
+            <TextField
+              label='Примечания'
+              name='notes'
+              value={form.notes}
+              onChange={handleChange}
+              fullWidth
+            />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Отмена</Button>
-          <Button onClick={handleSave} variant="contained" disabled={loading}>
+          <Button onClick={handleSave} variant='contained' disabled={loading}>
             Сохранить
           </Button>
         </DialogActions>

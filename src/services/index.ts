@@ -17,7 +17,12 @@ export * from './documents';
 // Добавляем экспорт сервиса настроек
 
 // Утилиты API
-export { apiClient, createApiInstance, BaseApiClient, apiCache } from '../utils/api';
+export {
+  apiClient,
+  createApiInstance,
+  BaseApiClient,
+  apiCache,
+} from '../utils/api';
 
 // Общие типы
 

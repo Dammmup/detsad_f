@@ -5,7 +5,7 @@ import { HashRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 // Стили удалены для упрощения структуры
-import {App} from './components/App';
+import { App } from './components/App';
 import * as serviceWorker from './serviceWorker';
 import { LayoutProvider } from './components/context/LayoutContext';
 // UserProvider removed during refactoring
@@ -77,7 +77,6 @@ const theme = createTheme({
   },
 });
 
-
 const history =
   typeof window !== 'undefined'
     ? createHashHistory()
@@ -90,7 +89,8 @@ export function getHistory() {
 }
 
 console.log('REACT_APP_API_URL from env:', process.env.REACT_APP_API_URL);
-axios.defaults.baseURL = process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
+axios.defaults.baseURL =
+  process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
 console.log('Final axios baseURL:', axios.defaults.baseURL);
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 // Токен теперь передается в заголовке Authorization с каждым запросом
@@ -106,14 +106,14 @@ axios.interceptors.request.use(
     }
     return config;
   },
- (error) => {
+  (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Добавляем перехватчик ответов для обработки 401 ошибок
 axios.interceptors.response.use(
- (response) => response,
+  (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       // Удаляем данные аутентификации из localStorage
@@ -123,9 +123,8 @@ axios.interceptors.response.use(
       window.location.href = '/login';
     }
     return Promise.reject(error);
-  }
+  },
 );
-
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
@@ -138,7 +137,7 @@ if (rootElement) {
           <TimeTrackingProvider>
             <App />
             <ToastContainer
-              position="top-right"
+              position='top-right'
               autoClose={5000}
               hideProgressBar={false}
               newestOnTop={false}
@@ -147,13 +146,13 @@ if (rootElement) {
               pauseOnFocusLoss
               draggable
               pauseOnHover
-              theme="light"
+              theme='light'
             />
           </TimeTrackingProvider>
         </LayoutProvider>
       </ThemeProvider>
-    </HashRouter>
-    );
+    </HashRouter>,
+  );
 }
 
 serviceWorker.unregister();

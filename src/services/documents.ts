@@ -26,7 +26,6 @@ export interface Document {
   updatedAt: string;
 }
 
-
 // Параметры для получения списка документов
 export interface GetDocumentsParams {
   type?: 'contract' | 'certificate' | 'report' | 'policy' | 'other';
@@ -39,12 +38,11 @@ export interface GetDocumentsParams {
   limit?: number;
 }
 
-
 // Создание документа
 export interface CreateDocumentData {
   title: string;
   description?: string;
- type: 'contract' | 'certificate' | 'report' | 'policy' | 'other';
+  type: 'contract' | 'certificate' | 'report' | 'policy' | 'other';
   category: 'staff' | 'children' | 'financial' | 'administrative' | 'other';
   file: File;
   relatedId?: string;
@@ -52,7 +50,6 @@ export interface CreateDocumentData {
   tags?: string[];
   expiryDate?: string;
 }
-
 
 // ========== DOCUMENTS API ==========
 
@@ -67,14 +64,16 @@ export const getDocuments = async (params?: GetDocumentsParams) => {
         }
       });
     }
-    
-  const response = await apiClient.get(`/documents?${queryParams.toString()}`);
-      // Преобразуем _id в id для совместимости с фронтендом
-      const documents = response.data;
-      if (Array.isArray(documents)) {
-        return documents.map(doc => ({ ...doc, id: doc._id }));
-      }
-      return documents;
+
+    const response = await apiClient.get(
+      `/documents?${queryParams.toString()}`,
+    );
+    // Преобразуем _id в id для совместимости с фронтендом
+    const documents = response.data;
+    if (Array.isArray(documents)) {
+      return documents.map((doc) => ({ ...doc, id: doc._id }));
+    }
+    return documents;
   } catch (error) {
     console.error('Error fetching documents:', error);
     throw error;
@@ -84,7 +83,7 @@ export const getDocuments = async (params?: GetDocumentsParams) => {
 // Получение конкретного документа
 export const getDocument = async (id: string) => {
   try {
-  const response = await apiClient.get(`/documents/${id}`);
+    const response = await apiClient.get(`/documents/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching document:', error);
@@ -105,13 +104,13 @@ export const createDocument = async (data: CreateDocumentData) => {
     if (data.relatedType) formData.append('relatedType', data.relatedType);
     if (data.tags) formData.append('tags', JSON.stringify(data.tags));
     if (data.expiryDate) formData.append('expiryDate', data.expiryDate);
-    
-  const response = await apiClient.post('/documents', formData, {
+
+    const response = await apiClient.post('/documents', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-    
+
     return response.data;
   } catch (error) {
     console.error('Error creating document:', error);
@@ -147,19 +146,23 @@ export const downloadDocument = async (id: string) => {
     const response = await apiClient.get(`/documents/${id}/download`, {
       responseType: 'blob',
     });
-    
+
     // Создание ссылки для скачивания
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', response.headers['content-disposition']?.split('filename=')[1] || 'document.pdf');
+    link.setAttribute(
+      'download',
+      response.headers['content-disposition']?.split('filename=')[1] ||
+        'document.pdf',
+    );
     document.body.appendChild(link);
     link.click();
-    
+
     // Очистка
     link.parentNode?.removeChild(link);
     window.URL.revokeObjectURL(url);
-    
+
     return response.data;
   } catch (error) {
     console.error('Error downloading document:', error);
@@ -167,37 +170,41 @@ export const downloadDocument = async (id: string) => {
   }
 };
 
-
-
-
 // Экспорт документов
-export const exportDocuments = async (format: 'pdf' | 'excel' | 'csv', params?: GetDocumentsParams) => {
+export const exportDocuments = async (
+  format: 'pdf' | 'excel' | 'csv',
+  params?: GetDocumentsParams,
+) => {
   try {
-  const response = await apiClient.post('/documents/export', {
-      format,
-      ...params
-    }, {
-      responseType: 'blob',
-    });
-    
+    const response = await apiClient.post(
+      '/documents/export',
+      {
+        format,
+        ...params,
+      },
+      {
+        responseType: 'blob',
+      },
+    );
+
     // Создание ссылки для скачивания
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `documents_export.${format === 'excel' ? 'xlsx' : format}`);
+    link.setAttribute(
+      'download',
+      `documents_export.${format === 'excel' ? 'xlsx' : format}`,
+    );
     document.body.appendChild(link);
     link.click();
-    
+
     // Очистка
     link.parentNode?.removeChild(link);
     window.URL.revokeObjectURL(url);
-    
+
     return response.data;
   } catch (error) {
     console.error('Error exporting documents:', error);
     throw error;
   }
 };
-
-
-

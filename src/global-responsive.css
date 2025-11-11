@@ -29,9 +29,9 @@ body {
   /* .MuiDrawer-paper { width: 64px !important; } — убрано для полноразмерного Sidebar */
   .MuiTypography-h6 {
     font-size: 0.95rem !important;
- }
+  }
 }
- 
+
 @media (max-width: 600px) {
   .MuiContainer-root {
     padding-left: 6px !important;
@@ -52,5 +52,5 @@ body {
   .MuiButton-root {
     font-size: 0.75rem !important;
     padding: 6px 10px !important;
- }
+  }
 }

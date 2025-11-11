@@ -1,6 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Box, Paper, TextField, IconButton, Typography, List, ListItem, Divider, InputAdornment, Button
+  Box,
+  Paper,
+  TextField,
+  IconButton,
+  Typography,
+  List,
+  ListItem,
+  Divider,
+  InputAdornment,
+  Button,
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -83,14 +92,19 @@ const Qwen3Chat: React.FC = () => {
       // Симулируем “печатает...”
       setMessages((prev) => [
         ...prev,
-        { id: Date.now() + 1, text: '...', sender: 'ai', timestamp: new Date() },
+        {
+          id: Date.now() + 1,
+          text: '...',
+          sender: 'ai',
+          timestamp: new Date(),
+        },
       ]);
 
       const aiResponse = await Qwen3ApiService.sendMessage(
         [...messages, userMessage],
         location.pathname,
         selectedImage || undefined,
-        sessionId
+        sessionId,
       );
 
       // Убираем временное сообщение “...”
@@ -127,8 +141,8 @@ const Qwen3Chat: React.FC = () => {
       {!isOpen ? (
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
           <Button
-            variant="contained"
-            color="primary"
+            variant='contained'
+            color='primary'
             onClick={toggleChat}
             sx={{
               minWidth: 56,
@@ -158,7 +172,8 @@ const Qwen3Chat: React.FC = () => {
                 borderRadius: 3,
                 overflow: 'hidden',
                 boxShadow: '0px 6px 20px rgba(0,0,0,0.25)',
-                background: 'linear-gradient(to bottom right, #f7f9fc, #eaf1f7)',
+                background:
+                  'linear-gradient(to bottom right, #f7f9fc, #eaf1f7)',
               }}
             >
               {/* Header */}
@@ -173,11 +188,15 @@ const Qwen3Chat: React.FC = () => {
                   color: 'white',
                 }}
               >
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                <Typography variant='subtitle1' sx={{ fontWeight: 600 }}>
                   Qwen3 Ассистент
                 </Typography>
-                <IconButton size="small" onClick={toggleChat} sx={{ color: 'white' }}>
-                  <CloseIcon fontSize="small" />
+                <IconButton
+                  size='small'
+                  onClick={toggleChat}
+                  sx={{ color: 'white' }}
+                >
+                  <CloseIcon fontSize='small' />
                 </IconButton>
               </Box>
 
@@ -195,12 +214,14 @@ const Qwen3Chat: React.FC = () => {
                       >
                         <ListItem
                           sx={{
-                            justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+                            justifyContent:
+                              msg.sender === 'user' ? 'flex-end' : 'flex-start',
                           }}
                         >
                           <Box
                             sx={{
-                              bgcolor: msg.sender === 'user' ? '#1976d2' : 'white',
+                              bgcolor:
+                                msg.sender === 'user' ? '#1976d2' : 'white',
                               color: msg.sender === 'user' ? 'white' : 'black',
                               px: 1.5,
                               py: 1,
@@ -214,27 +235,52 @@ const Qwen3Chat: React.FC = () => {
                                 <motion.div
                                   animate={{ opacity: [0.3, 1, 0.3] }}
                                   transition={{ repeat: Infinity, duration: 1 }}
-                                  style={{ width: 6, height: 6, backgroundColor: 'gray', borderRadius: '50%' }}
+                                  style={{
+                                    width: 6,
+                                    height: 6,
+                                    backgroundColor: 'gray',
+                                    borderRadius: '50%',
+                                  }}
                                 />
                                 <motion.div
                                   animate={{ opacity: [0.3, 1, 0.3] }}
-                                  transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
-                                  style={{ width: 6, height: 6, backgroundColor: 'gray', borderRadius: '50%' }}
+                                  transition={{
+                                    repeat: Infinity,
+                                    duration: 1,
+                                    delay: 0.2,
+                                  }}
+                                  style={{
+                                    width: 6,
+                                    height: 6,
+                                    backgroundColor: 'gray',
+                                    borderRadius: '50%',
+                                  }}
                                 />
                                 <motion.div
                                   animate={{ opacity: [0.3, 1, 0.3] }}
-                                  transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
-                                  style={{ width: 6, height: 6, backgroundColor: 'gray', borderRadius: '50%' }}
+                                  transition={{
+                                    repeat: Infinity,
+                                    duration: 1,
+                                    delay: 0.4,
+                                  }}
+                                  style={{
+                                    width: 6,
+                                    height: 6,
+                                    backgroundColor: 'gray',
+                                    borderRadius: '50%',
+                                  }}
                                 />
                               </Box>
                             ) : (
                               <>
-                                <Typography variant="body2">{msg.text}</Typography>
+                                <Typography variant='body2'>
+                                  {msg.text}
+                                </Typography>
                                 {msg.imageUrl && (
                                   <Box sx={{ mt: 1 }}>
                                     <motion.img
                                       src={msg.imageUrl}
-                                      alt="attached"
+                                      alt='attached'
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
                                       style={{
@@ -244,7 +290,10 @@ const Qwen3Chat: React.FC = () => {
                                     />
                                   </Box>
                                 )}
-                                <Typography variant="caption" sx={{ opacity: 0.6 }}>
+                                <Typography
+                                  variant='caption'
+                                  sx={{ opacity: 0.6 }}
+                                >
                                   {msg.timestamp.toLocaleTimeString([], {
                                     hour: '2-digit',
                                     minute: '2-digit',
@@ -264,33 +313,35 @@ const Qwen3Chat: React.FC = () => {
               {/* Input */}
               <Divider />
               <Box sx={{ display: 'flex', alignItems: 'center', p: 1.5 }}>
-                <IconButton component="label" disabled={isProcessing}>
+                <IconButton component='label' disabled={isProcessing}>
                   <AttachFileIcon />
                   <input
-                    type="file"
+                    type='file'
                     hidden
-                    accept="image/*"
+                    accept='image/*'
                     onChange={handleImageChange}
                   />
                 </IconButton>
                 <TextField
-                  variant="outlined"
-                  size="small"
+                  variant='outlined'
+                  size='small'
                   fullWidth
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder={isProcessing ? 'ИИ думает...' : 'Введите сообщение...'}
+                  placeholder={
+                    isProcessing ? 'ИИ думает...' : 'Введите сообщение...'
+                  }
                   multiline
                   maxRows={4}
                   InputProps={{
                     endAdornment: imagePreview && (
-                      <InputAdornment position="end">
+                      <InputAdornment position='end'>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <Box
-                            component="img"
+                            component='img'
                             src={imagePreview}
-                            alt="preview"
+                            alt='preview'
                             sx={{
                               width: 30,
                               height: 30,
@@ -298,8 +349,8 @@ const Qwen3Chat: React.FC = () => {
                               mr: 0.5,
                             }}
                           />
-                          <IconButton size="small" onClick={removeImage}>
-                            <CloseIcon fontSize="small" />
+                          <IconButton size='small' onClick={removeImage}>
+                            <CloseIcon fontSize='small' />
                           </IconButton>
                         </Box>
                       </InputAdornment>
@@ -308,10 +359,12 @@ const Qwen3Chat: React.FC = () => {
                 />
                 <IconButton
                   onClick={handleSend}
-                  disabled={(!inputValue.trim() && !selectedImage) || isProcessing}
+                  disabled={
+                    (!inputValue.trim() && !selectedImage) || isProcessing
+                  }
                   sx={{ ml: 1 }}
                 >
-                  <SendIcon color="primary" />
+                  <SendIcon color='primary' />
                 </IconButton>
               </Box>
             </Paper>

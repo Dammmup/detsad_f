@@ -19,20 +19,26 @@ export const App = () => {
           <GroupsProvider>
             <Routes>
               {/* Публичные маршруты */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/groups" element={<Groups />} />
-              <Route path="/children" element={<Children />} />
+              <Route path='/login' element={<Login />} />
+              <Route path='/groups' element={<Groups />} />
+              <Route path='/children' element={<Children />} />
 
               {/* Защищенные маршруты */}
-              <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
-              <Route path="/app/*" element={
-                <ProtectedRoute>
-                  <SimpleLayout />
-                </ProtectedRoute>
-              } />
+              <Route
+                path='/'
+                element={<Navigate to='/app/dashboard' replace />}
+              />
+              <Route
+                path='/app/*'
+                element={
+                  <ProtectedRoute>
+                    <SimpleLayout />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Fallback для неизвестных маршрутов */}
-              <Route path="*" element={<Navigate to="/login" replace />} />
+              <Route path='*' element={<Navigate to='/login' replace />} />
             </Routes>
           </GroupsProvider>
         </DateProvider>

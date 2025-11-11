@@ -7,23 +7,23 @@ export interface UserRef {
 
 export interface TaskList {
   _id?: string;
- title: string;
- description?: string;
- assignedTo: string | UserRef; // Может быть ID или populated объектом
- assignedBy: string | UserRef; // Может быть ID или populated объектом
+  title: string;
+  description?: string;
+  assignedTo: string | UserRef; // Может быть ID или populated объектом
+  assignedBy: string | UserRef; // Может быть ID или populated объектом
   assignedToSpecificUser?: string | UserRef; // Может быть ID или populated объектом
   dueDate?: string; // ISO string
- priority: 'low' | 'medium' | 'high' | 'urgent';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   category: string;
   attachments?: string[];
   notes?: string;
   completedAt?: string; // Дата выполнения
- cancelledAt?: string; // Дата отмены
+  cancelledAt?: string; // Дата отмены
   completedBy?: string | UserRef; // Может быть ID или populated объектом
   cancelledBy?: string | UserRef; // Может быть ID или populated объектом
   createdAt?: string;
- updatedAt?: string;
+  updatedAt?: string;
 }
 
 export interface TaskListFilters {

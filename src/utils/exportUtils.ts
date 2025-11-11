@@ -1,10 +1,15 @@
 import { apiClient } from './api';
 
-export const exportData = async (endpoint: string, format: 'pdf' | 'excel' | 'csv', filters?: any) => {
+export const exportData = async (
+  endpoint: string,
+  format: 'pdf' | 'excel' | 'csv',
+  filters?: any,
+) => {
   try {
-    const response = await apiClient.post(`/export/${endpoint}`,
+    const response = await apiClient.post(
+      `/export/${endpoint}`,
       { format, filters },
-      { responseType: 'blob' }
+      { responseType: 'blob' },
     );
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');

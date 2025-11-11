@@ -14,23 +14,41 @@ class UsersApiClient extends BaseCrudApiClient<User> {
   /**
    * Получить настройки зарплаты и штрафов сотрудника
    */
-  async getPayrollSettings(id: ID): Promise<Pick<User, 'salary' | 'shiftRate' | 'salaryType' | 'penaltyType' | 'penaltyAmount'>> {
+  async getPayrollSettings(
+    id: ID,
+  ): Promise<
+    Pick<
+      User,
+      'salary' | 'shiftRate' | 'salaryType' | 'penaltyType' | 'penaltyAmount'
+    >
+  > {
     return this.get(`${this.endpoint}/${id}`);
   }
 
   /**
    * Обновить настройки зарплаты и штрафов сотрудника
    */
- async updatePayrollSettings(id: ID, data: Partial<Pick<User, 'salary' | 'shiftRate' | 'salaryType' | 'penaltyType' | 'penaltyAmount'>>): Promise<User> {
+  async updatePayrollSettings(
+    id: ID,
+    data: Partial<
+      Pick<
+        User,
+        'salary' | 'shiftRate' | 'salaryType' | 'penaltyType' | 'penaltyAmount'
+      >
+    >,
+  ): Promise<User> {
     return this.put(`${this.endpoint}/${id}/payroll-settings`, data);
   }
 
   /**
    * Получение всех пользователей с кэшированием
    */
-  async getAll(filters?: UserFilters, includePasswords = false): Promise<User[]> {
+  async getAll(
+    filters?: UserFilters,
+    includePasswords = false,
+  ): Promise<User[]> {
     const cacheKey = `${this.CACHE_KEY}_${JSON.stringify(filters)}_${includePasswords}`;
-    
+
     // Проверяем кэш
     const cached = apiCache.get<User[]>(cacheKey);
     if (cached) {
@@ -43,10 +61,10 @@ class UsersApiClient extends BaseCrudApiClient<User> {
     }
 
     const users = await super.getAll(params);
-    
+
     // Кэшируем результат
     apiCache.set(cacheKey, users, this.CACHE_DURATION);
-    
+
     return users;
   }
 
@@ -81,14 +99,14 @@ class UsersApiClient extends BaseCrudApiClient<User> {
    */
   async getChildrenByGroup(groupId: ID): Promise<User[]> {
     const cacheKey = `children_group_${groupId}`;
-    
+
     const cached = apiCache.get<User[]>(cacheKey);
     if (cached) {
       return cached;
     }
 
-  const children = await this.get<User[]>(`/users/group/${groupId}/children`);
-    
+    const children = await this.get<User[]>(`/users/group/${groupId}/children`);
+
     apiCache.set(cacheKey, children, this.CACHE_DURATION);
     return children;
   }
@@ -103,8 +121,8 @@ class UsersApiClient extends BaseCrudApiClient<User> {
     }
 
     await this.delayRequest(300);
-  const roles = await this.get<string[]>('/roles');
-    
+    const roles = await this.get<string[]>('/roles');
+
     apiCache.set(this.ROLES_CACHE_KEY, roles, this.CACHE_DURATION);
     return roles;
   }
@@ -114,17 +132,17 @@ class UsersApiClient extends BaseCrudApiClient<User> {
    */
   async getTeachers(): Promise<User[]> {
     const cacheKey = 'teachers';
-    
+
     const cached = apiCache.get<User[]>(cacheKey);
     if (cached) {
       return cached;
     }
 
-  const teachers = await this.get<User[]>('/users/teachers', {
+    const teachers = await this.get<User[]>('/users/teachers', {
       params: {
         role: 'teacher',
-        fields: 'id,name,email,avatar'
-      }
+        fields: 'id,name,email,avatar',
+      },
     });
 
     apiCache.set(cacheKey, teachers, this.CACHE_DURATION);
@@ -136,13 +154,9 @@ class UsersApiClient extends BaseCrudApiClient<User> {
    */
   clearCache(): void {
     // Очищаем все кэши, связанные с пользователями
-    const keysToDelete = [
-      this.CACHE_KEY,
-      this.ROLES_CACHE_KEY,
-      'teachers'
-    ];
+    const keysToDelete = [this.CACHE_KEY, this.ROLES_CACHE_KEY, 'teachers'];
 
-    keysToDelete.forEach(key => {
+    keysToDelete.forEach((key) => {
       apiCache.delete(key);
     });
 
@@ -156,7 +170,7 @@ class UsersApiClient extends BaseCrudApiClient<User> {
   async search(query: string, filters?: UserFilters): Promise<User[]> {
     const params = {
       ...filters,
-      search: query
+      search: query,
     };
 
     return this.get<User[]>(`${this.endpoint}/search`, { params });
@@ -172,7 +186,7 @@ class UsersApiClient extends BaseCrudApiClient<User> {
     byRole: Record<string, number>;
     byType: Record<string, number>;
   }> {
-  return this.get('/users/stats');
+    return this.get('/users/stats');
   }
 
   /**
@@ -183,7 +197,7 @@ class UsersApiClient extends BaseCrudApiClient<User> {
     failed: number;
     errors: Array<{ id: ID; error: string }>;
   }> {
-  const result = await this.post('/users/bulk-update', { updates });
+    const result = await this.post('/users/bulk-update', { updates });
     this.clearCache();
     return result;
   }
@@ -191,12 +205,15 @@ class UsersApiClient extends BaseCrudApiClient<User> {
   /**
    * Экспорт пользователей
    */
-  async export(filters?: UserFilters, format: 'csv' | 'excel' = 'excel'): Promise<Blob> {
+  async export(
+    filters?: UserFilters,
+    format: 'csv' | 'excel' = 'excel',
+  ): Promise<Blob> {
     const params = { ...filters, format };
-    
-  return this.get('/users/export', {
+
+    return this.get('/users/export', {
       params,
-      responseType: 'blob'
+      responseType: 'blob',
     });
   }
 
@@ -211,10 +228,10 @@ class UsersApiClient extends BaseCrudApiClient<User> {
     const formData = new FormData();
     formData.append('file', file);
 
-  const result = await this.post('/users/import', formData, {
+    const result = await this.post('/users/import', formData, {
       headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+        'Content-Type': 'multipart/form-data',
+      },
     });
 
     this.clearCache();
@@ -240,7 +257,9 @@ class UsersApiClient extends BaseCrudApiClient<User> {
   /**
    * Генерация кода для привязки Telegram
    */
-  async generateTelegramLinkCode(id: ID): Promise<{ telegramLinkCode: string }> {
+  async generateTelegramLinkCode(
+    id: ID,
+  ): Promise<{ telegramLinkCode: string }> {
     return this.post(`${this.endpoint}/${id}/generate-telegram-code`);
   }
 }
@@ -249,13 +268,16 @@ class UsersApiClient extends BaseCrudApiClient<User> {
 export const usersApi = new UsersApiClient();
 
 // Экспортируем отдельные функции для обратной совместимости
-export const getUsers = (includePasswords = false) => usersApi.getAll({}, includePasswords);
+export const getUsers = (includePasswords = false) =>
+  usersApi.getAll({}, includePasswords);
 export const createUser = (user: Partial<User>) => usersApi.create(user);
-export const updateUser = (id: ID, user: Partial<User>) => usersApi.update(id, user);
+export const updateUser = (id: ID, user: Partial<User>) =>
+  usersApi.update(id, user);
 export const deleteUser = (id: ID) => usersApi.deleteItem(id);
 export const getUser = (id: ID) => usersApi.getById(id);
 export const getUserRoles = () => usersApi.getRoles();
-export const getChildrenByGroup = (groupId: ID) => usersApi.getChildrenByGroup(groupId);
+export const getChildrenByGroup = (groupId: ID) =>
+  usersApi.getChildrenByGroup(groupId);
 export const clearRolesCache = () => usersApi.clearCache();
 
 export default usersApi;
