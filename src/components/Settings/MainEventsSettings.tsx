@@ -66,102 +66,102 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
   // Состояние для отображения информации о сущностях
   const [exportEntities, setExportEntities] = useState<ExportEntity[]>([]);
   const [entitiesLoading, setEntitiesLoading] = useState(true);
- const loadExportEntities = async () => {
-    try {
-      setEntitiesLoading(true);
+ const loadExportEntities = React.useCallback(async () => {
+   try {
+     setEntitiesLoading(true);
 
-      // Определяем коллекции, которые могут быть экспортированы
-      const collections = [
-        {
-          id: 'childAttendance',
-          name: 'Посещаемость детей',
-          collection: 'childAttendance',
-          description: 'Записи о посещении детей',
-          exportDayOfMonth: 30,
-          emailRecipients: [],
-          scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel' as 'pdf' | 'excel' | 'csv',
-        },
-        {
-          id: 'childPayment',
-          name: 'Оплаты за посещение детей',
-          collection: 'childPayment',
-          description: 'Оплаты за посещение детей',
-          exportDayOfMonth: 30,
-          emailRecipients: [],
-          scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel' as 'pdf' | 'excel' | 'csv',
-        },
-        {
-          id: 'staffShifts',
-          name: 'Смены (раздел сотрудники)',
-          collection: 'staffShifts',
-          description: 'Смены сотрудников',
-          exportDayOfMonth: 30,
-          emailRecipients: [],
-          scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel' as 'pdf' | 'excel' | 'csv',
-        },
-        {
-          id: 'payroll',
-          name: 'Зарплаты',
-          collection: 'payroll',
-          description: 'Зарплатные ведомости',
-          exportDayOfMonth: 30,
-          emailRecipients: [],
-          scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel' as 'pdf' | 'excel' | 'csv',
-        },
-        {
-          id: 'rent',
-          name: 'Аренда',
-          collection: 'rent',
-          description: 'Арендные платежи',
-          exportDayOfMonth: 30,
-          emailRecipients: [],
-          scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel' as 'pdf' | 'excel' | 'csv',
-        },
-        {
-          id: 'schedule',
-          name: 'Расписание',
-          collection: 'schedule',
-          description: 'Отчет по расписанию',
-          exportDayOfMonth: 30,
-          emailRecipients: [],
-          scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel' as 'pdf' | 'excel' | 'csv',
-        },
-      ];
+     // Определяем коллекции, которые могут быть экспортированы
+     const collections = [
+       {
+         id: 'childAttendance',
+         name: 'Посещаемость детей',
+         collection: 'childAttendance',
+         description: 'Записи о посещении детей',
+         exportDayOfMonth: 30,
+         emailRecipients: [],
+         scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
+         format: 'excel' as 'pdf' | 'excel' | 'csv',
+       },
+       {
+         id: 'childPayment',
+         name: 'Оплаты за посещение детей',
+         collection: 'childPayment',
+         description: 'Оплаты за посещение детей',
+         exportDayOfMonth: 30,
+         emailRecipients: [],
+         scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
+         format: 'excel' as 'pdf' | 'excel' | 'csv',
+       },
+       {
+         id: 'staffShifts',
+         name: 'Смены (раздел сотрудники)',
+         collection: 'staffShifts',
+         description: 'Смены сотрудников',
+         exportDayOfMonth: 30,
+         emailRecipients: [],
+         scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
+         format: 'excel' as 'pdf' | 'excel' | 'csv',
+       },
+       {
+         id: 'payroll',
+         name: 'Зарплаты',
+         collection: 'payroll',
+         description: 'Зарплатные ведомости',
+         exportDayOfMonth: 30,
+         emailRecipients: [],
+         scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
+         format: 'excel' as 'pdf' | 'excel' | 'csv',
+       },
+       {
+         id: 'rent',
+         name: 'Аренда',
+         collection: 'rent',
+         description: 'Арендные платежи',
+         exportDayOfMonth: 30,
+         emailRecipients: [],
+         scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
+         format: 'excel' as 'pdf' | 'excel' | 'csv',
+       },
+       {
+         id: 'schedule',
+         name: 'Расписание',
+         collection: 'schedule',
+         description: 'Отчет по расписанию',
+         exportDayOfMonth: 30,
+         emailRecipients: [],
+         scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
+         format: 'excel' as 'pdf' | 'excel' | 'csv',
+       },
+     ];
 
-      // Получаем количество записей для каждой коллекции
-      const entitiesWithCounts = await Promise.all(
-        collections.map(async (entity) => {
-          const count = await getEntityCount(entity.collection);
-          const nextExportDate = getNextExportDate(entity.exportDayOfMonth);
-          const daysUntilExport = getDaysUntilExport(nextExportDate);
-          return {
-            ...entity,
-            count,
-            nextExportDate,
-            daysUntilExport,
-          };
-        }),
-      );
+     // Получаем количество записей для каждой коллекции
+     const entitiesWithCounts = await Promise.all(
+       collections.map(async (entity) => {
+         const count = await getEntityCount(entity.collection);
+         const nextExportDate = getNextExportDate(entity.exportDayOfMonth);
+         const daysUntilExport = getDaysUntilExport(nextExportDate);
+         return {
+           ...entity,
+           count,
+           nextExportDate,
+           daysUntilExport,
+         };
+       }),
+     );
 
-      setExportEntities(entitiesWithCounts);
-    } catch (err) {
-      setError(
-        'Ошибка загрузки информации о сущностях: ' + (err as Error).message,
-      );
-    } finally {
-      setEntitiesLoading(false);
-    }
-  };
-  // Загрузка событий
-  useEffect(() => {
-    loadExportEntities();
-  }, [loadExportEntities]);
+     setExportEntities(entitiesWithCounts);
+   } catch (err) {
+     setError(
+       'Ошибка загрузки информации о сущностях: ' + (err as Error).message,
+     );
+   } finally {
+     setEntitiesLoading(false);
+   }
+ }, []);
+ // Загрузка событий
+useEffect(() => {
+   loadExportEntities();
+ }, [loadExportEntities]);
 
   // Функция для получения количества записей в коллекциях
   const getEntityCount = async (collection: string): Promise<number> => {

@@ -104,12 +104,14 @@ export const TimeTrackingProvider = ({
     try {
       // API call would go here
       // return response.data;
-      return null;
     } catch (error) {
       console.error('Error fetching time status:', error);
       toast.error('Ошибка загрузки статуса рабочего времени');
       throw error;
+    } finally {
+      setLoading(false);
     }
+    return null;
   }, []);
 
   // Clock in
