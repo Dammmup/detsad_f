@@ -16,10 +16,9 @@ import {
   Close as CloseIcon,
   Chat as ChatIcon,
   AttachFile as AttachFileIcon,
-  ScreenshotMonitor as ScreenshotIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, useLocation } from 'react-router-dom';
+import {  useLocation } from 'react-router-dom';
 import { Qwen3ApiService } from '../services/qwen3-api';
 import { initUIStateCollector } from '../utils/uiStateCollector';
 
@@ -48,7 +47,6 @@ const Qwen3Chat: React.FC = () => {
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {

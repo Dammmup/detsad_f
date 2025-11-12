@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -51,19 +51,19 @@ export default function OrganolepticJournalPage() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [group, setGroup] = useState('all');
   const [responsibleSignature, setResponsibleSignature] = useState('');
-  const fetchRecords = async () => {
-    setLoading(true);
-    try {
-      const data = await getOrganolepticRecords({ date, group });
-      setRecords(data);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchRecords = React.useCallback(async () => {
+     setLoading(true);
+     try {
+       const data = await getOrganolepticRecords({ date, group });
+       setRecords(data);
+     } finally {
+       setLoading(false);
+     }
+   }, [date, group]);
 
-  useEffect(() => {
-    fetchRecords();
-  }, [date, group]);
+   useEffect(() => {
+     fetchRecords();
+   }, [date, group]);
 
   const handleGenerateByMenu = async () => {
     setLoading(true);

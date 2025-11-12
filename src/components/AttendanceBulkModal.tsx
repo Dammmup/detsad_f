@@ -84,7 +84,7 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
     if (open && groupId) {
       fetchChildren();
     }
-  }, [open, groupId]);
+  }, [open, groupId, fetchChildren]);
 
   const handleChildToggle = (childId: string) => {
     if (selectedChildren.includes(childId)) {

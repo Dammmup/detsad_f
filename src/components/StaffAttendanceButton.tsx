@@ -47,7 +47,6 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
     'success',
   );
 
-  const [isCheckInActive, setIsCheckInActive] = useState(false);
   const [geolocation, setGeolocation] = useState<{
     latitude: number;
     longitude: number;

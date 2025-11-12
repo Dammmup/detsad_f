@@ -24,11 +24,6 @@ import {
   Info as InfoIcon,
   Forward as ForwardIcon,
 } from '@mui/icons-material';
-import {
-  mainEventsService,
-  MainEvent,
-  MainEventCreateInput,
-} from '../../services/mainEvents';
 import { useAuth } from '../context/AuthContext';
 
 // Сервисы для получения данных о коллекциях
@@ -63,106 +58,15 @@ interface ExportEntity {
   format: 'pdf' | 'excel' | 'csv'; // Формат экспорта
 }
 
-const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({
-  onSettingsSaved,
-}) => {
+const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
   const { user } = useAuth();
-  const [mainEvents, setMainEvents] = useState<MainEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<MainEvent | null>(null);
-  const [formData, setFormData] = useState<Omit<MainEventCreateInput, 'id'>>({
-    name: '',
-    description: '',
-    dayOfMonth: 1,
-    enabled: true,
-    exportCollections: [],
-    emailRecipients: [],
-  });
-  const [newRecipient, setNewRecipient] = useState('');
-  const [newCollection, setNewCollection] = useState('');
 
   // Состояние для отображения информации о сущностях
   const [exportEntities, setExportEntities] = useState<ExportEntity[]>([]);
   const [entitiesLoading, setEntitiesLoading] = useState(true);
-
-  // Загрузка событий
-  useEffect(() => {
-    loadMainEvents();
-    loadExportEntities();
-  }, []);
-
-  // Функция для получения количества записей в коллекциях
-  const getEntityCount = async (collection: string): Promise<number> => {
-    try {
-      switch (collection) {
-        case 'childAttendance':
-          const attendanceRecords = await getChildAttendance();
-          return attendanceRecords.length;
-        case 'childPayment':
-          // Для childPayment получаем данные через API
-          const childPayments = await childPaymentApi.getAll();
-          return childPayments.length;
-        case 'staffShifts':
-          const shifts = await getShifts();
-          return shifts.length;
-        case 'payroll':
-          const payrolls = await getPayrolls({});
-          return payrolls.length;
-        case 'rent':
-          // Для аренды получаем данные через API
-          const rents = await getRents();
-          return rents.length;
-        default:
-          return 0;
-      }
-    } catch (err) {
-      console.error(
-        `Ошибка получения количества записей для ${collection}:`,
-        err,
-      );
-      return 0;
-    }
-  };
-
-  // Функция для расчета даты следующего экспорта (конец месяца)
-  const getNextExportDate = (dayOfMonth: number): Date => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
-
-    // Получаем последний день текущего месяца
-    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-
-    // Создаем дату для последнего дня месяца
-    let exportDate = new Date(year, month, lastDayOfMonth);
-
-    // Если дата уже прошла в этом месяце, берем конец следующего месяца
-    if (exportDate <= today) {
-      // Получаем последний день следующего месяца
-      const nextMonthLastDay = new Date(year, month + 2, 0).getDate();
-      exportDate = new Date(year, month + 1, nextMonthLastDay);
-    }
-
-    return exportDate;
-  };
-
-  // Функция для расчета оставшихся дней до экспорта
-  const getDaysUntilExport = (exportDate: Date): number => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const exportDateTime = new Date(exportDate);
-    exportDateTime.setHours(0, 0, 0, 0);
-
-    const diffTime = exportDateTime.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 24));
-
-    return diffDays;
-  };
-
-  const loadExportEntities = async () => {
+ const loadExportEntities = async () => {
     try {
       setEntitiesLoading(true);
 
@@ -254,33 +158,86 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({
       setEntitiesLoading(false);
     }
   };
+  // Загрузка событий
+  useEffect(() => {
+    loadExportEntities();
+  }, []);
 
-  const loadMainEvents = async () => {
+  // Функция для получения количества записей в коллекциях
+  const getEntityCount = async (collection: string): Promise<number> => {
     try {
-      setLoading(true);
-      const events = await mainEventsService.getAll();
-      setMainEvents(events);
-      setError(null);
+      switch (collection) {
+        case 'childAttendance':
+          const attendanceRecords = await getChildAttendance();
+          return attendanceRecords.length;
+        case 'childPayment':
+          // Для childPayment получаем данные через API
+          const childPayments = await childPaymentApi.getAll();
+          return childPayments.length;
+        case 'staffShifts':
+          const shifts = await getShifts();
+          return shifts.length;
+        case 'payroll':
+          const payrolls = await getPayrolls({});
+          return payrolls.length;
+        case 'rent':
+          // Для аренды получаем данные через API
+          const rents = await getRents();
+          return rents.length;
+        default:
+          return 0;
+      }
     } catch (err) {
-      setError('Ошибка загрузки событий: ' + (err as Error).message);
-    } finally {
-      setLoading(false);
+      console.error(
+        `Ошибка получения количества записей для ${collection}:`,
+        err,
+      );
+      return 0;
     }
   };
+
+  // Функция для расчета даты следующего экспорта (конец месяца)
+  const getNextExportDate = (dayOfMonth: number): Date => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+
+    // Получаем последний день текущего месяца
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+
+    // Создаем дату для последнего дня месяца
+    let exportDate = new Date(year, month, lastDayOfMonth);
+
+    // Если дата уже прошла в этом месяце, берем конец следующего месяца
+    if (exportDate <= today) {
+      // Получаем последний день следующего месяца
+      const nextMonthLastDay = new Date(year, month + 2, 0).getDate();
+      exportDate = new Date(year, month + 1, nextMonthLastDay);
+    }
+
+    return exportDate;
+  };
+
+  // Функция для расчета оставшихся дней до экспорта
+  const getDaysUntilExport = (exportDate: Date): number => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const exportDateTime = new Date(exportDate);
+    exportDateTime.setHours(0, 0, 0, 0);
+
+    const diffTime = exportDateTime.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 24));
+
+    return diffDays;
+  };
+
+ 
+
 
   const handleExecuteExportForEntity = async (entity: ExportEntity) => {
     try {
       setLoading(true);
-      const {
-        exportChildrenAttendance,
-        exportSchedule,
-        exportStaffAttendance,
-        exportChildrenList,
-        exportStaffList,
-        exportDocumentsList,
-        exportDocumentTemplatesList,
-        getCurrentPeriod,
-      } = await import('../../utils/excelExport');
 
       // В зависимости от сущности, получаем реальные данные и вызываем соответствующую функцию экспорта
       switch (entity.id) {
@@ -462,7 +419,6 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({
               shiftPeriodForExport,
             );
             return; // Прерываем выполнение для этого случая, чтобы не использовать временные данные
-            break;
           case 'payroll':
             content = `Зарплаты за ${month} ${year} год\nСотрудники,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31\nИван Петров,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,50000\nМария Сидорова,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000\nАлексей Козлов,50000,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,50000,0,50000,50000,50000,0,50000`;
             break;
@@ -534,21 +490,6 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = ({
     }
   };
 
-  const getDayName = (dayIndex: number) => {
-    return `День месяца: ${dayIndex}`;
-  };
-
-  const getCollectionsDisplay = (collections: string[]) => {
-    const collectionNames: Record<string, string> = {
-      childAttendance: 'Посещаемость детей',
-      childPayment: 'Оплаты за посещение детей',
-      staffShifts: 'Смены (раздел сотрудники)',
-      payroll: 'Зарплаты',
-      rent: 'Аренда',
-    };
-
-    return collections.map((col) => collectionNames[col] || col).join(', ');
-  };
 
   if (loading || entitiesLoading) {
     return (

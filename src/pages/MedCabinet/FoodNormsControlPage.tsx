@@ -39,7 +39,6 @@ const STATUSES = ['Все', 'В норме', 'Отклонение', 'Превы
 
 const FoodNormsControlPage: React.FC = () => {
   const [rows, setRows] = useState<any[]>([]);
-  const [filteredRows, setFilteredRows] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [month, setMonth] = useState(MONTHS[0]);
   const [year, setYear] = useState(new Date().getFullYear().toString());
@@ -47,9 +46,21 @@ const FoodNormsControlPage: React.FC = () => {
   const [status, setStatus] = useState('Все');
   const [note, setNote] = useState('');
 
+  // Фильтруем строки при изменении rows или фильтров
+  const filteredRows = rows.filter((row) => {
+    // Фильтр по поиску
+    const matchesSearch = !search ||
+      row.product.toLowerCase().includes(search.toLowerCase());
+    
+    // Фильтр по статусу
+    const matchesStatus = status === 'Все' || row.status === status;
+    
+    return matchesSearch && matchesStatus;
+  });
+
   const handleAutoFill = () => {
     // Placeholder for auto-fill logic
-  };
+ };
 
   const handleAdd = () => {
     setRows((prev) => [

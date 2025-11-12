@@ -28,7 +28,6 @@ import {
   deleteTask,
   toggleTaskStatus,
   markTaskAsCompleted,
-  markTaskAsCancelled,
 } from '../services/taskList';
 import { TaskList } from '../types/taskList';
 import { getUsers } from '../services/users';

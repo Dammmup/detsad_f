@@ -10,21 +10,15 @@ import {
   ClickAwayListener,
   Chip,
   Paper,
-  IconButton,
-  useTheme,
 } from '@mui/material';
-import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import {
   format,
-  addMonths,
-  subMonths,
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
   isSameMonth,
   isSameDay,
 } from 'date-fns';
-import { ru } from 'date-fns/locale';
 import { useDate } from './context/DateContext';
 import { Child } from '../types/common';
 import childrenApi from '../services/children';
@@ -111,11 +105,8 @@ interface BirthdaysCalendarWidgetProps {
   onBirthdaysChange?: () => void;
 }
 
-const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({
-  onBirthdaysChange,
-}) => {
-  const theme = useTheme();
-  const { currentDate, setCurrentDate } = useDate();
+const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = () => {
+  const { currentDate } = useDate();
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -159,22 +150,7 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = ({
     });
   };
 
-  // === Расчёт возраста (на следующий день рождения) ===
-  const calculateAge = (
-    birthday: string,
-    year: number = new Date().getFullYear(),
-  ) => {
-    const birthDate = new Date(birthday);
-    return year - birthDate.getFullYear();
-  };
 
-  // === Название группы ===
-  const getGroupName = (groupId: any) => {
-    if (!groupId) return 'Без группы';
-    if (typeof groupId === 'string') return groupId;
-    if (typeof groupId === 'object' && groupId.name) return groupId.name;
-    return 'Без группы';
-  };
 
   const daysWithBirthdays = getChildrenWithBirthdays(currentDate);
   const startWeekDay = (startOfMonth(currentDate).getDay() + 6) % 7; // Пн = 0

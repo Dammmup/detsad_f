@@ -4,7 +4,6 @@ import {
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
-  addDays,
 } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useSnackbar } from 'notistack';
@@ -24,7 +23,6 @@ import {
   FormControl,
   FormControlLabel,
   Grid,
-  IconButton,
   InputLabel,
   MenuItem,
   Paper,
@@ -47,18 +45,13 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  ArrowBackIos as ArrowBackIosIcon,
-  ArrowForwardIos as ArrowForwardIosIcon,
-  Today as TodayIcon,
 } from '@mui/icons-material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { Search as SearchIcon } from '@mui/icons-material';
 import ExportButton from '../../components/ExportButton';
-import { exportData } from '../../utils/exportUtils';
 import {
   exportStaffAttendance,
-  getCurrentMonthRange,
 } from '../../utils/excelExport';
 import { useDate } from '../../components/context/DateContext';
 import DateNavigator from '../../components/DateNavigator';
@@ -129,7 +122,7 @@ const ROLE_LABELS: Record<string, string> = {
 const StaffSchedule: React.FC = () => {
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
-  const { currentDate, setCurrentDate } = useDate();
+  const { currentDate } = useDate();
 
   // State
   const [modalOpen, setModalOpen] = useState<boolean>(false);
@@ -602,22 +595,6 @@ const StaffSchedule: React.FC = () => {
 
   // Получаем данные пользователя
 
-  // Month navigation
-  const goToPreviousMonth = () => {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
-    );
-  };
-
-  const goToNextMonth = () => {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
-    );
-  };
-
-  const goToToday = () => {
-    setCurrentDate(new Date());
-  };
 
   // Form handlers
   const handleInputChange = (
@@ -630,13 +607,6 @@ const StaffSchedule: React.FC = () => {
     }));
   };
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: checked,
-    }));
-  };
 
   const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target;

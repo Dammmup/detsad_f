@@ -33,12 +33,9 @@ import {
   Add,
   Delete,
   Assessment,
-  PictureAsPdf,
   TableChart,
-  InsertDriveFile,
   Email,
   Schedule,
-  GetApp,
   AttachMoney,
   People,
   ChildCare,
@@ -49,15 +46,12 @@ import {
   Sort,
 } from '@mui/icons-material';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
-import { ru } from 'date-fns/locale';
 import { useDate } from '../components/context/DateContext';
 import {
   getReports,
   deleteReport,
   exportReport,
   generateCustomReport,
-  exportChildrenReport,
-  exportAttendanceReport,
   sendReportByEmail,
   getChildrenSummary,
   getAttendanceSummary,
@@ -70,7 +64,7 @@ import { useAuth } from '../components/context/AuthContext';
 import { getUsers } from '../services/users';
 import { ID, UserRole } from '../types/common';
 import childrenApi from '../services/children';
-import { groupsApi } from '../services/groups';
+// import { groupsApi } from '../services/groups'; // This import is not being used
 import { getChildAttendance } from '../services/childAttendance';
 import { getShifts } from '../services/shifts';
 import {
@@ -80,7 +74,6 @@ import {
   exportSalaryReport,
 } from '../utils/excelExport';
 import {
-  getPayrolls,
   getPayrollsByUsers,
   generatePayrollSheets,
 } from '../services/payroll';
@@ -136,11 +129,7 @@ const Reports: React.FC = () => {
   // Недостающие переменные
   const selectedUserId = useRef<string>('');
   const selectedGroupId = useRef<string>('');
-
   const [reportType, setReportType] = useState<string>('attendance');
-  const [reportFormat, setReportFormat] = useState<'pdf' | 'excel' | 'csv'>(
-    'excel',
-  );
   const [reportTitle, setReportTitle] = useState<string>('');
   const [filters, setFilters] = useState<ReportFilters>({
     type: '',
@@ -162,42 +151,15 @@ const Reports: React.FC = () => {
   // Состояния для сводок
   const [childrenSummary, setChildrenSummary] = useState<any>(null);
   const [attendanceSummary, setAttendanceSummary] = useState<any>(null);
-
-  // Загрузка данных при монтировании компонента
-  useEffect(() => {
-    // Загружаем информацию о текущем пользователе
-    const fetchCurrentUser = async () => {
-      try {
-        const response = await fetch('/auth/me', {});
-        if (response.ok) {
-        }
-      } catch (err) {
-        console.error('Ошибка загрузки информации о пользователе:', err);
-      }
-    };
-
-    fetchCurrentUser();
-    fetchData();
-
-    // Устанавливаем начальное название отчета
-    setReportTitle(
-      `Отчет за ${currentDate.toLocaleDateString('ru-RU')} - ${currentDate.toLocaleDateString('ru-RU')}`,
-    );
-  }, [currentDate]);
-
-  // Загрузка всех необходимых данных
-  const fetchData = async () => {
+  const fetchData = React.useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const startDate = startOfMonth(currentDate);
-      const endDate = endOfMonth(currentDate);
-      // Получение списка отчетов
+  
       const reportsData = await getReports();
       setReports(reportsData);
 
-      // Получение списка сотрудников
       const staffData = await getUsers();
       setStaff(
         staffData.map((user) => ({
@@ -226,7 +188,30 @@ const Reports: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentDate, selectedGroupId]);
+  // Загрузка данных при монтировании компонента
+  useEffect(() => {
+    // Загружаем информацию о текущем пользователе
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch('/auth/me', {});
+        if (response.ok) {
+        }
+      } catch (err) {
+        console.error('Ошибка загрузки информации о пользователе:', err);
+      }
+    };
+
+    fetchCurrentUser();
+    fetchData();
+
+    // Устанавливаем начальное название отчета
+    setReportTitle(
+      `Отчет за ${currentDate.toLocaleDateString('ru-RU')} - ${currentDate.toLocaleDateString('ru-RU')}`,
+    );
+  }, [currentDate, fetchData]);
+
+
 
   // Обработчик изменения вкладки
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -409,7 +394,6 @@ const Reports: React.FC = () => {
     setLoading(true);
     try {
       const children = await childrenApi.getAll();
-      const groups = await groupsApi.getAll();
       await exportChildrenList(children, selectedGroupId.current || undefined);
       alert('Отчет по детям успешно экспортирован!');
     } catch (err: any) {
@@ -1336,16 +1320,9 @@ const Reports: React.FC = () => {
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Формат</InputLabel>
-                <Select
-                  value='excel' // Установлено значение Excel по умолчанию
-                  onChange={(e) =>
-                    setReportFormat(e.target.value as 'pdf' | 'excel' | 'csv')
-                  }
-                  label='Формат'
-                  disabled // Отключено, так как формат всегда Excel
-                >
+          
                   <MenuItem value='excel'>Excel</MenuItem>
-                </Select>
+           
               </FormControl>
             </Grid>
           </Grid>

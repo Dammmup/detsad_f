@@ -233,17 +233,6 @@ const Staff = () => {
     }
   };
 
-  // Обработчик для Select
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-
-    // Очистка ошибки при изменении поля
-    if (formErrors[name]) {
-      setFormErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-  };
-
   // Обработчик для фильтра ролей
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
     const { value } = event.target;

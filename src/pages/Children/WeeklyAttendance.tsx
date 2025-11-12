@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   format,
-  startOfWeek,
-  addDays,
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
@@ -34,16 +32,12 @@ import {
   Typography,
   useTheme,
   Tooltip,
-  Menu,
-  ListItemIcon,
-  ListItemText,
 } from '@mui/material';
 import {
   ArrowBackIos as ArrowBackIosIcon,
   ArrowForwardIos as ArrowForwardIosIcon,
   Today as TodayIcon,
   Person as PersonIcon,
-  Download as DownloadIcon,
   CheckCircle,
   Cancel,
   Sick,
@@ -53,7 +47,6 @@ import {
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import apiClient from '../../utils/api';
 
 // Types and Services
 import childrenApi, { Child } from '../../services/children';
@@ -68,8 +61,7 @@ import { useAuth } from '../../components/context/AuthContext';
 import { useDate } from '../../components/context/DateContext';
 import {
   exportChildrenAttendance,
-  getCurrentMonthRange,
-  getCurrentPeriod,
+
 } from '../../utils/excelExport';
 import AttendanceBulkModal from '../../components/AttendanceBulkModal';
 import ExportButton from '../../components/ExportButton';

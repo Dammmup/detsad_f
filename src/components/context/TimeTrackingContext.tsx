@@ -46,7 +46,7 @@ interface TimeTrackingProviderProps {
 export const TimeTrackingProvider = ({
   children,
 }: TimeTrackingProviderProps) => {
-  const [timeStatus, setTimeStatus] = useState<string | null>(null);
+  const [timeStatus] = useState<string | null>(null);
   // setTimeStatus is used in the fetchTimeStatus function below
   const [loading, setLoading] = useState<boolean>(false);
   const [location, setLocation] = useState<GeolocationPosition | null>(null);

@@ -8,7 +8,6 @@ import {
   Alert,
   List,
   ListItem,
-  ListItemText,
   Chip,
 } from '@mui/material';
 import { CalendarToday, AccessTime } from '@mui/icons-material';
@@ -22,9 +21,7 @@ interface StaffScheduleWidgetProps {
   onScheduleChange?: () => void; // Callback для обновления при изменении графика
 }
 
-const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = ({
-  onScheduleChange,
-}) => {
+const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = () => {
   const { user: currentUser } = useAuth();
   const { currentDate } = useDate();
   const [shifts, setShifts] = useState<any[]>([]);

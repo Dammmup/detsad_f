@@ -183,7 +183,7 @@ const Groups = () => {
       fetchGroupsCallback();
       fetchTeachers();
     }
-  }, [isLoggedIn, currentUser, authLoading]);
+  }, [isLoggedIn, currentUser, authLoading, fetchGroupsCallback]);
 
   // Получение списка воспитателей
 

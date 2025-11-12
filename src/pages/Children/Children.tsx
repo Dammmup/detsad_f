@@ -173,7 +173,7 @@ const Children: React.FC = () => {
     }
 
     setFilteredChildren(result);
-  }, [children]);
+  }, [children, groupFilter,nameFilter]);
 
   // Инициализация filteredChildren после загрузки данных
   useEffect(() => {

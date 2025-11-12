@@ -42,7 +42,6 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
-import { ru } from 'date-fns/locale';
 import { useDate } from '../../components/context/DateContext';
 import { getUsers } from '../../services/users';
 import shiftsApi from '../../services/shifts';
@@ -370,19 +369,19 @@ const StaffAttendanceTracking: React.FC = () => {
     getStaffName,
   ]);
 
-  const calculateWorkDuration = (
-    start: string,
-    end: string,
-    breakTime: number = 0,
-  ) => {
-    const [startHours, startMinutes] = start.split(':').map(Number);
-    const [endHours, endMinutes] = end.split(':').map(Number);
+// const calculateWorkDuration = (
+//   start: string,
+//   end: string,
+//   breakTime: number = 0,
+// ) => {
+//   const [startHours, startMinutes] = start.split(':').map(Number);
+//   const [endHours, endMinutes] = end.split(':').map(Number);
 
-    const startTotalMinutes = startHours * 60 + startMinutes;
-    const endTotalMinutes = endHours * 60 + endMinutes;
+//   const startTotalMinutes = startHours * 60 + startMinutes;
+//   const endTotalMinutes = endHours * 60 + endMinutes;
 
-    return Math.max(0, endTotalMinutes - startTotalMinutes - breakTime);
-  };
+//   return Math.max(0, endTotalMinutes - startTotalMinutes - breakTime);
+// };
 
   // Диалог отметки времени
   const [markDialogOpen, setMarkDialogOpen] = useState(false);
@@ -448,12 +447,11 @@ const StaffAttendanceTracking: React.FC = () => {
       });
       if (myShift) {
         // Проверяем, опаздывает ли сотрудник
-        const now = new Date();
-        const shiftDate = new Date(`${myShift.date} ${myShift.startTime}`);
-        const lateMinutes = Math.max(
-          0,
-          Math.floor((now.getTime() - shiftDate.getTime()) / (1000 * 60)),
-        );
+        
+        // Обновляем смену с информацией об опоздании
+        if (myShift.id) {
+          await shiftsApi.checkIn(myShift.id);
+        }
 
         // Определяем статус на основе опоздания
         if (myShift.id) {

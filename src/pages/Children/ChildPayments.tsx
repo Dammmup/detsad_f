@@ -30,7 +30,6 @@ import {
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
-import { ru } from 'date-fns/locale';
 import { useDate } from '../../components/context/DateContext';
 import { IChildPayment, Child, Group } from '../../types/common';
 import childPaymentApi from '../../services/childPayment';
@@ -71,7 +70,6 @@ const ChildPayments: React.FC = () => {
 
   // Фильтрованные платежи
   const [filteredPayments, setFilteredPayments] = useState<IChildPayment[]>([]);
-  const [childSearch, setChildSearch] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationAttempted, setGenerationAttempted] = useState(false);
 
@@ -108,7 +106,18 @@ const ChildPayments: React.FC = () => {
       setGroups([]);
     }
   };
-
+ const handleGeneratePayments = React.useCallback(async () => {
+    setIsGenerating(true);
+    setError(null);
+    try {
+      await childPaymentApi.generate(currentDate);
+      await fetchPayments(); // Refetch payments after generation
+    } catch (e: any) {
+      setError(e?.message || 'Ошибка генерации оплат');
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [currentDate]);
   useEffect(() => {
     setGenerationAttempted(false);
     fetchPayments();
@@ -188,20 +197,11 @@ const ChildPayments: React.FC = () => {
     currentDate,
     loading,
     generationAttempted,
+    isGenerating,
+    handleGeneratePayments
   ]);
 
-  const handleGeneratePayments = async () => {
-    setIsGenerating(true);
-    setError(null);
-    try {
-      await childPaymentApi.generate(currentDate);
-      await fetchPayments(); // Refetch payments after generation
-    } catch (e: any) {
-      setError(e?.message || 'Ошибка генерации оплат');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+ 
 
   const handleOpenModal = (payment?: IChildPayment) => {
     if (payment) {
@@ -837,7 +837,6 @@ const ChildPayments: React.FC = () => {
                   {...params}
                   label='Ребенок'
                   variant='outlined'
-                  onChange={(e) => setChildSearch(e.target.value)}
                 />
               )}
               noOptionsText='Ребенок не найден'

@@ -73,12 +73,6 @@ const Settings: React.FC = () => {
   const [geolocationSettings, setGeolocationSettings] =
     useState<GeolocationSettings | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  // Состояния для настроек автоматического расчета зарплат
-  const [payrollSettings, setPayrollSettings] = useState({
-    autoCalculationDay: 25, // день месяца для автоматического расчета
-    emailRecipients: '',
-    autoClearData: true,
-  });
 
   // Состояния для UI
   const [loading, setLoading] = useState<boolean>(true);
@@ -138,11 +132,7 @@ const Settings: React.FC = () => {
     setTabValue(newValue);
   };
 
-  // Обработчик сохранения настроек автоматического расчета зарплат
-  const handleSavePayrollSettings = async () => {
-    // В реальном приложении здесь будет вызов API для сохранения настроек
-    alert('Настройки автоматического расчета зарплат успешно сохранены');
-  };
+
 
   // Обработчик сохранения настроек детского сада
   const handleSaveKindergartenSettings = async () => {
