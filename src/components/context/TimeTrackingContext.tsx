@@ -109,8 +109,6 @@ export const TimeTrackingProvider = ({
       console.error('Error fetching time status:', error);
       toast.error('Ошибка загрузки статуса рабочего времени');
       throw error;
-    } finally {
-      setLoading(false);
     }
   }, []);
 

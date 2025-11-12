@@ -161,7 +161,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
   // Загрузка событий
   useEffect(() => {
     loadExportEntities();
-  }, []);
+  }, [loadExportEntities]);
 
   // Функция для получения количества записей в коллекциях
   const getEntityCount = async (collection: string): Promise<number> => {

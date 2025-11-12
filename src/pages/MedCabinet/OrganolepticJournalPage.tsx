@@ -63,7 +63,7 @@ export default function OrganolepticJournalPage() {
 
    useEffect(() => {
      fetchRecords();
-   }, [date, group]);
+   }, [date, group, fetchRecords]);
 
   const handleGenerateByMenu = async () => {
     setLoading(true);
