@@ -70,6 +70,9 @@ const Groups = () => {
   const [form, setForm] = useState<GroupFormData>(defaultForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  
+  // Состояние для отслеживания первоначальной загрузки
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Состояние для разворачивания групп с детьми
   const [expandedGroups, setExpandedGroups] = useState<{
@@ -184,6 +187,14 @@ const Groups = () => {
       fetchTeachers();
     }
   }, [isLoggedIn, currentUser, authLoading, fetchGroupsCallback]);
+
+  // Улучшенная обработка состояния загрузки
+  useEffect(() => {
+    // Когда данные загружены, устанавливаем флаг завершения первоначальной загрузки
+    if (!loading && !initialLoadComplete) {
+      setInitialLoadComplete(true);
+    }
+  }, [loading, initialLoadComplete]);
 
   // Получение списка воспитателей
 
@@ -379,7 +390,8 @@ const Groups = () => {
         </Button>
       </Box>
 
-      {loading && (
+      {/* Улучшенная обработка загрузки: показываем данные даже при загрузке, если они уже есть */}
+      {loading && !initialLoadComplete && (
         <Box
           display='flex'
           justifyContent='center'
@@ -391,6 +403,9 @@ const Groups = () => {
         </Box>
       )}
       {error && <Alert severity='error'>{error}</Alert>}
+      
+      {/* Показываем данные сразу, если они уже загружены или есть в кэше */}
+      {(!loading || initialLoadComplete) && !error && (
 
       {!loading && !error && (
         <>
