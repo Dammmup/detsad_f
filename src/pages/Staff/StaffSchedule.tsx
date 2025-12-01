@@ -1063,8 +1063,8 @@ const StaffSchedule: React.FC = () => {
                               <TableCell
                                 key={day.toString()}
                                 onClick={() => {
-                                  if (!isDayHoliday && !isWeekend(day)) {
-                                    // Не открываем модальное окно для праздничных дней и выходных
+                                  if (!isDayHoliday) {
+                                    // Не открываем модальное окно только для праздничных дней
                                     setFormData({
                                       ...formData,
                                       staffId: staffId,
@@ -1090,23 +1090,19 @@ const StaffSchedule: React.FC = () => {
                                         ? 'grey.200'
                                         : 'action.hover',
                                     cursor:
-                                      isDayHoliday || isWeekend(day)
+                                      isDayHoliday
                                         ? 'not-allowed'
                                         : 'pointer',
                                   },
                                 }}
                               >
-                                {isDayHoliday || isWeekend(day) ? (
+                                {isDayHoliday ? (
                                   <Box
                                     display='flex'
                                     alignItems='center'
                                     justifyContent='center'
                                     height='100%'
-                                    color={
-                                      isDayHoliday
-                                        ? 'error.main'
-                                        : 'text.secondary'
-                                    }
+                                    color='error.main'
                                     fontSize='0.8rem'
                                   >
                                     {isDayHoliday ? 'Праздник' : 'Выходной'}
@@ -1127,11 +1123,10 @@ const StaffSchedule: React.FC = () => {
                                       }}
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        // Проверяем, не является ли день праздничным или выходным перед редактированием
+                                        // Проверяем, не является ли день праздничным перед редактированием
                                         const shiftDate = new Date(shift.date);
                                         if (
-                                          !isHoliday(shiftDate) &&
-                                          !isWeekend(shiftDate)
+                                          !isHoliday(shiftDate)
                                         ) {
                                           handleEditShift(shift);
                                         }
