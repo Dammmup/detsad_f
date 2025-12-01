@@ -31,13 +31,30 @@ import {
   ExpandLess,
 } from '@mui/icons-material';
 import { useGroups } from '../../components/context/GroupsContext';
-import { Child } from '../../services/children';
+import { Child } from '../../types/common';
 // User импорт не нужен для детей
 import { useAuth } from '../../components/context/AuthContext';
 import { SelectChangeEvent } from '@mui/material/Select';
 import apiClient from '../../utils/api';
 import ExportButton from '../../components/ExportButton';
 // import { getChildrenByGroup } from '../../services'; // больше не используем отдельный маршрут, берём детей из /groups
+
+// Определяем интерфейс для группы с возможными свойствами
+interface Group {
+  id: string;
+  _id?: string;
+  name: string;
+  description?: string;
+  ageGroup?: string | string[];
+  isActive?: boolean;
+  teacher?: string;
+  teacherId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  maxStudents?: number;
+  children?: Child[];
+}
+
 interface TeacherOption {
   id: string;
   fullName: string;
@@ -62,7 +79,7 @@ const defaultForm: GroupFormData = {
 
 const Groups = () => {
   const groupsContext = useGroups();
-  const [groups, setGroups] = useState<any[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [teacherList, setTeacherList] = useState<TeacherOption[]>([]); // [{id, fullName}]
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +103,7 @@ const Groups = () => {
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
 
   const handleExport = async (
-    exportType: string,
+    _exportType: string, // Переменная _exportType не используется, но сохраняем для совместимости сигнатуры
     exportFormat: 'pdf' | 'excel' | 'csv',
   ) => {
     setLoading(true);
@@ -113,9 +130,8 @@ const Groups = () => {
   const fetchTeachers = async () => {
     try {
       // Для учителей оставляем getUsers, для детей используем Child
-      const users = await import('../../services/users').then((m) =>
-        m.getUsers(),
-      );
+      const { getUsers } = await import('../../services/users');
+      const users = await getUsers();
       const filtered = users.filter((u: any) =>
         ['teacher', 'assistant'].includes(u.role as any),
       );
@@ -131,45 +147,33 @@ const Groups = () => {
     setLoading(true);
     setError(null);
     try {
-      if (process.env.NODE_ENV !== 'production')
-        console.log('Запрашиваю список групп...');
       const data = await groupsContext.fetchGroups(true);
-      if (process.env.NODE_ENV !== 'production')
-        console.log('Получены данные групп:', data);
 
       // Преобразуем данные, если нужно
-      // Приводим к типу Group
-      const formattedData: any[] = Array.isArray(data)
+      const formattedData = Array.isArray(data)
         ? data.map((group) => ({
             id: group.id || group._id,
             name: group.name,
             description: group.description || '',
             // backend хранит ageGroup как строку; в UI используем массив для multiple UI
-            ageGroup: Array.isArray((group as any).ageGroup)
-              ? (group as any).ageGroup
-              : (group as any).ageGroup
-                ? [String((group as any).ageGroup)]
+            ageGroup: Array.isArray(group.ageGroup)
+                ? [String(group.ageGroup)]
                 : [],
             isActive: group.isActive ?? true,
             // сервер хранит teacherId; приводим к строке id
-            teacher: (group as any).teacherId
-              ? String((group as any).teacherId)
-              : '',
+            teacher: group.teacher || (group.teacherId ? String(group.teacherId) : ''),
             // isActive: group.isActive, // убрано, если не используется в UI
             // createdBy: group.createdBy, // убрано, если не используется в UI
             createdAt: group.createdAt,
             updatedAt: group.updatedAt,
             maxStudents: group.maxStudents,
             // добавляем детей, если backend их уже вернул
-            children: (group as any).children || [],
+            children: group.children || [],
           }))
         : [];
 
-      if (process.env.NODE_ENV !== 'production')
-        console.log('Отформатированные данные:', formattedData);
       setGroups(formattedData);
     } catch (err: any) {
-      console.error('Ошибка при загрузке групп:', err);
       setError(err?.message || 'Ошибка загрузки групп');
     } finally {
       setLoading(false);
@@ -179,13 +183,15 @@ const Groups = () => {
   const fetchGroupsCallback = useCallback(fetchGroups, [groupsContext]);
 
   // Загрузка групп только после успешной авторизации
-  useEffect(() => {
-    if (isLoggedIn && currentUser && !authLoading) {
-      if (process.env.NODE_ENV !== 'production')
-        console.log('User authenticated, loading groups and teachers...');
-      fetchGroupsCallback();
-      fetchTeachers();
-    }
+ useEffect(() => {
+    (async () => {
+      if (isLoggedIn && currentUser && !authLoading) {
+        if (process.env.NODE_ENV !== 'production')
+          console.log('User authenticated, loading groups and teachers...');
+        await fetchGroupsCallback();
+        await fetchTeachers();
+      }
+    })();
   }, [isLoggedIn, currentUser, authLoading, fetchGroupsCallback]);
 
   // Улучшенная обработка состояния загрузки
@@ -198,36 +204,38 @@ const Groups = () => {
 
   // Получение списка воспитателей
 
-  const teachers = teacherList.map((t) => t.fullName);
+  // Создаем карту для быстрого поиска воспитателей по id
+  const teacherMap = new Map(teacherList.map((t) => [t.id, t.fullName]));
 
   // Открытие модального окна для добавления/редактирования
-  const handleOpenModal = (group?: any) => {
-    if (group) {
-      setForm({
-        id: group.id,
-        name: group.name,
-        description: group.description || '',
-        maxStudents: group.maxStudents || 20,
-        ageGroup: Array.isArray(group.ageGroup)
-          ? group.ageGroup
-          : typeof group.ageGroup === 'string'
-            ? [group.ageGroup]
-            : [],
-        teacher: (group as any).teacher || (group as any).teacherId || '',
-      });
-      setEditId(group.id);
-    } else {
-      setForm(defaultForm);
-      setEditId(null);
-    }
-    setModalOpen(true);
-  };
+    const handleOpenModal = (group?: Group) => {
+      if (group) {
+        setForm({
+          id: group.id,
+          name: group.name,
+          description: group.description || '',
+          maxStudents: group.maxStudents || 20,
+          ageGroup: Array.isArray(group.ageGroup)
+            ? group.ageGroup
+            : typeof group.ageGroup === 'string'
+              ? [group.ageGroup]
+              : [],
+          teacher: group.teacher || group.teacherId || '',
+        });
+        setEditId(group.id);
+      } else {
+        setForm(defaultForm);
+        setEditId(null);
+      }
+      setModalOpen(true);
+    };
 
   // Закрытие модального окна
   const handleCloseModal = () => {
     setModalOpen(false);
     setForm(defaultForm);
     setEditId(null);
+    setSaving(false); // Сбрасываем состояние сохранения
   };
 
   // Обработка изменений в форме для текстовых/числовых полей
@@ -242,16 +250,16 @@ const Groups = () => {
   };
 
   // Обработка изменений в Select для ageGroup (multiple)
-  const handleAgeGroupChange = (e: SelectChangeEvent<string[]>) => {
+  const handleAgeGroupChange = (e: SelectChangeEvent<unknown>) => {
     const { value } = e.target;
-    const arr = typeof value === 'string' ? value.split(',') : value;
+    const arr = typeof value === 'string' ? value.split(',') : value as string[];
     setForm((prev) => ({ ...prev, ageGroup: arr }));
   };
 
   // Обработка изменений в Select для teacher (single)
   const handleTeacherChange = (e: SelectChangeEvent<string>) => {
     const { value } = e.target;
-    setForm((prev) => ({ ...prev, teacher: value as string }));
+    setForm((prev) => ({ ...prev, teacher: value }));
   };
 
   // Сохранение группы (создание или обновление)
@@ -273,17 +281,15 @@ const Groups = () => {
         isActive: true,
       };
 
-      console.log('📤 Отправляю данные группы на backend:', groupData);
-
       if (editId) {
         await groupsContext.updateGroup(editId, groupData);
       } else {
         await groupsContext.createGroup(groupData);
       }
+      // Успешное сохранение: закрываем модальное окно и обновляем список
       handleCloseModal();
-      fetchGroups();
+      await fetchGroups();
     } catch (e: any) {
-      console.error('❌ Ошибка сохранения группы:', e);
       alert(e?.message || 'Ошибка сохранения');
     } finally {
       setSaving(false);
@@ -297,7 +303,7 @@ const Groups = () => {
     setSaving(true);
     try {
       await groupsContext.deleteGroup(id);
-      fetchGroups();
+      await fetchGroups();
     } catch (e: any) {
       alert(e?.message || 'Ошибка удаления');
     } finally {
@@ -406,8 +412,6 @@ const Groups = () => {
       
       {/* Показываем данные сразу, если они уже загружены или есть в кэше */}
       {(!loading || initialLoadComplete) && !error && (
-
-      {!loading && !error && (
         <>
           {groups.length === 0 ? (
             <Alert severity='info' style={{ marginTop: 16 }}>
@@ -416,7 +420,7 @@ const Groups = () => {
           ) : (
             <Table>
               <TableHead>
-                <TableRow>
+                <TableRow hover>
                   <TableCell>Название</TableCell>
                   <TableCell>Описание</TableCell>
                   <TableCell>Возрастная группа</TableCell>
@@ -428,42 +432,43 @@ const Groups = () => {
               <TableBody>
                 {groups.map((group) => (
                   <React.Fragment key={group.id}>
-                    <TableRow>
+                    <TableRow hover>
                       <TableCell>{group.name}</TableCell>
                       <TableCell>{group.description}</TableCell>
                       <TableCell>
-                        {Array.isArray(group.ageGroup)
+                        {group.ageGroup && Array.isArray(group.ageGroup)
                           ? group.ageGroup.join(', ')
-                          : String(group.ageGroup)}
+                          : group.ageGroup
+                            ? String(group.ageGroup)
+                            : ''}
                       </TableCell>
                       <TableCell>{group.maxStudents}</TableCell>
                       <TableCell>
-                        {teacherList.find((t) => t.id === group.teacher)
-                          ?.fullName || '—'}
+                        {group.teacher ? teacherMap.get(group.teacher) || '—' : '—'}
                       </TableCell>
                       <TableCell align='right'>
                         <IconButton
                           onClick={(e) =>
-                            handleToggleGroupChildren(e, group.id)
+                            handleToggleGroupChildren(e, group.id!)
                           }
                           title='Просмотреть детей группы'
                         >
-                          {expandedGroups[group.id]?.expanded ? (
-                            <ExpandLess color='primary' />
+                          {group.id && expandedGroups[group.id]?.expanded ? (
+                            <ExpandLess color="primary" />
                           ) : (
-                            <Visibility color='primary' />
+                            <Visibility color="primary" />
                           )}
                         </IconButton>
                         <IconButton onClick={() => handleOpenModal(group)}>
                           <Edit />
                         </IconButton>
-                        <IconButton onClick={() => handleDelete(group.id)}>
+                        <IconButton onClick={() => handleDelete(group.id!)}>
                           <Delete color='error' />
                         </IconButton>
                       </TableCell>
                     </TableRow>
                     {/* Разворачивающаяся строка с детьми */}
-                    {expandedGroups[group.id]?.expanded && (
+                    {group.id && expandedGroups[group.id]?.expanded && (
                       <TableRow>
                         <TableCell
                           colSpan={6}
@@ -478,10 +483,10 @@ const Groups = () => {
                             >
                               Дети группы "{group.name}"
                             </Typography>
-                            {expandedGroups[group.id]?.loading ? (
+                            {group.id && expandedGroups[group.id]?.loading ? (
                               <Box
-                                display='flex'
-                                justifyContent='center'
+                                display="flex"
+                                justifyContent="center"
                                 alignItems='center'
                                 py={2}
                               >
@@ -490,10 +495,9 @@ const Groups = () => {
                                   Загрузка детей...
                                 </Typography>
                               </Box>
-                            ) : expandedGroups[group.id]?.children?.length ===
-                              0 ? (
+                            ) : !(group.id && expandedGroups[group.id]?.children?.length) ? (
                               <Typography
-                                variant='body2'
+                                variant="body2"
                                 color='text.secondary'
                                 sx={{ py: 2 }}
                               >
@@ -521,8 +525,8 @@ const Groups = () => {
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                  {expandedGroups[group.id]?.children?.map(
-                                    (child, index) => (
+                                  {group.id && expandedGroups[group.id]?.children?.map(
+                                    (child: Child, index: number) => (
                                       <TableRow key={child.id || index}>
                                         <TableCell>{child.fullName}</TableCell>
                                         <TableCell>
@@ -611,7 +615,7 @@ const Groups = () => {
             value={form.maxStudents}
             onChange={handleChange}
           />
-          {teachers.length > 0 && (
+          {teacherList.length > 0 && (
             <FormControl fullWidth margin='dense'>
               <InputLabel>Воспитатель</InputLabel>
               <Select

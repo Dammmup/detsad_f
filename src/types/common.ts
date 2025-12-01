@@ -1,5 +1,7 @@
 // Common types for the application
 
+import Children from "../services/children";
+
 export type ID = string;
 
 export enum UserRole {
@@ -27,11 +29,13 @@ export interface Group {
   description?: string;
   childrenCount?: number;
   teacher?: string; // Добавляем поле для учителя
+     teacherId?: string;
   isActive?: boolean; // Добавляем поле для статуса активности
   maxStudents?: number; // Добавляем поле для максимального количества студентов
   ageGroup?: string[]; // Добавляем поле для возрастной группы
   createdAt?: string;
   updatedAt?: string;
+  children?: Child[];
 }
 
 export interface Child {

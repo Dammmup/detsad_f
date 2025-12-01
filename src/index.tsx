@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import axios from 'axios';
-import { HashRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 // Стили удалены для упрощения структуры
@@ -13,7 +13,6 @@ import { TimeTrackingProvider } from './components/context/TimeTrackingContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { createHashHistory, createMemoryHistory } from 'history';
 import './sentry'; // Инициализируем Sentry
 
 // Простая тема MUI для детского сада
@@ -77,16 +76,6 @@ const theme = createTheme({
   },
 });
 
-const history =
-  typeof window !== 'undefined'
-    ? createHashHistory()
-    : createMemoryHistory({
-        initialEntries: [],
-      });
-
-export function getHistory() {
-  return history;
-}
 
 console.log('REACT_APP_API_URL from env:', process.env.REACT_APP_API_URL);
 axios.defaults.baseURL =
@@ -130,7 +119,7 @@ const rootElement = document.getElementById('root');
 if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
-    <HashRouter>
+    <BrowserRouter>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <LayoutProvider>
@@ -151,7 +140,7 @@ if (rootElement) {
           </TimeTrackingProvider>
         </LayoutProvider>
       </ThemeProvider>
-    </HashRouter>,
+    </BrowserRouter>,
   );
 }
 
