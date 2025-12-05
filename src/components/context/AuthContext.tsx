@@ -176,7 +176,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
       if (!authValid) {
         console.log('🚫 Пользователь не авторизован, редиректим');
-        navigate('/login', { replace: true });
+        // Use window.location instead of navigate to avoid potential routing conflicts
+        window.location.href = '/login';
       } else {
         setChecking(false);
       }
@@ -185,7 +186,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     verifyAuth();
   }, [loading, checkAuth, navigate]);
 
-  if (loading || checking) {
+  // Show loading spinner only for initial auth check, not for route changes
+ if (loading && checking) {
     return (
       <Box
         display='flex'
@@ -197,13 +199,34 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         top='0'
         left='0'
         zIndex={9999}
+        bgcolor='background.default'
       >
         <CircularProgress size={60} color='primary' />
       </Box>
     );
   }
 
-  if (!isLoggedIn) return null;
+ // If auth check is complete but user is not logged in, return null
+  if (!loading && !isLoggedIn) {
+    return null;
+  }
 
-  return <>{children}</>;
+  // If auth check is complete and user is logged in, render children
+  if (!checking) {
+    return <>{children}</>;
+  }
+
+  // Default fallback to avoid white screen
+  return (
+    <Box
+      display='flex'
+      justifyContent='center'
+      alignItems='center'
+      minHeight='100vh'
+      minWidth='100vw'
+      bgcolor='background.default'
+    >
+      <CircularProgress size={60} color='primary' />
+    </Box>
+  );
 };

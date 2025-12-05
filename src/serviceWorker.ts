@@ -137,8 +137,12 @@ function checkValidServiceWorker(swUrl: string | URL | Request, config: any) {
 
 export function unregister() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then((registration) => {
-      registration.unregister();
-    });
+    navigator.serviceWorker.ready
+      .then((registration) => {
+        registration.unregister();
+      })
+      .catch((error) => {
+        console.error('Error unregistering service worker:', error);
+      });
   }
 }

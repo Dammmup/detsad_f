@@ -41,15 +41,15 @@ body {
     min-height: 44px !important;
   }
   .MuiToolbar-root {
-    min-height: 4px !important;
+    min-height: 48px !important;
     padding-left: 6px !important;
     padding-right: 6px !important;
-  }
+ }
   /* .MuiDrawer-paper { width: 48px !important; } — убрано для полноразмерного Sidebar */
-  .MuiTypography-h6 {
+ .MuiTypography-h6 {
     font-size: 0.85rem !important;
   }
-  .MuiButton-root {
+ .MuiButton-root {
     font-size: 0.75rem !important;
     padding: 6px 10px !important;
   }

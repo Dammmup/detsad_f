@@ -146,25 +146,20 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
       </AppBar>
 
       {/* Sidebar с древовидной структурой */}
-      {isMobile ? (
-        <Sidebar
-          location={location}
-          structure={sidebarStructure}
-          variant='temporary'
-          open={drawerOpen}
-          onClose={toggleDrawer}
-        />
-      ) : (
-        <Sidebar
-          location={location}
-          structure={sidebarStructure}
-          variant='permanent'
-          open={true}
-        />
-      )}
+      <Sidebar
+        location={location}
+        structure={sidebarStructure}
+        variant={isMobile ? 'temporary' : 'permanent'}
+        open={isMobile ? drawerOpen : true}
+        onClose={isMobile ? toggleDrawer : undefined}
+      />
 
       {/* Основное содержимое */}
-      <Box component='main' sx={{ flexGrow: 1, p: 3 }}>
+      <Box component='main' sx={{
+        flexGrow: 1,
+        p: 3,
+        ...(isMobile && drawerOpen ? { overflow: 'hidden' } : {})
+      }}>
         <Toolbar />
         <Container maxWidth='lg'>
           <Routes>

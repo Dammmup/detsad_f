@@ -119,29 +119,33 @@ const rootElement = document.getElementById('root');
 if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
-    <BrowserRouter>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <LayoutProvider>
-          <TimeTrackingProvider>
-            <App />
-            <ToastContainer
-              position='top-right'
-              autoClose={5000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme='light'
-            />
-          </TimeTrackingProvider>
-        </LayoutProvider>
-      </ThemeProvider>
-    </BrowserRouter>,
+    <React.StrictMode>
+      <BrowserRouter>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <LayoutProvider>
+            <TimeTrackingProvider>
+              <App />
+              <ToastContainer
+                position='top-right'
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme='light'
+              />
+            </TimeTrackingProvider>
+          </LayoutProvider>
+        </ThemeProvider>
+      </BrowserRouter>
+    </React.StrictMode>
   );
+} else {
+  console.error('Failed to find the root element');
 }
 
 serviceWorker.unregister();
