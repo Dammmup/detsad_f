@@ -12,10 +12,23 @@
 ```
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
+    { "source": "/((?!static|favicon|manifest).*)", "destination": "/" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    }
   ]
 }
 ```
+
+Эта конфигурация перенаправляет все маршруты на `/`, за исключением статических файлов (CSS, JS, изображения), favicon и manifest файлов, что позволяет корректно работать клиентской маршрутизации без ошибок загрузки статических ресурсов.
 
 ### Netlify
 
