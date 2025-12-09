@@ -29,8 +29,10 @@ import apiClient from '../../utils/api';
 import ChildrenModal from '../../components/ChildrenModal';
 
 import ExportButton from '../../components/ExportButton';
+import { useAuth } from '../../components/context/AuthContext';
 
 const Children: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [children, setChildren] = useState<Child[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,12 +95,24 @@ const Children: React.FC = () => {
   };
 
   // Загрузка детей
-  const fetchChildren = async () => {
+ const fetchChildren = async () => {
     setLoading(true);
     setError(null);
     try {
       const childrenList = await childrenApi.getAll();
-      setChildren(childrenList);
+      
+      if (currentUser && (currentUser.role === 'teacher' || currentUser.role === 'substitute')) {
+        // Для преподавателей и заменителей показываем только детей из их групп
+        const userGroups = currentUser.groups || [];
+        const filteredChildren = childrenList.filter(child => {
+          const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
+          return userGroups.some((group: any) => group._id === childGroupId);
+        });
+        setChildren(filteredChildren);
+      } else {
+        // Для администраторов и других ролей показываем всех детей
+        setChildren(childrenList);
+      }
     } catch (e: any) {
       setError(e?.message || 'Ошибка загрузки');
     } finally {
@@ -322,7 +336,7 @@ const Children: React.FC = () => {
         alignItems={isMobile ? 'stretch' : 'center'}
         gap={2}
         mb={2}
-        sx={{ p: 2, backgroundColor: '#f5f5', borderRadius: 1 }}
+        sx={{ p: 2, backgroundColor: '#f8f9fa', borderRadius: 1, border: '1px solid #e0e0e0' }}
       >
         <TextField
           label='Фильтр по имени'

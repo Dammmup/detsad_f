@@ -1,6 +1,6 @@
 import MenuItemsAdminPage from '../pages/MedCabinet/MenuItemsAdminPage';
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -10,8 +10,12 @@ import {
   CssBaseline,
   IconButton,
   Button,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
-import { Menu as MenuIcon } from '@mui/icons-material';
+import { Menu as MenuIcon, AccountCircle as AccountCircleIcon, ExitToApp as ExitToAppIcon, MoreVert as MoreVertIcon } from '@mui/icons-material';
 
 // Импорт страниц
 import Dashboard from '../pages/Dashboard';
@@ -30,14 +34,10 @@ import StaffSchedule from '../pages/Staff/StaffSchedule';
 
 import WeeklyAttendance from '../pages/Children/WeeklyAttendance';
 import ReportsSalary from './reports/ReportsSalary';
-import { logout, getCurrentUser } from '../services/auth';
-import { useNavigate } from 'react-router-dom';
+import { logout, getCurrentUser } from '../services';
 import Reports from '../pages/Reports';
 import StaffAttendanceTracking from '../pages/Staff/StaffAttendanceTracking';
 import { Documents } from '../pages/Documents';
-
-// Импорт страниц медкабинета
-
 import TubPositiveJournal from '../pages/MedCabinet/TubPositiveJournal';
 import InfectiousDiseasesJournal from '../pages/MedCabinet/InfectiousDiseasesJournal';
 import ContactInfectionJournal from '../pages/MedCabinet/ContactInfectionJournal';
@@ -60,6 +60,7 @@ interface SimpleLayoutProps {
 
 const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:768px)');
@@ -71,6 +72,24 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleProfileClick = () => {
+    navigate('/app/profile');
+    handleMenuClose();
+  };
+
+  const handleLogoutClick = async () => {
+    await handleLogout();
+    handleMenuClose();
   };
 
   return (
@@ -87,35 +106,37 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
-        <Toolbar style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <IconButton
-            color='inherit'
-            aria-label='open drawer'
-            edge='start'
-            onClick={toggleDrawer}
-            sx={{ mr: 2, display: { xs: 'block', md: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography
-              variant='h6'
-              noWrap
-              component='div'
-              sx={{ fontWeight: 600, letterSpacing: 1 }}
+        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton
+              color='inherit'
+              aria-label='open drawer'
+              edge='start'
+              onClick={toggleDrawer}
+              sx={{ mr: 1, display: { xs: 'block', md: 'none' } }}
             >
-              Система управления детским садом
-            </Typography>
-            <Typography
-              variant='subtitle1'
-              noWrap
-              component='div'
-              sx={{ fontWeight: 400, letterSpacing: 0.5, opacity: 0.9 }}
-            >
-              {getCurrentUser()?.fullName || ''}
-            </Typography>
+              <MenuIcon />
+            </IconButton>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden' }}>
+              <Typography
+                variant='h6'
+                noWrap
+                component='div'
+                sx={{ fontWeight: 600, letterSpacing: 0.5, fontSize: { xs: '0.9rem', sm: '1rem' } }}
+              >
+                Система управления детским садом
+              </Typography>
+              <Typography
+                variant='subtitle2'
+                noWrap
+                component='div'
+                sx={{ fontWeight: 400, letterSpacing: 0.5, opacity: 0.9, fontSize: { xs: '0.7rem', sm: '0.8rem' } }}
+              >
+                {getCurrentUser()?.fullName || ''}
+              </Typography>
+            </Box>
           </Box>
-          <Box>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <Button
               variant='outlined'
               color='primary'
@@ -125,6 +146,11 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
                 borderColor: 'white',
                 color: 'white',
                 '&:hover': { background: 'rgba(255,255,0.08)' },
+                display: { xs: 'none', sm: 'inline-flex' },
+                minWidth: 'auto',
+                px: 1.5,
+                py: 0.5,
+                fontSize: { xs: '0.7rem', sm: '0.8rem' }
               }}
             >
               Профиль
@@ -137,12 +163,61 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
                 borderColor: 'white',
                 color: 'white',
                 '&:hover': { background: 'rgba(255,255,0.08)' },
+                display: { xs: 'none', sm: 'inline-flex' },
+                minWidth: 'auto',
+                px: 1.5,
+                py: 0.5,
+                fontSize: { xs: '0.7rem', sm: '0.8rem' }
               }}
             >
               Выйти
             </Button>
+            {/* Mobile menu for profile/logout options */}
+            <Box sx={{ display: { xs: 'flex', sm: 'none' }, gap: 0.5 }}>
+              <IconButton
+                color='inherit'
+                onClick={handleMenuOpen}
+                title="Меню"
+                size="small"
+              >
+                <MoreVertIcon sx={{ color: 'white', fontSize: 20 }} />
+              </IconButton>
+            </Box>
           </Box>
         </Toolbar>
+        {/* Dropdown menu for mobile */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          PaperProps={{
+            elevation: 8,
+            sx: {
+              overflow: 'visible',
+              filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+              mt: 1.5,
+              '& .MuiAvatar-root': {
+                width: 32,
+                height: 32,
+                ml: -0.5,
+                mr: 1,
+              },
+            },
+          }}
+        >
+          <MenuItem onClick={handleProfileClick}>
+            <ListItemIcon>
+              <AccountCircleIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Профиль</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleLogoutClick}>
+            <ListItemIcon>
+              <ExitToAppIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Выйти</ListItemText>
+          </MenuItem>
+        </Menu>
       </AppBar>
 
       {/* Sidebar с древовидной структурой */}

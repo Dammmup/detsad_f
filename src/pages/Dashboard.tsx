@@ -85,11 +85,12 @@ const Dashboard = () => {
     >
       <DateNavigator />
       {/* На мобильных список задач всегда сверху и в одну колонку */}
-      {isMobile && (
+      {/* Убрано дублирование TaskListColumn на мобильных устройствах */}
+      {/* {isMobile && (
         <Box sx={{ mb: 3 }}>
           <TaskListColumn />
         </Box>
-      )}
+      )} */}
 
       <Box
         sx={{
