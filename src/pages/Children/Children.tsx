@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -65,9 +65,13 @@ const Children: React.FC = () => {
     const groupIndex = groups.findIndex((g) => g._id === groupId);
     return groupIndex !== -1 ? colors[groupIndex % colors.length] : '#B0B0B0';
   };
+  // Helper function to safely extract group ID from child
+  const getChildGroupId = (child: Child): string | undefined => {
+    return typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
+  };
 
   const handleExport = async (
-    exportType: string,
+    _exportType: string, // Renamed to indicate it's unused
     exportFormat: 'pdf' | 'excel' | 'csv',
   ) => {
     setLoading(true);
@@ -94,46 +98,59 @@ const Children: React.FC = () => {
     }
   };
 
-  // Загрузка детей
- const fetchChildren = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const childrenList = await childrenApi.getAll();
-      
-      if (currentUser && (currentUser.role === 'teacher' || currentUser.role === 'substitute')) {
-        // Для преподавателей и заменителей показываем только детей из их групп
-        const userGroups = currentUser.groups || [];
-        const filteredChildren = childrenList.filter(child => {
-          const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
-          return userGroups.some((group: any) => group._id === childGroupId);
-        });
-        setChildren(filteredChildren);
-      } else {
-        // Для администраторов и других ролей показываем всех детей
-        setChildren(childrenList);
-      }
-    } catch (e: any) {
-      setError(e?.message || 'Ошибка загрузки');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Загрузка групп
-  const fetchGroupsList = async () => {
+  const fetchGroupsList = useCallback(async () => {
     try {
       const groupList = await groupsApi.getAll();
       setGroups(groupList);
     } catch {
       setGroups([]);
     }
-  };
-
-  useEffect(() => {
-    fetchChildren();
-    fetchGroupsList();
   }, []);
+
+  // Загрузка детей
+  const fetchChildren = useCallback(async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const childrenList = await childrenApi.getAll();
+        
+        if (currentUser && (currentUser.role === 'teacher' || currentUser.role === 'substitute')) {
+          // Для преподавателей и заменителей показываем только детей из их групп
+          // Сначала получаем все группы и фильтруем по учителю
+          const allGroups = await groupsApi.getAll();
+          const userGroups = allGroups.filter(group => group.teacher === currentUser.id || group.teacherId === currentUser.id);
+          const userGroupIds = userGroups.map(group => group._id).filter(id => id !== undefined) as string[];
+          
+          const filteredChildren = childrenList.filter(child => {
+            const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
+            return childGroupId && userGroupIds.includes(childGroupId);
+          });
+          setChildren(filteredChildren);
+        } else {
+          // Для администраторов и других ролей показываем всех детей
+          setChildren(childrenList);
+        }
+      } catch (e: any) {
+        setError(e?.message || 'Ошибка загрузки');
+      } finally {
+        setLoading(false);
+      }
+    }, [currentUser]); // Added currentUser as dependency
+
+   useEffect(() => {
+     (async () => {
+       // Загружаем группы для всех пользователей
+       await fetchGroupsList();
+       
+       // Загружаем детей (это включает логику фильтрации для преподавателей)
+       await fetchChildren();
+     })();
+   }, [fetchGroupsList, fetchChildren]); // Added dependencies to avoid ESLint warnings
+   
+   // To fix the linting issue, we can use a more explicit approach if needed
+  
+  // Memoize functions to avoid unnecessary re-renders and ESLint warnings
 
   // Фильтрация детей при изменении данных или фильтров
   useEffect(() => {
@@ -155,65 +172,39 @@ const Children: React.FC = () => {
           typeof child.groupId === 'object'
             ? child.groupId?._id
             : child.groupId;
-        return childGroupId === groupFilter;
+        return childGroupId && childGroupId === groupFilter;
       });
     }
 
     setFilteredChildren(result);
   }, [children, nameFilter, groupFilter]);
 
-  // Обновление filteredChildren при изменении children
-  useEffect(() => {
-    let result = [...children];
-
-    // Фильтрация по имени ребенка
-    if (nameFilter) {
-      result = result.filter(
-        (child) =>
-          child.fullName &&
-          child.fullName.toLowerCase().includes(nameFilter.toLowerCase()),
-      );
-    }
-
-    // Фильтрация по группе
-    if (groupFilter) {
-      result = result.filter((child) => {
-        const childGroupId =
-          typeof child.groupId === 'object'
-            ? child.groupId?._id
-            : child.groupId;
-        return childGroupId === groupFilter;
-      });
-    }
-
-    setFilteredChildren(result);
-  }, [children, groupFilter,nameFilter]);
 
   // Инициализация filteredChildren после загрузки данных
   useEffect(() => {
     setFilteredChildren([...children]);
   }, [children]);
 
-  const handleOpenModal = (child?: Child) => {
+  const handleOpenModal = useCallback((child?: Child) => {
     setEditingChild(child || null);
     setModalOpen(true);
-  };
+  }, []);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setModalOpen(false);
     setEditingChild(null);
-  };
+  }, []);
 
-  const handleDelete = async (id?: string) => {
+  const handleDelete = useCallback(async (id?: string) => {
     if (!id) return;
     if (!window.confirm('Удалить ребёнка?')) return;
     try {
       await childrenApi.deleteItem(id);
-      fetchChildren();
+      await fetchChildren();
     } catch (e: any) {
       setError(e?.message || 'Ошибка удаления');
     }
-  };
+  }, [fetchChildren]); // Added fetchChildren as dependency
 
   const isMobile = useMediaQuery('(max-width:900px)');
 
@@ -576,10 +567,7 @@ const Children: React.FC = () => {
           <TableBody>
             {filteredChildren.map((child, index) => {
               // Определяем цветовую индикацию на основе группы
-              const childGroupId =
-                typeof child.groupId === 'object'
-                  ? child.groupId?._id
-                  : child.groupId;
+              const childGroupId = getChildGroupId(child);
               const groupColor = childGroupId
                 ? getGroupColor(childGroupId)
                 : '#B0B0B0';
@@ -631,8 +619,8 @@ const Children: React.FC = () => {
                   </TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>
                     {typeof child.groupId === 'object' && child.groupId
-                      ? child.groupId.name
-                      : child.groupId}
+                      ? (child.groupId as Group).name
+                      : child.groupId ? child.groupId : 'Не указана'}
                   </TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>
                     {child.notes}
