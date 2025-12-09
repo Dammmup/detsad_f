@@ -85,12 +85,11 @@ const Dashboard = () => {
     >
       <DateNavigator />
       {/* На мобильных список задач всегда сверху и в одну колонку */}
-      {/* Убрано дублирование TaskListColumn на мобильных устройствах */}
-      {/* {isMobile && (
+      {isMobile && (
         <Box sx={{ mb: 3 }}>
           <TaskListColumn />
         </Box>
-      )} */}
+      )}
 
       <Box
         sx={{
@@ -427,6 +426,7 @@ const Dashboard = () => {
         </Box>
 
         {/* Правая колонка - шторка уведомлений */}
+        {!isStaff && (
         <Box
           sx={{
             width: 350,
@@ -446,6 +446,7 @@ const Dashboard = () => {
         >
           <TaskListColumn />
         </Box>
+        )}
       </Box>
 
       {/* Модальное окно добавления ребёнка */}
