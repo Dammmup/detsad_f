@@ -69,13 +69,12 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(
+    `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
+  );
 
   useEffect(() => {
     let mounted = true;
-
-    // Определяем текущий месяц
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
     const load = async () => {
       setLoading(true);
@@ -102,7 +101,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
 
         // Формируем параметры запроса - теперь используем текущий месяц
         const params: any = {
-          month: currentMonth, // используем месяц вместо startDate/endDate
+          period: selectedMonth, // используем период формата YYYY-MM
         };
 
         // Если пользователь не администратор, он может видеть только свои данные
@@ -173,7 +172,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
     return () => {
       mounted = false;
     };
-  }, [userId]); // убрали startDate и endDate из зависимостей
+  }, [userId, selectedMonth]); // обновляем данные при смене месяца
 
   const handleEditClick = (row: PayrollRow) => {
     setEditingId(row.staffId);
@@ -337,7 +336,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
       return;
     }
 
-    const monthToGenerate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const monthToGenerate = selectedMonth || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
     if (
       window.confirm(
@@ -351,9 +350,6 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         setSnackbarOpen(true);
 
         // Обновляем данные
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
         const { getCurrentUser } = await import('../../services/auth');
         const { getPayrolls } = await import('../../services/payroll');
 
@@ -372,7 +368,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         }
 
         const params: any = {
-          month: currentMonth, // используем месяц вместо startDate/endDate
+          period: selectedMonth, // используем месяц вместо startDate/endDate
         };
 
         if (
@@ -442,6 +438,11 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
       }
     }
   };
+
+  const selectedMonthLabel = new Date(`${selectedMonth}-01`).toLocaleString(
+    'ru-RU',
+    { month: 'long', year: 'numeric' },
+  );
 
   if (loading) {
     return (
@@ -521,12 +522,18 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
               fontWeight: 'medium',
             }}
           >
-            Управление зарплатами сотрудников за{' '}
-            {new Date().toLocaleString('ru-RU', {
-              month: 'long',
-              year: 'numeric',
-            })}
+            Управление зарплатами сотрудников за {selectedMonthLabel}
           </Typography>
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+            <TextField
+              label='Выберите месяц'
+              type='month'
+              size='small'
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Box>
         </Box>
 
         {/* Сводная информация */}
