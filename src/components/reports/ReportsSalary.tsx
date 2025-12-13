@@ -807,19 +807,25 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                   <TableHead>
                     <TableRow
                       sx={{
-                        backgroundColor: 'grey.100',
+                        backgroundColor: '#f8fafc',
                         '& th': {
-                          fontWeight: 'bold',
-                          color: 'text.primary',
+                          fontWeight: '600',
+                          color: '#475569',
                           py: 2,
-                          fontSize: '0.9rem',
+                          px: 2,
+                          fontSize: '0.875rem',
                           textTransform: 'uppercase',
-                          letterSpacing: '0.5px',
+                          letterSpacing: '0.05em',
+                          borderBottom: '2px solid #e2e8f0'
                         },
                       }}
                     >
+                      <TableCell sx={{ minWidth: 250 }}>
+                        Сотрудник
+                      </TableCell>
                       <TableCell
-                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
+                        align='right'
+                        sx={{ minWidth: 150 }}
                       >
                         Базовый Оклад
                       </TableCell>
@@ -927,8 +933,9 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                               type='number'
                               value={editData.baseSalary ?? ''}
                               onChange={(e) => handleInputChange('baseSalary', Number(e.target.value))}
-                              inputProps={{ style: { fontSize: 14 }, min: 0 }}
-                              style={{ width: '100px' }}
+                              inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
+                              sx={{ width: '100px' }}
+                              variant='standard'
                             />
                           ) : (
                             r.baseSalary?.toLocaleString()
@@ -959,16 +966,12 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                                 }
                               }}
                               inputProps={{
-                                style: { fontSize: 14 },
+                                style: { fontSize: 14, padding: '4px 8px', textAlign: 'right' },
                                 min: 0,
                                 step: 'any',
                               }}
-                              InputProps={{
-                                style: { padding: '4px 8px' },
-                                disableUnderline: true,
-                              }}
-                              style={{ width: '100px' }}
-                              variant='outlined'
+                              sx={{ width: '100px' }}
+                              variant='standard'
                             />
                           ) : r.accruals ? (
                             r.accruals?.toLocaleString()
@@ -1001,16 +1004,12 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                                 }
                               }}
                               inputProps={{
-                                style: { fontSize: 14 },
+                                style: { fontSize: 14, padding: '4px 8px', textAlign: 'right' },
                                 min: 0,
                                 step: 'any',
                               }}
-                              InputProps={{
-                                style: { padding: '4px 8px' },
-                                disableUnderline: true,
-                              }}
-                              style={{ width: '100px' }}
-                              variant='outlined'
+                              sx={{ width: '80px' }}
+                              variant='standard'
                             />
                           ) : r.advance ? (
                             r.advance?.toLocaleString()
@@ -1021,70 +1020,91 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                         <TableCell
                           align='right'
                           sx={{
-                            fontSize: '1rem',
-                            fontWeight: 'medium',
+                            fontSize: '0.95rem',
+                            fontWeight: '500',
                             color: 'error.main',
                           }}
-                          title={`Штрафы за опоздания: ${r.latePenalties?.toLocaleString() || '0'} тг\nШтрафы за неявки: ${r.absencePenalties?.toLocaleString() || '0'} тг\nОбщая сумма штрафов: ${r.penalties?.toLocaleString() || '0'} тг`}
                         >
-                          {editingId === r.staffId ? (
-                            <TextField
-                              size='small'
-                              type='number'
-                              value={editData.penalties ?? ''}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === '' || value === '-') {
-                                  handleInputChange('penalties', '');
-                                } else {
-                                  const numValue = Number(value);
-                                  if (numValue >= 0) {
-                                    handleInputChange('penalties', numValue);
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+                            {editingId === r.staffId ? (
+                              <TextField
+                                size='small'
+                                type='number'
+                                value={editData.penalties ?? ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '' || value === '-') {
+                                    handleInputChange('penalties', '');
+                                  } else {
+                                    const numValue = Number(value);
+                                    if (numValue >= 0) {
+                                      handleInputChange('penalties', numValue);
+                                    }
                                   }
+                                }}
+                                inputProps={{
+                                  style: { fontSize: 14, padding: '4px 8px', textAlign: 'right' },
+                                  min: 0,
+                                  step: 'any',
+                                }}
+                                sx={{ width: '80px' }}
+                                variant='standard'
+                              />
+                            ) : (
+                              <Tooltip
+                                title={
+                                  <Box sx={{ p: 1 }}>
+                                    <Typography variant="subtitle2" sx={{ mb: 1, borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+                                      Детализация штрафов
+                                    </Typography>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                                      <span>Опоздания:</span>
+                                      <b>{r.latePenalties?.toLocaleString()}</b>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                                      <span>Неявки:</span>
+                                      <b>{r.absencePenalties?.toLocaleString()}</b>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                                      <span>Ручные:</span>
+                                      <b>{r.userFines?.toLocaleString()}</b>
+                                    </div>
+                                    {r.fines && r.fines.length > 0 && (
+                                      <>
+                                        <Box sx={{ my: 1, borderTop: '1px dashed rgba(255,255,255,0.2)' }} />
+                                        {r.fines.map((f: any, i: number) => (
+                                          <div key={i} style={{ fontSize: '0.85rem' }}>
+                                            • {f.reason}: {f.amount}
+                                          </div>
+                                        ))}
+                                      </>
+                                    )}
+                                  </Box>
                                 }
-                              }}
-                              inputProps={{
-                                style: { fontSize: 14 },
-                                min: 0,
-                                step: 'any',
-                              }}
-                              InputProps={{
-                                style: { padding: '4px 8px' },
-                                disableUnderline: true,
-                              }}
-                              style={{ width: '100px' }}
-                              variant='outlined'
-                            />
-                          ) : (
-                            <Tooltip
-                              title={
-                                <React.Fragment>
-                                  <Typography color="inherit">Детализация штрафов</Typography>
-                                  <div>Опоздания: {r.latePenalties?.toLocaleString()}</div>
-                                  <div>Неявки: {r.absencePenalties?.toLocaleString()}</div>
-                                  <div>Ручные штрафы: {r.userFines?.toLocaleString()}</div>
-                                  {r.fines && r.fines.length > 0 && (
-                                    <>
-                                      <hr style={{ margin: '4px 0' }} />
-                                      {r.fines.map((f: any, i: number) => (
-                                        <div key={i}>• {f.reason}: {f.amount}</div>
-                                      ))}
-                                    </>
-                                  )}
-                                </React.Fragment>
-                              }
-                              placement="top"
-                            >
-                              <span style={{ cursor: 'help', borderBottom: '1px dotted #ccc' }}>
-                                {r.penalties ? r.penalties?.toLocaleString() : '0'}
-                              </span>
-                            </Tooltip>
-                          )}
-                          {currentUser?.role === 'admin' && (
-                            <IconButton size="small" onClick={() => handleOpenFineDialog(r.staffId)}>
-                              <AddIcon fontSize="small" />
-                            </IconButton>
-                          )}
+                                placement="left"
+                                arrow
+                              >
+                                <span style={{ cursor: 'help', borderBottom: '1px dotted #ef5350' }}>
+                                  {r.penalties ? r.penalties?.toLocaleString() : '0'}
+                                </span>
+                              </Tooltip>
+                            )}
+                            {currentUser?.role === 'admin' && (
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenFineDialog(r.staffId)}
+                                sx={{
+                                  color: 'error.main',
+                                  bgcolor: 'error.lighter',
+                                  width: 28,
+                                  height: 28,
+                                  '&:hover': { bgcolor: 'error.light', color: 'white' }
+                                }}
+                              >
+                                <AddIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                          </Box>
                         </TableCell>
                         <TableCell
                           align='right'
