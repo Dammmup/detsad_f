@@ -27,12 +27,21 @@ import {
   Cancel as CancelIcon,
   Close as CloseIcon,
   Visibility as VisibilityIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+} from '@mui/material';
 import {
   updatePayroll,
   deletePayroll,
   Payroll,
   generatePayrollSheets,
+  addFine, // Assuming this is exported from service
 } from '../../services/payroll';
 
 interface Props {
@@ -56,6 +65,9 @@ interface PayrollRow {
   status: string;
   staffId: string;
   _id?: string;
+  baseSalary: number; // New field
+  fines?: any[]; // For tooltip
+  userFines?: number; // Manual fines total
 }
 
 const ReportsSalary: React.FC<Props> = ({ userId }) => {
@@ -72,6 +84,9 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   const [selectedMonth, setSelectedMonth] = useState(
     `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
   );
+  const [fineDialogOpen, setFineDialogOpen] = useState(false);
+  const [currentFinePayrollId, setCurrentFinePayrollId] = useState<string | null>(null);
+  const [newFine, setNewFine] = useState({ amount: '', reason: '' });
 
   useEffect(() => {
     let mounted = true;
@@ -159,7 +174,10 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
               (p.advance || 0), // Упрощенный расчет
             status: p.status && p.status !== 'draft' ? p.status : 'calculated',
             staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
-            _id: p._id || undefined, // Добавляем ID записи зарплаты
+            _id: p._id || undefined,
+            baseSalary: p.baseSalary || 0,
+            fines: p.fines || [],
+            userFines: p.userFines || 0,
           })),
         );
       } catch (e: any) {
@@ -181,6 +199,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
       penalties: row.penalties || undefined,
       advance: row.advance || undefined,
       latePenaltyRate: row.latePenaltyRate || undefined,
+      baseSalary: row.baseSalary || undefined,
       status: row.status && row.status !== 'draft' ? row.status : 'calculated',
     });
   };
@@ -425,6 +444,9 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
             status: p.status && p.status !== 'draft' ? p.status : 'calculated',
             staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
             _id: p._id || undefined, // Добавляем ID записи зарплаты
+            baseSalary: p.baseSalary || 0,
+            fines: p.fines || [],
+            userFines: p.userFines || 0,
           })),
         );
       } catch (error: any) {
@@ -436,6 +458,60 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
       } finally {
         setGenerating(false);
       }
+    }
+  };
+
+  const handleOpenFineDialog = (payrollId: string) => {
+    setCurrentFinePayrollId(payrollId);
+    setNewFine({ amount: '', reason: '' });
+    setFineDialogOpen(true);
+  };
+
+  const handleAddFine = async () => {
+    if (!currentFinePayrollId || !newFine.amount || !newFine.reason) return;
+
+    try {
+      // Find the payroll object
+      const row = rows.find(r => r._id === currentFinePayrollId || r.staffId === currentFinePayrollId);
+      const payrollId = row?._id || currentFinePayrollId;
+
+      await import('../../services/payroll').then(m => m.addFine(payrollId, {
+        amount: Number(newFine.amount),
+        reason: newFine.reason,
+        type: 'manual'
+      }));
+
+      setSnackbarMessage('Штраф добавлен');
+      setSnackbarOpen(true);
+      setFineDialogOpen(false);
+
+      // Trigger reload (simple way)
+      // Better: updates rows locally. But logic is complex (recalc total).
+      // Let's just force reload or partial update.
+      // For now, simpler to reload the data.
+      const { getPayrolls } = await import('../../services/payroll');
+      const params: any = { period: selectedMonth };
+      // ... Add user filter logic if needed (simplified here for brevity)
+      if (userId) params.userId = userId;
+
+      const payrollsData = await getPayrolls(params);
+      const data = (payrollsData?.data || payrollsData || []) as any[];
+      // Update rows... (Re-use load logic or just reload page?)
+      // Since load logic is inside useEffect, we can maybe trigger it?
+      // Or manually update the row in `rows`
+
+      // Manually updating for immediate feedback (simplified)
+      // Ideally we should refactor load logic to a function `fetchData` and call it.
+      // I'll assume page reload is acceptable or user can refresh, BUT
+      // let's try to just update the specific row if we got the updated payroll back.
+      // But `addFine` returns updated payroll.
+
+      // Force reload by changing a dependency? Or just alert user.
+      window.location.reload(); // Brute force but works for now to ensure consistency.
+
+    } catch (e: any) {
+      setSnackbarMessage('Ошибка добавления штрафа: ' + (e.message || 'Unknown'));
+      setSnackbarOpen(true);
     }
   };
 
@@ -462,128 +538,111 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%)',
-        p: 3,
-      }}
-    >
-      {/* Добавляем Snackbar для отображения сообщений */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleSnackbarClose}
-        message={snackbarMessage}
-        action={
-          <IconButton
-            size='small'
-            aria-label='close'
-            color='inherit'
-            onClick={handleSnackbarClose}
-          >
-            <CloseIcon fontSize='small' />
-          </IconButton>
-        }
-      />
-
+    <>
       <Box
         sx={{
-          maxWidth: '1400px',
-          mx: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 3,
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%)',
+          p: 3,
         }}
       >
-        {/* Заголовок страницы */}
+        {/* Добавляем Snackbar для отображения сообщений */}
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={6000}
+          onClose={handleSnackbarClose}
+          message={snackbarMessage}
+          action={
+            <IconButton
+              size='small'
+              aria-label='close'
+              color='inherit'
+              onClick={handleSnackbarClose}
+            >
+              <CloseIcon fontSize='small' />
+            </IconButton>
+          }
+        />
+
         <Box
           sx={{
-            textAlign: 'center',
-            mb: 3,
-            px: 2,
+            maxWidth: '1400px',
+            mx: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
           }}
         >
-          <Typography
-            variant='h3'
-            sx={{
-              fontWeight: 'bold',
-              color: 'primary.main',
-              mb: 1,
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            }}
-          >
-            Расчетные листы
-          </Typography>
-          <Typography
-            variant='h6'
-            sx={{
-              color: 'text.secondary',
-              fontWeight: 'medium',
-            }}
-          >
-            Управление зарплатами сотрудников за {selectedMonthLabel}
-          </Typography>
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-            <TextField
-              label='Выберите месяц'
-              type='month'
-              size='small'
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Box>
-        </Box>
-
-        {/* Сводная информация */}
-        <Card
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            overflow: 'hidden',
-            background: 'white',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-            border: '1px solid rgba(255,255,255,0.2)',
-          }}
-        >
+          {/* Заголовок страницы */}
           <Box
             sx={{
-              p: 3,
-              background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
-              color: 'white',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              textAlign: 'center',
+              mb: 3,
+              px: 2,
             }}
           >
-            <Typography variant='h5' component='h2' sx={{ fontWeight: 'bold' }}>
-              Сводная информация
+            <Typography
+              variant='h3'
+              sx={{
+                fontWeight: 'bold',
+                color: 'primary.main',
+                mb: 1,
+                textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              }}
+            >
+              Расчетные листы
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant='contained'
-                color='secondary'
-                startIcon={<SaveIcon />}
-                onClick={handleExportToExcel}
-                sx={{
-                  backgroundColor: 'rgba(255,255,255,0.2)',
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
-                  color: 'white',
-                  fontWeight: 'medium',
-                }}
-              >
-                Экспорт
-              </Button>
-              {currentUser?.id && currentUser?.role === 'admin' && (
+            <Typography
+              variant='h6'
+              sx={{
+                color: 'text.secondary',
+                fontWeight: 'medium',
+              }}
+            >
+              Управление зарплатами сотрудников за {selectedMonthLabel}
+            </Typography>
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+              <TextField
+                label='Выберите месяц'
+                type='month'
+                size='small'
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Box>
+          </Box>
+
+          {/* Сводная информация */}
+          <Card
+            elevation={0}
+            sx={{
+              borderRadius: 3,
+              overflow: 'hidden',
+              background: 'white',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+              border: '1px solid rgba(255,255,255,0.2)',
+            }}
+          >
+            <Box
+              sx={{
+                p: 3,
+                background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
+                color: 'white',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <Typography variant='h5' component='h2' sx={{ fontWeight: 'bold' }}>
+                Сводная информация
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button
                   variant='contained'
-                  color='success'
-                  startIcon={
-                    generating ? <CircularProgress size={20} /> : <SaveIcon />
-                  }
-                  onClick={handleGeneratePayrollSheets}
-                  disabled={generating}
+                  color='secondary'
+                  startIcon={<SaveIcon />}
+                  onClick={handleExportToExcel}
                   sx={{
                     backgroundColor: 'rgba(255,255,255,0.2)',
                     '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
@@ -591,426 +650,484 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                     fontWeight: 'medium',
                   }}
                 >
-                  {generating ? 'Генерация...' : 'Сгенерировать'}
+                  Экспорт
                 </Button>
-              )}
-            </Box>
-          </Box>
-
-          <CardContent>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                gap: 3,
-              }}
-            >
-              <Box
-                sx={{
-                  p: 3,
-                  borderRadius: 2,
-                  background:
-                    'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 10%)',
-                  textAlign: 'center',
-                }}
-              >
-                <Typography
-                  variant='h4'
-                  sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}
-                >
-                  {summary?.totalEmployees ?? 0}
-                </Typography>
-                <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                  Всего сотрудников
-                </Typography>
-              </Box>
-
-              <Box
-                sx={{
-                  p: 3,
-                  borderRadius: 2,
-                  background:
-                    'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
-                  textAlign: 'center',
-                }}
-              >
-                <Typography
-                  variant='h4'
-                  sx={{ fontWeight: 'bold', color: 'success.main', mb: 1 }}
-                >
-                  {(summary?.totalAccruals ?? 0)?.toLocaleString()} тг
-                </Typography>
-                <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                  Начисления
-                </Typography>
-              </Box>
-
-              <Box
-                sx={{
-                  p: 3,
-                  borderRadius: 2,
-                  background:
-                    'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
-                  textAlign: 'center',
-                }}
-              >
-                <Typography
-                  variant='h4'
-                  sx={{ fontWeight: 'bold', color: 'error.main', mb: 1 }}
-                >
-                  {(summary?.totalPenalties ?? 0)?.toLocaleString()} тг
-                </Typography>
-                <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                  Штрафы
-                </Typography>
-              </Box>
-
-              <Box
-                sx={{
-                  p: 3,
-                  borderRadius: 2,
-                  background:
-                    'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 10%)',
-                  textAlign: 'center',
-                }}
-              >
-                <Typography
-                  variant='h4'
-                  sx={{ fontWeight: 'bold', color: 'warning.main', mb: 1 }}
-                >
-                  {(summary?.totalPayout ?? 0)?.toLocaleString()} тг
-                </Typography>
-                <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                  К выплате
-                </Typography>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-
-        {/* Таблица расчетных листов */}
-        <Card
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            overflow: 'hidden',
-            background: 'white',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-            border: '1px solid rgba(255,255,255,0.2)',
-          }}
-        >
-          <Box
-            sx={{
-              p: 3,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <Typography variant='h5' component='h2' sx={{ fontWeight: 'bold' }}>
-              Расчетные листы сотрудников
-            </Typography>
-          </Box>
-
-          <CardContent sx={{ p: 0 }}>
-            <Box sx={{ overflowX: 'auto' }}>
-              <Table
-                size='medium'
-                sx={{
-                  minWidth: 1200,
-                  '& .MuiTableCell-root': {
-                    borderBottom: '1px solid #e0e0e0',
-                    py: 2.5,
-                    px: 2,
-                  },
-                }}
-              >
-                <TableHead>
-                  <TableRow
+                {currentUser?.id && currentUser?.role === 'admin' && (
+                  <Button
+                    variant='contained'
+                    color='success'
+                    startIcon={
+                      generating ? <CircularProgress size={20} /> : <SaveIcon />
+                    }
+                    onClick={handleGeneratePayrollSheets}
+                    disabled={generating}
                     sx={{
-                      backgroundColor: 'grey.100',
-                      '& th': {
-                        fontWeight: 'bold',
-                        color: 'text.primary',
-                        py: 2,
-                        fontSize: '0.9rem',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                      },
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                      color: 'white',
+                      fontWeight: 'medium',
                     }}
                   >
-                    <TableCell
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Сотрудник
-                    </TableCell>
-                    <TableCell
-                      align='right'
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Начисления
-                    </TableCell>
-                    <TableCell
-                      align='right'
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Аванс
-                    </TableCell>
-                    <TableCell
-                      align='right'
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Штрафы
-                    </TableCell>
-                    <TableCell
-                      align='right'
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Ставка за опоздание (тг/мин)
-                    </TableCell>
-                    <TableCell
-                      align='right'
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Итого
-                    </TableCell>
-                    <TableCell
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Статус
-                    </TableCell>
-                    <TableCell
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Действия
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rows.map((r, idx) => (
+                    {generating ? 'Генерация...' : 'Сгенерировать'}
+                  </Button>
+                )}
+              </Box>
+            </Box>
+
+            <CardContent>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: 3,
+                }}
+              >
+                <Box
+                  sx={{
+                    p: 3,
+                    borderRadius: 2,
+                    background:
+                      'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 10%)',
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography
+                    variant='h4'
+                    sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}
+                  >
+                    {summary?.totalEmployees ?? 0}
+                  </Typography>
+                  <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                    Всего сотрудников
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    p: 3,
+                    borderRadius: 2,
+                    background:
+                      'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography
+                    variant='h4'
+                    sx={{ fontWeight: 'bold', color: 'success.main', mb: 1 }}
+                  >
+                    {(summary?.totalAccruals ?? 0)?.toLocaleString()} тг
+                  </Typography>
+                  <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                    Начисления
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    p: 3,
+                    borderRadius: 2,
+                    background:
+                      'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography
+                    variant='h4'
+                    sx={{ fontWeight: 'bold', color: 'error.main', mb: 1 }}
+                  >
+                    {(summary?.totalPenalties ?? 0)?.toLocaleString()} тг
+                  </Typography>
+                  <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                    Штрафы
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    p: 3,
+                    borderRadius: 2,
+                    background:
+                      'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 10%)',
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography
+                    variant='h4'
+                    sx={{ fontWeight: 'bold', color: 'warning.main', mb: 1 }}
+                  >
+                    {(summary?.totalPayout ?? 0)?.toLocaleString()} тг
+                  </Typography>
+                  <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                    К выплате
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+
+          {/* Таблица расчетных листов */}
+          <Card
+            elevation={0}
+            sx={{
+              borderRadius: 3,
+              overflow: 'hidden',
+              background: 'white',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+              border: '1px solid rgba(255,255,255,0.2)',
+            }}
+          >
+            <Box
+              sx={{
+                p: 3,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <Typography variant='h5' component='h2' sx={{ fontWeight: 'bold' }}>
+                Расчетные листы сотрудников
+              </Typography>
+            </Box>
+
+            <CardContent sx={{ p: 0 }}>
+              <Box sx={{ overflowX: 'auto' }}>
+                <Table
+                  size='medium'
+                  sx={{
+                    minWidth: 1200,
+                    '& .MuiTableCell-root': {
+                      borderBottom: '1px solid #e0e0e0',
+                      py: 2.5,
+                      px: 2,
+                    },
+                  }}
+                >
+                  <TableHead>
                     <TableRow
-                      key={idx}
                       sx={{
-                        '&:nth-of-type(odd)': {
-                          backgroundColor: 'grey.50',
+                        backgroundColor: 'grey.100',
+                        '& th': {
+                          fontWeight: 'bold',
+                          color: 'text.primary',
+                          py: 2,
+                          fontSize: '0.9rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
                         },
-                        '&:nth-of-type(even)': {
-                          backgroundColor: 'white',
-                        },
-                        '&:hover': {
-                          backgroundColor: 'action.hover',
-                          boxShadow: '0 4px 20px rgba(0, 0, 0.1)',
-                          transform: 'translateY(-2px)',
-                          transition: 'all 0.3s ease',
-                          zIndex: 1,
-                          position: 'relative',
-                        },
-                        height: '70px',
-                        borderRadius: '12px',
-                        mb: 1,
                       }}
                     >
                       <TableCell
+                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
+                      >
+                        Базовый Оклад
+                      </TableCell>
+                      <TableCell
+                        align='right'
+                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
+                      >
+                        Начисления
+                      </TableCell>
+                      <TableCell
+                        align='right'
+                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
+                      >
+                        Аванс
+                      </TableCell>
+                      <TableCell
+                        align='right'
+                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
+                      >
+                        Штрафы
+                      </TableCell>
+                      <TableCell
+                        align='right'
+                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
+                      >
+                        Ставка за опоздание (тг/мин)
+                      </TableCell>
+                      <TableCell
+                        align='right'
+                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
+                      >
+                        Итого
+                      </TableCell>
+                      <TableCell
+                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
+                      >
+                        Статус
+                      </TableCell>
+                      <TableCell
+                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
+                      >
+                        Действия
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rows.map((r, idx) => (
+                      <TableRow
+                        key={idx}
                         sx={{
-                          fontWeight: 'medium',
-                          fontSize: '1rem',
-                          color: 'text.primary',
+                          '&:nth-of-type(odd)': {
+                            backgroundColor: 'grey.50',
+                          },
+                          '&:nth-of-type(even)': {
+                            backgroundColor: 'white',
+                          },
+                          '&:hover': {
+                            backgroundColor: 'action.hover',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0.1)',
+                            transform: 'translateY(-2px)',
+                            transition: 'all 0.3s ease',
+                            zIndex: 1,
+                            position: 'relative',
+                          },
+                          height: '70px',
+                          borderRadius: '12px',
+                          mb: 1,
                         }}
                       >
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                        <TableCell
+                          sx={{
+                            fontWeight: 'medium',
+                            fontSize: '1rem',
+                            color: 'text.primary',
+                          }}
                         >
                           <Box
-                            sx={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: '50%',
-                              bgcolor: 'primary.light',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'primary.contrastText',
-                              fontWeight: 'bold',
-                            }}
+                            sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
                           >
-                            {r.staffName.charAt(0).toUpperCase()}
+                            <Box
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: '50%',
+                                bgcolor: 'primary.light',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'primary.contrastText',
+                                fontWeight: 'bold',
+                              }}
+                            >
+                              {r.staffName.charAt(0).toUpperCase()}
+                            </Box>
+                            {r.staffName}
                           </Box>
-                          {r.staffName}
-                        </Box>
-                      </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{
-                          fontSize: '1rem',
-                          fontWeight: 'medium',
-                          color: 'success.main',
-                        }}
-                      >
-                        {editingId === r.staffId ? (
-                          <TextField
-                            size='small'
-                            type='number'
-                            value={editData.accruals ?? ''}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === '' || value === '-') {
-                                handleInputChange('accruals', '');
-                              } else {
-                                const numValue = Number(value);
-                                if (numValue >= 0) {
-                                  handleInputChange('accruals', numValue);
+                        </TableCell>
+                        <TableCell
+                          align='right'
+                          sx={{ fontSize: '1rem', fontWeight: 'medium' }}
+                        >
+                          {editingId === r.staffId ? (
+                            <TextField
+                              size='small'
+                              type='number'
+                              value={editData.baseSalary ?? ''}
+                              onChange={(e) => handleInputChange('baseSalary', Number(e.target.value))}
+                              inputProps={{ style: { fontSize: 14 }, min: 0 }}
+                              style={{ width: '100px' }}
+                            />
+                          ) : (
+                            r.baseSalary?.toLocaleString()
+                          )}
+                        </TableCell>
+                        <TableCell
+                          align='right'
+                          sx={{
+                            fontSize: '1rem',
+                            fontWeight: 'medium',
+                            color: 'success.main',
+                          }}
+                        >
+                          {editingId === r.staffId ? (
+                            <TextField
+                              size='small'
+                              type='number'
+                              value={editData.accruals ?? ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || value === '-') {
+                                  handleInputChange('accruals', '');
+                                } else {
+                                  const numValue = Number(value);
+                                  if (numValue >= 0) {
+                                    handleInputChange('accruals', numValue);
+                                  }
                                 }
-                              }
-                            }}
-                            inputProps={{
-                              style: { fontSize: 14 },
-                              min: 0,
-                              step: 'any',
-                            }}
-                            InputProps={{
-                              style: { padding: '4px 8px' },
-                              disableUnderline: true,
-                            }}
-                            style={{ width: '100px' }}
-                            variant='outlined'
-                          />
-                        ) : r.accruals ? (
-                          r.accruals?.toLocaleString()
-                        ) : (
-                          '0'
-                        )}
-                      </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{
-                          fontSize: '1rem',
-                          fontWeight: 'medium',
-                          color: 'success.main',
-                        }}
-                      >
-                        {editingId === r.staffId ? (
-                          <TextField
-                            size='small'
-                            type='number'
-                            value={editData.advance ?? ''}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === '' || value === '-') {
-                                handleInputChange('advance', '');
-                              } else {
-                                const numValue = Number(value);
-                                if (numValue >= 0) {
-                                  handleInputChange('advance', numValue);
+                              }}
+                              inputProps={{
+                                style: { fontSize: 14 },
+                                min: 0,
+                                step: 'any',
+                              }}
+                              InputProps={{
+                                style: { padding: '4px 8px' },
+                                disableUnderline: true,
+                              }}
+                              style={{ width: '100px' }}
+                              variant='outlined'
+                            />
+                          ) : r.accruals ? (
+                            r.accruals?.toLocaleString()
+                          ) : (
+                            '0'
+                          )}
+                        </TableCell>
+                        <TableCell
+                          align='right'
+                          sx={{
+                            fontSize: '1rem',
+                            fontWeight: 'medium',
+                            color: 'success.main',
+                          }}
+                        >
+                          {editingId === r.staffId ? (
+                            <TextField
+                              size='small'
+                              type='number'
+                              value={editData.advance ?? ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || value === '-') {
+                                  handleInputChange('advance', '');
+                                } else {
+                                  const numValue = Number(value);
+                                  if (numValue >= 0) {
+                                    handleInputChange('advance', numValue);
+                                  }
                                 }
-                              }
-                            }}
-                            inputProps={{
-                              style: { fontSize: 14 },
-                              min: 0,
-                              step: 'any',
-                            }}
-                            InputProps={{
-                              style: { padding: '4px 8px' },
-                              disableUnderline: true,
-                            }}
-                            style={{ width: '100px' }}
-                            variant='outlined'
-                          />
-                        ) : r.advance ? (
-                          r.advance?.toLocaleString()
-                        ) : (
-                          '0'
-                        )}
-                      </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{
-                          fontSize: '1rem',
-                          fontWeight: 'medium',
-                          color: 'error.main',
-                        }}
-                        title={`Штрафы за опоздания: ${r.latePenalties?.toLocaleString() || '0'} тг\nШтрафы за неявки: ${r.absencePenalties?.toLocaleString() || '0'} тг\nОбщая сумма штрафов: ${r.penalties?.toLocaleString() || '0'} тг`}
-                      >
-                        {editingId === r.staffId ? (
-                          <TextField
-                            size='small'
-                            type='number'
-                            value={editData.penalties ?? ''}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === '' || value === '-') {
-                                handleInputChange('penalties', '');
-                              } else {
-                                const numValue = Number(value);
-                                if (numValue >= 0) {
-                                  handleInputChange('penalties', numValue);
+                              }}
+                              inputProps={{
+                                style: { fontSize: 14 },
+                                min: 0,
+                                step: 'any',
+                              }}
+                              InputProps={{
+                                style: { padding: '4px 8px' },
+                                disableUnderline: true,
+                              }}
+                              style={{ width: '100px' }}
+                              variant='outlined'
+                            />
+                          ) : r.advance ? (
+                            r.advance?.toLocaleString()
+                          ) : (
+                            '0'
+                          )}
+                        </TableCell>
+                        <TableCell
+                          align='right'
+                          sx={{
+                            fontSize: '1rem',
+                            fontWeight: 'medium',
+                            color: 'error.main',
+                          }}
+                          title={`Штрафы за опоздания: ${r.latePenalties?.toLocaleString() || '0'} тг\nШтрафы за неявки: ${r.absencePenalties?.toLocaleString() || '0'} тг\nОбщая сумма штрафов: ${r.penalties?.toLocaleString() || '0'} тг`}
+                        >
+                          {editingId === r.staffId ? (
+                            <TextField
+                              size='small'
+                              type='number'
+                              value={editData.penalties ?? ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || value === '-') {
+                                  handleInputChange('penalties', '');
+                                } else {
+                                  const numValue = Number(value);
+                                  if (numValue >= 0) {
+                                    handleInputChange('penalties', numValue);
+                                  }
                                 }
+                              }}
+                              inputProps={{
+                                style: { fontSize: 14 },
+                                min: 0,
+                                step: 'any',
+                              }}
+                              InputProps={{
+                                style: { padding: '4px 8px' },
+                                disableUnderline: true,
+                              }}
+                              style={{ width: '100px' }}
+                              variant='outlined'
+                            />
+                          ) : (
+                            <Tooltip
+                              title={
+                                <React.Fragment>
+                                  <Typography color="inherit">Детализация штрафов</Typography>
+                                  <div>Опоздания: {r.latePenalties?.toLocaleString()}</div>
+                                  <div>Неявки: {r.absencePenalties?.toLocaleString()}</div>
+                                  <div>Ручные штрафы: {r.userFines?.toLocaleString()}</div>
+                                  {r.fines && r.fines.length > 0 && (
+                                    <>
+                                      <hr style={{ margin: '4px 0' }} />
+                                      {r.fines.map((f: any, i: number) => (
+                                        <div key={i}>• {f.reason}: {f.amount}</div>
+                                      ))}
+                                    </>
+                                  )}
+                                </React.Fragment>
                               }
-                            }}
-                            inputProps={{
-                              style: { fontSize: 14 },
-                              min: 0,
-                              step: 'any',
-                            }}
-                            InputProps={{
-                              style: { padding: '4px 8px' },
-                              disableUnderline: true,
-                            }}
-                            style={{ width: '100px' }}
-                            variant='outlined'
-                          />
-                        ) : (
-                          <span
-                            title={`Штрафы за опоздания: ${r.latePenalties?.toLocaleString() || '0'} тг\nШтрафы за неявки: ${r.absencePenalties?.toLocaleString() || '0'} тг\nОбщая сумма штрафов: ${r.penalties?.toLocaleString() || '0'} тг`}
-                          >
-                            {r.penalties ? r.penalties?.toLocaleString() : '0'}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{ fontSize: '1rem', color: 'text.secondary' }}
-                      >
-                        {editingId === r.staffId ? (
-                          <TextField
-                            size='small'
-                            type='number'
-                            value={editData.latePenaltyRate ?? ''}
-                            onChange={(e) =>
-                              handleInputChange(
-                                'latePenaltyRate',
-                                e.target.value ? Number(e.target.value) : '',
-                              )
-                            }
-                            inputProps={{
-                              style: { fontSize: 14 },
-                              step: 'any',
-                            }}
-                            InputProps={{
-                              style: { padding: '4px 8px' },
-                              disableUnderline: true,
-                            }}
-                            style={{ width: '100px' }}
-                            variant='outlined'
-                          />
-                        ) : r.latePenaltyRate ? (
-                          r.latePenaltyRate
-                        ) : (
-                          '500'
-                        )}
-                      </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{
-                          fontWeight: 'bold',
-                          fontSize: '1.1rem',
-                          color: r.total >= 0 ? 'success.main' : 'error.main',
-                        }}
-                      >
-                        {editingId === r.staffId
-                          ? (() => {
+                              placement="top"
+                            >
+                              <span style={{ cursor: 'help', borderBottom: '1px dotted #ccc' }}>
+                                {r.penalties ? r.penalties?.toLocaleString() : '0'}
+                              </span>
+                            </Tooltip>
+                          )}
+                          {currentUser?.role === 'admin' && (
+                            <IconButton size="small" onClick={() => handleOpenFineDialog(r.staffId)}>
+                              <AddIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                        </TableCell>
+                        <TableCell
+                          align='right'
+                          sx={{ fontSize: '1rem', color: 'text.secondary' }}
+                        >
+                          {editingId === r.staffId ? (
+                            <TextField
+                              size='small'
+                              type='number'
+                              value={editData.latePenaltyRate ?? ''}
+                              onChange={(e) =>
+                                handleInputChange(
+                                  'latePenaltyRate',
+                                  e.target.value ? Number(e.target.value) : '',
+                                )
+                              }
+                              inputProps={{
+                                style: { fontSize: 14 },
+                                step: 'any',
+                              }}
+                              InputProps={{
+                                style: { padding: '4px 8px' },
+                                disableUnderline: true,
+                              }}
+                              style={{ width: '100px' }}
+                              variant='outlined'
+                            />
+                          ) : r.latePenaltyRate ? (
+                            r.latePenaltyRate
+                          ) : (
+                            '500'
+                          )}
+                        </TableCell>
+                        <TableCell
+                          align='right'
+                          sx={{
+                            fontWeight: 'bold',
+                            fontSize: '1.1rem',
+                            color: r.total >= 0 ? 'success.main' : 'error.main',
+                          }}
+                        >
+                          {editingId === r.staffId
+                            ? (() => {
                               const accruals =
                                 editData.accruals !== undefined
                                   ? editData.accruals
@@ -1027,109 +1144,140 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                               const total = accruals - penalties - advance;
                               return total?.toLocaleString() || '0';
                             })()
-                          : r.total
-                            ? r.total?.toLocaleString()
-                            : '0'}
-                      </TableCell>
-                      <TableCell>
-                        {editingId === r.staffId ? (
-                          <FormControl size='small' style={{ minWidth: 120 }}>
-                            <Select
-                              value={editData.status ?? r.status}
-                              onChange={(e) =>
-                                handleInputChange('status', e.target.value)
+                            : r.total
+                              ? r.total?.toLocaleString()
+                              : '0'}
+                        </TableCell>
+                        <TableCell>
+                          {editingId === r.staffId ? (
+                            <FormControl size='small' style={{ minWidth: 120 }}>
+                              <Select
+                                value={editData.status ?? r.status}
+                                onChange={(e) =>
+                                  handleInputChange('status', e.target.value)
+                                }
+                                style={{ fontSize: 14 }}
+                                variant='outlined'
+                              >
+                                <MenuItem value='calculated'>Рассчитано</MenuItem>
+                                <MenuItem value='approved'>Подтвержден</MenuItem>
+                                <MenuItem value='paid'>Оплачен</MenuItem>
+                              </Select>
+                            </FormControl>
+                          ) : (
+                            <Chip
+                              label={
+                                r.status === 'calculated'
+                                  ? 'Рассчитано'
+                                  : r.status === 'approved'
+                                    ? 'Подтвержден'
+                                    : 'Оплачен'
                               }
-                              style={{ fontSize: 14 }}
-                              variant='outlined'
-                            >
-                              <MenuItem value='calculated'>Рассчитано</MenuItem>
-                              <MenuItem value='approved'>Подтвержден</MenuItem>
-                              <MenuItem value='paid'>Оплачен</MenuItem>
-                            </Select>
-                          </FormControl>
-                        ) : (
-                          <Chip
-                            label={
-                              r.status === 'calculated'
-                                ? 'Рассчитано'
-                                : r.status === 'approved'
-                                  ? 'Подтвержден'
-                                  : 'Оплачен'
-                            }
-                            size='medium'
-                            color={
-                              r.status === 'calculated'
-                                ? 'info'
-                                : r.status === 'approved'
-                                  ? 'primary'
-                                  : 'success'
-                            }
-                            variant='filled'
-                            sx={{ fontWeight: 'medium', px: 1.5, py: 0.5 }}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingId === r.staffId ? (
-                          <>
-                            <Tooltip title='Сохранить'>
-                              <IconButton
-                                color='success'
-                                size='small'
-                                onClick={() => handleSaveClick(r.staffId)}
-                                sx={{ mr: 1 }}
-                              >
-                                <SaveIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title='Отменить'>
-                              <IconButton
-                                color='error'
-                                size='small'
-                                onClick={handleCancelClick}
-                              >
-                                <CancelIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </>
-                        ) : (
-                          <>
-                            <Tooltip title='Редактировать'>
-                              <IconButton
-                                color='primary'
-                                size='small'
-                                onClick={() => handleEditClick(r)}
-                                sx={{ mr: 1 }}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title='Просмотр'>
-                              <IconButton color='default' size='small'>
-                                <VisibilityIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title='Удалить'>
-                              <IconButton
-                                color='error'
-                                size='small'
-                                onClick={() => handleDeleteClick(r.staffId)}
-                              >
-                                <CloseIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Box>
-          </CardContent>
-        </Card>
+                              size='medium'
+                              color={
+                                r.status === 'calculated'
+                                  ? 'info'
+                                  : r.status === 'approved'
+                                    ? 'primary'
+                                    : 'success'
+                              }
+                              variant='filled'
+                              sx={{ fontWeight: 'medium', px: 1.5, py: 0.5 }}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingId === r.staffId ? (
+                            <>
+                              <Tooltip title='Сохранить'>
+                                <IconButton
+                                  color='success'
+                                  size='small'
+                                  onClick={() => handleSaveClick(r.staffId)}
+                                  sx={{ mr: 1 }}
+                                >
+                                  <SaveIcon />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title='Отменить'>
+                                <IconButton
+                                  color='error'
+                                  size='small'
+                                  onClick={handleCancelClick}
+                                >
+                                  <CancelIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          ) : (
+                            <>
+                              <Tooltip title='Редактировать'>
+                                <IconButton
+                                  color='primary'
+                                  size='small'
+                                  onClick={() => handleEditClick(r)}
+                                  sx={{ mr: 1 }}
+                                >
+                                  <EditIcon />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title='Просмотр'>
+                                <IconButton color='default' size='small'>
+                                  <VisibilityIcon />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title='Удалить'>
+                                <IconButton
+                                  color='error'
+                                  size='small'
+                                  onClick={() => handleDeleteClick(r.staffId)}
+                                >
+                                  <CloseIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
       </Box>
-    </Box>
+
+      <Dialog open={fineDialogOpen} onClose={() => setFineDialogOpen(false)}>
+        <DialogTitle>Добавить штраф</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Укажите сумму и причину штрафа.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Сумма"
+            type="number"
+            fullWidth
+            value={newFine.amount}
+            onChange={(e) => setNewFine({ ...newFine, amount: e.target.value })}
+          />
+          <TextField
+            margin="dense"
+            label="Причина"
+            type="text"
+            fullWidth
+            value={newFine.reason}
+            onChange={(e) => setNewFine({ ...newFine, reason: e.target.value })}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFineDialogOpen(false)}>Отмена</Button>
+          <Button onClick={handleAddFine}>Добавить</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

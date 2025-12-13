@@ -281,3 +281,21 @@ export const generateRentSheets = async (period: string) => {
     return handleApiError(error, 'generating rent sheets');
   }
 };
+
+/**
+ * Add fine to payroll
+ * @param {string} id - Payroll ID
+ * @param {object} fineData - Fine data (amount, reason, type)
+ * @returns {Promise<Payroll>} Updated payroll
+ */
+export const addFine = async (
+  id: string,
+  fineData: { amount: number; reason: string; type?: string; notes?: string },
+) => {
+  try {
+    const response = await apiClient.post(`/payroll/${id}/fines`, fineData);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, `adding fine to payroll ${id}`);
+  }
+};
