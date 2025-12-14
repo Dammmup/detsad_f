@@ -445,7 +445,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
             accruals: p.accruals || p.baseSalary || 0,
             // Рассчитываем общую сумму штрафов
             penalties:
-              p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0),
+              p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0),
             latePenalties: p.latePenalties || 0,
             absencePenalties: p.absencePenalties || 0,
             latePenaltyRate: p.latePenaltyRate || 500, // Значение по умолчанию
