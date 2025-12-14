@@ -796,7 +796,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                 <Table
                   size='medium'
                   sx={{
-                    minWidth: 1200,
+                    width: '100%',
                     '& .MuiTableCell-root': {
                       borderBottom: '1px solid #e0e0e0',
                       py: 2.5,
@@ -829,12 +829,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                       >
                         Базовый Оклад
                       </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                      >
-                        Начисления
-                      </TableCell>
+
                       <TableCell
                         align='right'
                         sx={{ color: 'primary.main', fontWeight: 'bold' }}
@@ -941,44 +936,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                             r.baseSalary?.toLocaleString()
                           )}
                         </TableCell>
-                        <TableCell
-                          align='right'
-                          sx={{
-                            fontSize: '1rem',
-                            fontWeight: 'medium',
-                            color: 'success.main',
-                          }}
-                        >
-                          {editingId === r.staffId ? (
-                            <TextField
-                              size='small'
-                              type='number'
-                              value={editData.accruals ?? ''}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === '' || value === '-') {
-                                  handleInputChange('accruals', '');
-                                } else {
-                                  const numValue = Number(value);
-                                  if (numValue >= 0) {
-                                    handleInputChange('accruals', numValue);
-                                  }
-                                }
-                              }}
-                              inputProps={{
-                                style: { fontSize: 14, padding: '4px 8px', textAlign: 'right' },
-                                min: 0,
-                                step: 'any',
-                              }}
-                              sx={{ width: '100px' }}
-                              variant='standard'
-                            />
-                          ) : r.accruals ? (
-                            r.accruals?.toLocaleString()
-                          ) : (
-                            '0'
-                          )}
-                        </TableCell>
+
                         <TableCell
                           align='right'
                           sx={{
@@ -1266,7 +1224,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
             </CardContent>
           </Card>
         </Box>
-      </Box>
+      </Box >
 
       <Dialog open={fineDialogOpen} onClose={() => setFineDialogOpen(false)}>
         <DialogTitle>Добавить штраф</DialogTitle>
