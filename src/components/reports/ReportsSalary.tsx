@@ -39,9 +39,9 @@ import {
 import {
   updatePayroll,
   deletePayroll,
+  createPayroll,
   Payroll,
   generatePayrollSheets,
-  addFine, // Assuming this is exported from service
 } from '../../services/payroll';
 
 interface Props {
@@ -207,10 +207,10 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   const handleSaveClick = async (rowId: string) => {
     try {
       // Найдем оригинальный объект зарплаты для получения полного ID
+      // Найдем оригинальный объект зарплаты для получения полного ID
       const originalRow = rows.find((r) => r.staffId === rowId);
       if (originalRow) {
-        // Используем _id записи зарплаты, если он есть, иначе staffId
-        const payrollId = originalRow._id || rowId;
+        let payrollId = originalRow._id;
 
         // Рассчитываем поле "Итого" в реальном времени
         const accruals =
@@ -232,6 +232,9 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
               ? originalRow.status
               : 'calculated';
 
+        // Map 'calculated' to 'draft' for API compliance
+        const apiStatus = status === 'calculated' ? 'draft' : status;
+
         // Обновленный расчет итоговой суммы (без бонусов)
         const total = accruals - penalties - advance;
 
@@ -239,19 +242,30 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         const updatedData = {
           ...editData,
           total,
-          status,
+          status: apiStatus as 'draft' | 'approved' | 'paid',
         };
 
-        // Выведем ID для отладки
-        console.log('Updating payroll with ID:', payrollId);
-        console.log('Edit data:', updatedData);
+        if (!payrollId) {
+          // Create payroll record first if it's virtual
+          console.log('Creating new payroll for virtual record');
+          const newPayroll = await createPayroll({
+            staffId: { _id: originalRow.staffId } as any,
+            period: selectedMonth,
+            baseSalary: editData.baseSalary ?? originalRow.baseSalary ?? 0,
+            latePenaltyRate: editData.latePenaltyRate ?? originalRow.latePenaltyRate,
+            ...updatedData
+          });
+          payrollId = newPayroll._id;
+        } else {
+          // Обновляем через API
+          console.log('Updating payroll with ID:', payrollId);
+          await updatePayroll(payrollId, updatedData as Partial<Payroll>);
+        }
 
-        // Обновляем через API
-        await updatePayroll(payrollId, updatedData as Partial<Payroll>);
         // Обновляем локальный массив
         setRows((prev) =>
           prev.map((r) =>
-            r.staffId === rowId ? ({ ...r, ...updatedData } as PayrollRow) : r,
+            r.staffId === rowId ? ({ ...r, ...updatedData, _id: payrollId, staffId: rowId } as PayrollRow) : r,
           ),
         );
         setEditingId(null);
@@ -472,10 +486,25 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
 
     try {
       // Find the payroll object
+      // Find the row
       const row = rows.find(r => r._id === currentFinePayrollId || r.staffId === currentFinePayrollId);
-      const payrollId = row?._id || currentFinePayrollId;
+      let payrollId = row?._id;
 
-      await import('../../services/payroll').then(m => m.addFine(payrollId, {
+      if (!payrollId && row) {
+        // Create payroll record first if it's virtual
+        const { createPayroll } = await import('../../services/payroll');
+        const newPayroll = await createPayroll({
+          staffId: { _id: row.staffId } as any,
+          period: selectedMonth,
+          baseSalary: row.baseSalary || 0,
+          status: 'draft'
+        });
+        payrollId = newPayroll._id;
+      }
+
+      if (!payrollId) throw new Error('Could not determine payroll ID');
+
+      await import('../../services/payroll').then(m => m.addFine(payrollId!, {
         amount: Number(newFine.amount),
         reason: newFine.reason,
         type: 'manual'
