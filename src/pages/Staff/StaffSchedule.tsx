@@ -327,11 +327,11 @@ const StaffSchedule: React.FC = () => {
       const existingHoliday =
         holidays && Array.isArray(holidays)
           ? holidays.find(
-              (h) =>
-                h.day === day &&
-                h.month === month &&
-                (h.isRecurring || h.year === year),
-            )
+            (h) =>
+              h.day === day &&
+              h.month === month &&
+              (h.isRecurring || h.year === year),
+          )
           : undefined;
 
       console.log(
@@ -366,12 +366,12 @@ const StaffSchedule: React.FC = () => {
         const duplicateHoliday =
           holidays && Array.isArray(holidays)
             ? holidays.find(
-                (h) =>
-                  h.day === day &&
-                  h.month === month &&
-                  h.year === year &&
-                  !h.isRecurring,
-              )
+              (h) =>
+                h.day === day &&
+                h.month === month &&
+                h.year === year &&
+                !h.isRecurring,
+            )
             : undefined;
 
         console.log(
@@ -978,7 +978,8 @@ const StaffSchedule: React.FC = () => {
                         filterRole.length === 0 ||
                         filterRole.includes(roleLabel);
 
-                      return matchesSearch && matchesRole;
+                      // Только активные сотрудники
+                      return matchesSearch && matchesRole && staffMember.active;
                     })
                     .map((staffMember) => {
                       const staffId = staffMember.id || staffMember._id;
@@ -1139,13 +1140,13 @@ const StaffSchedule: React.FC = () => {
                                         <Chip
                                           label={
                                             STATUS_TEXT[
-                                              shift.status as keyof typeof STATUS_TEXT
+                                            shift.status as keyof typeof STATUS_TEXT
                                             ] || shift.status
                                           }
                                           size='small'
                                           color={
                                             STATUS_COLORS[
-                                              shift.status as keyof typeof STATUS_COLORS
+                                            shift.status as keyof typeof STATUS_COLORS
                                             ] || 'default'
                                           }
                                         />

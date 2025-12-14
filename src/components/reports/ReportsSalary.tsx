@@ -43,6 +43,7 @@ import {
   Payroll,
   generatePayrollSheets,
 } from '../../services/payroll';
+import FinesDetailsDialog from './FinesDetailsDialog';
 
 interface Props {
   userId?: string;
@@ -86,6 +87,8 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   );
   const [fineDialogOpen, setFineDialogOpen] = useState(false);
   const [currentFinePayrollId, setCurrentFinePayrollId] = useState<string | null>(null);
+  const [currentFineStaffName, setCurrentFineStaffName] = useState('');
+  const [currentFines, setCurrentFines] = useState<any[]>([]);
   const [newFine, setNewFine] = useState({ amount: '', reason: '' });
 
   useEffect(() => {
@@ -165,7 +168,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
               p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0),
             latePenalties: p.latePenalties || 0,
             absencePenalties: p.absencePenalties || 0,
-            latePenaltyRate: p.latePenaltyRate || 500, // Значение по умолчанию
+            latePenaltyRate: p.latePenaltyRate || 13,// Значение по умолчанию
             advance: p.advance || 0, // Аванс
             // Рассчитываем поле "Итого" в реальном времени (без бонусов)
             total:
@@ -430,7 +433,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           totalPayout: data.reduce((sum, p) => {
             // Рассчитываем "Итого" для каждой записи
             const accruals = p.accruals || p.baseSalary || 0;
-            const penalties = p.penalties || 0;
+            const penalties = p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0);
             const advance = p.advance || 0;
             const total = accruals - penalties - advance; // Упрощенный расчет (без бонусов)
             // Не добавляем отрицательные значения в сумму
@@ -448,12 +451,12 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
               p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0),
             latePenalties: p.latePenalties || 0,
             absencePenalties: p.absencePenalties || 0,
-            latePenaltyRate: p.latePenaltyRate || 500, // Значение по умолчанию
+            latePenaltyRate: p.latePenaltyRate || 13, // Значение по умолчанию
             advance: p.advance || 0, // Аванс
             // Рассчитываем поле "Итого" в реальном времени (без бонусов)
             total:
               (p.accruals || p.baseSalary || 0) -
-              ((p.latePenalties || 0) + (p.absencePenalties || 0)) -
+              (p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0)) -
               (p.advance || 0), // Упрощенный расчет
             status: p.status && p.status !== 'draft' ? p.status : 'calculated',
             staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
@@ -475,17 +478,17 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
     }
   };
 
-  const handleOpenFineDialog = (payrollId: string) => {
-    setCurrentFinePayrollId(payrollId);
-    setNewFine({ amount: '', reason: '' });
+  const handleOpenFineDialog = (row: PayrollRow) => {
+    setCurrentFinePayrollId(row._id || row.staffId); // Use _id if available, logic handles missing locally
+    setCurrentFineStaffName(row.staffName);
+    setCurrentFines(row.fines || []);
     setFineDialogOpen(true);
   };
 
-  const handleAddFine = async () => {
-    if (!currentFinePayrollId || !newFine.amount || !newFine.reason) return;
+  const handleAddFine = async (fineData: { amount: number; reason: string; type: 'manual' }) => {
+    if (!currentFinePayrollId) return;
 
     try {
-      // Find the payroll object
       // Find the row
       const row = rows.find(r => r._id === currentFinePayrollId || r.staffId === currentFinePayrollId);
       let payrollId = row?._id;
@@ -504,39 +507,21 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
 
       if (!payrollId) throw new Error('Could not determine payroll ID');
 
-      await import('../../services/payroll').then(m => m.addFine(payrollId!, {
-        amount: Number(newFine.amount),
-        reason: newFine.reason,
+      const updatedPayroll = await import('../../services/payroll').then(m => m.addFine(payrollId!, {
+        amount: fineData.amount,
+        reason: fineData.reason,
         type: 'manual'
       }));
 
       setSnackbarMessage('Штраф добавлен');
       setSnackbarOpen(true);
-      setFineDialogOpen(false);
 
-      // Trigger reload (simple way)
-      // Better: updates rows locally. But logic is complex (recalc total).
-      // Let's just force reload or partial update.
-      // For now, simpler to reload the data.
-      const { getPayrolls } = await import('../../services/payroll');
-      const params: any = { period: selectedMonth };
-      // ... Add user filter logic if needed (simplified here for brevity)
-      if (userId) params.userId = userId;
+      // Update local state to reflect change immediately in modal and table
+      setCurrentFines(updatedPayroll.fines || []);
 
-      const payrollsData = await getPayrolls(params);
-      const data = (payrollsData?.data || payrollsData || []) as any[];
-      // Update rows... (Re-use load logic or just reload page?)
-      // Since load logic is inside useEffect, we can maybe trigger it?
-      // Or manually update the row in `rows`
-
-      // Manually updating for immediate feedback (simplified)
-      // Ideally we should refactor load logic to a function `fetchData` and call it.
-      // I'll assume page reload is acceptable or user can refresh, BUT
-      // let's try to just update the specific row if we got the updated payroll back.
-      // But `addFine` returns updated payroll.
-
-      // Force reload by changing a dependency? Or just alert user.
-      window.location.reload(); // Brute force but works for now to ensure consistency.
+      // Update main table rows
+      // We can reload or manually update
+      window.location.reload();
 
     } catch (e: any) {
       setSnackbarMessage('Ошибка добавления штрафа: ' + (e.message || 'Unknown'));
@@ -955,14 +940,14 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                             <TextField
                               size='small'
                               type='number'
-                              value={editData.baseSalary ?? ''}
-                              onChange={(e) => handleInputChange('baseSalary', Number(e.target.value))}
+                              value={editData.accruals ?? ''}
+                              onChange={(e) => handleInputChange('accruals', Number(e.target.value))}
                               inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
                               sx={{ width: '100px' }}
                               variant='standard'
                             />
                           ) : (
-                            r.baseSalary?.toLocaleString()
+                            r.accruals?.toLocaleString()
                           )}
                         </TableCell>
 
@@ -1013,73 +998,27 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                           }}
                         >
                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
-                            {editingId === r.staffId ? (
-                              <TextField
-                                size='small'
-                                type='number'
-                                value={editData.penalties ?? ''}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  if (value === '' || value === '-') {
-                                    handleInputChange('penalties', '');
-                                  } else {
-                                    const numValue = Number(value);
-                                    if (numValue >= 0) {
-                                      handleInputChange('penalties', numValue);
-                                    }
-                                  }
+                            <Tooltip
+                              title="Нажмите для детализации"
+                              placement="left"
+                              arrow
+                            >
+                              <span
+                                style={{
+                                  cursor: 'pointer',
+                                  borderBottom: '1px dashed #ef5350',
+                                  color: '#d32f2f',
+                                  fontWeight: 'bold'
                                 }}
-                                inputProps={{
-                                  style: { fontSize: 14, padding: '4px 8px', textAlign: 'right' },
-                                  min: 0,
-                                  step: 'any',
-                                }}
-                                sx={{ width: '80px' }}
-                                variant='standard'
-                              />
-                            ) : (
-                              <Tooltip
-                                title={
-                                  <Box sx={{ p: 1 }}>
-                                    <Typography variant="subtitle2" sx={{ mb: 1, borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
-                                      Детализация штрафов
-                                    </Typography>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                                      <span>Опоздания:</span>
-                                      <b>{r.latePenalties?.toLocaleString()}</b>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                                      <span>Неявки:</span>
-                                      <b>{r.absencePenalties?.toLocaleString()}</b>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                                      <span>Ручные:</span>
-                                      <b>{r.userFines?.toLocaleString()}</b>
-                                    </div>
-                                    {r.fines && r.fines.length > 0 && (
-                                      <>
-                                        <Box sx={{ my: 1, borderTop: '1px dashed rgba(255,255,255,0.2)' }} />
-                                        {r.fines.map((f: any, i: number) => (
-                                          <div key={i} style={{ fontSize: '0.85rem' }}>
-                                            • {f.reason}: {f.amount}
-                                          </div>
-                                        ))}
-                                      </>
-                                    )}
-                                  </Box>
-                                }
-                                placement="left"
-                                arrow
+                                onClick={() => handleOpenFineDialog(r)}
                               >
-                                <span style={{ cursor: 'help', borderBottom: '1px dotted #ef5350' }}>
-                                  {r.penalties ? r.penalties?.toLocaleString() : '0'}
-                                </span>
-                              </Tooltip>
-                            )}
+                                {r.penalties ? r.penalties?.toLocaleString() : '0'}
+                              </span>
+                            </Tooltip>
                             {currentUser?.role === 'admin' && (
                               <IconButton
                                 size="small"
-                                onClick={() => handleOpenFineDialog(r.staffId)}
+                                onClick={() => handleOpenFineDialog(r)}
                                 sx={{
                                   color: 'error.main',
                                   bgcolor: 'error.lighter',
@@ -1121,9 +1060,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                             />
                           ) : r.latePenaltyRate ? (
                             r.latePenaltyRate
-                          ) : (
-                            '500'
-                          )}
+                          ) : 13}
                         </TableCell>
                         <TableCell
                           align='right'
@@ -1255,35 +1192,13 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         </Box>
       </Box >
 
-      <Dialog open={fineDialogOpen} onClose={() => setFineDialogOpen(false)}>
-        <DialogTitle>Добавить штраф</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Укажите сумму и причину штрафа.
-          </DialogContentText>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Сумма"
-            type="number"
-            fullWidth
-            value={newFine.amount}
-            onChange={(e) => setNewFine({ ...newFine, amount: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Причина"
-            type="text"
-            fullWidth
-            value={newFine.reason}
-            onChange={(e) => setNewFine({ ...newFine, reason: e.target.value })}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setFineDialogOpen(false)}>Отмена</Button>
-          <Button onClick={handleAddFine}>Добавить</Button>
-        </DialogActions>
-      </Dialog>
+      <FinesDetailsDialog
+        open={fineDialogOpen}
+        onClose={() => setFineDialogOpen(false)}
+        fines={currentFines}
+        onAddFine={handleAddFine}
+        staffName={currentFineStaffName}
+      />
     </>
   );
 };
