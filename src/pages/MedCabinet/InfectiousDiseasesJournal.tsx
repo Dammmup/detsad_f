@@ -18,6 +18,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { getUsers } from '../../services/users';
+import childrenApi from '../../services/children';
 import { User } from '../../types/common';
 import { InfectiousDiseaseRecord } from '../../types/infectiousDisease';
 import {
@@ -41,9 +42,8 @@ export default function InfectiousDiseasesJournal() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      getUsers().then((users) => {
-        const children = users.filter((u) => u.birthday && u.parentName);
-        setUsers(children);
+      childrenApi.getAll().then((children) => {
+        setUsers(children as any);
       }),
       getInfectiousDiseaseRecords().then(setRecords),
     ]).finally(() => setLoading(false));

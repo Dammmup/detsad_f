@@ -19,6 +19,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { getUsers } from '../../services/users';
+import childrenApi from '../../services/children';
 import { User } from '../../types/common';
 import { MantouxRecord } from '../../types/mantoux';
 import {
@@ -56,9 +57,8 @@ export default function MantouxJournal() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      getUsers().then((users) => {
-        const children = users.filter((u) => u.birthday && u.parentName);
-        setUsers(children);
+      childrenApi.getAll().then((children) => {
+        setUsers(children as any);
       }),
       getMantouxRecords().then(setRecords),
     ]).finally(() => setLoading(false));

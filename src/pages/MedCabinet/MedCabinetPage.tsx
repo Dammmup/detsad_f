@@ -74,20 +74,30 @@ export default function MedCabinetPage() {
         return '/app/med/mantoux';
       case 'somatic_diseases':
         return '/app/med/somatic';
-      case 'helminth_journal':
+      case 'helminth_test_register':
         return '/app/med/helminth';
       case 'infectious_diseases':
         return '/app/med/infectious';
-      case 'contact_infection':
+      case 'contacts_infections':
         return '/app/med/contact-infection';
-      case 'risk_group_children':
+      case 'risk_group':
         return '/app/med/risk-group';
-      case 'tub_positive':
+      case 'tub_positive_register':
         return '/app/med/tub-positive';
       case 'organoleptic':
         return '/app/med/organoleptic-journal';
       case 'food_norms_control':
         return '/app/med/food-norms-control';
+      case 'perishable_brak':
+        return '/app/med/perishable-brak';
+      case 'food_certificates':
+        return '/app/med/food-certificates';
+      case 'detergents':
+        return '/app/med/detergents';
+      case 'food_stock':
+        return '/app/med/food-stock';
+      case 'canteen_staff_health':
+        return '/app/med/canteen-staff-health';
       default:
         return '/app/med';
     }

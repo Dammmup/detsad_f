@@ -79,7 +79,7 @@ const theme = createTheme({
 
 console.log('REACT_APP_API_URL from env:', process.env.REACT_APP_API_URL);
 axios.defaults.baseURL =
-  process.env.REACT_APP_API_URL || 'https:
+  process.env.REACT_APP_API_URL || 'http://localhost:8080';
 console.log('Final axios baseURL:', axios.defaults.baseURL);
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 

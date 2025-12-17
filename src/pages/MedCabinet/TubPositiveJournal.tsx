@@ -18,6 +18,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { getUsers } from '../../services/users';
+import childrenApi from '../../services/children';
 import { User } from '../../types/common';
 import { TubPositiveRecord } from '../../types/tubPositive';
 import {
@@ -40,9 +41,8 @@ export default function TubPositiveJournal() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      getUsers().then((users) => {
-        const children = users.filter((u) => u.birthday && u.parentName);
-        setUsers(children);
+      childrenApi.getAll().then((children) => {
+        setUsers(children as any);
       }),
       getTubPositiveRecords().then(setRecords),
     ]).finally(() => setLoading(false));

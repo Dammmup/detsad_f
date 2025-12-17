@@ -49,6 +49,11 @@ import HelminthJournal from '../pages/MedCabinet/HelminthJournal';
 import MantouxJournal from '../pages/MedCabinet/MantouxJournal';
 import OrganolepticJournalPage from '../pages/MedCabinet/OrganolepticJournalPage';
 import SomaticJournal from '../pages/MedCabinet/SomaticJournal';
+import PerishableBrakPage from '../pages/MedCabinet/PerishableBrakPage';
+import ProductCertificatePage from '../pages/MedCabinet/ProductCertificatePage';
+import DetergentLogPage from '../pages/MedCabinet/DetergentLogPage';
+import FoodStockLogPage from '../pages/MedCabinet/FoodStockLogPage';
+import FoodStaffHealthPage from '../pages/MedCabinet/FoodStaffHealthPage';
 import ReportsRent from './reports/ReportsRent';
 import ChildPayments from '../pages/Children/ChildPayments';
 import Qwen3Chat from './Qwen3Chat';
@@ -287,6 +292,26 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route
               path='med/food-norms-control'
               element={<FoodNormsControlPage />}
+            />
+            <Route
+              path='med/perishable-brak'
+              element={<PerishableBrakPage />}
+            />
+            <Route
+              path='med/food-certificates'
+              element={<ProductCertificatePage />}
+            />
+            <Route
+              path='med/detergents'
+              element={<DetergentLogPage />}
+            />
+            <Route
+              path='med/food-stock'
+              element={<FoodStockLogPage />}
+            />
+            <Route
+              path='med/canteen-staff-health'
+              element={<FoodStaffHealthPage />}
             />
             <Route path='profile' element={<ProfilePage />} />
 
