@@ -4,7 +4,7 @@ import { ApiError, DelayFunction, ErrorHandler } from '../types/common';
 
 
 export const API_BASE_URL =
-  process.env.REACT_APP_API_URL || 'https:
+  process.env.REACT_APP_API_URL || 'https://api.detsad.pro';
 export const API_TIMEOUT = 120000;
 export const RETRY_DELAY = 2000;
 export const MAX_RETRIES = 3;

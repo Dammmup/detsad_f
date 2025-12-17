@@ -219,7 +219,7 @@ export const Sidebar = ({
             bottom: 0,
             left: 0,
             background:
-              'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http:
+              'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"%3E%3Cpath d="M10 20 L50 20 M20 10 L50 10 M20 50 L50 50"/%3E%3C/svg%3E")',
             opacity: 0.1,
           },
         }}
