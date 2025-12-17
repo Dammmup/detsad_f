@@ -9,4 +9,7 @@ export interface MantouxRecord {
   diagnosis: string;
   mm: number;
   has063: boolean;
+  reactionSize: number;
+  reactionType: 'negative' | 'positive' | 'hyperergic';
+  injectionSite: string;
 }

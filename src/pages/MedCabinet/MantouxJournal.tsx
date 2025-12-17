@@ -44,7 +44,7 @@ export default function MantouxJournal() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const [newRecord, setNewRecord] = useState<Partial<MantouxRecord>>({ mm: 0 });
+  const [newRecord, setNewRecord] = useState<Partial<MantouxRecord>>({ mm: 0, reactionSize: 0 });
 
 
   const stats = useMemo(() => {
@@ -75,6 +75,9 @@ export default function MantouxJournal() {
 
   const handleAdd = async () => {
     if (!newRecord.childId || !newRecord.fio) return;
+    if (newRecord.reactionSize === undefined || newRecord.reactionSize === null) return;
+    if (!newRecord.reactionType) return;
+    if (!newRecord.injectionSite) return;
     setLoading(true);
     try {
       const created = await createMantouxRecord({
@@ -86,10 +89,11 @@ export default function MantouxJournal() {
         year: newRecord.year || new Date().getFullYear().toString(),
         atr: newRecord.atr || '',
         diagnosis: newRecord.diagnosis || '',
+        reactionSize: Number(newRecord.reactionSize),
       });
       setRecords((prev) => [...prev, created]);
       setModalOpen(false);
-      setNewRecord({ mm: 0 });
+      setNewRecord({ mm: 0, reactionSize: 0 });
     } finally {
       setLoading(false);
     }
@@ -175,6 +179,9 @@ export default function MantouxJournal() {
         fio: child.fullName || '',
         address: child.notes || '',
         birthdate: child.birthday || '',
+        reactionSize: 0, // Установим значение по умолчанию
+        reactionType: 'negative', // Установим значение по умолчанию
+        injectionSite: '', // Установим значение по умолчанию
       }));
     }
   };
@@ -204,7 +211,7 @@ export default function MantouxJournal() {
         <Typography>С данными 063: {stats.with063}</Typography>
         <Typography>Без данных 063: {stats.without063}</Typography>
       </Paper>
-      <Table size='small' sx={{ minWidth: 900, overflowX: 'auto' }}>
+      <Table size='small' sx={{ minWidth: 1200, overflowX: 'auto' }}>
         <TableHead>
           <TableRow>
             <TableCell>№</TableCell>
@@ -215,6 +222,9 @@ export default function MantouxJournal() {
             <TableCell>АТР</TableCell>
             <TableCell>Диагноз</TableCell>
             <TableCell>мм</TableCell>
+            <TableCell>Размер реакции</TableCell>
+            <TableCell>Тип реакции</TableCell>
+            <TableCell>Место инъекции</TableCell>
             <TableCell>063</TableCell>
             <TableCell>Действия</TableCell>
           </TableRow>
@@ -230,6 +240,9 @@ export default function MantouxJournal() {
               <TableCell>{r.atr}</TableCell>
               <TableCell>{r.diagnosis}</TableCell>
               <TableCell>{r.mm}</TableCell>
+              <TableCell>{r.reactionSize}</TableCell>
+              <TableCell>{r.reactionType}</TableCell>
+              <TableCell>{r.injectionSite}</TableCell>
               <TableCell>{r.has063 ? 'Да' : 'Нет'}</TableCell>
               <TableCell>
                 <Button
@@ -276,6 +289,44 @@ export default function MantouxJournal() {
                 ...r,
                 mm: Math.max(0, Math.min(50, Number(e.target.value))),
               }))
+            }
+            fullWidth
+            margin='dense'
+          />
+          <TextField
+            label='Размер реакции (мм)'
+            type='number'
+            inputProps={{ min: 0, max: 50 }}
+            value={newRecord.reactionSize || ''}
+            onChange={(e) =>
+              setNewRecord((r) => ({
+                ...r,
+                reactionSize: Math.max(0, Math.min(50, Number(e.target.value))),
+              }))
+            }
+            fullWidth
+            margin='dense'
+          />
+          <TextField
+            select
+            label='Тип реакции'
+            value={newRecord.reactionType || ''}
+            onChange={(e) =>
+              setNewRecord((r) => ({ ...r, reactionType: e.target.value as any }))
+            }
+            fullWidth
+            margin='dense'
+          >
+            <MenuItem value=''>—</MenuItem>
+            <MenuItem value='negative'>Отрицательная</MenuItem>
+            <MenuItem value='positive'>Положительная</MenuItem>
+            <MenuItem value='hyperergic'>Гиперергическая</MenuItem>
+          </TextField>
+          <TextField
+            label='Место инъекции'
+            value={newRecord.injectionSite || ''}
+            onChange={(e) =>
+              setNewRecord((r) => ({ ...r, injectionSite: e.target.value }))
             }
             fullWidth
             margin='dense'
