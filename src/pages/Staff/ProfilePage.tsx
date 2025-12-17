@@ -98,7 +98,7 @@ const ProfilePage: React.FC = () => {
     if (!user) return;
 
     try {
-      // Формируем объект обновления только с непустыми значениями
+
       const updateData: any = {};
       if (formData.phone) updateData.phone = formData.phone;
       if (formData.fullName) updateData.fullName = formData.fullName;
@@ -111,7 +111,7 @@ const ProfilePage: React.FC = () => {
 
       const updatedUser = await updateUser(user.id as any, updateData);
 
-      // Обновляем данные в localStorage
+
       const authData = {
         ...updatedUser,
         id: updatedUser._id,
@@ -124,7 +124,7 @@ const ProfilePage: React.FC = () => {
       setSuccess('Профиль успешно обновлен');
       setIsEditing(false);
 
-      // Очищаем сообщения через 3 секунды
+
       setTimeout(() => {
         setSuccess(null);
       }, 3000);
@@ -146,16 +146,16 @@ const ProfilePage: React.FC = () => {
     }
 
     try {
-      // Обновляем пароль через бэкенд
+
       if (user) {
-        // Формируем данные для обновления пароля
+
         const updateData = {
           initialPassword: passwordForm.newPassword,
         };
 
         const updatedUser = await updateUser(user.id as any, updateData);
 
-        // Обновляем данные в localStorage
+
         const authData = {
           ...updatedUser,
           id: updatedUser._id,
@@ -167,13 +167,13 @@ const ProfilePage: React.FC = () => {
 
         setSuccess('Пароль успешно изменен');
 
-        // Очищаем поля формы
+
         setPasswordForm({
           newPassword: '',
           confirmPassword: '',
         });
 
-        // Очищаем сообщения через 3 секунды
+
         setTimeout(() => {
           setSuccess(null);
         }, 3000);
@@ -196,7 +196,7 @@ const ProfilePage: React.FC = () => {
         setSuccess(
           'Код для привязки Telegram сгенерирован. Отправьте этот код боту.',
         );
-        setTimeout(() => setSuccess(null), 5000); // Hide after 5 seconds
+        setTimeout(() => setSuccess(null), 5000);
       }
     } catch (err) {
       setError('Ошибка при генерации кода для Telegram');

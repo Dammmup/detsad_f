@@ -18,7 +18,7 @@ export interface SidebarItem {
   link?: string;
   icon?: React.ReactNode;
   children?: SidebarItem[];
-  visibleFor?: string[]; // Массив ролей, которым виден этот элемент
+  visibleFor?: string[];
 }
 
 const sidebarStructure: SidebarItem[] = [
@@ -89,7 +89,7 @@ const sidebarStructure: SidebarItem[] = [
         icon: <AssessmentIcon />,
       },
     ],
-    visibleFor: ['admin'], // Только для администраторов
+    visibleFor: ['admin'],
   },
   {
     id: 'documents',
@@ -128,7 +128,7 @@ const sidebarStructure: SidebarItem[] = [
         icon: <AssessmentIcon />,
       },
     ],
-    visibleFor: ['admin'], // Только для администраторов
+    visibleFor: ['admin'],
   },
   {
     id: 'organization',
@@ -148,12 +148,12 @@ const sidebarStructure: SidebarItem[] = [
         icon: <SettingsIcon />,
       },
     ],
-    visibleFor: ['admin'], // Только для администраторов
+    visibleFor: ['admin'],
   },
   medicalSidebarSection,
 ];
 
-// Функция для фильтрации структуры боковой панели в зависимости от роли пользователя
+
 export const getFilteredSidebarStructure = (
   userRole: string = 'staff',
 ): SidebarItem[] => {

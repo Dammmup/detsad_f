@@ -47,12 +47,12 @@ export const TimeTrackingProvider = ({
   children,
 }: TimeTrackingProviderProps) => {
   const [timeStatus] = useState<string | null>(null);
-  // setTimeStatus is used in the fetchTimeStatus function below
+
   const [loading, setLoading] = useState<boolean>(false);
   const [location, setLocation] = useState<GeolocationPosition | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
 
-  // Get user location
+
   const getCurrentLocation = useCallback((): Promise<GeolocationPosition> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -93,17 +93,17 @@ export const TimeTrackingProvider = ({
         {
           enableHighAccuracy: true,
           timeout: 10000,
-          maximumAge: 300000, // 5 minutes
+          maximumAge: 300000,
         },
       );
     });
   }, []);
 
-  // Fetch current time tracking status
+
   const fetchTimeStatus = useCallback(async () => {
     try {
-      // API call would go here
-      // return response.data;
+
+
     } catch (error) {
       console.error('Error fetching time status:', error);
       toast.error('Ошибка загрузки статуса рабочего времени');
@@ -114,13 +114,13 @@ export const TimeTrackingProvider = ({
     return null;
   }, []);
 
-  // Clock in
+
   const clockIn = useCallback(
     async (options: Record<string, any> = {}) => {
       try {
         setLoading(true);
 
-        // Get current location if not provided
+
         let currentLocation = location;
         if (!currentLocation) {
           currentLocation = await getCurrentLocation();
@@ -136,8 +136,8 @@ export const TimeTrackingProvider = ({
           requestData,
         );
 
-        // // Update status
-        // await fetchTimeStatus();
+
+
 
         toast.success('Успешно отмечен приход на работу');
         return response.data;
@@ -154,13 +154,13 @@ export const TimeTrackingProvider = ({
     [location, getCurrentLocation],
   );
 
-  // Clock out
+
   const clockOut = useCallback(
     async (options: Record<string, any> = {}) => {
       try {
         setLoading(true);
 
-        // Get current location if not provided
+
         let currentLocation = location;
         if (!currentLocation) {
           currentLocation = await getCurrentLocation();
@@ -176,8 +176,8 @@ export const TimeTrackingProvider = ({
           requestData,
         );
 
-        // // Update status
-        // await fetchTimeStatus();
+
+
 
         toast.success('Успешно отмечен уход с работы');
         return response.data;
@@ -194,14 +194,14 @@ export const TimeTrackingProvider = ({
     [location, getCurrentLocation],
   );
 
-  // Start break
+
   const startBreak = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiClient.post('/time-tracking/break-start');
 
-      // // Update status
-      // await fetchTimeStatus();
+
+
 
       toast.success('Перерыв начат');
       return response.data;
@@ -216,14 +216,14 @@ export const TimeTrackingProvider = ({
     }
   }, []);
 
-  // End break
+
   const endBreak = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiClient.post('/time-tracking/break-end');
 
-      // // Update status
-      // await fetchTimeStatus();
+
+
 
       toast.success('Перерыв завершен');
       return response.data;
@@ -239,7 +239,7 @@ export const TimeTrackingProvider = ({
     }
   }, []);
 
-  // Get time entries
+
   const getTimeEntries = useCallback(
     async (params: Record<string, any> = {}) => {
       try {
@@ -260,7 +260,7 @@ export const TimeTrackingProvider = ({
     [],
   );
 
-  // Get time summary
+
   const getTimeSummary = useCallback(
     async (
       startDate: { toISOString: () => any },
@@ -285,32 +285,32 @@ export const TimeTrackingProvider = ({
     [],
   );
 
-  // Initialize location on mount
+
   useEffect(() => {
     getCurrentLocation().catch(() => {
-      // Location error is already handled in getCurrentLocation
+
     });
   }, [getCurrentLocation]);
 
-  // Auto-refresh status every 30 seconds if user is clocked in
+
   useEffect(() => {
     fetchTimeStatus();
     const interval = setInterval(() => {
       fetchTimeStatus().catch(() => {
-        // Error is already handled in fetchTimeStatus
+
       });
-    }, 30000); // 30 seconds
+    }, 30000);
     return () => clearInterval(interval);
   }, [fetchTimeStatus]);
 
   const value = {
-    // State
+
     timeStatus,
     loading,
     location,
     locationError,
 
-    // Actions
+
     fetchTimeStatus,
     getCurrentLocation,
     clockIn,
@@ -320,7 +320,7 @@ export const TimeTrackingProvider = ({
     getTimeEntries,
     getTimeSummary,
 
-    // Helper functions
+
     formatTime: (date: string | number | Date) => {
       return new Date(date).toLocaleTimeString('ru-RU', {
         hour: '2-digit',

@@ -1,14 +1,14 @@
 import { apiClient } from '../utils/api';
 
-// const REACT_APP_API_URL = `${process.env.REACT_APP_API_URL}/` || 'https://detsad-b.onrender.com';
 
-// Интерфейс для API ошибки
+
+
 interface ApiError extends Error {
   status?: number;
   data?: any;
 }
 
-// Интерфейс для смены
+
 export interface Shift {
   id?: string;
   userId: string;
@@ -16,18 +16,18 @@ export interface Shift {
   date: string;
   startTime: string;
   endTime: string;
-  type: string; // regular, overtime, sick, vacation
+  type: string;
   notes?: string;
-  status?: string; // planned, completed, cancelled
+  status?: string;
   groupId?: string;
 }
 
-// Helper function to handle API errors
+
 const handleApiError = (error: any, context = '') => {
   const errorMessage = error.response?.data?.message || error.message;
   console.error(`Error ${context}:`, errorMessage);
 
-  // Create a more detailed error object
+
   const apiError = new Error(`Error ${context}: ${errorMessage}`) as ApiError;
   apiError.status = error.response?.status;
   apiError.data = error.response?.data;
@@ -35,12 +35,6 @@ const handleApiError = (error: any, context = '') => {
   throw apiError;
 };
 
-/**
- * Get all schedules
- * @param {string} groupId - Optional group ID
- * @param {string} userId - Optional user ID
- * @returns {Promise<Shift[]>} List of schedules
- */
 export const getSchedules = async (groupId?: string, userId?: string) => {
   try {
     console.log('Fetching schedules from API...');
@@ -65,11 +59,6 @@ export const getSchedules = async (groupId?: string, userId?: string) => {
   }
 };
 
-/**
- * Get a single shift by ID
- * @param {string} id - Shift ID
- * @returns {Promise<Shift>} Shift data
- */
 export const getShift = async (id: string) => {
   try {
     const response = await apiClient.get(`/shifts/${id}`);
@@ -90,11 +79,6 @@ export const getShift = async (id: string) => {
   }
 };
 
-/**
- * Create a new schedule record
- * @param {Shift} record - Schedule record to create
- * @returns {Promise<Shift>} Created record
- */
 export const createSchedule = async (record: Shift) => {
   try {
     const response = await apiClient.post('/schedule', {
@@ -121,12 +105,6 @@ export const createSchedule = async (record: Shift) => {
   }
 };
 
-/**
- * Update an existing schedule record
- * @param {string} id - Schedule record ID
- * @param {Shift} record - Updated record data
- * @returns {Promise<Shift>} Updated record
- */
 export const updateSchedule = async (id: string, record: Shift) => {
   try {
     const response = await apiClient.put(`/schedule/${id}`, {
@@ -153,11 +131,6 @@ export const updateSchedule = async (id: string, record: Shift) => {
   }
 };
 
-/**
- * Delete a schedule record
- * @param {string} id - Schedule record ID
- * @returns {Promise<void>}
- */
 export const deleteSchedule = async (id: string) => {
   try {
     await apiClient.delete(`/schedule/${id}`);
@@ -167,10 +140,3 @@ export const deleteSchedule = async (id: string) => {
   }
 };
 
-/**
- * Generate mock shifts for testing
- * @param {string} startDate - Start date in YYYY-MM-DD format
- * @param {string} endDate - End date in YYYY-MM-DD format
- * @param {string} userId - Optional user ID to filter shifts
- * @returns {Shift[]} List of mock shifts
- */

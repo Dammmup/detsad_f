@@ -1,4 +1,4 @@
-// Тип для пользователя
+
 export interface UserRef {
   _id: string;
   fullName: string;
@@ -9,19 +9,19 @@ export interface TaskList {
   _id?: string;
   title: string;
   description?: string;
-  assignedTo: string | UserRef; // Может быть ID или populated объектом
-  assignedBy: string | UserRef; // Может быть ID или populated объектом
-  assignedToSpecificUser?: string | UserRef; // Может быть ID или populated объектом
-  dueDate?: string; // ISO string
+  assignedTo: string | UserRef;
+  assignedBy: string | UserRef;
+  assignedToSpecificUser?: string | UserRef;
+  dueDate?: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   category: string;
   attachments?: string[];
   notes?: string;
-  completedAt?: string; // Дата выполнения
-  cancelledAt?: string; // Дата отмены
-  completedBy?: string | UserRef; // Может быть ID или populated объектом
-  cancelledBy?: string | UserRef; // Может быть ID или populated объектом
+  completedAt?: string;
+  cancelledAt?: string;
+  completedBy?: string | UserRef;
+  cancelledBy?: string | UserRef;
   createdAt?: string;
   updatedAt?: string;
 }

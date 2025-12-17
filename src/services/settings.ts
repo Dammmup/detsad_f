@@ -1,13 +1,13 @@
 import { apiClient } from '../utils/api';
 
-// let baseUrl = process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
-// // Добавляем '' к базовому URL, если его нет
-// if (!baseUrl.endsWith('')) {
-//   baseUrl = baseUrl.replace(/\/$/, '') + '';
-// }
-// const REACT_APP_API_URL = baseUrl;
 
-// Интерфейс для API ошибки
+
+
+
+
+
+
+
 interface ApiError extends Error {
   status?: number;
   data?: any;
@@ -22,7 +22,7 @@ export interface GeolocationSettings {
   coordinates: Coordinates;
   radius: number;
 }
-// Интерфейс для настроек детского сада
+
 export interface KindergartenSettings {
   id?: string;
   name: string;
@@ -41,7 +41,7 @@ export interface KindergartenSettings {
   holidays?: string[];
 }
 
-// Интерфейс для настроек уведомлений
+
 export interface NotificationSettings {
   id?: string;
   emailNotifications: boolean;
@@ -53,7 +53,7 @@ export interface NotificationSettings {
   reportReminders: boolean;
 }
 
-// Интерфейс для настроек безопасности
+
 export interface SecuritySettings {
   id?: string;
   passwordPolicy: {
@@ -63,27 +63,27 @@ export interface SecuritySettings {
     requireNumbers: boolean;
     requireSpecialChars: boolean;
   };
-  sessionTimeout: number; // в минутах
+  sessionTimeout: number;
   twoFactorAuth: boolean;
   ipWhitelist: string[];
   maxLoginAttempts: number;
 }
 
-// Интерфейс для настроек геолокации
+
 export interface GeolocationSettings {
   id?: string;
   enabled: boolean;
-  radius: number; // в метрах
+  radius: number;
   coordinates: {
     latitude: number;
     longitude: number;
   };
-  yandexApiKey?: string; // API key for Yandex services
+  yandexApiKey?: string;
   strictMode: boolean;
   allowedDevices: string[];
 }
 
-// Интерфейс для пользователя
+
 export interface User {
   id?: string;
   username: string;
@@ -96,12 +96,12 @@ export interface User {
   permissions: string[];
 }
 
-// Helper function to handle API errors
+
 const handleApiError = (error: any, context = '') => {
   const errorMessage = error.response?.data?.message || error.message;
   console.error(`Error ${context}:`, errorMessage);
 
-  // Create a more detailed error object
+
   const apiError = new Error(`Error ${context}: ${errorMessage}`) as ApiError;
   apiError.status = error.response?.status;
   apiError.data = error.response?.data;
@@ -109,13 +109,9 @@ const handleApiError = (error: any, context = '') => {
   throw apiError;
 };
 
-/**
- * Get kindergarten settings
- * @returns {Promise<KindergartenSettings>} Kindergarten settings
- */
 
 export const settingsService = {
-  // Геолокация
+
   getGeolocationSettings: () =>
     apiClient.get<GeolocationSettings>('/settings/geolocation'),
   updateGeolocationSettings: (data: Partial<GeolocationSettings>) =>
@@ -130,13 +126,13 @@ export const settingsService = {
       radius,
     }),
 
-  // Настройки детского сада
+
   getKindergartenSettings: () =>
     apiClient.get<KindergartenSettings>('/settings/kindergarten'),
   updateKindergartenSettings: (data: Partial<KindergartenSettings>) =>
     apiClient.put<KindergartenSettings>('/settings/kindergarten', data),
 
-  // Проверка нерабочего дня
+
   isNonWorkingDay: (dateStr: string) =>
     apiClient.get<{ isNonWorkingDay: boolean }>(
       `/settings/is-non-working-day/${dateStr}`,
@@ -174,11 +170,6 @@ export const getKindergartenSettings = async () => {
   }
 };
 
-/**
- * Update kindergarten settings
- * @param {KindergartenSettings} settings - Updated settings
- * @returns {Promise<KindergartenSettings>} Updated settings
- */
 export const updateKindergartenSettings = async (
   settings: KindergartenSettings,
 ) => {
@@ -219,10 +210,6 @@ export const updateKindergartenSettings = async (
   }
 };
 
-/**
- * Get notification settings
- * @returns {Promise<NotificationSettings>} Notification settings
- */
 export const getNotificationSettings = async () => {
   try {
     const response = await apiClient.get('/settings/notifications');
@@ -244,11 +231,6 @@ export const getNotificationSettings = async () => {
   }
 };
 
-/**
- * Update notification settings
- * @param {NotificationSettings} settings - Updated settings
- * @returns {Promise<NotificationSettings>} Updated settings
- */
 export const updateNotificationSettings = async (
   settings: NotificationSettings,
 ) => {
@@ -272,10 +254,6 @@ export const updateNotificationSettings = async (
   }
 };
 
-/**
- * Get security settings
- * @returns {Promise<SecuritySettings>} Security settings
- */
 export const getSecuritySettings = async () => {
   try {
     const response = await apiClient.get('/settings/security');
@@ -304,11 +282,6 @@ export const getSecuritySettings = async () => {
   }
 };
 
-/**
- * Update security settings
- * @param {SecuritySettings} settings - Updated settings
- * @returns {Promise<SecuritySettings>} Updated settings
- */
 export const updateSecuritySettings = async (settings: SecuritySettings) => {
   try {
     const response = await apiClient.put('/settings/security', settings);
@@ -337,10 +310,6 @@ export const updateSecuritySettings = async (settings: SecuritySettings) => {
   }
 };
 
-/**
- * Get geolocation settings
- * @returns {Promise<GeolocationSettings>} Geolocation settings
- */
 export const getGeolocationSettings = async () => {
   try {
     const response = await apiClient.get('/settings/geolocation');
@@ -364,11 +333,6 @@ export const getGeolocationSettings = async () => {
   }
 };
 
-/**
- * Update geolocation settings
- * @param {GeolocationSettings} settings - Updated settings
- * @returns {Promise<GeolocationSettings>} Updated settings
- */
 export const updateGeolocationSettings = async (
   settings: GeolocationSettings,
 ) => {
@@ -396,10 +360,6 @@ export const updateGeolocationSettings = async (
   }
 };
 
-/**
- * Get all users
- * @returns {Promise<User[]>} List of users
- */
 export const getAllUsers = async () => {
   try {
     const response = await apiClient.get('/users');
@@ -413,7 +373,7 @@ export const getAllUsers = async () => {
       isActive: user.active,
       lastLogin: user.lastLogin,
       createdAt: user.createdAt,
-      permissions: [], // В реальном приложении здесь будут реальные разрешения
+      permissions: [],
     }));
 
     return users;
@@ -422,11 +382,6 @@ export const getAllUsers = async () => {
   }
 };
 
-/**
- * Create a new user
- * @param {User} user - User data to create
- * @returns {Promise<User>} Created user
- */
 export const createUser = async (user: User) => {
   try {
     const response = await apiClient.post('/users', user);
@@ -449,12 +404,6 @@ export const createUser = async (user: User) => {
   }
 };
 
-/**
- * Update an existing user
- * @param {string} id - User ID
- * @param {User} user - Updated user data
- * @returns {Promise<User>} Updated user
- */
 export const updateUser = async (id: string, user: User) => {
   try {
     const response = await apiClient.put(`/users/${id}`, user);
@@ -477,11 +426,6 @@ export const updateUser = async (id: string, user: User) => {
   }
 };
 
-/**
- * Delete a user
- * @param {string} id - User ID
- * @returns {Promise<void>}
- */
 export const deleteUser = async (id: string) => {
   try {
     await apiClient.delete(`/users/${id}`);
@@ -491,5 +435,5 @@ export const deleteUser = async (id: string) => {
   }
 };
 
-// Export api for backward compatibility
+
 export { apiClient as api };

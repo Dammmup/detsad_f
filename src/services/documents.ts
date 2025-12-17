@@ -1,6 +1,6 @@
 import { apiClient } from '../utils/api';
 
-// Типы для документов
+
 export interface Document {
   id: string;
   title: string;
@@ -26,7 +26,7 @@ export interface Document {
   updatedAt: string;
 }
 
-// Параметры для получения списка документов
+
 export interface GetDocumentsParams {
   type?: 'contract' | 'certificate' | 'report' | 'policy' | 'other';
   category?: 'staff' | 'children' | 'financial' | 'administrative' | 'other';
@@ -38,7 +38,7 @@ export interface GetDocumentsParams {
   limit?: number;
 }
 
-// Создание документа
+
 export interface CreateDocumentData {
   title: string;
   description?: string;
@@ -51,9 +51,9 @@ export interface CreateDocumentData {
   expiryDate?: string;
 }
 
-// ========== DOCUMENTS API ==========
 
-// Получение списка документов
+
+
 export const getDocuments = async (params?: GetDocumentsParams) => {
   try {
     const queryParams = new URLSearchParams();
@@ -68,7 +68,7 @@ export const getDocuments = async (params?: GetDocumentsParams) => {
     const response = await apiClient.get(
       `/documents?${queryParams.toString()}`,
     );
-    // Преобразуем _id в id для совместимости с фронтендом
+
     const documents = response.data;
     if (Array.isArray(documents)) {
       return documents.map((doc) => ({ ...doc, id: doc._id }));
@@ -80,7 +80,7 @@ export const getDocuments = async (params?: GetDocumentsParams) => {
   }
 };
 
-// Получение конкретного документа
+
 export const getDocument = async (id: string) => {
   try {
     const response = await apiClient.get(`/documents/${id}`);
@@ -91,7 +91,7 @@ export const getDocument = async (id: string) => {
   }
 };
 
-// Создание документа
+
 export const createDocument = async (data: CreateDocumentData) => {
   try {
     const formData = new FormData();
@@ -118,7 +118,7 @@ export const createDocument = async (data: CreateDocumentData) => {
   }
 };
 
-// Обновление документа
+
 export const updateDocument = async (id: string, data: Partial<Document>) => {
   try {
     const response = await apiClient.put(`/documents/${id}`, data);
@@ -129,7 +129,7 @@ export const updateDocument = async (id: string, data: Partial<Document>) => {
   }
 };
 
-// Удаление документа
+
 export const deleteDocument = async (id: string) => {
   try {
     const response = await apiClient.delete(`/documents/${id}`);
@@ -140,26 +140,26 @@ export const deleteDocument = async (id: string) => {
   }
 };
 
-// Скачивание документа
+
 export const downloadDocument = async (id: string) => {
   try {
     const response = await apiClient.get(`/documents/${id}/download`, {
       responseType: 'blob',
     });
 
-    // Создание ссылки для скачивания
+
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute(
       'download',
       response.headers['content-disposition']?.split('filename=')[1] ||
-        'document.pdf',
+      'document.pdf',
     );
     document.body.appendChild(link);
     link.click();
 
-    // Очистка
+
     link.parentNode?.removeChild(link);
     window.URL.revokeObjectURL(url);
 
@@ -170,7 +170,7 @@ export const downloadDocument = async (id: string) => {
   }
 };
 
-// Экспорт документов
+
 export const exportDocuments = async (
   format: 'pdf' | 'excel' | 'csv',
   params?: GetDocumentsParams,
@@ -187,7 +187,7 @@ export const exportDocuments = async (
       },
     );
 
-    // Создание ссылки для скачивания
+
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
@@ -198,7 +198,7 @@ export const exportDocuments = async (
     document.body.appendChild(link);
     link.click();
 
-    // Очистка
+
     link.parentNode?.removeChild(link);
     window.URL.revokeObjectURL(url);
 

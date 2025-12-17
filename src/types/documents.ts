@@ -1,6 +1,6 @@
-// ===== ТИПЫ ДЛЯ ДОКУМЕНТОВ =====
 
-// Базовые типы
+
+
 export type DocumentType =
   | 'contract'
   | 'certificate'
@@ -27,12 +27,12 @@ export type TemplateCategory =
   | 'administrative'
   | 'other';
 
-// ===== ИНТЕРФЕЙСЫ =====
 
-// Документ
+
+
 export interface Document {
-  id?: string; // для совместимости с фронтендом
-  _id?: string; // для совместимости с MongoDB
+  id?: string;
+  _id?: string;
   title: string;
   description?: string;
   type: DocumentType;
@@ -40,7 +40,7 @@ export interface Document {
   fileName: string;
   fileSize: number;
   filePath: string;
-  uploadDate?: string; // ISODateString
+  uploadDate?: string;
   uploader?: {
     id: string;
     fullName: string;
@@ -51,15 +51,15 @@ export interface Document {
   status: DocumentStatus;
   tags: string[];
   version: string;
-  expiryDate?: string; // ISODateString
-  createdAt?: string; // ISODateString
-  updatedAt?: string; // ISODateString
+  expiryDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// Шаблон документа
+
 export interface DocumentTemplate {
   id: string;
-  _id?: string; // для совместимости с MongoDB
+  _id?: string;
   name: string;
   description?: string;
   type: TemplateType;
@@ -71,13 +71,13 @@ export interface DocumentTemplate {
   isActive: boolean;
   tags: string[];
   usageCount: number;
-  createdAt?: string; // ISODateString
-  updatedAt?: string; // ISODateString
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// ===== ПАРАМЕТРЫ API =====
 
-// Параметры для получения списка документов
+
+
 export interface GetDocumentsParams {
   type?: DocumentType;
   category?: DocumentCategory;
@@ -91,7 +91,7 @@ export interface GetDocumentsParams {
   order?: 'asc' | 'desc';
 }
 
-// Параметры для получения списка шаблонов
+
 export interface GetTemplatesParams {
   type?: TemplateType;
   category?: TemplateCategory;
@@ -103,7 +103,7 @@ export interface GetTemplatesParams {
   order?: 'asc' | 'desc';
 }
 
-// Параметры для создания документа
+
 export interface CreateDocumentData {
   title: string;
   description?: string;
@@ -113,10 +113,10 @@ export interface CreateDocumentData {
   relatedId?: string;
   relatedType?: 'staff' | 'child' | 'group';
   tags?: string[];
-  expiryDate?: string; // ISODateString
+  expiryDate?: string;
 }
 
-// Параметры для создания шаблона
+
 export interface CreateTemplateData {
   name: string;
   description?: string;
@@ -126,7 +126,7 @@ export interface CreateTemplateData {
   tags?: string[];
 }
 
-// Параметры для обновления документа
+
 export interface UpdateDocumentData {
   title?: string;
   description?: string;
@@ -135,11 +135,11 @@ export interface UpdateDocumentData {
   relatedId?: string;
   relatedType?: 'staff' | 'child' | 'group';
   tags?: string[];
-  expiryDate?: string; // ISODateString
+  expiryDate?: string;
   status?: DocumentStatus;
 }
 
-// Параметры для обновления шаблона
+
 export interface UpdateTemplateData {
   name?: string;
   description?: string;
@@ -149,7 +149,7 @@ export interface UpdateTemplateData {
   tags?: string[];
 }
 
-// Параметры для экспорта документов
+
 export interface ExportDocumentsParams {
   format: 'pdf' | 'excel' | 'csv';
   type?: DocumentType;
@@ -157,12 +157,12 @@ export interface ExportDocumentsParams {
   status?: DocumentStatus;
   relatedId?: string;
   relatedType?: 'staff' | 'child' | 'group';
-  startDate?: string; // ISODateString
-  endDate?: string; // ISODateString
+  startDate?: string;
+  endDate?: string;
   search?: string;
 }
 
-// Параметры для экспорта шаблонов
+
 export interface ExportTemplatesParams {
   format: 'pdf' | 'excel' | 'csv';
   type?: TemplateType;
@@ -171,7 +171,7 @@ export interface ExportTemplatesParams {
   search?: string;
 }
 
-// Параметры для отправки отчета по email
+
 export interface SendReportByEmailParams {
   reportType: 'salary' | 'children' | 'attendance' | 'schedule';
   recipients: string[];
@@ -181,19 +181,19 @@ export interface SendReportByEmailParams {
   reportParams?: any;
 }
 
-// Параметры для планирования отчета
+
 export interface ScheduleReportParams {
   reportType: 'salary' | 'children' | 'attendance' | 'schedule';
   frequency: 'daily' | 'weekly' | 'monthly';
   recipients: string[];
   format: 'pdf' | 'excel' | 'csv';
   reportParams?: any;
-  startDate?: string; // ISODateString
+  startDate?: string;
 }
 
-// ===== ВСПОМОГАТЕЛЬНЫЕ ТИПЫ =====
 
-// Результат экспорта
+
+
 export interface ExportResult {
   success: boolean;
   message?: string;
@@ -201,7 +201,7 @@ export interface ExportResult {
   error?: string;
 }
 
-// Результат отправки по email
+
 export interface SendEmailResult {
   success: boolean;
   message?: string;
@@ -209,7 +209,7 @@ export interface SendEmailResult {
   error?: string;
 }
 
-// Результат планирования отчета
+
 export interface ScheduleReportResult {
   success: boolean;
   message?: string;
@@ -217,9 +217,9 @@ export interface ScheduleReportResult {
   error?: string;
 }
 
-// ===== УТИЛИТЫ =====
 
-// Маппинг типов документов на русский текст
+
+
 export const DOCUMENT_TYPE_TEXT: Record<DocumentType, string> = {
   contract: 'Договор',
   certificate: 'Справка',
@@ -228,7 +228,7 @@ export const DOCUMENT_TYPE_TEXT: Record<DocumentType, string> = {
   other: 'Другое',
 };
 
-// Маппинг категорий документов на русский текст
+
 export const DOCUMENT_CATEGORY_TEXT: Record<DocumentCategory, string> = {
   staff: 'Сотрудники',
   children: 'Дети',
@@ -237,13 +237,13 @@ export const DOCUMENT_CATEGORY_TEXT: Record<DocumentCategory, string> = {
   other: 'Другое',
 };
 
-// Маппинг статусов документов на русский текст
+
 export const DOCUMENT_STATUS_TEXT: Record<DocumentStatus, string> = {
   active: 'Активен',
   archived: 'Архивирован',
 };
 
-// Маппинг типов шаблонов на русский текст
+
 export const TEMPLATE_TYPE_TEXT: Record<TemplateType, string> = {
   contract: 'Договор',
   certificate: 'Справка',
@@ -252,7 +252,7 @@ export const TEMPLATE_TYPE_TEXT: Record<TemplateType, string> = {
   other: 'Другое',
 };
 
-// Маппинг категорий шаблонов на русский текст
+
 export const TEMPLATE_CATEGORY_TEXT: Record<TemplateCategory, string> = {
   staff: 'Сотрудники',
   children: 'Дети',

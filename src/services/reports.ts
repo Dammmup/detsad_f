@@ -1,6 +1,6 @@
 import { apiClient } from '../utils/api';
 
-// Интерфейсы для отчетов
+
 export interface Report {
   id?: string;
   title: string;
@@ -58,18 +58,18 @@ export interface ScheduleStats {
   averageHoursPerDay: number;
 }
 
-// API Error interface
+
 interface ApiError extends Error {
   status?: number;
   data?: any;
 }
 
-// Helper function to handle API errors
+
 const handleApiError = (error: any, context = '') => {
   const errorMessage = error.response?.data?.message || error.message;
   console.error(`Error ${context}:`, errorMessage);
 
-  // Create a more detailed error object
+
   const apiError = new Error(`Error ${context}: ${errorMessage}`) as ApiError;
   apiError.status = error.response?.status;
   apiError.data = error.response?.data;
@@ -77,20 +77,16 @@ const handleApiError = (error: any, context = '') => {
   throw apiError;
 };
 
-// Add delay between requests to prevent rate limiting
+
 const delay = (ms: number | undefined) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Get all reports
- * @returns {Promise<Report[]>} List of reports
- */
 export const getReports = async () => {
   try {
     console.log('Fetching reports from API...');
 
     const response = await apiClient.get('/reports', {
-      timeout: 30000, // 30 seconds for fetching reports
+      timeout: 30000,
     });
 
     const reports: Report[] = response.data.map((report: any) => ({
@@ -124,15 +120,10 @@ export const getReports = async () => {
   }
 };
 
-/**
- * Get a single report by ID
- * @param {string} id - Report ID
- * @returns {Promise<Report>} Report data
- */
 export const getReport = async (id: string) => {
   try {
     const response = await apiClient.get(`/reports/${id}`, {
-      timeout: 30000, // 30 seconds for fetching report
+      timeout: 30000,
     });
 
     const report: Report = {
@@ -164,15 +155,10 @@ export const getReport = async (id: string) => {
   }
 };
 
-/**
- * Create a new report
- * @param {Report} report - Report data to create
- * @returns {Promise<Report>} Created report
- */
 export const createReport = async (report: Report) => {
   try {
     const response = await apiClient.post('/reports', report, {
-      timeout: 30000, // 30 seconds for creating report
+      timeout: 30000,
     });
 
     const createdReport: Report = {
@@ -204,15 +190,10 @@ export const createReport = async (report: Report) => {
   }
 };
 
-/**
- * Delete a report
- * @param {string} id - Report ID
- * @returns {Promise<void>}
- */
 export const deleteReport = async (id: string) => {
   try {
     await apiClient.delete(`/reports/${id}`, {
-      timeout: 30000, // 30 seconds for deleting report
+      timeout: 30000,
     });
     return { success: true };
   } catch (error) {
@@ -220,13 +201,6 @@ export const deleteReport = async (id: string) => {
   }
 };
 
-/**
- * Generate attendance statistics for a specific date range
- * @param {string} startDate - Start date in YYYY-MM-DD format
- * @param {string} endDate - End date in YYYY-MM-DD format
- * @param {string} userId - Optional user ID to filter statistics
- * @returns {Promise<AttendanceStats>} Attendance statistics
- */
 export const getAttendanceStatistics = async (
   startDate: string,
   endDate: string,
@@ -235,10 +209,10 @@ export const getAttendanceStatistics = async (
   try {
     await delay(500);
 
-    // В реальном приложении здесь будет запрос к API
+
     const response = await apiClient.get('/reports/attendance-statistics', {
       params: { startDate, endDate, userId },
-      timeout: 30000, // 30 seconds for attendance statistics
+      timeout: 30000,
     });
 
     return response.data;
@@ -247,13 +221,6 @@ export const getAttendanceStatistics = async (
   }
 };
 
-/**
- * Generate schedule statistics for a specific date range
- * @param {string} startDate - Start date in YYYY-MM-DD format
- * @param {string} endDate - End date in YYYY-MM-DD format
- * @param {string} userId - Optional user ID to filter statistics
- * @returns {Promise<ScheduleStats>} Schedule statistics
- */
 export const getScheduleStatistics = async (
   startDate: string,
   endDate: string,
@@ -262,10 +229,10 @@ export const getScheduleStatistics = async (
   try {
     await delay(500);
 
-    // В реальном приложении здесь будет запрос к API
+
     const response = await apiClient.get('/reports/schedule-statistics', {
       params: { startDate, endDate, userId },
-      timeout: 30000, // 30 seconds for schedule statistics
+      timeout: 30000,
     });
 
     return response.data;
@@ -274,12 +241,6 @@ export const getScheduleStatistics = async (
   }
 };
 
-/**
- * Export report to file
- * @param {string} reportId - Report ID
- * @param {string} format - Export format (pdf, excel, csv)
- * @returns {Promise<Blob>} File blob
- */
 export const exportReport = async (
   reportId: string,
   format: 'pdf' | 'excel' | 'csv',
@@ -288,10 +249,10 @@ export const exportReport = async (
     const response = await apiClient.get(`/reports/${reportId}/export`, {
       params: { format },
       responseType: 'blob',
-      timeout: 60000, // 60 seconds for exporting report
+      timeout: 60000,
     });
 
-    // Создаем blob для скачивания
+
     const blob = new Blob([response.data], {
       type:
         format === 'pdf'
@@ -307,13 +268,8 @@ export const exportReport = async (
   }
 };
 
-// ===== РАСШИРЕННЫЕ ФУНКЦИИ ЭКСПОРТА ОТЧЕТОВ =====
 
-/**
- * Export salary report
- * @param {object} params - Salary report parameters
- * @returns {Promise<Blob>} File blob
- */
+
 export const exportSalaryReport = async (params: {
   startDate: string;
   endDate: string;
@@ -329,7 +285,7 @@ export const exportSalaryReport = async (params: {
     );
     const response = await apiClient.post('/reports/salary/export', params, {
       responseType: 'blob',
-      timeout: 60000, // 60 seconds for salary report export
+      timeout: 60000,
     });
     const blob = new Blob([response.data], {
       type:
@@ -342,7 +298,7 @@ export const exportSalaryReport = async (params: {
     return blob;
   } catch (error: any) {
     if (error.response) {
-      // Логируем подробности ответа с ошибкой
+
       console.error(
         '[exportSalaryReport] Ошибка:',
         error.response.status,
@@ -359,12 +315,12 @@ export const exportSalaryReport = async (params: {
   }
 };
 
-// Получение salary summary (GET)
+
 export const getSalarySummary = async (month: string) => {
   try {
     const response = await apiClient.get('/reports/salary/summary', {
       params: { month },
-      timeout: 30000, // 30 seconds for salary summary
+      timeout: 30000,
     });
     return response.data;
   } catch (error) {
@@ -372,11 +328,6 @@ export const getSalarySummary = async (month: string) => {
   }
 };
 
-/**
- * Export children list report
- * @param {object} params - Children report parameters
- * @returns {Promise<Blob>} File blob
- */
 export const exportChildrenReport = async (params: {
   groupId?: string;
   ageGroup?: string;
@@ -387,7 +338,7 @@ export const exportChildrenReport = async (params: {
   try {
     const response = await apiClient.post('/reports/children/export', params, {
       responseType: 'blob',
-      timeout: 60000, // 60 seconds for children report export
+      timeout: 60000,
     });
 
     const blob = new Blob([response.data], {
@@ -405,11 +356,6 @@ export const exportChildrenReport = async (params: {
   }
 };
 
-/**
- * Export attendance report with advanced options
- * @param {object} params - Attendance report parameters
- * @returns {Promise<Blob>} File blob
- */
 export const exportAttendanceReport = async (params: {
   startDate: string;
   endDate: string;
@@ -425,7 +371,7 @@ export const exportAttendanceReport = async (params: {
       params,
       {
         responseType: 'blob',
-        timeout: 60000, // 60 seconds for attendance report export
+        timeout: 60000,
       },
     );
 
@@ -444,11 +390,6 @@ export const exportAttendanceReport = async (params: {
   }
 };
 
-/**
- * Send report via email
- * @param {object} params - Email parameters
- * @returns {Promise<any>} Success response
- */
 export const sendReportByEmail = async (params: {
   reportType: 'salary' | 'children' | 'attendance' | 'schedule';
   recipients: string[];
@@ -459,7 +400,7 @@ export const sendReportByEmail = async (params: {
 }) => {
   try {
     const response = await apiClient.post('/reports/send-email', params, {
-      timeout: 30000, // 30 seconds for email sending
+      timeout: 30000,
     });
     return response.data;
   } catch (error) {
@@ -467,11 +408,6 @@ export const sendReportByEmail = async (params: {
   }
 };
 
-/**
- * Schedule automatic report generation and sending
- * @param {object} params - Schedule parameters
- * @returns {Promise<any>} Success response
- */
 export const scheduleReport = async (params: {
   reportType: 'salary' | 'children' | 'attendance' | 'schedule';
   frequency: 'daily' | 'weekly' | 'monthly';
@@ -482,7 +418,7 @@ export const scheduleReport = async (params: {
 }) => {
   try {
     const response = await apiClient.post('/reports/schedule', params, {
-      timeout: 30000, // 30 seconds for report scheduling
+      timeout: 30000,
     });
     return response.data;
   } catch (error) {
@@ -490,12 +426,6 @@ export const scheduleReport = async (params: {
   }
 };
 
-/**
- * Download report file directly
- * @param {string} reportId - Report ID
- * @param {string} format - File format
- * @returns {Promise<void>} Triggers download
- */
 export const downloadReport = async (
   reportId: string,
   format: 'pdf' | 'excel' | 'csv',
@@ -504,20 +434,20 @@ export const downloadReport = async (
     const response = await apiClient.get(`/reports/${reportId}/download`, {
       params: { format },
       responseType: 'blob',
-      timeout: 60000, // 60 seconds for downloading report
+      timeout: 60000,
     });
 
-    // Создаем ссылку для скачивания
+
     const blob = new Blob([response.data]);
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
 
-    // Определяем имя файла
+
     const fileExtension = format === 'excel' ? 'xlsx' : format;
     link.download = `report_${reportId}.${fileExtension}`;
 
-    // Запускаем скачивание
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -529,11 +459,6 @@ export const downloadReport = async (
   }
 };
 
-/**
- * Generate a custom report
- * @param {object} params - Report parameters
- * @returns {Promise<any>} Report data
- */
 export const generateCustomReport = async (params: {
   type: string;
   startDate: string;
@@ -544,7 +469,7 @@ export const generateCustomReport = async (params: {
 }) => {
   try {
     const response = await apiClient.post('/reports/generate', params, {
-      timeout: 60000, // 60 seconds for custom report generation
+      timeout: 60000,
     });
 
     const report: Report = {
@@ -576,18 +501,13 @@ export const generateCustomReport = async (params: {
   }
 };
 
-// ===== ФУНКЦИИ ДЛЯ РАБОТЫ С АРЕНДОЙ =====
 
-/**
- * Get all rents
- * @param {object} params - Filter parameters
- * @returns {Promise<any>} List of rents
- */
+
 export const getRents = async (params: any = {}) => {
   try {
     const response = await apiClient.get('/rent', {
       params,
-      timeout: 30000, // 30 seconds for fetching rents
+      timeout: 30000,
     });
     return response.data;
   } catch (error) {
@@ -595,16 +515,10 @@ export const getRents = async (params: any = {}) => {
   }
 };
 
-/**
- * Update rent
- * @param {string} id - Rent ID
- * @param {object} data - Rent data to update
- * @returns {Promise<any>} Updated rent
- */
 export const updateRent = async (id: string, data: any) => {
   try {
     const response = await apiClient.put(`/rent/${id}`, data, {
-      timeout: 30000, // 30 seconds for updating rent
+      timeout: 30000,
     });
     return response.data;
   } catch (error) {
@@ -612,15 +526,10 @@ export const updateRent = async (id: string, data: any) => {
   }
 };
 
-/**
- * Delete rent
- * @param {string} id - Rent ID
- * @returns {Promise<void>}
- */
 export const deleteRent = async (id: string) => {
   try {
     await apiClient.delete(`/rent/${id}`, {
-      timeout: 30000, // 30 seconds for deleting rent
+      timeout: 30000,
     });
     return { success: true };
   } catch (error) {
@@ -628,18 +537,13 @@ export const deleteRent = async (id: string) => {
   }
 };
 
-/**
- * Mark rent as paid
- * @param {string} id - Rent ID
- * @returns {Promise<any>} Updated rent
- */
 export const markRentAsPaid = async (id: string) => {
   try {
     const response = await apiClient.patch(
       `/rent/${id}/mark-paid`,
       {},
       {
-        timeout: 30000, // 30 seconds for marking rent as paid
+        timeout: 30000,
       },
     );
     return response.data;
@@ -648,18 +552,13 @@ export const markRentAsPaid = async (id: string) => {
   }
 };
 
-/**
- * Generate rent sheets for specific tenants
- * @param {object} params - Generation parameters
- * @returns {Promise<any>} Success response
- */
 export const generateRentSheets = async (params: {
   period: string;
   tenantIds?: string[];
 }) => {
   try {
     const response = await apiClient.post('/rent/generate-sheets', params, {
-      timeout: 120000, // 120 seconds for rent sheet generation (may take longer than payroll)
+      timeout: 120000,
     });
     return response.data;
   } catch (error) {
@@ -667,18 +566,13 @@ export const generateRentSheets = async (params: {
   }
 };
 
-// ===== ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ СВОДОК =====
 
-/**
- * Get children summary
- * @param {object} params - Filter parameters
- * @returns {Promise<any>} Children summary
- */
+
 export const getChildrenSummary = async (params?: { groupId?: string }) => {
   try {
     const response = await apiClient.get('/reports/children/summary', {
       params,
-      timeout: 30000, // 30 seconds for fetching children summary
+      timeout: 30000,
     });
     return response.data;
   } catch (error) {
@@ -686,11 +580,6 @@ export const getChildrenSummary = async (params?: { groupId?: string }) => {
   }
 };
 
-/**
- * Get attendance summary
- * @param {object} params - Filter parameters
- * @returns {Promise<any>} Attendance summary
- */
 export const getAttendanceSummary = async (params: {
   startDate: string;
   endDate: string;
@@ -699,7 +588,7 @@ export const getAttendanceSummary = async (params: {
   try {
     const response = await apiClient.get('/reports/attendance/summary', {
       params,
-      timeout: 30000, // 30 seconds for fetching attendance summary
+      timeout: 30000,
     });
     return response.data;
   } catch (error) {
@@ -708,40 +597,40 @@ export const getAttendanceSummary = async (params: {
 };
 
 const reportsService = {
-  // Reports
+
   getReports,
   getReport,
   createReport,
   deleteReport,
   downloadReport,
 
-  // Stats
+
   getAttendanceStatistics,
   getScheduleStatistics,
 
-  // Export
+
   exportReport,
   exportSalaryReport,
   exportChildrenReport,
   exportAttendanceReport,
 
-  // Email
+
   sendReportByEmail,
 
-  // Schedule
+
   scheduleReport,
 
-  // Generate
+
   generateCustomReport,
 
-  // Rent functions
+
   getRents,
   updateRent,
   deleteRent,
   markRentAsPaid,
   generateRentSheets,
 
-  // Summary functions
+
   getChildrenSummary,
   getAttendanceSummary,
 };

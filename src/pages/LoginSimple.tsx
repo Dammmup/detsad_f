@@ -46,13 +46,13 @@ const Login: React.FC = () => {
         updatedAt: authResponse.user.updatedAt || new Date().toISOString(),
       };
 
-      // Use AuthContext login method to properly update context
+
       const token = authResponse.token;
       if (!token) {
         setError('Ошибка авторизации: сервер не вернул токен');
         return;
       }
-      login(userData, token); // Сохраняем токен в localStorage
+      login(userData, token);
       navigate('/app/dashboard');
     } catch (e: any) {
       setError(e.message || 'Ошибка входа');

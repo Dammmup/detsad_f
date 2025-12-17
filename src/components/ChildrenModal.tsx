@@ -13,7 +13,7 @@ import {
   Select,
   MenuItem,
   SelectChangeEvent,
-  
+
 } from '@mui/material';
 import childrenApi from '../services/children';
 import { getGroups } from '../services/groups';
@@ -36,7 +36,7 @@ const defaultForm: Omit<Partial<User>, 'role'> = {
   groupId: '',
   parentName: '',
   active: true,
-  phone: '', // для совместимости с API
+  phone: '',
   photo: '',
 };
 
@@ -115,7 +115,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
     setError(null);
     try {
       if (child && child.id) {
-        // Редактирование существующего ребенка
+
         const childData: Partial<User> = {
           id: child.id,
           fullName: form.fullName || '',
@@ -131,10 +131,10 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
         };
         await childrenApi.update(child.id, childData);
       } else {
-        // Создание нового пользователя
+
         const userData = {
           fullName: form.fullName || '',
-          phone: form.parentPhone || '', // Для детей phone = parentPhone!
+          phone: form.parentPhone || '',
           parentPhone: form.parentPhone || '',
           birthday: form.birthday || '',
           iin: form.iin || '',

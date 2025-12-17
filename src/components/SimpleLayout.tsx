@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import { Menu as MenuIcon, AccountCircle as AccountCircleIcon, ExitToApp as ExitToAppIcon, MoreVert as MoreVertIcon } from '@mui/icons-material';
 
-// Импорт страниц
+
 import Dashboard from '../pages/Dashboard';
 import Staff from '../pages/Staff/Staff';
 import Groups from '../pages/Children/Groups';
@@ -25,7 +25,7 @@ import Settings from '../pages/Settings';
 import Cyclogram from '../pages/Cyclogram';
 import Children from '../pages/Children/Children';
 
-// Импорт Sidebar и структуры меню
+
 import { Sidebar } from './Sidebar/Sidebar';
 import sidebarStructure from './Sidebar/SidebarStructure';
 import { useLocation } from 'react-router-dom';

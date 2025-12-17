@@ -1,9 +1,9 @@
 import { apiClient } from '../utils/api';
 import { TaskList, TaskListFilters } from '../types/taskList';
 
-// REACT_APP_API_URL и авторизация берутся из settings.ts
 
-// Получить список задач
+
+
 export const getTaskList = async (
   filters: TaskListFilters = {},
 ): Promise<TaskList[]> => {
@@ -20,7 +20,7 @@ export const getTaskList = async (
   }
 };
 
-// Создать новую задачу
+
 export const createTask = async (
   taskData: Omit<TaskList, '_id' | 'createdAt' | 'updatedAt'>,
 ): Promise<TaskList> => {
@@ -33,7 +33,7 @@ export const createTask = async (
   }
 };
 
-// Обновить задачу
+
 export const updateTask = async (
   id: string,
   taskData: Partial<TaskList>,
@@ -47,7 +47,7 @@ export const updateTask = async (
   }
 };
 
-// Удалить задачу
+
 export const deleteTask = async (id: string): Promise<void> => {
   try {
     await apiClient.delete(`/task-list/${id}`);
@@ -57,7 +57,7 @@ export const deleteTask = async (id: string): Promise<void> => {
   }
 };
 
-// Переключить статус задачи
+
 export const toggleTaskStatus = async (
   id: string,
   userId: string,
@@ -75,7 +75,7 @@ export const toggleTaskStatus = async (
   }
 };
 
-// Отметить задачу как выполненную
+
 export const markTaskAsCompleted = async (
   id: string,
   userId: string,
@@ -91,7 +91,7 @@ export const markTaskAsCompleted = async (
   }
 };
 
-// Отметить задачу как отмененную
+
 export const markTaskAsCancelled = async (
   id: string,
   userId: string,
@@ -107,7 +107,7 @@ export const markTaskAsCancelled = async (
   }
 };
 
-// Отметить задачу как в процессе выполнения
+
 export const markTaskAsInProgress = async (id: string): Promise<TaskList> => {
   try {
     const response = await apiClient.patch(`/task-list/${id}/in-progress`);
@@ -116,12 +116,12 @@ export const markTaskAsInProgress = async (id: string): Promise<TaskList> => {
     console.error('Error marking task as in progress:', error);
     throw new Error(
       error.response?.data?.error ||
-        'Ошибка перевода задачи в статус "в работе"',
+      'Ошибка перевода задачи в статус "в работе"',
     );
   }
 };
 
-// Обновить приоритет задачи
+
 export const updateTaskPriority = async (
   id: string,
   priority: 'low' | 'medium' | 'high' | 'urgent',

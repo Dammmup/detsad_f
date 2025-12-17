@@ -1,18 +1,12 @@
 import { BaseCrudApiClient, apiCache } from '../utils/api';
 import { Group, User, ID } from '../types/common';
 
-/**
- * API клиент для работы с группами
- */
 class GroupsApiClient extends BaseCrudApiClient<Group> {
   protected endpoint = '/groups';
   private readonly CACHE_KEY = 'groups';
   private readonly TEACHERS_CACHE_KEY = 'teachers';
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 минут
+  private readonly CACHE_DURATION = 5 * 60 * 1000;
 
-  /**
-   * Получение всех групп с кэшированием
-   */
   async getAll(): Promise<Group[]> {
     const cached = apiCache.get<Group[]>(this.CACHE_KEY);
     if (cached) {
@@ -21,17 +15,14 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
 
     const groups = await super.getAll();
 
-    // Кэшируем результат
+
     apiCache.set(this.CACHE_KEY, groups, this.CACHE_DURATION);
 
     return groups;
   }
 
-  /**
-   * Создание группы с очисткой кэша
-   */
   async create(groupData: Partial<Group>): Promise<Group> {
-    // Backend ожидает ageGroup как строку, UI хранит массив строк
+
     const payload: any = {
       name: groupData.name,
       description: groupData.description,
@@ -51,11 +42,8 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     return group;
   }
 
-  /**
-   * Обновление группы с очисткой кэша
-   */
   async update(id: ID, groupData: Partial<Group>): Promise<Group> {
-    // Преобразуем ageGroup в строку для backend
+
     const payload: any = {
       ...groupData,
       ageGroup: Array.isArray(groupData.ageGroup)
@@ -70,18 +58,12 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     return group;
   }
 
-  /**
-   * Удаление группы с очисткой кэша
-   */
   async deleteItem(id: ID): Promise<void> {
-    // Корректный путь удаления согласно маршруту backend: DELETE /groups/:id
+
     await this.delete(`${this.endpoint}/${id}`);
     this.clearCache();
   }
 
-  /**
-   * Получение учителей с кэшированием
-   */
   async getTeachers(): Promise<User[]> {
     const cached = apiCache.get<User[]>(this.TEACHERS_CACHE_KEY);
     if (cached) {
@@ -96,7 +78,7 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
         },
       });
 
-      // Преобразуем формат для совместимости
+
       const formattedTeachers = teachers.map((teacher) => ({
         ...teacher,
         id: teacher._id || teacher.id,
@@ -115,9 +97,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     }
   }
 
-  /**
-   * Получение детей в группе
-   */
   async getGroupChildren(groupId: ID): Promise<User[]> {
     const cacheKey = `group_children_${groupId}`;
 
@@ -132,9 +111,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     return children;
   }
 
-  /**
-   * Получение статистики группы
-   */
   async getGroupStats(groupId: ID): Promise<{
     totalChildren: number;
     activeChildren: number;
@@ -144,9 +120,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     return this.get(`${this.endpoint}/${groupId}/stats`);
   }
 
-  /**
-   * Получение расписания группы
-   */
   async getGroupSchedule(
     groupId: ID,
     startDate?: string,
@@ -159,9 +132,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     return this.get(`${this.endpoint}/${groupId}/schedule`, { params });
   }
 
-  /**
-   * Назначение учителя группе
-   */
   async assignTeacher(groupId: ID, teacherId: ID): Promise<Group> {
     const group = await this.patch<Group>(`${this.endpoint}/${groupId}`, {
       teacher: teacherId,
@@ -171,25 +141,16 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     return group;
   }
 
-  /**
-   * Добавление ребенка в группу
-   */
   async addChild(groupId: ID, childId: ID): Promise<void> {
     await this.post(`${this.endpoint}/${groupId}/children`, { childId });
     this.clearGroupChildrenCache(groupId);
   }
 
-  /**
-   * Удаление ребенка из группы
-   */
   async removeChild(groupId: ID, childId: ID): Promise<void> {
     await this.delete(`${this.endpoint}/${groupId}/children/${childId}`);
     this.clearGroupChildrenCache(groupId);
   }
 
-  /**
-   * Массовое добавление детей в группу
-   */
   async addChildren(
     groupId: ID,
     childIds: ID[],
@@ -206,9 +167,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     return result;
   }
 
-  /**
-   * Перевод детей между группами
-   */
   async transferChildren(
     fromGroupId: ID,
     toGroupId: ID,
@@ -229,9 +187,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     return result;
   }
 
-  /**
-   * Активация/деактивация группы
-   */
   async toggleActive(groupId: ID, isActive: boolean): Promise<Group> {
     const group = await this.patch<Group>(`${this.endpoint}/${groupId}`, {
       isActive,
@@ -240,9 +195,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     return group;
   }
 
-  /**
-   * Поиск групп
-   */
   async search(
     query: string,
     filters?: {
@@ -259,9 +211,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     return this.get<Group[]>(`${this.endpoint}/search`, { params });
   }
 
-  /**
-   * Получение доступных возрастных групп
-   */
   async getAgeGroups(): Promise<string[]> {
     const cacheKey = 'age_groups';
 
@@ -276,9 +225,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     return ageGroups;
   }
 
-  /**
-   * Экспорт списка групп
-   */
   async export(format: 'csv' | 'excel' = 'excel'): Promise<Blob> {
     return this.get(`${this.endpoint}/export`, {
       params: { format },
@@ -286,25 +232,16 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     });
   }
 
-  /**
-   * Очистка кэша групп
-   */
   clearCache(): void {
     apiCache.delete(this.CACHE_KEY);
     apiCache.delete(this.TEACHERS_CACHE_KEY);
     apiCache.delete('age_groups');
   }
 
-  /**
-   * Очистка кэша детей конкретной группы
-   */
   private clearGroupChildrenCache(groupId: ID): void {
     apiCache.delete(`group_children_${groupId}`);
   }
 
-  /**
-   * Создание группы из шаблона
-   */
   async createFromTemplate(
     templateId: ID,
     groupData: {
@@ -322,9 +259,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     return group;
   }
 
-  /**
-   * Получение шаблонов групп
-   */
   async getTemplates(): Promise<
     Array<{
       id: ID;
@@ -356,10 +290,10 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
   }
 }
 
-// Экспортируем экземпляр клиента
+
 export const groupsApi = new GroupsApiClient();
 
-// Экспортируем отдельные функции для обратной совместимости
+
 export const getGroups = () => groupsApi.getAll();
 export const getGroup = (id: ID) => groupsApi.getById(id);
 export const createGroup = (group: Partial<Group>) => groupsApi.create(group);

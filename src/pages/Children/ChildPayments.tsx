@@ -64,18 +64,18 @@ const ChildPayments: React.FC = () => {
     comments: '',
   });
 
-  // Состояния для фильтрации
+
   const [nameFilter, setNameFilter] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
 
-  // Фильтрованные платежи
+
   const [filteredPayments, setFilteredPayments] = useState<IChildPayment[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationAttempted, setGenerationAttempted] = useState(false);
 
   const isMobile = useMediaQuery('(max-width:900px)');
 
-  // Загрузка оплат, детей и групп
+
   const fetchPayments = async () => {
     setLoading(true);
     setError(null);
@@ -106,12 +106,12 @@ const ChildPayments: React.FC = () => {
       setGroups([]);
     }
   };
- const handleGeneratePayments = React.useCallback(async () => {
+  const handleGeneratePayments = React.useCallback(async () => {
     setIsGenerating(true);
     setError(null);
     try {
       await childPaymentApi.generate(currentDate);
-      await fetchPayments(); // Refetch payments after generation
+      await fetchPayments();
     } catch (e: any) {
       setError(e?.message || 'Ошибка генерации оплат');
     } finally {
@@ -125,23 +125,23 @@ const ChildPayments: React.FC = () => {
     fetchGroups();
   }, [currentDate]);
 
-  // Инициализация filteredPayments после загрузки данных
+
   useEffect(() => {
     setFilteredPayments([...payments]);
   }, [payments]);
 
-  // Фильтрация платежей при изменении данных или фильтров
+
   useEffect(() => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
 
     let result = payments.filter((payment) => {
-      if (!payment.period || !payment.period.start) return false; // Added null/undefined check
+      if (!payment.period || !payment.period.start) return false;
       const paymentDate = new Date(payment.period.start);
       return paymentDate >= monthStart && paymentDate <= monthEnd;
     });
 
-    // Фильтрация по имени ребенка
+
     if (nameFilter) {
       result = result.filter((payment) => {
         const child = children.find(
@@ -158,7 +158,7 @@ const ChildPayments: React.FC = () => {
       });
     }
 
-    // Фильтрация по группе
+
     if (groupFilter) {
       result = result.filter((payment) => {
         const child = children.find(
@@ -185,7 +185,7 @@ const ChildPayments: React.FC = () => {
       !isGenerating &&
       !generationAttempted
     ) {
-      // Automatically trigger generation if no payments for the current month
+
       setGenerationAttempted(true);
       handleGeneratePayments();
     }
@@ -201,12 +201,12 @@ const ChildPayments: React.FC = () => {
     handleGeneratePayments
   ]);
 
- 
+
 
   const handleOpenModal = (payment?: IChildPayment) => {
     if (payment) {
       setEditingPayment(payment);
-      // При редактировании платежа, если childId является объектом, извлекаем _id
+
       const childIdValue =
         typeof payment.childId === 'object'
           ? payment.childId._id
@@ -296,15 +296,15 @@ const ChildPayments: React.FC = () => {
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
       case 'paid':
-        return '#4CAF50'; // зеленый для оплачено
+        return '#4CAF50';
       case 'overdue':
-        return '#F44336'; // красный для просрочено
+        return '#F44336';
       case 'active':
-        return '#FFC107'; // желтый для активно
+        return '#FFC107';
       case 'draft':
-        return '#9E9E9E'; // серый для черновика
+        return '#9E9E9E';
       default:
-        return '#B0B0B0'; // стандартный цвет
+        return '#B0B0B0';
     }
   };
 
@@ -323,10 +323,10 @@ const ChildPayments: React.FC = () => {
     }
   };
 
-  // Состояние для управления всплывающим сообщением
+
   const [showInitialTooltip, setShowInitialTooltip] = useState(false);
 
-  // Автоматическое отображение подсказки при загрузке страницы
+
   useEffect(() => {
     setShowInitialTooltip(true);
     const timer = setTimeout(() => {
@@ -336,11 +336,11 @@ const ChildPayments: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Функция для установки статуса оплаты в "Оплачено"
+
   const markAsPaid = async (paymentId: string) => {
     try {
       await childPaymentApi.update(paymentId, { status: 'paid' });
-      // Обновляем список оплат
+
       fetchPayments();
     } catch (error) {
       console.error('Ошибка при установке статуса "Оплачено"', error);
@@ -348,11 +348,11 @@ const ChildPayments: React.FC = () => {
     }
   };
 
-  // Функция для отмены оплаты
+
   const cancelPayment = async (paymentId: string) => {
     try {
       await childPaymentApi.update(paymentId, { status: 'active' });
-      // Обновляем список оплат
+
       fetchPayments();
     } catch (error) {
       console.error('Ошибка при отмене оплаты', error);

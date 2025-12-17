@@ -93,7 +93,7 @@ export default function HelminthJournal() {
     ]).finally(() => setLoading(false));
   }, []);
 
-  // Фильтрация записей
+
   const filteredRecords = useMemo(() => {
     let filtered = [...records];
     if (month !== 'all') filtered = filtered.filter((r) => r.month === month);
@@ -105,7 +105,7 @@ export default function HelminthJournal() {
     return filtered;
   }, [records, month, year, examType, result]);
 
-  // Статистика
+
   const stats = useMemo(() => {
     const total = filteredRecords.length;
     const positive = filteredRecords.filter(
@@ -117,7 +117,7 @@ export default function HelminthJournal() {
     return { total, positive, negative };
   }, [filteredRecords]);
 
-  // Добавление новой записи через API
+
   const handleAdd = async () => {
     if (
       !newRecord.childId ||
@@ -144,7 +144,7 @@ export default function HelminthJournal() {
     }
   };
 
-  // Удаление записи через API
+
   const handleDelete = async (id: string) => {
     setLoading(true);
     try {
@@ -155,7 +155,7 @@ export default function HelminthJournal() {
     }
   };
 
-  // Экспорт в Word
+
   const handleExport = () => {
     const doc = new Document({
       sections: [
@@ -216,7 +216,7 @@ export default function HelminthJournal() {
     });
   };
 
-  // При выборе ребенка автозаполняем поля
+
   const handleChildSelect = (id: string) => {
     const child = users.find((u) => u.id === id || u._id === id);
     if (child) {

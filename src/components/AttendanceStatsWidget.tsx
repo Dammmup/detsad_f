@@ -23,7 +23,7 @@ import { getAttendanceStats } from '../services/childAttendance';
 import { useAuth } from './context/AuthContext';
 
 interface AttendanceStatsWidgetProps {
-  onStatsChange?: () => void; // Callback для обновления статистики
+  onStatsChange?: () => void;
 }
 
 const AttendanceStatsWidget: React.FC<AttendanceStatsWidgetProps> = ({
@@ -35,7 +35,7 @@ const AttendanceStatsWidget: React.FC<AttendanceStatsWidgetProps> = ({
   const [stats, setStats] = useState<any>(null);
   const [chartData, setChartData] = useState<any[]>([]);
 
-  // Загрузка статистики посещаемости
+
   useEffect(() => {
     const fetchAttendanceStats = async () => {
       if (!currentUser) return;
@@ -43,7 +43,7 @@ const AttendanceStatsWidget: React.FC<AttendanceStatsWidgetProps> = ({
       setLoading(true);
       setError(null);
       try {
-        // Получаем статистику за последние 7 дней
+
         const today = new Date();
         const startDate = new Date(today);
         startDate.setDate(today.getDate() - 7);
@@ -55,7 +55,7 @@ const AttendanceStatsWidget: React.FC<AttendanceStatsWidgetProps> = ({
 
         setStats(statsData);
 
-        // Подготовка данных для графика
+
         const chartDataArray = [
           {
             name: 'Присутствия',

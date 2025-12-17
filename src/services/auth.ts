@@ -1,15 +1,9 @@
 import { BaseApiClient } from '../utils/api';
 import { LoginCredentials, AuthResponse, User } from '../types/common';
 
-/**
- * API клиент для авторизации
- */
 class AuthApiClient extends BaseApiClient {
-  // ===== КЛАССИЧЕСКАЯ АВТОРИЗАЦИЯ =====
 
-  /**
-   * Вход пользователя с email и паролем
-   */
+
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
       console.log('🔐 Попытка входа для:', credentials.phone);
@@ -50,10 +44,10 @@ class AuthApiClient extends BaseApiClient {
           staffId: response.user.staffId,
           staffName: response.user.staffName,
         },
-        token: response.token, // Токен теперь передается в ответе
+        token: response.token,
       };
 
-      // Сохраняем пользователя и токен
+
       this.saveAuthData(authData);
 
       console.log('✅ Успешный вход:', authData.user.fullName);
@@ -65,27 +59,21 @@ class AuthApiClient extends BaseApiClient {
     }
   }
 
-  // ===== УПРАВЛЕНИЕ СЕССИЕЙ =====
 
-  /**
-   * Выход из системы
-   */
+
   async logout(): Promise<void> {
     try {
-      // Уведомляем backend о выходе (опционально)
+
       await this.post('/auth/logout', {});
     } catch (error) {
       console.warn('Ошибка при выходе на backend:', error);
     } finally {
-      // Очищаем локальные данные в любом случае
+
       this.clearAuthData();
       console.log('🚪 Пользователь вышел из системы');
     }
   }
 
-  /**
-   * Получение текущего пользователя
-   */
   getCurrentUser(): User | null {
     try {
       const userStr = localStorage.getItem('user');
@@ -107,18 +95,14 @@ class AuthApiClient extends BaseApiClient {
       return false;
     }
 
-    // Проверяем валидность токена на сервере
+
     return await this.validateToken();
   }
 
-  /**
-   * Обновление токена
-   * Токен обновляется при истечении срока действия, требуя повторной аутентификации
-   */
   async refreshToken(): Promise<boolean> {
     try {
-      // При использовании токенов в заголовке Authorization обновление не требуется
-      // Токен валиден в течение 24 часов, после чего нужно перезайти
+
+
       const token = this.getToken();
       if (!token) {
         return false;
@@ -135,23 +119,19 @@ class AuthApiClient extends BaseApiClient {
     } catch (error) {
       console.error('Ошибка проверки токена:', error);
 
-      // Если не удалось проверить токен, очищаем данные
+
       this.clearAuthData();
 
       return false;
     }
   }
 
-  /**
-   * Валидация токена с backend
-   * Токен отправляется в заголовке Authorization с каждым запросом
-   */
   async validateToken(): Promise<boolean> {
     try {
-      // Делаем запрос на валидацию токена, который передается в заголовке Authorization
+
       const response = await this.get('/auth/validate');
 
-      // Проверяем, что ответ валиден
+
       if (
         response &&
         typeof response === 'object' &&
@@ -171,32 +151,26 @@ class AuthApiClient extends BaseApiClient {
     return localStorage.getItem('auth_token');
   }
 
-  /**
-   * Сохранение данных авторизации
-   */
   private saveAuthData(authData: AuthResponse): void {
-    // Сохраняем пользователя и токен
+
     localStorage.setItem('user', JSON.stringify(authData.user));
     if (authData.token) {
       localStorage.setItem('auth_token', authData.token);
     }
   }
 
-  /**
-   * Очистка данных авторизации
-   */
   private clearAuthData(): void {
-    // Удаляем данные аутентификации из localStorage
+
     localStorage.removeItem('user');
     localStorage.removeItem('auth_token');
     localStorage.removeItem('phoneNumber');
   }
 }
 
-// Экспортируем экземпляр клиента
+
 export const authApi = new AuthApiClient();
 
-// Экспортируем отдельные функции для обратной совместимости
+
 
 export const login = (credentials: LoginCredentials) =>
   authApi.login(credentials);

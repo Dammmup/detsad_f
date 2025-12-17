@@ -29,21 +29,21 @@ export const GroupsContext = createContext<GroupsContextType | undefined>(
   undefined,
 );
 
-// Cache for storing groups data
+
 let groupsCache: Group[] | null = null;
 let cacheTimestamp = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+const CACHE_DURATION = 5 * 60 * 1000;
 
-// Helper to get id from group
+
 
 export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
   const [groups, setGroups] = useState<Group[]>(groupsCache || []);
   const [loading, setLoading] = useState(!groupsCache);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch all groups with caching
+
   const fetchGroups = useCallback(async (force = false) => {
-    // Return cached data if it's still valid
+
     const now = Date.now();
     if (!force && groupsCache && now - cacheTimestamp < CACHE_DURATION) {
       setGroups(groupsCache as Group[]);
@@ -54,7 +54,7 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
       setLoading(true);
       const data = await groupsApi.getGroups();
 
-      // Update cache
+
       groupsCache = data;
       cacheTimestamp = now;
 
@@ -79,11 +79,11 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
     }
   }, []);
 
-  // Create a new group
+
   const createGroup = async (groupData: Partial<Group>) => {
     setLoading(true);
     try {
-      // Гарантируем, что обязательные поля есть
+
       if (!groupData.name) throw new Error('Название группы обязательно');
       const newGroup = await groupsApi.createGroup(groupData as Group);
       setGroups((prevGroups) => [...prevGroups, newGroup]);
@@ -97,7 +97,7 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
     }
   };
 
-  // Update an existing group
+
   const updateGroup = async (id: string, groupData: Partial<Group>) => {
     setLoading(true);
     try {
@@ -115,7 +115,7 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
     }
   };
 
-  // Delete a group
+
   const deleteGroup = async (id: string) => {
     try {
       setLoading(true);
@@ -131,7 +131,7 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
     }
   };
 
-  // Get a single group by ID
+
   const getGroup = async (id: string) => {
     try {
       setLoading(true);
@@ -147,7 +147,7 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
     }
   };
 
-  // Get teachers list
+
   const getTeachers = async () => {
     try {
       const teachers = await groupsApi.getTeachers();

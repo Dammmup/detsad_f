@@ -63,7 +63,7 @@ export default function SomaticJournal() {
     ]).finally(() => setLoading(false));
   }, []);
 
-  // Фильтрация записей
+
   const filteredRecords = useMemo(() => {
     let filtered = [...records];
     if (search) {
@@ -93,7 +93,7 @@ export default function SomaticJournal() {
     return filtered;
   }, [records, search, diagnosisFilter, fromDate, toDate, onlyCurrentYear]);
 
-  // Статистика
+
   const stats = useMemo(() => {
     const total = filteredRecords.length;
     const totalDays = filteredRecords.reduce(
@@ -103,7 +103,7 @@ export default function SomaticJournal() {
     return { total, totalDays };
   }, [filteredRecords]);
 
-  // Добавление новой записи (через API)
+
   const handleAdd = async () => {
     if (
       !newRecord.childId ||
@@ -136,7 +136,7 @@ export default function SomaticJournal() {
     }
   };
 
-  // Удаление записи
+
   const handleDelete = async (id: string) => {
     setLoading(true);
     try {
@@ -147,7 +147,7 @@ export default function SomaticJournal() {
     }
   };
 
-  // Экспорт в Word
+
   const handleExport = () => {
     const doc = new Document({
       sections: [
@@ -204,7 +204,7 @@ export default function SomaticJournal() {
     });
   };
 
-  // При выборе ребенка автозаполняем поля
+
   const handleChildSelect = (id: string) => {
     const child = users.find((u) => u.id === id || u._id === id);
     if (child) {

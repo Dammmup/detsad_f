@@ -32,14 +32,14 @@ import {
 } from '@mui/icons-material';
 import { useGroups } from '../../components/context/GroupsContext';
 import { Child } from '../../types/common';
-// User импорт не нужен для детей
+
 import { useAuth } from '../../components/context/AuthContext';
 import { SelectChangeEvent } from '@mui/material/Select';
 import apiClient from '../../utils/api';
 import ExportButton from '../../components/ExportButton';
-// import { getChildrenByGroup } from '../../services'; // больше не используем отдельный маршрут, берём детей из /groups
 
-// Определяем интерфейс для группы с возможными свойствами
+
+
 interface Group {
   id: string;
   _id?: string;
@@ -73,25 +73,25 @@ const defaultForm: GroupFormData = {
   name: '',
   description: '',
   maxStudents: 20,
-  ageGroup: [], // по умолчанию пустой массив
-  teacher: '', // Обязательное поле для backend
+  ageGroup: [],
+  teacher: '',
 };
 
 const Groups = () => {
   const groupsContext = useGroups();
   const [groups, setGroups] = useState<Group[]>([]);
-  const [teacherList, setTeacherList] = useState<TeacherOption[]>([]); // [{id, fullName}]
+  const [teacherList, setTeacherList] = useState<TeacherOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<GroupFormData>(defaultForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  
-  // Состояние для отслеживания первоначальной загрузки
+
+
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  // Состояние для разворачивания групп с детьми
+
   const [expandedGroups, setExpandedGroups] = useState<{
     [groupId: string]: {
       expanded: boolean;
@@ -103,7 +103,7 @@ const Groups = () => {
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
 
   const handleExport = async (
-    _exportType: string, // Переменная _exportType не используется, но сохраняем для совместимости сигнатуры
+    _exportType: string,
     exportFormat: 'pdf' | 'excel' | 'csv',
   ) => {
     setLoading(true);
@@ -129,7 +129,7 @@ const Groups = () => {
 
   const fetchTeachers = async () => {
     try {
-      // Для учителей оставляем getUsers, для детей используем Child
+
       const { getUsers } = await import('../../services/users');
       const users = await getUsers();
       const filtered = users.filter((u: any) =>
@@ -142,34 +142,34 @@ const Groups = () => {
       setTeacherList([]);
     }
   };
-  // Получение списка групп
+
   const fetchGroups = async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await groupsContext.fetchGroups(true);
 
-      // Преобразуем данные, если нужно
+
       const formattedData = Array.isArray(data)
         ? data.map((group) => ({
-            id: group.id || group._id,
-            name: group.name,
-            description: group.description || '',
-            // backend хранит ageGroup как строку; в UI используем массив для multiple UI
-            ageGroup: Array.isArray(group.ageGroup)
-                ? [String(group.ageGroup)]
-                : [],
-            isActive: group.isActive ?? true,
-            // сервер хранит teacherId; приводим к строке id
-            teacher: group.teacher || (group.teacherId ? String(group.teacherId) : ''),
-            // isActive: group.isActive, // убрано, если не используется в UI
-            // createdBy: group.createdBy, // убрано, если не используется в UI
-            createdAt: group.createdAt,
-            updatedAt: group.updatedAt,
-            maxStudents: group.maxStudents,
-            // добавляем детей, если backend их уже вернул
-            children: group.children || [],
-          }))
+          id: group.id || group._id,
+          name: group.name,
+          description: group.description || '',
+
+          ageGroup: Array.isArray(group.ageGroup)
+            ? [String(group.ageGroup)]
+            : [],
+          isActive: group.isActive ?? true,
+
+          teacher: group.teacher || (group.teacherId ? String(group.teacherId) : ''),
+
+
+          createdAt: group.createdAt,
+          updatedAt: group.updatedAt,
+          maxStudents: group.maxStudents,
+
+          children: group.children || [],
+        }))
         : [];
 
       setGroups(formattedData);
@@ -182,8 +182,8 @@ const Groups = () => {
 
   const fetchGroupsCallback = useCallback(fetchGroups, [groupsContext]);
 
-  // Загрузка групп только после успешной авторизации
- useEffect(() => {
+
+  useEffect(() => {
     (async () => {
       if (isLoggedIn && currentUser && !authLoading) {
         if (process.env.NODE_ENV !== 'production')
@@ -194,51 +194,51 @@ const Groups = () => {
     })();
   }, [isLoggedIn, currentUser, authLoading, fetchGroupsCallback]);
 
-  // Улучшенная обработка состояния загрузки
+
   useEffect(() => {
-    // Когда данные загружены, устанавливаем флаг завершения первоначальной загрузки
+
     if (!loading && !initialLoadComplete) {
       setInitialLoadComplete(true);
     }
   }, [loading, initialLoadComplete]);
 
-  // Получение списка воспитателей
 
-  // Создаем карту для быстрого поиска воспитателей по id
+
+
   const teacherMap = new Map(teacherList.map((t) => [t.id, t.fullName]));
 
-  // Открытие модального окна для добавления/редактирования
-    const handleOpenModal = (group?: Group) => {
-      if (group) {
-        setForm({
-          id: group.id,
-          name: group.name,
-          description: group.description || '',
-          maxStudents: group.maxStudents || 20,
-          ageGroup: Array.isArray(group.ageGroup)
-            ? group.ageGroup
-            : typeof group.ageGroup === 'string'
-              ? [group.ageGroup]
-              : [],
-          teacher: group.teacher || group.teacherId || '',
-        });
-        setEditId(group.id);
-      } else {
-        setForm(defaultForm);
-        setEditId(null);
-      }
-      setModalOpen(true);
-    };
 
-  // Закрытие модального окна
+  const handleOpenModal = (group?: Group) => {
+    if (group) {
+      setForm({
+        id: group.id,
+        name: group.name,
+        description: group.description || '',
+        maxStudents: group.maxStudents || 20,
+        ageGroup: Array.isArray(group.ageGroup)
+          ? group.ageGroup
+          : typeof group.ageGroup === 'string'
+            ? [group.ageGroup]
+            : [],
+        teacher: group.teacher || group.teacherId || '',
+      });
+      setEditId(group.id);
+    } else {
+      setForm(defaultForm);
+      setEditId(null);
+    }
+    setModalOpen(true);
+  };
+
+
   const handleCloseModal = () => {
     setModalOpen(false);
     setForm(defaultForm);
     setEditId(null);
-    setSaving(false); // Сбрасываем состояние сохранения
+    setSaving(false);
   };
 
-  // Обработка изменений в форме для текстовых/числовых полей
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (name) {
@@ -249,31 +249,31 @@ const Groups = () => {
     }
   };
 
-  // Обработка изменений в Select для ageGroup (multiple)
+
   const handleAgeGroupChange = (e: SelectChangeEvent<unknown>) => {
     const { value } = e.target;
     const arr = typeof value === 'string' ? value.split(',') : value as string[];
     setForm((prev) => ({ ...prev, ageGroup: arr }));
   };
 
-  // Обработка изменений в Select для teacher (single)
+
   const handleTeacherChange = (e: SelectChangeEvent<string>) => {
     const { value } = e.target;
     setForm((prev) => ({ ...prev, teacher: value }));
   };
 
-  // Сохранение группы (создание или обновление)
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Подготавливаем данные для backend
+
       const groupData = {
         name: form.name,
         description: form.description,
-        maxStudents: Number(form.maxStudents) || 0, // число
-        // в UI держим массив строк; конвертацию в строку делает сервис groups
+        maxStudents: Number(form.maxStudents) || 0,
+
         ageGroup: Array.isArray(form.ageGroup) ? form.ageGroup : [],
-        // backend ждёт строку id; сервис преобразует без изменений
+
         teacher:
           typeof form.teacher === 'string'
             ? form.teacher
@@ -286,7 +286,7 @@ const Groups = () => {
       } else {
         await groupsContext.createGroup(groupData);
       }
-      // Успешное сохранение: закрываем модальное окно и обновляем список
+
       handleCloseModal();
       await fetchGroups();
     } catch (e: any) {
@@ -296,7 +296,7 @@ const Groups = () => {
     }
   };
 
-  // Удаление группы
+
   const handleDelete = async (id: string) => {
     if (!id) return;
     if (!window.confirm('Удалить группу?')) return;
@@ -311,7 +311,7 @@ const Groups = () => {
     }
   };
 
-  // Обработка клика на "глазок" для разворачивания/сворачивания группы
+
   const handleToggleGroupChildren = async (
     event: React.MouseEvent<HTMLElement>,
     groupId: string,
@@ -322,7 +322,7 @@ const Groups = () => {
     const currentState = expandedGroups[groupId];
 
     if (currentState?.expanded) {
-      // Сворачиваем группу
+
       setExpandedGroups((prev) => ({
         ...prev,
         [groupId]: {
@@ -331,7 +331,7 @@ const Groups = () => {
         },
       }));
     } else {
-      // Разворачиваем группу
+
       setExpandedGroups((prev) => ({
         ...prev,
         [groupId]: {
@@ -341,14 +341,14 @@ const Groups = () => {
         },
       }));
 
-      // Загружаем детей, если они еще не загружены
+
       if (!currentState?.children?.length) {
         try {
-          // сначала пробуем взять детей из уже загруженных групп
+
           const group = groups.find((g) => g.id === groupId);
           let children: Child[] = (group && (group as any).children) || [];
           if (!children.length) {
-            // если в списке нет детей, запрашиваем полные данные группы
+
             const fullGroup = await groupsContext.getGroup(groupId);
             children = ((fullGroup as any).children || []) as Child[];
           }
@@ -409,7 +409,7 @@ const Groups = () => {
         </Box>
       )}
       {error && <Alert severity='error'>{error}</Alert>}
-      
+
       {/* Показываем данные сразу, если они уже загружены или есть в кэше */}
       {(!loading || initialLoadComplete) && !error && (
         <>
@@ -538,8 +538,8 @@ const Groups = () => {
                                         <TableCell>
                                           {child.birthday
                                             ? new Date(
-                                                child.birthday,
-                                              ).toLocaleDateString('ru-RU')
+                                              child.birthday,
+                                            ).toLocaleDateString('ru-RU')
                                             : '—'}
                                         </TableCell>
                                       </TableRow>

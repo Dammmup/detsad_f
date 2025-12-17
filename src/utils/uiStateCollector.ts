@@ -1,7 +1,7 @@
-// Функция для сбора состояния интерфейса
+
 export const collectUIState = (): any => {
   try {
-    // Собираем видимый текст на странице
+
     const visibleElements = document.querySelectorAll(
       'body *:not(script):not(style):not(meta):not(link):not(title)',
     );
@@ -23,10 +23,10 @@ export const collectUIState = (): any => {
       }
     });
 
-    // Ограничиваем длину текста до 5000 символов
+
     visibleText = visibleText.substring(0, 5000);
 
-    // Собираем информацию о компонентах
+
     const componentsState = {
       activeRoute: window.location.pathname,
       title: document.title,
@@ -45,7 +45,7 @@ export const collectUIState = (): any => {
         width: window.innerWidth,
         height: window.innerHeight,
       },
-      // Собираем информацию о текущем пользователе из localStorage или API
+
       currentUser: (() => {
         try {
           const userData = localStorage.getItem('currentUser');
@@ -60,10 +60,10 @@ export const collectUIState = (): any => {
       })(),
     };
 
-    // Ищем возможные ошибки в интерфейсе
+
     const uiErrors: string[] = [];
 
-    // Проверяем наличие элементов с классами ошибок
+
     const errorElements = document.querySelectorAll(
       '.error, .alert, .warning, .danger, .invalid',
     );
@@ -78,7 +78,7 @@ export const collectUIState = (): any => {
       }
     });
 
-    // Проверяем наличие элементов с атрибутами ошибок
+
     const invalidElements = document.querySelectorAll(
       '[aria-invalid="true"], [data-error], [data-invalid]',
     );
@@ -93,7 +93,7 @@ export const collectUIState = (): any => {
       }
     });
 
-    // Собираем данные из localStorage и sessionStorage
+
     const localStorageData: any = {};
     const sessionStorageData: any = {};
 
@@ -112,11 +112,11 @@ export const collectUIState = (): any => {
         }
       }
     } catch (e) {
-      // Игнорируем ошибки доступа к хранилищу
+
       console.warn('Could not access localStorage or sessionStorage:', e);
     }
 
-    // Собираем информацию о DOM для анализа
+
     const domSnapshot = {
       url: window.location.href,
       route: window.location.pathname,
@@ -165,12 +165,12 @@ export const collectUIState = (): any => {
   }
 };
 
-// Функция для отправки состояния UI на бэкенд
+
 export const sendUIState = async (sessionId: string, userId?: string) => {
   try {
     const uiState = collectUIState();
 
-    // Получаем информацию о текущем пользователе через API
+
     let currentUser = uiState.componentsState.currentUser;
     if (!currentUser) {
       try {
@@ -178,7 +178,7 @@ export const sendUIState = async (sessionId: string, userId?: string) => {
           `${process.env.REACT_APP_API_URL}/api/auth/current-user`,
           {
             method: 'GET',
-            credentials: 'include', // Включаем cookies для передачи токена аутентификации
+            credentials: 'include',
           },
         );
 
@@ -225,76 +225,76 @@ export const sendUIState = async (sessionId: string, userId?: string) => {
     return await response.json();
   } catch (error) {
     console.error('Ошибка при отправке состояния UI:', error);
-    // Не выбрасываем ошибку, чтобы не нарушать работу приложения
+
     return null;
   }
 };
 
-// Функция для инициализации автоматического сбора состояния UI
+
 export const initUIStateCollector = (sessionId: string, userId?: string) => {
-  // Отправляем состояние UI при загрузке страницы
-  // sendUIState(sessionId, userId);
 
-  // Отправляем состояние UI каждые 15 секунд
-  // const intervalId = setInterval(() => {
-  //   sendUIState(sessionId, userId);
-  // }, 10000); // 15 секунд
 
-  // Отправляем состояние UI при изменении URL (навигации)
-  // let currentPath = window.location.pathname;
-  // const handleUrlChange = () => {
-  //   if (window.location.pathname !== currentPath) {
-  //     currentPath = window.location.pathname;
-  //     sendUIState(sessionId, userId);
-  //   }
-  // };
 
-  // Наблюдаем за изменениями URL
-  // const originalPushState = window.history.pushState;
-  // const originalReplaceState = window.history.replaceState;
 
-  // window.history.pushState = function (...args: [data: any, unused: string, url?: string | URL | null]) {
-  //   originalPushState.apply(this, args);
-  //   handleUrlChange();
-  // };
 
-  // window.history.replaceState = function (...args: [data: any, unused: string, url?: string | URL | null]) {
-  //   originalReplaceState.apply(this, args);
-  //   handleUrlChange();
-  // };
 
-  // Также проверяем изменения URL с помощью popstate
-  // window.addEventListener('popstate', handleUrlChange);
 
-  // Отслеживаем клики и изменения на странице
-  // const observer = new MutationObserver(() => {
-  //   // Не отправляем каждый раз при изменении, а делаем это с задержкой
-  //   // чтобы избежать слишком частых вызовов
-  //   clearTimeout((window as any).uiStateTimeout);
-  //   (window as any).uiStateTimeout = setTimeout(() => {
-  //     sendUIState(sessionId, userId);
-  //   }, 2000); // Отправляем обновление через 2 секунды после последнего изменения
-  // });
 
-  // observer.observe(document.body, {
-  //   childList: true,
-  //   subtree: true,
-  //   attributes: true,
-  //   attributeOldValue: true,
-  //   characterData: true,
-  //   characterDataOldValue: true
-  // });
 
-  // Возвращаем функцию для остановки сбора
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   return () => {
-    // clearInterval(intervalId);
-    // window.removeEventListener('popstate', handleUrlChange);
-    // window.history.pushState = originalPushState;
-    // window.history.replaceState = originalReplaceState;
-    // observer.disconnect();
-    // Очищаем таймаут
-    // if ((window as any).uiStateTimeout) {
-    //   clearTimeout((window as any).uiStateTimeout);
-    // }
+
+
+
+
+
+
+
+
+
   };
 };

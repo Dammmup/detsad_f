@@ -1,17 +1,11 @@
 import { BaseCrudApiClient, apiCache } from '../utils/api';
 import { Child, ID } from '../types/common';
 
-/**
- * API клиент для работы с детьми
- */
 class ChildrenApiClient extends BaseCrudApiClient<Child> {
   protected endpoint = '/children';
   private readonly CACHE_KEY = 'children';
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 минут
+  private readonly CACHE_DURATION = 5 * 60 * 1000;
 
-  /**
-   * Получение всех детей с кэшированием
-   */
   async getAll(): Promise<Child[]> {
     const cacheKey = this.CACHE_KEY;
     const cached = apiCache.get<Child[]>(cacheKey);

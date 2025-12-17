@@ -40,11 +40,12 @@ const Children: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingChild, setEditingChild] = useState<Child | null>(null);
 
-  // Состояния для фильтрации
+
   const [nameFilter, setNameFilter] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'active' | 'inactive'>('active');
 
-  // Фильтрованные дети
+
   const [filteredChildren, setFilteredChildren] = useState<Child[]>([]);
 
   const getGroupColor = (groupId: string) => {
@@ -65,13 +66,13 @@ const Children: React.FC = () => {
     const groupIndex = groups.findIndex((g) => g._id === groupId);
     return groupIndex !== -1 ? colors[groupIndex % colors.length] : '#B0B0B0';
   };
-  // Helper function to safely extract group ID from child
+
   const getChildGroupId = (child: Child): string | undefined => {
     return typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
   };
 
   const handleExport = async (
-    _exportType: string, // Renamed to indicate it's unused
+    _exportType: string,
     exportFormat: 'pdf' | 'excel' | 'csv',
   ) => {
     setLoading(true);
@@ -98,7 +99,7 @@ const Children: React.FC = () => {
     }
   };
 
-  // Загрузка групп
+
   const fetchGroupsList = useCallback(async () => {
     try {
       const groupList = await groupsApi.getAll();
@@ -108,55 +109,62 @@ const Children: React.FC = () => {
     }
   }, []);
 
-  // Загрузка детей
+
   const fetchChildren = useCallback(async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const childrenList = await childrenApi.getAll();
-        
-        if (currentUser && (currentUser.role === 'teacher' || currentUser.role === 'substitute')) {
-          // Для преподавателей и заменителей показываем только детей из их групп
-          // Сначала получаем все группы и фильтруем по учителю
-          const allGroups = await groupsApi.getAll();
-          const userGroups = allGroups.filter(group => group.teacher === currentUser.id || group.teacherId === currentUser.id);
-          const userGroupIds = userGroups.map(group => group._id).filter(id => id !== undefined) as string[];
-          
-          const filteredChildren = childrenList.filter(child => {
-            const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
-            return childGroupId && userGroupIds.includes(childGroupId);
-          });
-          setChildren(filteredChildren);
-        } else {
-          // Для администраторов и других ролей показываем всех детей
-          setChildren(childrenList);
-        }
-      } catch (e: any) {
-        setError(e?.message || 'Ошибка загрузки');
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    setError(null);
+    try {
+      const childrenList = await childrenApi.getAll();
+
+      if (currentUser && (currentUser.role === 'teacher' || currentUser.role === 'substitute')) {
+
+
+        const allGroups = await groupsApi.getAll();
+        const userGroups = allGroups.filter(group => group.teacher === currentUser.id || group.teacherId === currentUser.id);
+        const userGroupIds = userGroups.map(group => group._id).filter(id => id !== undefined) as string[];
+
+        const filteredChildren = childrenList.filter(child => {
+          const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
+          return childGroupId && userGroupIds.includes(childGroupId);
+        });
+        setChildren(filteredChildren);
+      } else {
+
+        setChildren(childrenList);
       }
-    }, [currentUser]); // Added currentUser as dependency
+    } catch (e: any) {
+      setError(e?.message || 'Ошибка загрузки');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser]);
 
-   useEffect(() => {
-     (async () => {
-       // Загружаем группы для всех пользователей
-       await fetchGroupsList();
-       
-       // Загружаем детей (это включает логику фильтрации для преподавателей)
-       await fetchChildren();
-     })();
-   }, [fetchGroupsList, fetchChildren]); // Added dependencies to avoid ESLint warnings
-   
-   // To fix the linting issue, we can use a more explicit approach if needed
-  
-  // Memoize functions to avoid unnecessary re-renders and ESLint warnings
+  useEffect(() => {
+    (async () => {
 
-  // Фильтрация детей при изменении данных или фильтров
+      await fetchGroupsList();
+
+
+      await fetchChildren();
+    })();
+  }, [fetchGroupsList, fetchChildren]);
+
+
+
+
+
+
   useEffect(() => {
     let result = [...children];
 
-    // Фильтрация по имени ребенка
+
+    if (activeFilter === 'active') {
+      result = result.filter((child) => child.active !== false);
+    } else {
+      result = result.filter((child) => child.active === false);
+    }
+
+
     if (nameFilter) {
       result = result.filter(
         (child) =>
@@ -165,7 +173,7 @@ const Children: React.FC = () => {
       );
     }
 
-    // Фильтрация по группе
+
     if (groupFilter) {
       result = result.filter((child) => {
         const childGroupId =
@@ -177,10 +185,10 @@ const Children: React.FC = () => {
     }
 
     setFilteredChildren(result);
-  }, [children, nameFilter, groupFilter]);
+  }, [children, nameFilter, groupFilter, activeFilter]);
 
 
-  // Инициализация filteredChildren после загрузки данных
+
   useEffect(() => {
     setFilteredChildren([...children]);
   }, [children]);
@@ -204,7 +212,7 @@ const Children: React.FC = () => {
     } catch (e: any) {
       setError(e?.message || 'Ошибка удаления');
     }
-  }, [fetchChildren]); // Added fetchChildren as dependency
+  }, [fetchChildren]);
 
   const isMobile = useMediaQuery('(max-width:900px)');
 
@@ -263,63 +271,6 @@ const Children: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Вкладки для активных и неактивных детей */}
-      <Box mb={3} display='flex' gap={1}>
-        <Button
-          variant={
-            nameFilter === '' && groupFilter === '' ? 'contained' : 'outlined'
-          }
-          onClick={() => {
-            setNameFilter('');
-            setGroupFilter('');
-          }}
-        >
-          Все
-        </Button>
-        <Button
-          variant={
-            nameFilter === '' &&
-            groupFilter === '' &&
-            children.some((c) => c.active !== false)
-              ? 'contained'
-              : 'outlined'
-          }
-          onClick={() => {
-            setNameFilter('');
-            setGroupFilter('');
-            setTimeout(() => {
-              const activeChildren = children.filter(
-                (child) => child.active !== false,
-              );
-              setFilteredChildren(activeChildren);
-            }, 0);
-          }}
-        >
-          Активные
-        </Button>
-        <Button
-          variant={
-            nameFilter === '' &&
-            groupFilter === '' &&
-            children.some((c) => c.active === false)
-              ? 'contained'
-              : 'outlined'
-          }
-          onClick={() => {
-            setNameFilter('');
-            setGroupFilter('');
-            setTimeout(() => {
-              const inactiveChildren = children.filter(
-                (child) => child.active === false,
-              );
-              setFilteredChildren(inactiveChildren);
-            }, 0);
-          }}
-        >
-          Неактивные
-        </Button>
-      </Box>
-
       {/* Фильтры */}
       <Box
         display='flex'
@@ -368,6 +319,26 @@ const Children: React.FC = () => {
             ))}
           </Select>
         </FormControl>
+
+        {/* Кнопки фильтрации по активности */}
+        <Box display='flex' gap={1} sx={{ ml: isMobile ? 0 : 'auto' }}>
+          <Button
+            variant={activeFilter === 'active' ? 'contained' : 'outlined'}
+            color='success'
+            size='small'
+            onClick={() => setActiveFilter('active')}
+          >
+            Активные
+          </Button>
+          <Button
+            variant={activeFilter === 'inactive' ? 'contained' : 'outlined'}
+            color='error'
+            size='small'
+            onClick={() => setActiveFilter('inactive')}
+          >
+            Неактивные
+          </Button>
+        </Box>
       </Box>
       {loading && (
         <Box
@@ -566,7 +537,7 @@ const Children: React.FC = () => {
           </TableHead>
           <TableBody>
             {filteredChildren.map((child, index) => {
-              // Определяем цветовую индикацию на основе группы
+
               const childGroupId = getChildGroupId(child);
               const groupColor = childGroupId
                 ? getGroupColor(childGroupId)
@@ -652,7 +623,7 @@ const Children: React.FC = () => {
         open={modalOpen}
         onClose={handleCloseModal}
         onSaved={fetchChildren}
-        child={editingChild as any} // Временное решение для совместимости типов
+        child={editingChild as any}
       />
     </Box>
   );

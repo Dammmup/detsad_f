@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { getGroups } from '../services/groups';
-// Интерфейсы для экспорта
+
 export interface ExportConfig {
   filename: string;
   sheetName: string;
@@ -11,14 +11,14 @@ export interface ExportConfig {
   data: any[][];
   includeDate?: boolean;
   includeWeekdays?: boolean;
-  dateColumn?: number; // Индекс колонки с датами для добавления дней недели
+  dateColumn?: number;
 }
 
-// Утилиты для работы с датами
+
 export const formatDate = (date: Date): string => {
-  // Проверяем, что дата корректна
+
   if (isNaN(date.getTime())) {
-    return ''; // Возвращаем пустую строку для некорректных дат
+    return '';
   }
 
   return date.toLocaleDateString('ru-RU', {
@@ -29,9 +29,9 @@ export const formatDate = (date: Date): string => {
 };
 
 export const getWeekday = (date: Date): string => {
-  // Проверяем, что дата корректна
+
   if (isNaN(date.getTime())) {
-    return ''; // Возвращаем пустую строку для некорректных дат
+    return '';
   }
 
   const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -39,16 +39,16 @@ export const getWeekday = (date: Date): string => {
 };
 
 export const formatDateWithWeekday = (dateString: string): string => {
-  // Проверяем, что dateString не пустая строка
+
   if (!dateString) {
-    return ''; // Возвращаем пустую строку вместо "Invalid Date"
+    return '';
   }
 
   const date = new Date(dateString);
 
-  // Проверяем, что дата корректна
+
   if (isNaN(date.getTime())) {
-    return ''; // Возвращаем пустую строку для некорректных дат
+    return '';
   }
 
   const formattedDate = formatDate(date);
@@ -56,7 +56,7 @@ export const formatDateWithWeekday = (dateString: string): string => {
   return `${formattedDate} (${weekday})`;
 };
 
-// Основная функция экспорта
+
 export const exportToExcel = (config: ExportConfig): void => {
   const {
     filename,
@@ -68,40 +68,40 @@ export const exportToExcel = (config: ExportConfig): void => {
     includeDate = true,
   } = config;
 
-  // Создаем новую книгу
+
   const workbook = XLSX.utils.book_new();
 
-  // Подготавливаем данные для листа
+
   const worksheetData: any[][] = [];
 
-  // Добавляем заголовок документа
+
   let fullTitle = title;
   if (includeDate) {
     const currentDate = new Date();
-    // Проверяем, что дата корректна
+
     if (!isNaN(currentDate.getTime())) {
       fullTitle += ` - ${formatDate(currentDate)}`;
     }
   }
   worksheetData.push([fullTitle]);
-  worksheetData.push([]); // Пустая строка
+  worksheetData.push([]);
   const titleRowCount = worksheetData.length;
 
-  // Добавляем подзаголовок если есть
+
   if (subtitle) {
     worksheetData.push([subtitle]);
-    worksheetData.push([]); // Пустая строка
+    worksheetData.push([]);
   }
   const subtitleRowCount = subtitle ? 2 : 0;
 
-  // Добавляем заголовки колонок и данные
+
   worksheetData.push(headers);
   worksheetData.push(...data);
 
-  // Создаем лист
+
   const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
 
-  // Стилизация и ширина колонок
+
   const columnWidths = headers.map((header, index) => {
     const maxLength = Math.max(
       header.length,
@@ -111,7 +111,7 @@ export const exportToExcel = (config: ExportConfig): void => {
   });
   worksheet['!cols'] = columnWidths;
 
-  // Стилизация заголовка таблицы
+
   const headerStyle = {
     font: { bold: true },
     fill: { fgColor: { rgb: 'FFD3D3D3' } },
@@ -132,10 +132,10 @@ export const exportToExcel = (config: ExportConfig): void => {
     worksheet[address].s = headerStyle;
   }
 
-  // Добавляем лист в книгу
+
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
-  // Генерируем файл и скачиваем
+
   const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([excelBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -147,9 +147,9 @@ export const exportToExcel = (config: ExportConfig): void => {
   saveAs(blob, fullFilename);
 };
 
-// Специализированные функции экспорта для каждого раздела
 
-// 1. Экспорт списка детей
+
+
 export const exportChildrenList = async (
   children: any[],
   groupName?: string,
@@ -201,10 +201,10 @@ export const exportChildrenList = async (
       child.iin || '',
       status,
       (child.allergy ? 'Аллергия: ' + child.allergy + '; ' : '') +
-        (child.diagnosis ? 'Диагноз: ' + child.diagnosis : ''),
+      (child.diagnosis ? 'Диагноз: ' + child.diagnosis : ''),
     ];
   });
-  // Итоговая строка
+
   data.push([
     `Итого детей: ${children.length}`,
     `Мужчин: ${male}`,
@@ -218,7 +218,7 @@ export const exportChildrenList = async (
     `Неактивных: ${inactive}`,
   ]);
 
-  // Верхняя легенда
+
   const legend = [
     'В поле "Примечание" отображаются аллергии и diagnosis, в "Статус" — активность, даты — в формате ДД.ММ.ГГГГ',
   ];
@@ -234,7 +234,7 @@ export const exportChildrenList = async (
   });
 };
 
-// 2. Экспорт списка сотрудников
+
 export const exportStaffList = async (staff: any[]): Promise<void> => {
   const groups = await getGroups();
   const roleLabels: { [key: string]: string } = {
@@ -320,7 +320,7 @@ export const exportStaffList = async (staff: any[]): Promise<void> => {
   });
 };
 
-// 3. Экспорт расписания/смен
+
 export const exportSchedule = async (
   scheduleData: any[],
   period?: string,
@@ -337,13 +337,13 @@ export const exportSchedule = async (
     'Статус',
     'Примечания',
   ];
-  // Статусы для подсчета итогов
+
   let scheduled = 0,
     completed = 0,
     inprogress = 0,
     absent = 0,
     other = 0;
-  // Перевод ролей
+
   const roleLabels: { [key: string]: string } = {
     admin: 'Администратор',
     teacher: 'Воспитатель',
@@ -418,7 +418,7 @@ export const exportSchedule = async (
   });
 };
 
-// 4. Экспорт табеля посещаемости детей
+
 
 export const exportChildrenAttendance = async (
   attendanceData: any[],
@@ -426,12 +426,12 @@ export const exportChildrenAttendance = async (
   period: string,
   filteredChildren: any[],
 ): Promise<void> => {
-  // 1. Достаём имена детей из filteredChildren
-  // 2. Уникальные даты из attendanceData
+
+
   const allDates = Array.from(
     new Set(attendanceData.map((r) => r.date)),
   ).sort();
-  // 3. Заголовки
+
   const headers = [
     'ФИО ребенка',
     'Группа',
@@ -447,13 +447,13 @@ export const exportChildrenAttendance = async (
     'Болезней (Б)',
     'Отпусков (ОТ)',
   ];
-  // Итоги по группе
+
   let totalPresent = 0,
     totalAbsent = 0,
     totalLate = 0,
     totalSick = 0,
     totalVacation = 0;
-  // 4. Формируем строки только для детей из filteredChildren
+
   const data = filteredChildren.map((child) => {
     const childId = child._id || child.id;
     const row: (string | null)[] = [
@@ -504,7 +504,7 @@ export const exportChildrenAttendance = async (
     );
     return row;
   });
-  // Итоговая строка по группе
+
   data.push([
     `Итого по группе:`,
     groupName,
@@ -530,12 +530,12 @@ export const exportChildrenAttendance = async (
   });
 };
 
-// 5. Экспорт табеля рабочего времени сотрудников
+
 export const exportStaffAttendance = async (
   attendanceData: any[],
   period: string,
 ): Promise<void> => {
-  // Легенда статусов
+
   const legend = [
     '✓ — явка',
     'Н — неявка',
@@ -547,7 +547,7 @@ export const exportStaffAttendance = async (
     '? — неизвестно',
   ];
 
-  // Переводы статусов
+
   const statusTranslations: { [key: string]: string } = {
     completed: '✓',
     absent: 'Н',
@@ -679,7 +679,7 @@ export const exportStaffAttendance = async (
   });
 };
 
-// Утилита для получения периода (месяц/год)
+
 export const getCurrentPeriod = (): string => {
   const now = new Date();
   const monthNames = [
@@ -699,17 +699,17 @@ export const getCurrentPeriod = (): string => {
   return `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
 };
 
-// Утилита для получения диапазона дат текущего месяца
+
 export const getCurrentMonthRange = (): {
   startDate: string;
   endDate: string;
 } => {
   const now = new Date();
 
-  // Получаем первый день месяца
+
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // Получаем последний день месяца
+
   const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   return {
@@ -718,7 +718,7 @@ export const getCurrentMonthRange = (): {
   };
 };
 
-// 6. Экспорт списка документов
+
 export const exportDocumentsList = async (documents: any[]): Promise<void> => {
   const headers = [
     'Название документа',
@@ -778,7 +778,7 @@ export const exportDocumentsList = async (documents: any[]): Promise<void> => {
   exportToExcel(config);
 };
 
-// 7. Экспорт списка шаблонов документов
+
 export const exportDocumentTemplatesList = async (
   templates: any[],
 ): Promise<void> => {
@@ -861,12 +861,12 @@ export const exportChildPayments = async (
     );
     const group = child
       ? groups.find(
-          (g) =>
-            g._id ===
-            (typeof child.groupId === 'object'
-              ? child.groupId?._id
-              : child.groupId),
-        )
+        (g) =>
+          g._id ===
+          (typeof child.groupId === 'object'
+            ? child.groupId?._id
+            : child.groupId),
+      )
       : undefined;
 
     return [

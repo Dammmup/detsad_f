@@ -32,16 +32,16 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
   const [allTenants, setAllTenants] = useState<User[]>([]);
   const [selectedTenants, setSelectedTenants] = useState<User[]>([]);
 
-  // Загружаем всех пользователей (арендаторов)
+
   useEffect(() => {
     const fetchTenants = async () => {
       try {
         const users = await getUsers();
-        // Фильтруем, чтобы получить только арендаторов (не администраторов)
+
         const tenants = users.filter((user) => user.role !== 'admin');
         setAllTenants(tenants);
 
-        // Обновляем выбранных арендаторов на основе переданных ID
+
         const selected = tenants.filter(
           (tenant) => tenant._id && selectedTenantIds.includes(tenant._id),
         );
@@ -54,7 +54,7 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
     fetchTenants();
   }, [selectedTenantIds]);
 
-  // Обработчик изменения выбранных арендаторов
+
   const handleTenantChange = (event: any, newValue: User[]) => {
     setSelectedTenants(newValue);
     onTenantSelect(
@@ -64,7 +64,7 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
     );
   };
 
-  // Фильтруем арендаторов для отображения в автозаполнении
+
   const filteredTenants = allTenants.filter(
     (tenant) =>
       tenant._id &&

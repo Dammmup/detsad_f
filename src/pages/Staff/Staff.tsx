@@ -56,14 +56,14 @@ import { useAuth } from '../../components/context/AuthContext';
 import ExportButton from '../../components/ExportButton';
 import { exportData } from '../../utils/exportUtils';
 
-// 🇷🇺 Переводы ролей с английского на русский
+
 const roleTranslations: Record<string, string> = {
-  // Административные роли
+
   admin: 'Администратор',
   manager: 'Менеджер',
   director: 'Директор',
 
-  // Педагогические роли
+
   teacher: 'Воспитатель',
   assistant: 'Помощник воспитателя',
   psychologist: 'Психолог',
@@ -71,30 +71,30 @@ const roleTranslations: Record<string, string> = {
   music_teacher: 'Музыкальный руководитель',
   physical_education: 'Инструктор по физкультуре',
 
-  // Медицинские роли
+
   nurse: 'Медсестра',
   doctor: 'Врач',
 
-  // Обслуживающий персонал
+
   cook: 'Повар',
   cleaner: 'Уборщица',
   security: 'Охранник',
   maintenance: 'Завхоз',
   laundry: 'Прачка',
 
-  // Дополнительные роли
+
   staff: 'Сотрудник',
   substitute: 'Подменный сотрудник',
   intern: 'Стажер',
   tenant: 'Арендатор',
 };
 
-// Функция для перевода роли на русский
+
 const translateRole = (role: string): string => {
-  return roleTranslations[role] || role; // Если перевода нет, возвращаем оригинал
+  return roleTranslations[role] || role;
 };
 
-// Функция для получения английской роли по русскому названию
+
 const getRoleByTranslation = (translation: string): string => {
   const entry = Object.entries(roleTranslations).find(
     ([_, value]) => value === translation,
@@ -130,17 +130,18 @@ const Staff = () => {
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [showRentTab, setShowRentTab] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'active' | 'inactive'>('active');
   const { user: currentUser } = useAuth();
-  // 🇷🇺 Список доступных ролей на русском языке (автоматически из переводов)
+
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
-  // Обновляем доступные роли при изменении showRentTab
+
   useEffect(() => {
     const roles = showRentTab
       ? [roleTranslations['tenant']].sort()
       : Object.values(roleTranslations)
-          .filter((role) => role !== roleTranslations['tenant'])
-          .sort();
+        .filter((role) => role !== roleTranslations['tenant'])
+        .sort();
     setAvailableRoles(roles);
   }, [showRentTab]);
 
@@ -157,7 +158,7 @@ const Staff = () => {
       .finally(() => setLoading(false));
   }, [currentUser?.role]);
 
-  // Загрузка списка групп
+
   const fetchGroups = async () => {
     try {
       await getGroups();
@@ -171,20 +172,27 @@ const Staff = () => {
     fetchGroups();
   }, [fetchStaff]);
 
-  // Фильтрация сотрудников при изменении поисковой строки или фильтра ролей
+
   useEffect(() => {
     if (!staff.length) return;
 
     let filtered = staff;
 
-    // Если активна вкладка "Арендаторы", показываем только арендаторов
+
     if (showRentTab) {
       filtered = staff.filter((member) => member.role === 'tenant');
     } else {
-      // Иначе исключаем арендаторов из основного списка
+
       filtered = staff.filter((member) => member.role !== 'tenant');
 
-      // Фильтрация поисковой строке
+
+      if (activeFilter === 'active') {
+        filtered = filtered.filter((member) => member.active !== false);
+      } else {
+        filtered = filtered.filter((member) => member.active === false);
+      }
+
+
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
         filtered = filtered.filter(
@@ -198,8 +206,8 @@ const Staff = () => {
         );
       }
 
-      // 🇷🇺 Фильтрация по роли (сравниваем русские переводы)
-      // На вкладке "Арендаторы" фильтрация по ролям не применяется, т.к. там показываются только арендаторы
+
+
       if (filterRole.length > 0 && !showRentTab) {
         filtered = filtered.filter((member) => {
           const russianRole = translateRole(member.role || '');
@@ -209,7 +217,7 @@ const Staff = () => {
     }
 
     setFilteredStaff(filtered);
-  }, [staff, searchTerm, filterRole, showRentTab, currentUser?.role]);
+  }, [staff, searchTerm, filterRole, showRentTab, activeFilter, currentUser?.role]);
 
   const handleOpenModal = (member?: StaffMember) => {
     setForm(member ? { ...member } : defaultForm);
@@ -227,19 +235,19 @@ const Staff = () => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
 
-    // Очистка ошибки при изменении поля
+
     if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 
-  // Обработчик для фильтра ролей
+
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
     const { value } = event.target;
     setFilterRole(typeof value === 'string' ? value.split(',') : value);
   };
 
-  // Валидация формы
+
   const validateForm = () => {
     const errors: { [key: string]: string } = {};
 
@@ -254,7 +262,7 @@ const Staff = () => {
   };
 
   const handleSave = async () => {
-    // Валидация формы перед сохранением
+
     if (!validateForm()) {
       return;
     }
@@ -271,7 +279,7 @@ const Staff = () => {
         });
         handleCloseModal();
       } else {
-        // Создание нового сотрудника
+
         await createUser(form);
         handleCloseModal();
       }
@@ -306,13 +314,13 @@ const Staff = () => {
     exportType: string,
     exportFormat: 'pdf' | 'excel' | 'csv',
   ) => {
-    // При экспорте с вкладки "Арендаторы" передаем специальный параметр
+
     const params = showRentTab
       ? { name: searchTerm, type: 'tenant' }
       : {
-          name: searchTerm,
-          role: filterRole.length > 0 ? filterRole : undefined,
-        };
+        name: searchTerm,
+        role: filterRole.length > 0 ? filterRole : undefined,
+      };
     await exportData('staff', exportFormat, params);
   };
 
@@ -343,7 +351,7 @@ const Staff = () => {
             startIcon={<Add />}
             onClick={() => {
               if (showRentTab) {
-                // Если активна вкладка "Арендаторы", создаем арендатора
+
                 setForm({ ...defaultForm, role: 'tenant' as UserRole });
                 setModalOpen(true);
               } else {
@@ -355,89 +363,8 @@ const Staff = () => {
           </Button>
         </Box>
 
-        {/* Вкладки для активных и неактивных сотрудников */}
-        <Box mb={3} display='flex' gap={1}>
-          <Button
-            variant={
-              filterRole.length === 0 && searchTerm === '' && !showRentTab
-                ? 'contained'
-                : 'outlined'
-            }
-            onClick={() => {
-              setFilterRole([]);
-              setSearchTerm('');
-              setShowRentTab(false);
-            }}
-          >
-            Все
-          </Button>
-          <Button
-            variant={
-              !searchTerm &&
-              filterRole.length === 0 &&
-              !showRentTab &&
-              !filteredStaff.every((m) => !m.active)
-                ? 'contained'
-                : 'outlined'
-            }
-            onClick={() => {
-              setFilterRole([]);
-              setSearchTerm('');
-              setShowRentTab(false);
-              setTimeout(() => {
-                const activeStaff = staff.filter(
-                  (member) => member.active && member.role !== 'tenant',
-                );
-                setFilteredStaff(activeStaff);
-              }, 0);
-            }}
-          >
-            Активные
-          </Button>
-          <Button
-            variant={
-              !searchTerm &&
-              filterRole.length === 0 &&
-              !showRentTab &&
-              !filteredStaff.every((m) => m.active)
-                ? 'contained'
-                : 'outlined'
-            }
-            onClick={() => {
-              setFilterRole([]);
-              setSearchTerm('');
-              setShowRentTab(false);
-              setTimeout(() => {
-                const inactiveStaff = staff.filter(
-                  (member) => !member.active && member.role !== 'tenant',
-                );
-                setFilteredStaff(inactiveStaff);
-              }, 0);
-            }}
-          >
-            Неактивные
-          </Button>
-          <Button
-            variant={showRentTab ? 'contained' : 'outlined'}
-            onClick={() => {
-              setShowRentTab(true);
-              setFilterRole([]);
-              setSearchTerm('');
-              setTimeout(() => {
-                const rentStaff = staff.filter(
-                  (member) => member.role === 'tenant',
-                );
-                setFilteredStaff(rentStaff);
-              }, 0);
-            }}
-            style={{ backgroundColor: '#FF9800', color: 'white' }}
-          >
-            Арендаторы
-          </Button>
-        </Box>
-
         {/* Поиск и фильтры */}
-        <Box mb={3} display='flex' flexWrap='wrap' gap={2}>
+        <Box mb={3} display='flex' flexWrap='wrap' gap={2} alignItems='center'>
           <TextField
             placeholder='Поиск сотрудников...'
             variant='outlined'
@@ -478,6 +405,50 @@ const Staff = () => {
               ))}
             </Select>
           </FormControl>
+
+          {/* Кнопки фильтрации по активности и арендаторам */}
+          <Box display='flex' gap={1}>
+            <Button
+              variant={!showRentTab && activeFilter === 'active' ? 'contained' : 'outlined'}
+              color='success'
+              size='small'
+              onClick={() => {
+                setShowRentTab(false);
+                setActiveFilter('active');
+              }}
+            >
+              Активные
+            </Button>
+            <Button
+              variant={!showRentTab && activeFilter === 'inactive' ? 'contained' : 'outlined'}
+              color='error'
+              size='small'
+              onClick={() => {
+                setShowRentTab(false);
+                setActiveFilter('inactive');
+              }}
+            >
+              Неактивные
+            </Button>
+            <Button
+              variant={showRentTab ? 'contained' : 'outlined'}
+              size='small'
+              onClick={() => {
+                setShowRentTab(true);
+                setFilterRole([]);
+              }}
+              sx={{
+                backgroundColor: showRentTab ? '#FF9800' : 'transparent',
+                color: showRentTab ? 'white' : '#FF9800',
+                borderColor: '#FF9800',
+                '&:hover': {
+                  backgroundColor: showRentTab ? '#F57C00' : 'rgba(255, 152, 0, 0.1)',
+                }
+              }}
+            >
+              Арендаторы
+            </Button>
+          </Box>
         </Box>
 
         {loading && <CircularProgress />}
@@ -623,8 +594,8 @@ const Staff = () => {
                     label='Должность'
                   >
                     {(() => {
-                      // Если открыто модальное окно для арендаторов (редактирование арендатора),
-                      // показываем только роль rent
+
+
                       if (form.role === 'tenant') {
                         return (
                           <MenuItem
@@ -635,7 +606,7 @@ const Staff = () => {
                           </MenuItem>
                         );
                       } else if (showRentTab) {
-                        // Если активна вкладка "Арендаторы", показываем только роль rent
+
                         return (
                           <MenuItem
                             key={roleTranslations['tenant']}

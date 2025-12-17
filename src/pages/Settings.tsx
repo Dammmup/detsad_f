@@ -63,7 +63,7 @@ import {
 import MainEventsSettings from '../components/Settings/MainEventsSettings';
 
 const Settings: React.FC = () => {
-  // Состояния для данных
+
   const [kindergartenSettings, setKindergartenSettings] =
     useState<KindergartenSettings | null>(null);
   const [notificationSettings, setNotificationSettings] =
@@ -74,14 +74,14 @@ const Settings: React.FC = () => {
     useState<GeolocationSettings | null>(null);
   const [users, setUsers] = useState<User[]>([]);
 
-  // Состояния для UI
+
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  // Состояние для формы пользователя
+
   const [userForm, setUserForm] = useState<User>({
     username: '',
     email: '',
@@ -94,18 +94,18 @@ const Settings: React.FC = () => {
     [key: string]: string;
   }>({});
 
-  // Загрузка данных при монтировании компонента
+
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Загрузка всех необходимых данных
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Получение всех настроек
+
       const [kindergarten, notifications, security, geolocation, usersData] =
         await Promise.all([
           getKindergartenSettings(),
@@ -127,14 +127,14 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Обработчик изменения вкладки
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
 
 
-  // Обработчик сохранения настроек детского сада
+
   const handleSaveKindergartenSettings = async () => {
     if (!kindergartenSettings) return;
 
@@ -152,7 +152,7 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Обработчик сохранения настроек уведомлений
+
   const handleSaveNotificationSettings = async () => {
     if (!notificationSettings) return;
 
@@ -170,7 +170,7 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Обработчик сохранения настроек безопасности
+
   const handleSaveSecuritySettings = async () => {
     if (!securitySettings) return;
 
@@ -187,7 +187,7 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Обработчик сохранения настроек геолокации
+
   const handleSaveGeolocationSettings = async () => {
     if (!geolocationSettings) return;
 
@@ -205,29 +205,29 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Обработчик изменения полей формы пользователя
+
   const handleUserFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setUserForm({ ...userForm, [name]: value });
 
-    // Очищаем ошибку для измененного поля
+
     if (userFormErrors[name]) {
       setUserFormErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 
-  // Обработчик изменения полей Select в форме пользователя
+
   const handleUserFormSelectChange = (e: SelectChangeEvent) => {
     const { name, value } = e.target;
     setUserForm({ ...userForm, [name]: value });
 
-    // Очищаем ошибку для измененного поля
+
     if (userFormErrors[name]) {
       setUserFormErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 
-  // Валидация формы пользователя
+
   const validateUserForm = () => {
     const errors: { [key: string]: string } = {};
 
@@ -236,7 +236,7 @@ const Settings: React.FC = () => {
     if (!userForm.fullName) errors.fullName = 'Введите полное имя';
     if (!userForm.role) errors.role = 'Выберите роль';
 
-    // Проверка формата email
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (userForm.email && !emailRegex.test(userForm.email)) {
       errors.email = 'Введите корректный email';
@@ -246,9 +246,9 @@ const Settings: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Обработчик сохранения пользователя
+
   const handleSaveUser = async () => {
-    // Валидация формы
+
     if (!validateUserForm()) {
       return;
     }
@@ -257,7 +257,7 @@ const Settings: React.FC = () => {
 
     try {
       if (userForm.id) {
-        // Обновление существующего пользователя
+
         const updatedUser = await updateUser(userForm.id, userForm);
         setUsers(
           users.map((user) =>
@@ -265,12 +265,12 @@ const Settings: React.FC = () => {
           ),
         );
       } else {
-        // Создание нового пользователя
+
         const newUser = await createUser(userForm);
         setUsers([...users, newUser]);
       }
 
-      // Закрываем диалог
+
       setUserDialogOpen(false);
       setSelectedUser(null);
       setUserForm({
@@ -288,7 +288,7 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Обработчик удаления пользователя
+
   const handleDeleteUser = async (id: string) => {
     if (!window.confirm('Вы уверены, что хотите удалить этого пользователя?')) {
       return;
@@ -306,14 +306,14 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Обработчик редактирования пользователя
+
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setUserForm(user);
     setUserDialogOpen(true);
   };
 
-  // Получение текста для роли пользователя
+
   const getRoleText = (role: string) => {
     switch (role) {
       case 'admin':
@@ -327,7 +327,7 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Получение цвета для роли пользователя
+
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin':
@@ -809,7 +809,7 @@ const Settings: React.FC = () => {
                       geolocationSettings,
                     );
 
-                    // Загружаем настройки геолокации с сервера для получения API-ключа
+
                     try {
                       console.log(
                         'Пытаемся получить настройки геолокации сервера...',
@@ -820,10 +820,10 @@ const Settings: React.FC = () => {
                         freshSettings,
                       );
 
-                      // Обновляем состояние с настройками, используя API-ключ из бэкенда
+
                       const updatedSettings = {
                         ...freshSettings,
-                        yandexApiKey: '', // Пустая строка означает использование ключа из бэкенда
+                        yandexApiKey: '',
                       };
 
                       console.log(
@@ -837,10 +837,10 @@ const Settings: React.FC = () => {
                         error,
                       );
 
-                      // В случае ошибки, используем текущие настройки с пустым API-ключом
+
                       const updatedSettings = {
                         ...geolocationSettings,
-                        yandexApiKey: '', // Пустая строка означает использование ключа из бэкенда
+                        yandexApiKey: '',
                       };
 
                       console.log(

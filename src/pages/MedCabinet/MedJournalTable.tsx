@@ -20,15 +20,15 @@ interface Props {
 export const MedJournalTable = ({ config }: Props) => {
   const [rows, setRows] = React.useState<any[]>([]);
 
-  // Добавить пустую строку для ввода
+
   const handleAdd = () => {
     setRows((prev) => [...prev, {}]);
   };
 
-  // Заглушка экспорта: просто выводит alert (реализация — далее)
+
   const handleExport = () => {
     alert(`Экспорт журнала "${config.title}" в Word (docx) — демо`);
-    // Здесь будет логика экспорта в docx/xlsx/pdf
+
   };
 
   return (

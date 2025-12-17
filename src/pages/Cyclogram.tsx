@@ -60,13 +60,13 @@ import { Group } from '../types/common';
 import { getGroups } from '../services/groups';
 import { User as StaffMember } from '../types/common';
 const Cyclogram: React.FC = () => {
-  // Состояния для данных
+
   const [cyclograms, setCyclograms] = useState<WeeklyCyclogram[]>([]);
   const [templates, setTemplates] = useState<CyclogramTemplate[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
 
-  // Состояния для UI
+
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
@@ -75,11 +75,11 @@ const Cyclogram: React.FC = () => {
   const [selectedCyclogram, setSelectedCyclogram] =
     useState<WeeklyCyclogram | null>(null);
 
-  // Состояния для фильтров
+
   const [filterGroupId, setFilterGroupId] = useState<string>('');
   const [filterAgeGroup, setFilterAgeGroup] = useState<string>('');
 
-  // Состояние для формы циклограммы
+
   const [cyclogramForm, setCyclogramForm] = useState<WeeklyCyclogram>({
     title: '',
     description: '',
@@ -94,18 +94,18 @@ const Cyclogram: React.FC = () => {
     [key: string]: string;
   }>({});
 
-  // Загрузка данных при монтировании компонента
+
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Загрузка всех необходимых данных
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Получение всех данных
+
       const [cyclogramsData, templatesData, staffData, groupsData] =
         await Promise.all([
           getCyclograms(),
@@ -125,36 +125,36 @@ const Cyclogram: React.FC = () => {
     }
   };
 
-  // Обработчик изменения вкладки
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
-  // Обработчик изменения полей формы циклограммы
+
   const handleCyclogramFormChange = (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const { name, value } = e.target;
     setCyclogramForm({ ...cyclogramForm, [name]: value });
 
-    // Очищаем ошибку для измененного поля
+
     if (cyclogramFormErrors[name]) {
       setCyclogramFormErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 
-  // Обработчик изменения полей Select в форме циклограммы
+
   const handleCyclogramFormSelectChange = (e: SelectChangeEvent) => {
     const { name, value } = e.target;
     setCyclogramForm({ ...cyclogramForm, [name]: value });
 
-    // Очищаем ошибку для измененного поля
+
     if (cyclogramFormErrors[name]) {
       setCyclogramFormErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 
-  // Валидация формы циклограммы
+
   const validateCyclogramForm = () => {
     const errors: { [key: string]: string } = {};
 
@@ -169,9 +169,9 @@ const Cyclogram: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Обработчик сохранения циклограммы
+
   const handleSaveCyclogram = async () => {
-    // Валидация формы
+
     if (!validateCyclogramForm()) {
       return;
     }
@@ -180,7 +180,7 @@ const Cyclogram: React.FC = () => {
 
     try {
       if (cyclogramForm.id) {
-        // Обновление существующей циклограммы
+
         const updatedCyclogram = await updateCyclogram(
           cyclogramForm.id,
           cyclogramForm,
@@ -191,12 +191,12 @@ const Cyclogram: React.FC = () => {
           ),
         );
       } else {
-        // Создание новой циклограммы
+
         const newCyclogram = await createCyclogram(cyclogramForm);
         setCyclograms([...cyclograms, newCyclogram]);
       }
 
-      // Закрываем диалог
+
       setCyclogramDialogOpen(false);
       setSelectedCyclogram(null);
       setCyclogramForm({
@@ -216,7 +216,7 @@ const Cyclogram: React.FC = () => {
     }
   };
 
-  // Обработчик удаления циклограммы
+
   const handleDeleteCyclogram = async (id: string) => {
     if (!window.confirm('Вы уверены, что хотите удалить эту циклограмму?')) {
       return;
@@ -234,14 +234,14 @@ const Cyclogram: React.FC = () => {
     }
   };
 
-  // Обработчик редактирования циклограммы
+
   const handleEditCyclogram = (cyclogram: WeeklyCyclogram) => {
     setSelectedCyclogram(cyclogram);
     setCyclogramForm(cyclogram);
     setCyclogramDialogOpen(true);
   };
 
-  // Обработчик создания циклограммы из шаблона
+
   const handleCreateFromTemplate = async (template: CyclogramTemplate) => {
     if (!template.id) {
       setError('ID шаблона не найден');
@@ -272,7 +272,7 @@ const Cyclogram: React.FC = () => {
     }
   };
 
-  // Получение иконки для типа активности
+
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'educational':
@@ -292,7 +292,7 @@ const Cyclogram: React.FC = () => {
     }
   };
 
-  // Получение текста статуса
+
   const getStatusText = (status: string) => {
     switch (status) {
       case 'draft':
@@ -306,7 +306,7 @@ const Cyclogram: React.FC = () => {
     }
   };
 
-  // Получение цвета статуса
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'draft':

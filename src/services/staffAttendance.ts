@@ -8,11 +8,11 @@ export interface StaffAttendance {
     role: string;
   };
   groupId?: string;
-  date: string; // YYYY-MM-DD format
-  startTime: string; // HH:MM format
-  endTime: string; // HH:MM format
-  actualStart?: string; // HH:MM format
-  actualEnd?: string; // HH:MM format
+  date: string;
+  startTime: string;
+  endTime: string;
+  actualStart?: string;
+  actualEnd?: string;
   workDuration?: number;
   overtimeMinutes?: number;
   lateMinutes?: number;
@@ -61,7 +61,7 @@ export interface StaffAttendance {
   approvedAtTimeTracking?: Date;
   approvedByTimeTracking?: string;
   isManualEntry: boolean;
-  alternativeStaffId?: string; // Альтернативный сотрудник для отметки посещаемости
+  alternativeStaffId?: string;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -75,17 +75,17 @@ export interface ClockInOutData {
 }
 
 export const staffAttendanceService = {
-  // Clock in/out
+
   checkIn: (data: ClockInOutData) =>
     apiClient.post('/attendance/clock-in', data),
   checkOut: (data: ClockInOutData) =>
     apiClient.post('/attendance/clock-out', data),
 
-  // Break management
+
   startBreak: () => apiClient.post('/attendance/start-break'),
   endBreak: () => apiClient.post('/attendance/end-break'),
 
-  // Get records
+
   getEntries: (params?: {
     page?: number;
     limit?: number;
@@ -123,7 +123,7 @@ export const staffAttendanceService = {
       params: { startDate, endDate, ...params },
     }),
 
-  // Record management
+
   createRecord: (data: Partial<StaffAttendance>) =>
     apiClient.post('/attendance', data),
   updateRecord: (id: string, data: Partial<StaffAttendance>) =>
@@ -140,7 +140,7 @@ export const staffAttendanceService = {
     data: { penalties: any; bonuses: any; notes: string },
   ) => apiClient.put(`/attendance/${id}/adjustments`, data),
 
-  // Approvals
+
   getPendingApprovals: () => apiClient.get('/attendance/approvals/pending'),
   getApprovedRecords: () => apiClient.get('/attendance/records/approved'),
   getRejectedRecords: () => apiClient.get('/attendance/records/rejected'),
@@ -149,7 +149,7 @@ export const staffAttendanceService = {
   rejectAttendance: (id: string, reason?: string) =>
     apiClient.patch(`/attendance/${id}/reject`, { reason }),
 
-  // Statistics and analytics
+
   getStatistics: () => apiClient.get('/attendance/statistics'),
   getLateArrivals: (threshold?: number) =>
     apiClient.get('/attendance/arrivals/late', { params: { threshold } }),
@@ -189,7 +189,7 @@ export const staffAttendanceService = {
       params: { startDate, endDate },
     }),
 
-  // Time tracking
+
   getTimeTracking: (params?: {
     staffId?: string;
     startDate?: string;

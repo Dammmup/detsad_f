@@ -1,4 +1,4 @@
-// Сервис для взаимодействия с Qwen3 через backend
+
 
 interface ChatMessage {
   id: number;
@@ -21,35 +21,35 @@ export class Qwen3ApiService {
     sessionId?: string,
   ): Promise<string> {
     try {
-      // Если есть изображение, используем FormData для отправки файла
+
       if (imageFile) {
         const formData = new FormData();
 
-        // Добавляем сообщения
+
         formData.append(
           'messages',
           JSON.stringify(
             messages.map((msg) => ({
               ...msg,
-              timestamp: msg.timestamp.toISOString(), // Преобразуем дату в строку для передачи
+              timestamp: msg.timestamp.toISOString(),
             })),
           ),
         );
 
-        // Добавляем модель
-        formData.append('model', 'qwen-vl-max'); // Используем модель с поддержкой визуального восприятия
 
-        // Добавляем информацию о текущей странице
+        formData.append('model', 'qwen-vl-max');
+
+
         if (currentPage) {
           formData.append('currentPage', currentPage);
         }
 
-        // Добавляем sessionId, если он доступен
+
         if (sessionId) {
           formData.append('sessionId', sessionId);
         }
 
-        // Добавляем файл изображения
+
         formData.append('image', imageFile, imageFile.name);
 
         const response = await fetch(this.API_URL, {
@@ -66,21 +66,21 @@ export class Qwen3ApiService {
         const data: Qwen3Response = await response.json();
         return data.content || 'Не удалось получить ответ от ИИ.';
       } else {
-        // Если изображения нет, используем старый метод с JSON
+
         const requestData: any = {
           messages: messages.map((msg) => ({
             ...msg,
-            timestamp: msg.timestamp.toISOString(), // Преобразуем дату в строку для передачи
+            timestamp: msg.timestamp.toISOString(),
           })),
           model: 'qwen-plus',
         };
 
-        // Добавляем информацию о текущей странице, если она предоставлена
+
         if (currentPage) {
           requestData.currentPage = currentPage;
         }
 
-        // Добавляем sessionId, если он доступен
+
         if (sessionId) {
           requestData.sessionId = sessionId;
         }
@@ -104,7 +104,7 @@ export class Qwen3ApiService {
       }
     } catch (error) {
       console.error('Error calling Qwen3 API through backend:', error);
-      throw error; // Пробрасываем ошибку наверх для обработки в компоненте
+      throw error;
     }
   }
 }

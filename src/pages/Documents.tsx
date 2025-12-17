@@ -59,14 +59,14 @@ import {
   downloadDocument,
 } from '../services/documents';
 
-// 🇷🇺 Переводы ролей с английского на русский
+
 const roleTranslations: Record<string, string> = {
-  // Административные роли
+
   admin: 'Администратор',
   manager: 'Менеджер',
   director: 'Директор',
 
-  // Педагогические роли
+
   teacher: 'Воспитатель',
   assistant: 'Помощник воспитателя',
   psychologist: 'Психолог',
@@ -74,18 +74,18 @@ const roleTranslations: Record<string, string> = {
   music_teacher: 'Музыкальный руководитель',
   physical_education: 'Инструктор по физкультуре',
 
-  // Медицинские роли
+
   nurse: 'Медсестра',
   doctor: 'Врач',
 
-  // Обслуживающий персонал
+
   cook: 'Повар',
   cleaner: 'Уборщица',
   security: 'Охранник',
   maintenance: 'Завхоз',
   laundry: 'Прачка',
 
-  // Дополнительные роли
+
   staff: 'Сотрудник',
   substitute: 'Подменный сотрудник',
   intern: 'Стажер',
@@ -105,7 +105,7 @@ export const Documents = () => {
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
-  // Фильтры
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('');
@@ -113,13 +113,13 @@ export const Documents = () => {
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [filterName, setFilterName] = useState<string>('');
 
-  // Загрузка данных с бэкенда
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Загрузка документов
+
         const documentsData = await getDocuments();
         setDocuments(documentsData.items || documentsData);
         setFilteredDocuments(documentsData.items || documentsData);
@@ -134,11 +134,11 @@ export const Documents = () => {
     fetchData();
   }, []);
 
-  // Применение фильтров
+
   useEffect(() => {
     let filtered = [...documents];
 
-    // Поиск по названию
+
     if (searchTerm) {
       filtered = filtered.filter(
         (doc) =>
@@ -150,22 +150,22 @@ export const Documents = () => {
       );
     }
 
-    // Фильтр по типу
+
     if (filterType) {
       filtered = filtered.filter((doc) => doc.type === filterType);
     }
 
-    // Фильтр по категории
+
     if (filterCategory) {
       filtered = filtered.filter((doc) => doc.category === filterCategory);
     }
 
-    // Фильтр по статусу
+
     if (filterStatus) {
       filtered = filtered.filter((doc) => doc.status === filterStatus);
     }
 
-    // Фильтр по имени (только для категории "staff")
+
     if (filterName && filterCategory === 'staff') {
       const name = filterName.toLowerCase();
       filtered = filtered.filter((doc) => {
@@ -174,18 +174,18 @@ export const Documents = () => {
       });
     }
 
-    // Фильтр по роли (только для категории "staff")
+
     if (filterRole.length > 0 && filterCategory === 'staff') {
       filtered = filtered.filter((doc) => {
         const uploaderId = doc.uploader?.id;
         if (!uploaderId) return false;
-        // Skip the role filter for staff since staffList is not available
+
         return true;
       });
     }
 
     setFilteredDocuments(filtered);
-    setPage(0); // Сброс на первую страницу при изменении фильтров
+    setPage(0);
   }, [
     documents,
     searchTerm,
@@ -221,7 +221,7 @@ export const Documents = () => {
 
     try {
       if (currentDocument.id) {
-        // Редактирование существующего документа
+
         const updatedDocument = await updateDocument(currentDocument.id, {
           title: currentDocument.title,
           description: currentDocument.description,
@@ -242,7 +242,7 @@ export const Documents = () => {
           ),
         );
       } else {
-        // Добавление нового документа
+
         if (!file) {
           setError('Пожалуйста, выберите файл документа');
           return;
@@ -548,8 +548,8 @@ export const Documents = () => {
                     <TableCell>
                       {document.uploadDate
                         ? format(new Date(document.uploadDate), 'dd.MM.yyyy', {
-                            locale: ru,
-                          })
+                          locale: ru,
+                        })
                         : '-'}
                     </TableCell>
                     <TableCell>{document.uploader?.fullName || '-'}</TableCell>

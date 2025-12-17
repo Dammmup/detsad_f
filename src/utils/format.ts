@@ -1,12 +1,9 @@
-// ===== УТИЛИТЫ ДЛЯ ФОРМАТИРОВАНИЯ =====
+
 
 import { StatusColor, STATUS_COLORS, STATUS_TEXT } from '../types/common';
 
-// ===== ФОРМАТИРОВАНИЕ ДАТА И ВРЕМЕНИ =====
 
-/**
- * Форматирование даты в русском формате
- */
+
 export const formatDate = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return dateObj.toLocaleDateString('ru-RU', {
@@ -16,9 +13,6 @@ export const formatDate = (date: Date | string): string => {
   });
 };
 
-/**
- * Форматирование времени в формате HH:MM
- */
 export const formatTime = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return dateObj.toLocaleTimeString('ru-RU', {
@@ -27,9 +21,6 @@ export const formatTime = (date: Date | string): string => {
   });
 };
 
-/**
- * Форматирование даты и времени
- */
 export const formatDateTime = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return dateObj.toLocaleString('ru-RU', {
@@ -41,35 +32,23 @@ export const formatDateTime = (date: Date | string): string => {
   });
 };
 
-/**
- * Получение дня недели
- */
 export const getWeekday = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
   return weekdays[dateObj.getDay()];
 };
 
-/**
- * Получение полного названия дня недели
- */
 export const getFullWeekday = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return dateObj.toLocaleDateString('ru-RU', { weekday: 'long' });
 };
 
-/**
- * Форматирование даты с днем недели
- */
 export const formatDateWithWeekday = (date: Date | string): string => {
   const formattedDate = formatDate(date);
   const weekday = getWeekday(date);
   return `${formattedDate} (${weekday})`;
 };
 
-/**
- * Получение текущего периода (месяц/год)
- */
 export const getCurrentPeriod = (): string => {
   const now = new Date();
   const monthNames = [
@@ -89,9 +68,6 @@ export const getCurrentPeriod = (): string => {
   return `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
 };
 
-/**
- * Получение диапазона дат текущего месяца
- */
 export const getCurrentMonthRange = (): {
   startDate: string;
   endDate: string;
@@ -106,28 +82,19 @@ export const getCurrentMonthRange = (): {
   };
 };
 
-// ===== ФОРМАТИРОВАНИЕ ВРЕМЕНИ В МИНУТАХ =====
 
-/**
- * Преобразование времени в минуты
- */
+
 export const parseTimeToMinutes = (timeStr: string): number => {
   const [hours, minutes] = timeStr.split(':').map(Number);
   return hours * 60 + minutes;
 };
 
-/**
- * Преобразование минут в время
- */
 export const formatMinutesToTime = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 };
 
-/**
- * Форматирование минут в читаемый вид
- */
 export const formatMinutesToReadable = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
@@ -141,42 +108,27 @@ export const formatMinutesToReadable = (minutes: number): string => {
   }
 };
 
-/**
- * Получение текущего времени в формате HH:MM
- */
 export const getCurrentTime = (): string => {
   const now = new Date();
   return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 };
 
-// ===== ФОРМАТИРОВАНИЕ СТАТУСОВ =====
 
-/**
- * Получение цвета статуса для UI
- */
+
 export const getStatusColor = (status: string): StatusColor => {
   return STATUS_COLORS[status] || 'default';
 };
 
-/**
- * Получение текста статуса на русском языке
- */
 export const getStatusText = (status: string): string => {
   return STATUS_TEXT[status] || status;
 };
 
-// ===== ФОРМАТИРОВАНИЕ ЧИСЕЛ И ВАЛЮТ =====
 
-/**
- * Форматирование числа с разделителями тысяч
- */
+
 export const formatNumber = (num: number): string => {
   return num.toLocaleString('ru-RU');
 };
 
-/**
- * Форматирование валюты
- */
 export const formatCurrency = (
   amount: number,
   currency: string = 'тенге',
@@ -184,9 +136,6 @@ export const formatCurrency = (
   return `${formatNumber(amount)} ${currency}`;
 };
 
-/**
- * Форматирование процентов
- */
 export const formatPercentage = (
   value: number,
   decimals: number = 1,
@@ -194,27 +143,24 @@ export const formatPercentage = (
   return `${value.toFixed(decimals)}%`;
 };
 
-// ===== ФОРМАТИРОВАНИЕ ТЕЛЕФОНОВ =====
 
-/**
- * Форматирование номера телефона
- */
+
 export const formatPhoneNumber = (phone: string): string => {
-  // Удаляем все нецифровые символы
+
   const cleaned = phone.replace(/\D/g, '');
 
-  // Если номер начинается с 8, заменяем на +7
+
   let formatted = cleaned;
   if (formatted.startsWith('8') && formatted.length === 11) {
     formatted = '7' + formatted.slice(1);
   }
 
-  // Добавляем + если номер начинается с 7
+
   if (formatted.startsWith('7') && formatted.length === 11) {
     formatted = '+' + formatted;
   }
 
-  // Форматируем как +7 (XXX) XXX-XX-XX
+
   if (formatted.startsWith('+7') && formatted.length === 12) {
     return formatted.replace(
       /(\+7)(\d{3})(\d{3})(\d{2})(\d{2})/,
@@ -222,14 +168,11 @@ export const formatPhoneNumber = (phone: string): string => {
     );
   }
 
-  return phone; // Возвращаем исходный номер если не удалось отформатировать
+  return phone;
 };
 
-// ===== ФОРМАТИРОВАНИЕ ИМЕН =====
 
-/**
- * Форматирование ФИО (первая буква заглавная)
- */
+
 export const formatFullName = (name: string): string => {
   return name
     .split(' ')
@@ -237,9 +180,6 @@ export const formatFullName = (name: string): string => {
     .join(' ');
 };
 
-/**
- * Получение инициалов из ФИО
- */
 export const getInitials = (fullName: string): string => {
   return fullName
     .split(' ')
@@ -247,9 +187,6 @@ export const getInitials = (fullName: string): string => {
     .join('');
 };
 
-/**
- * Сокращение ФИО до Фамилия И.О.
- */
 export const formatShortName = (fullName: string): string => {
   const parts = fullName.trim().split(' ');
   if (parts.length < 2) return fullName;
@@ -264,11 +201,8 @@ export const formatShortName = (fullName: string): string => {
     : `${lastName} ${firstInitial}.`;
 };
 
-// ===== ФОРМАТИРОВАНИЕ РАЗМЕРОВ ФАЙЛОВ =====
 
-/**
- * Форматирование размера файла
- */
+
 export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Б';
 
@@ -279,11 +213,8 @@ export const formatFileSize = (bytes: number): string => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
 
-// ===== ФОРМАТИРОВАНИЕ АДРЕСОВ =====
 
-/**
- * Форматирование адреса
- */
+
 export const formatAddress = (address: string): string => {
   return address
     .split(',')
@@ -292,11 +223,8 @@ export const formatAddress = (address: string): string => {
     .join(', ');
 };
 
-// ===== УТИЛИТЫ ДЛЯ РАБОТЫ С ДАТАМИ =====
 
-/**
- * Проверка, является ли дата сегодняшней
- */
+
 export const isToday = (date: Date | string): boolean => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   const today = new Date();
@@ -304,9 +232,6 @@ export const isToday = (date: Date | string): boolean => {
   return dateObj.toDateString() === today.toDateString();
 };
 
-/**
- * Проверка, является ли дата вчерашней
- */
 export const isYesterday = (date: Date | string): boolean => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   const yesterday = new Date();
@@ -315,9 +240,6 @@ export const isYesterday = (date: Date | string): boolean => {
   return dateObj.toDateString() === yesterday.toDateString();
 };
 
-/**
- * Получение относительного времени (например, "2 часа назад")
- */
 export const getRelativeTime = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
@@ -339,9 +261,6 @@ export const getRelativeTime = (date: Date | string): string => {
   }
 };
 
-/**
- * Получение возраста по дате рождения
- */
 export const calculateAge = (birthDate: Date | string): number => {
   const birth = typeof birthDate === 'string' ? new Date(birthDate) : birthDate;
   const today = new Date();
@@ -356,11 +275,8 @@ export const calculateAge = (birthDate: Date | string): number => {
   return age;
 };
 
-// ===== ФОРМАТИРОВАНИЕ ДЛЯ ЭКСПОРТА =====
 
-/**
- * Форматирование данных для экспорта в Excel
- */
+
 export const formatForExport = (value: any): string => {
   if (value === null || value === undefined) {
     return '';
@@ -381,9 +297,6 @@ export const formatForExport = (value: any): string => {
   return String(value);
 };
 
-/**
- * Очистка строки для безопасного использования в именах файлов
- */
 export const sanitizeFilename = (filename: string): string => {
   return filename
     .replace(/[<>:"/\\|?*]/g, '_')

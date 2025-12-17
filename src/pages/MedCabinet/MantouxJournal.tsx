@@ -45,7 +45,7 @@ export default function MantouxJournal() {
   const [modalOpen, setModalOpen] = useState(false);
   const [newRecord, setNewRecord] = useState<Partial<MantouxRecord>>({ mm: 0 });
 
-  // Статистика
+
   const stats = useMemo(() => {
     const total = records.length;
     const with063 = records.filter((r) => r.has063).length;
@@ -64,7 +64,7 @@ export default function MantouxJournal() {
     ]).finally(() => setLoading(false));
   }, []);
 
-  // Фильтрация по ФИО
+
   const filteredRecords = useMemo(() => {
     if (!search) return records;
     return records.filter((r) =>
@@ -72,7 +72,7 @@ export default function MantouxJournal() {
     );
   }, [records, search]);
 
-  // Добавление новой записи (через API)
+
   const handleAdd = async () => {
     if (!newRecord.childId || !newRecord.fio) return;
     setLoading(true);
@@ -95,7 +95,7 @@ export default function MantouxJournal() {
     }
   };
 
-  // Удаление записи
+
   const handleDelete = async (id: string) => {
     setLoading(true);
     try {
@@ -106,7 +106,7 @@ export default function MantouxJournal() {
     }
   };
 
-  // Экспорт в Word
+
   const handleExport = () => {
     const doc = new Document({
       sections: [
@@ -165,7 +165,7 @@ export default function MantouxJournal() {
     });
   };
 
-  // При выборе ребенка автозаполняем поля
+
   const handleChildSelect = (id: string) => {
     const child = users.find((u) => u.id === id || u._id === id);
     if (child) {

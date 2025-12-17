@@ -48,7 +48,7 @@ import {
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
-// Types and Services
+
 import childrenApi, { Child } from '../../services/children';
 import { STATUS_COLORS } from '../../types/common';
 import { getGroups } from '../../services/groups';
@@ -66,7 +66,7 @@ import {
 import AttendanceBulkModal from '../../components/AttendanceBulkModal';
 import ExportButton from '../../components/ExportButton';
 
-// Constants
+
 const ATTENDANCE_STATUSES = {
   present: 'Присутствует',
   absent: 'Отсутствует',
@@ -99,13 +99,13 @@ const WeeklyAttendance: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   const { currentDate, setCurrentDate } = useDate();
 
-  // State
+
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
 
-  // Data
+
   const [groups, setGroups] = useState<any[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [attendanceData, setAttendanceData] = useState<AttendanceData>({});
@@ -152,7 +152,7 @@ const WeeklyAttendance: React.FC = () => {
     }
   };
 
-  // Load initial data
+
   useEffect(() => {
     const fetchInitialData = async () => {
       if (!isLoggedIn || !currentUser || authLoading) return;
@@ -168,7 +168,7 @@ const WeeklyAttendance: React.FC = () => {
         setGroups(groupsData || []);
         setChildren(childrenList);
 
-        // Auto-select group for teachers
+
         if (
           currentUser.role === 'teacher' ||
           currentUser.role === 'assistant'
@@ -190,7 +190,7 @@ const WeeklyAttendance: React.FC = () => {
     fetchInitialData();
   }, [isLoggedIn, currentUser, authLoading, enqueueSnackbar]);
 
-  // Load attendance data when month or group changes
+
   useEffect(() => {
     const fetchAttendanceData = async () => {
       if (!selectedGroup) {
@@ -209,7 +209,7 @@ const WeeklyAttendance: React.FC = () => {
           endDate: format(monthEnd, 'yyyy-MM-dd'),
         });
 
-        // Convert records to attendance data format
+
         const attendanceMap: AttendanceData = {};
         records.forEach((record: ChildAttendanceRecord) => {
           const childId = record.childId;
@@ -240,7 +240,7 @@ const WeeklyAttendance: React.FC = () => {
     fetchAttendanceData();
   }, [currentDate, selectedGroup, enqueueSnackbar]);
 
-  // Month navigation
+
   const goToPreviousMonth = () => {
     setCurrentDate(
       new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
@@ -261,38 +261,38 @@ const WeeklyAttendance: React.FC = () => {
     setSelectedGroup(e.target.value);
   };
 
-  // Get filtered children for selected group
+
   const filteredChildren = selectedGroup
     ? children.filter((child) => {
-        // Проверяем, является ли groupId объектом или строкой
-        if (typeof child.groupId === 'object' && child.groupId !== null) {
-          return (
-            (child.groupId as any)._id === selectedGroup ||
-            (child.groupId as any).id === selectedGroup
-          );
-        } else {
-          return child.groupId === selectedGroup;
-        }
-      })
+
+      if (typeof child.groupId === 'object' && child.groupId !== null) {
+        return (
+          (child.groupId as any)._id === selectedGroup ||
+          (child.groupId as any).id === selectedGroup
+        );
+      } else {
+        return child.groupId === selectedGroup;
+      }
+    })
     : [];
 
-  // Get month days
+
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  // Get attendance for a specific child and day
+
   const getAttendanceForDay = (childId: string, date: Date) => {
     const dateString = format(date, 'yyyy-MM-dd');
     return attendanceData[childId]?.[dateString];
   };
 
-  // Cycle through attendance statuses on click
+
   const handleAttendanceClick = async (child: Child, date: Date) => {
     const dateString = format(date, 'yyyy-MM-dd');
     const existingAttendance = getAttendanceForDay(child.id!, date);
 
-    // Cycle through statuses: present -> absent -> sick -> vacation -> late -> present
+
     const statusCycle: AttendanceStatus[] = [
       'present',
       'absent',
@@ -319,7 +319,7 @@ const WeeklyAttendance: React.FC = () => {
 
       await bulkSaveChildAttendance([record], selectedGroup);
 
-      // Update local state
+
       setAttendanceData((prev) => ({
         ...prev,
         [child.id!]: {
@@ -340,7 +340,7 @@ const WeeklyAttendance: React.FC = () => {
     }
   };
 
-  // Render loading state
+
   if (loading && Object.keys(attendanceData).length === 0) {
     return (
       <Box
@@ -354,7 +354,7 @@ const WeeklyAttendance: React.FC = () => {
     );
   }
 
-  // Render error state
+
   if (error) {
     return (
       <Box p={3}>
@@ -562,8 +562,7 @@ const WeeklyAttendance: React.FC = () => {
                                       p: 1,
                                       borderRadius: 1,
                                       bgcolor: 'background.paper',
-                                      borderLeft: `4px solid ${
-                                        attendance.status === 'present'
+                                      borderLeft: `4px solid ${attendance.status === 'present'
                                           ? theme.palette.success.main
                                           : attendance.status === 'sick'
                                             ? theme.palette.warning.main
@@ -572,7 +571,7 @@ const WeeklyAttendance: React.FC = () => {
                                               : attendance.status === 'late'
                                                 ? theme.palette.warning.main
                                                 : theme.palette.error.main
-                                      }`,
+                                        }`,
                                       cursor: 'pointer',
                                       '&:hover': {
                                         bgcolor: 'action.selected',
@@ -678,7 +677,7 @@ const WeeklyAttendance: React.FC = () => {
         onClose={() => setBulkModalOpen(false)}
         groupId={selectedGroup}
         onSuccess={() => {
-          // Refresh attendance data after bulk operation
+
           const monthStart = startOfMonth(currentDate);
           const monthEnd = endOfMonth(currentDate);
 
@@ -688,7 +687,7 @@ const WeeklyAttendance: React.FC = () => {
             endDate: format(monthEnd, 'yyyy-MM-dd'),
           })
             .then((records) => {
-              // Convert records to attendance data format
+
               const attendanceMap: AttendanceData = {};
               records.forEach((record: ChildAttendanceRecord) => {
                 const childId = record.childId;

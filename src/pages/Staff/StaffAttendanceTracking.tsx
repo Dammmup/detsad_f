@@ -54,7 +54,7 @@ import {
 } from '../../types/common';
 import DateNavigator from '../../components/DateNavigator';
 
-// Интерфейс для записей учета времени
+
 interface TimeRecord {
   id: string;
   staffId: string | undefined;
@@ -63,13 +63,13 @@ interface TimeRecord {
   actualStart?: string;
   actualEnd?: string;
   status:
-    | 'checked_in'
-    | 'checked_out'
-    | 'on_break'
-    | 'overtime'
-    | 'absent'
-    | 'scheduled';
-  originalStatus?: ShiftStatus; // Добавляем оригинальный статус смены
+  | 'checked_in'
+  | 'checked_out'
+  | 'on_break'
+  | 'overtime'
+  | 'absent'
+  | 'scheduled';
+  originalStatus?: ShiftStatus;
   workDuration?: number;
   breakDuration?: number;
   overtimeDuration?: number;
@@ -91,16 +91,17 @@ interface TimeRecord {
   notes?: string;
 }
 
-// Используем только смены (Shift) для учета посещаемости сотрудников
 
-// Удаляем локальное определение roleTranslations, так как используем импортированные из common.ts
 
-// Используем функцию translateRole из common.ts
+
+
+
 
 const StaffAttendanceTracking: React.FC = () => {
   const { currentDate } = useDate();
   const [staffList, setStaffList] = useState<any[]>([]);
   const [records, setRecords] = useState<TimeRecord[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedStaff, setSelectedStaff] = useState('all');
   const [filterRole, setFilterRole] = useState<string[]>([]);
@@ -112,11 +113,11 @@ const StaffAttendanceTracking: React.FC = () => {
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
   const [currentStaffId, setCurrentStaffId] = useState('');
 
-  // Удаляем локальное определение statusLabels, так как используем импортированные из common.ts
 
-  // Удаляем локальное определение attendanceStatusColors, так как используем импортированные из common.ts
 
-  // Удаляем локальное определение attendanceStatusLabels, так как используем импортированные из common.ts
+
+
+
 
   useEffect(() => {
     const fetchStaff = async () => {
@@ -130,10 +131,10 @@ const StaffAttendanceTracking: React.FC = () => {
     fetchStaff();
   }, []);
 
-  // 🇷🇺 Список доступных ролей на русском языке (автоматически из переводов)
+
   const availableRoles = Object.values(ROLE_TRANSLATIONS).sort();
 
-  // Обработчик для фильтра ролей
+
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
     const { value } = event.target;
     setFilterRole(typeof value === 'string' ? value.split(',') : value);
@@ -149,46 +150,46 @@ const StaffAttendanceTracking: React.FC = () => {
     [staffList],
   );
 
-  // Загрузка смен сотрудников (учет посещаемости)
+
   useEffect(() => {
     const fetchRecords = async () => {
       try {
-        const startDate = startOfMonth(currentDate);
-        const endDate = endOfMonth(currentDate);
+
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
         let filters: any = {
-          startDate: format(startDate, 'yyyy-MM-dd'),
-          endDate: format(endDate, 'yyyy-MM-dd'),
+          startDate: dateStr,
+          endDate: dateStr,
         };
         if (selectedStaff !== 'all') filters.staffId = selectedStaff;
 
-        // Загружаем данные об учете посещаемости
+
         const response =
           await staffAttendanceTrackingService.getAllRecords(filters);
         const attendanceRecords = response.data;
 
-        // Загружаем все смены в указанный период для отображения назначенных смен
+
         const shifts = await shiftsApi.getAll(filters);
 
-        // Создаем мапу для быстрого поиска записей посещаемости по дате и сотруднику
+
         const attendanceMap = new Map();
         attendanceRecords.forEach((record: any) => {
           const key = `${record.staffId._id || record.staffId}-${new Date(record.date).toISOString().split('T')[0]}`;
           attendanceMap.set(key, record);
         });
 
-        // Объединяем данные смен и посещаемости
+
         const allRecords: TimeRecord[] = [];
 
-        // Добавляем все смены, включая те, по которым нет данных посещаемости
+
         shifts.forEach((shift: any) => {
           const attendanceRecord = attendanceMap.get(
             `${shift.staffId._id || shift.staffId}-${shift.date}`,
           );
 
           if (attendanceRecord) {
-            // Если есть запись посещаемости, используем её данные
+
             const statusMap: Record<string, TimeRecord['status']> = {
-              scheduled: 'scheduled', // Запланированная смена - сотрудник еще не пришел
+              scheduled: 'scheduled',
               completed: 'checked_out',
               in_progress: 'checked_in',
               late: 'absent',
@@ -202,25 +203,25 @@ const StaffAttendanceTracking: React.FC = () => {
                 attendanceRecord.staffId.fullName ||
                 getStaffName(
                   attendanceRecord.staffId._id ||
-                    attendanceRecord.staffId ||
-                    '',
+                  attendanceRecord.staffId ||
+                  '',
                 ),
               date: attendanceRecord.date,
               actualStart: attendanceRecord.actualStart
                 ? new Date(attendanceRecord.actualStart).toLocaleTimeString(
-                    'ru-RU',
-                    { hour: '2-digit', minute: '2-digit' },
-                  )
+                  'ru-RU',
+                  { hour: '2-digit', minute: '2-digit' },
+                )
                 : undefined,
               actualEnd: attendanceRecord.actualEnd
                 ? new Date(attendanceRecord.actualEnd).toLocaleTimeString(
-                    'ru-RU',
-                    { hour: '2-digit', minute: '2-digit' },
-                  )
+                  'ru-RU',
+                  { hour: '2-digit', minute: '2-digit' },
+                )
                 : undefined,
               status:
                 statusMap[attendanceRecord.status] || attendanceRecord.status,
-              originalStatus: attendanceRecord.status as ShiftStatus, // Сохраняем оригинальный статус для проверки
+              originalStatus: attendanceRecord.status as ShiftStatus,
               workDuration: attendanceRecord.workDuration,
               breakDuration: attendanceRecord.breakDuration,
               overtimeDuration: attendanceRecord.overtimeDuration,
@@ -233,12 +234,12 @@ const StaffAttendanceTracking: React.FC = () => {
                 unauthorized: { amount: 0 },
               },
               bonuses: attendanceRecord.bonuses || {
-                overtime: { minutes: 0, amount: 0 }, // Не добавляем сверхурочные в смену
+                overtime: { minutes: 0, amount: 0 },
                 punctuality: { amount: 0 },
               },
             });
           } else {
-            // Если нет записи посещаемости, создаем запись только на основе смены
+
             allRecords.push({
               id: shift._id || shift.id || '',
               staffId: shift.staffId._id || shift.staffId,
@@ -248,7 +249,7 @@ const StaffAttendanceTracking: React.FC = () => {
               date: shift.date,
               actualStart: undefined,
               actualEnd: undefined,
-              status: 'scheduled', // Статус смены - запланирована
+              status: 'scheduled',
               originalStatus: shift.status as ShiftStatus,
               workDuration: undefined,
               breakDuration: undefined,
@@ -269,7 +270,7 @@ const StaffAttendanceTracking: React.FC = () => {
           }
         });
 
-        // Добавляем записи посещаемости, которые не связаны с конкретными сменами (если есть)
+
         attendanceRecords.forEach((record: any) => {
           const key = `${record.staffId._id || record.staffId}-${new Date(record.date).toISOString().split('T')[0]}`;
           const shiftExists = shifts.some(
@@ -279,7 +280,7 @@ const StaffAttendanceTracking: React.FC = () => {
 
           if (!shiftExists) {
             const statusMap: Record<string, TimeRecord['status']> = {
-              scheduled: 'scheduled', // Запланированная смена - сотрудник еще не пришел
+              scheduled: 'scheduled',
               completed: 'checked_out',
               in_progress: 'checked_in',
               late: 'absent',
@@ -295,18 +296,18 @@ const StaffAttendanceTracking: React.FC = () => {
               date: record.date,
               actualStart: record.actualStart
                 ? new Date(record.actualStart).toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
                 : undefined,
               actualEnd: record.actualEnd
                 ? new Date(record.actualEnd).toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
                 : undefined,
               status: statusMap[record.status] || record.status,
-              originalStatus: record.status as ShiftStatus, // Сохраняем оригинальный статус для проверки
+              originalStatus: record.status as ShiftStatus,
               workDuration: record.workDuration,
               breakDuration: record.breakDuration,
               overtimeDuration: record.overtimeDuration,
@@ -319,17 +320,17 @@ const StaffAttendanceTracking: React.FC = () => {
                 unauthorized: { amount: 0 },
               },
               bonuses: record.bonuses || {
-                overtime: { minutes: 0, amount: 0 }, // Не добавляем сверхурочные в смену
+                overtime: { minutes: 0, amount: 0 },
                 punctuality: { amount: 0 },
               },
             });
           }
         });
 
-        // Фильтрация по роли и имени
+
         let filteredRecords = [...allRecords];
 
-        // Фильтрация по поисковой строке
+
         if (searchTerm) {
           const search = searchTerm.toLowerCase();
           filteredRecords = filteredRecords.filter((record) =>
@@ -337,7 +338,7 @@ const StaffAttendanceTracking: React.FC = () => {
           );
         }
 
-        // Фильтрация по роли
+
         if (filterRole.length > 0) {
           filteredRecords = filteredRecords.filter((record) => {
             const staff = staffList.find(
@@ -345,8 +346,8 @@ const StaffAttendanceTracking: React.FC = () => {
             );
             const russianRole = staff
               ? ROLE_TRANSLATIONS[
-                  staff.role as keyof typeof ROLE_TRANSLATIONS
-                ] || staff.role
+              staff.role as keyof typeof ROLE_TRANSLATIONS
+              ] || staff.role
               : '';
             return filterRole.includes(russianRole);
           });
@@ -362,28 +363,28 @@ const StaffAttendanceTracking: React.FC = () => {
     fetchRecords();
   }, [
     selectedStaff,
-    currentDate,
+    selectedDate,
     filterRole,
     searchTerm,
     staffList,
     getStaffName,
   ]);
 
-// const calculateWorkDuration = (
-//   start: string,
-//   end: string,
-//   breakTime: number = 0,
-// ) => {
-//   const [startHours, startMinutes] = start.split(':').map(Number);
-//   const [endHours, endMinutes] = end.split(':').map(Number);
 
-//   const startTotalMinutes = startHours * 60 + startMinutes;
-//   const endTotalMinutes = endHours * 60 + endMinutes;
 
-//   return Math.max(0, endTotalMinutes - startTotalMinutes - breakTime);
-// };
 
-  // Диалог отметки времени
+
+
+
+
+
+
+
+
+
+
+
+
   const [markDialogOpen, setMarkDialogOpen] = useState(false);
   const [markForm, setMarkForm] = useState({
     staffId: '',
@@ -401,10 +402,10 @@ const StaffAttendanceTracking: React.FC = () => {
     setMarkDialogOpen(false);
   };
 
-  // ...
 
-  // Вставьте этот блок в JSX диалога (DialogContent)
-  // Адрес учреждения
+
+
+
 
   const handleMarkChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any,
@@ -428,14 +429,14 @@ const StaffAttendanceTracking: React.FC = () => {
     address?: string;
   }) => {
     try {
-      // Найти смену для текущего сотрудника и даты
+
       const filters: any = { date };
       if (selectedStaff !== 'all') {
         filters.staffId = selectedStaff;
       }
       const shifts = await shiftsApi.getAll(filters);
       const myShift = shifts.find((s) => {
-        // staffId может быть как строкой, так и объектом с _id
+
         if (
           typeof s.staffId === 'object' &&
           s.staffId !== null &&
@@ -446,21 +447,21 @@ const StaffAttendanceTracking: React.FC = () => {
         return s.staffId === currentStaffId;
       });
       if (myShift) {
-        // Проверяем, опаздывает ли сотрудник
-        
-        // Обновляем смену с информацией об опоздании
+
+
+
         if (myShift.id) {
           await shiftsApi.checkIn(myShift.id);
         }
 
-        // Определяем статус на основе опоздания
+
         if (myShift.id) {
           await shiftsApi.checkIn(myShift.id);
         }
         setCheckInDialogOpen(false);
-        // Обновить записи
 
-        // Обновляем записи, чтобы отразить изменения
+
+
         const fetchRecords = async () => {
           const startDate = startOfMonth(currentDate);
           const endDate = endOfMonth(currentDate);
@@ -469,7 +470,7 @@ const StaffAttendanceTracking: React.FC = () => {
             endDate: format(endDate, 'yyyy-MM-dd'),
           };
           if (selectedStaff !== 'all') filters.staffId = selectedStaff;
-          // Загружаем обновленные данные об учете посещаемости
+
           const response =
             await staffAttendanceTrackingService.getAllRecords(filters);
           const updatedAttendanceRecords = response.data;
@@ -483,15 +484,15 @@ const StaffAttendanceTracking: React.FC = () => {
               date: record.date,
               actualStart: record.actualStart
                 ? new Date(record.actualStart).toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
                 : undefined,
               actualEnd: record.actualEnd
                 ? new Date(record.actualEnd).toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
                 : undefined,
               status:
                 (
@@ -542,7 +543,7 @@ const StaffAttendanceTracking: React.FC = () => {
       }
       const shifts = await shiftsApi.getAll(filters);
       const myShift = shifts.find((s) => {
-        // staffId может быть как строкой, так и объектом с _id
+
         if (
           typeof s.staffId === 'object' &&
           s.staffId !== null &&
@@ -559,7 +560,7 @@ const StaffAttendanceTracking: React.FC = () => {
           }
         }
         setCheckOutDialogOpen(false);
-        // Обновить записи
+
         const fetchRecords = async () => {
           const startDate = startOfMonth(currentDate);
           const endDate = endOfMonth(currentDate);
@@ -568,7 +569,7 @@ const StaffAttendanceTracking: React.FC = () => {
             endDate: format(endDate, 'yyyy-MM-dd'),
           };
           if (selectedStaff !== 'all') filters.staffId = selectedStaff;
-          // Загружаем обновленные данные об учете посещаемости
+
           const response =
             await staffAttendanceTrackingService.getAllRecords(filters);
           const updatedAttendanceRecords = response.data;
@@ -582,15 +583,15 @@ const StaffAttendanceTracking: React.FC = () => {
               date: record.date,
               actualStart: record.actualStart
                 ? new Date(record.actualStart).toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
                 : undefined,
               actualEnd: record.actualEnd
                 ? new Date(record.actualEnd).toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
                 : undefined,
               status:
                 record.actualStart && !record.actualEnd
@@ -624,11 +625,11 @@ const StaffAttendanceTracking: React.FC = () => {
     }
   };
 
-  // Состояние для проверки "в зоне"
+
 
   const handleMarkSubmit = async () => {
     try {
-      // Создаем новую запись учета посещаемости через API
+
       await staffAttendanceTrackingService.createRecord({
         staffId: markForm.staffId,
         date: markForm.date,
@@ -636,10 +637,10 @@ const StaffAttendanceTracking: React.FC = () => {
         actualEnd: markForm.actualEnd,
         status: markForm.status as any,
         notes: markForm.notes,
-      } as any); // Используем as any, чтобы обойти строгую типизацию
+      } as any);
 
       setMarkDialogOpen(false);
-      // Обновляем записи
+
       const startDate = startOfMonth(currentDate);
       const endDate = endOfMonth(currentDate);
       let filters: any = {
@@ -648,14 +649,14 @@ const StaffAttendanceTracking: React.FC = () => {
       };
       if (selectedStaff !== 'all') filters.staffId = selectedStaff;
 
-      // Загружаем данные об учете посещаемости
+
       const response =
         await staffAttendanceTrackingService.getAllRecords(filters);
       const attendanceRecords = response.data;
 
-      // Преобразуем данные учета посещаемости для отображения в таблице
+
       const transformedRecords = attendanceRecords.map((record: any) => {
-        // Определяем статус на основе наличия actualStart и actualEnd
+
         let timeRecordStatus: TimeRecord['status'] = 'absent';
         if (record.actualStart && !record.actualEnd) {
           timeRecordStatus = 'checked_in';
@@ -672,15 +673,15 @@ const StaffAttendanceTracking: React.FC = () => {
           date: record.date,
           actualStart: record.actualStart
             ? new Date(record.actualStart).toLocaleTimeString('ru-RU', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })
+              hour: '2-digit',
+              minute: '2-digit',
+            })
             : undefined,
           actualEnd: record.actualEnd
             ? new Date(record.actualEnd).toLocaleTimeString('ru-RU', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })
+              hour: '2-digit',
+              minute: '2-digit',
+            })
             : undefined,
           status: timeRecordStatus,
           workDuration: record.workDuration,
@@ -689,26 +690,26 @@ const StaffAttendanceTracking: React.FC = () => {
           lateMinutes: record.lateMinutes,
           earlyLeaveMinutes: record.earlyLeaveMinutes,
           notes: record.notes || '',
-          // Инициализируем penalties и bonuses как пустые объекты для смен
+
           penalties: record.penalties || {
             late: { minutes: 0, amount: 0 },
             earlyLeave: { minutes: 0, amount: 0 },
             unauthorized: { amount: 0 },
           },
           bonuses: record.bonuses || {
-            overtime: { minutes: 0, amount: 0 }, // Не добавляем сверхурочные в смену
+            overtime: { minutes: 0, amount: 0 },
             punctuality: { amount: 0 },
           },
         };
       });
 
       setRecords(transformedRecords);
-    } catch {}
+    } catch { }
   };
 
   const calculateStats = () => {
     const totalRecords = records.length;
-    // Для статусов TimeRecord используем правильное значение
+
     const completedRecords = records.filter(
       (r) => r.status === 'checked_out',
     ).length;
@@ -730,8 +731,8 @@ const StaffAttendanceTracking: React.FC = () => {
     const avgWorkHours =
       records.length > 0
         ? records.reduce((sum, r) => sum + (r.workDuration || 0), 0) /
-          records.length /
-          60
+        records.length /
+        60
         : 0;
 
     return {
@@ -760,7 +761,7 @@ const StaffAttendanceTracking: React.FC = () => {
   };
 
   const handleEditRecord = (record: TimeRecord) => {
-    // Убедимся, что selectedRecord имеет актуальный статус
+
     setSelectedRecord(record);
     setEditDialogOpen(true);
   };
@@ -769,7 +770,7 @@ const StaffAttendanceTracking: React.FC = () => {
     if (!selectedRecord) return;
 
     try {
-      // Обновляем запись учета посещаемости через API
+
       const updatedRecord = await staffAttendanceTrackingService.updateRecord(
         selectedRecord.id,
         {
@@ -780,45 +781,45 @@ const StaffAttendanceTracking: React.FC = () => {
             ? new Date(`${selectedRecord.date}T${selectedRecord.actualEnd}`)
             : undefined,
           notes: selectedRecord.notes,
-          // Убираем поле status, так как оно больше не существует в модели
+
           lateMinutes: selectedRecord.lateMinutes,
           earlyLeaveMinutes: selectedRecord.earlyLeaveMinutes,
         },
       );
 
-      // Обновляем только конкретную запись в состоянии, а не все
+
       setRecords((prevRecords) =>
         prevRecords.map((record) =>
           record.id === selectedRecord.id
             ? {
-                ...updatedRecord.data,
-                actualStart: updatedRecord.data.actualStart
-                  ? new Date(updatedRecord.data.actualStart).toLocaleTimeString(
-                      'ru-RU',
-                      { hour: '2-digit', minute: '2-digit' },
-                    )
-                  : undefined,
-                actualEnd: updatedRecord.data.actualEnd
-                  ? new Date(updatedRecord.data.actualEnd).toLocaleTimeString(
-                      'ru-RU',
-                      { hour: '2-digit', minute: '2-digit' },
-                    )
-                  : undefined,
-                staffName:
-                  updatedRecord.data.staffId?.fullName ||
-                  getStaffName(updatedRecord.data.staffId || ''),
-                // Обновляем отображаемый статус в соответствии с новым оригинальным статусом
-                status: ({
-                  scheduled: 'absent',
-                  completed: 'checked_out',
-                  absent: 'absent',
-                  checked_out: 'checked_out',
-                  in_progress: 'in_progress',
-                  late: 'absent',
-                  pending_approval: 'absent',
-                }[updatedRecord.data.status as keyof typeof STATUS_TEXT] ||
-                  'checked_in') as 'checked_in' | 'checked_out' | 'absent',
-              }
+              ...updatedRecord.data,
+              actualStart: updatedRecord.data.actualStart
+                ? new Date(updatedRecord.data.actualStart).toLocaleTimeString(
+                  'ru-RU',
+                  { hour: '2-digit', minute: '2-digit' },
+                )
+                : undefined,
+              actualEnd: updatedRecord.data.actualEnd
+                ? new Date(updatedRecord.data.actualEnd).toLocaleTimeString(
+                  'ru-RU',
+                  { hour: '2-digit', minute: '2-digit' },
+                )
+                : undefined,
+              staffName:
+                updatedRecord.data.staffId?.fullName ||
+                getStaffName(updatedRecord.data.staffId || ''),
+
+              status: ({
+                scheduled: 'absent',
+                completed: 'checked_out',
+                absent: 'absent',
+                checked_out: 'checked_out',
+                in_progress: 'in_progress',
+                late: 'absent',
+                pending_approval: 'absent',
+              }[updatedRecord.data.status as keyof typeof STATUS_TEXT] ||
+                'checked_in') as 'checked_in' | 'checked_out' | 'absent',
+            }
             : record,
         ),
       );
@@ -832,10 +833,10 @@ const StaffAttendanceTracking: React.FC = () => {
 
   const handleDeleteRecord = async (id: string) => {
     try {
-      // Удаляем запись учета посещаемости через API
+
       await staffAttendanceTrackingService.deleteRecord(id);
 
-      // Обновляем записи
+
       const startDate = startOfMonth(currentDate);
       const endDate = endOfMonth(currentDate);
       let filters: any = {
@@ -844,14 +845,14 @@ const StaffAttendanceTracking: React.FC = () => {
       };
       if (selectedStaff !== 'all') filters.staffId = selectedStaff;
 
-      // Загружаем данные об учете посещаемости
+
       const response =
         await staffAttendanceTrackingService.getAllRecords(filters);
       const attendanceRecords = response.data;
 
-      // Преобразуем данные учета посещаемости для отображения в таблице
+
       const transformedRecords = attendanceRecords.map((record: any) => {
-        // Определяем статус на основе наличия actualStart и actualEnd
+
         let timeRecordStatus: TimeRecord['status'] = 'absent';
         if (record.actualStart && !record.actualEnd) {
           timeRecordStatus = 'checked_in';
@@ -868,15 +869,15 @@ const StaffAttendanceTracking: React.FC = () => {
           date: record.date,
           actualStart: record.actualStart
             ? new Date(record.actualStart).toLocaleTimeString('ru-RU', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })
+              hour: '2-digit',
+              minute: '2-digit',
+            })
             : undefined,
           actualEnd: record.actualEnd
             ? new Date(record.actualEnd).toLocaleTimeString('ru-RU', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })
+              hour: '2-digit',
+              minute: '2-digit',
+            })
             : undefined,
           status: timeRecordStatus,
           workDuration: record.workDuration,
@@ -885,14 +886,14 @@ const StaffAttendanceTracking: React.FC = () => {
           lateMinutes: record.lateMinutes,
           earlyLeaveMinutes: record.earlyLeaveMinutes,
           notes: record.notes || '',
-          // Инициализируем penalties и bonuses как пустые объекты для смен
+
           penalties: record.penalties || {
             late: { minutes: 0, amount: 0 },
             earlyLeave: { minutes: 0, amount: 0 },
             unauthorized: { amount: 0 },
           },
           bonuses: record.bonuses || {
-            overtime: { minutes: 0, amount: 0 }, // Не добавляем сверхурочные в смену
+            overtime: { minutes: 0, amount: 0 },
             punctuality: { amount: 0 },
           },
         };
@@ -931,7 +932,7 @@ const StaffAttendanceTracking: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant='h6' color='error.main'>
-                Штрафы
+                Вычеты
               </Typography>
               <Typography variant='h5'>
                 {formatCurrency(stats.totalPenalties)}
@@ -951,7 +952,7 @@ const StaffAttendanceTracking: React.FC = () => {
               <TableCell>Время работы</TableCell>
               <TableCell>Статус</TableCell>
               <TableCell>Адрес</TableCell>
-              <TableCell align='right'>Штрафы</TableCell>
+              <TableCell align='right'>Вычеты</TableCell>
               <TableCell align='right'>Действия</TableCell>
             </TableRow>
           </TableHead>
@@ -976,21 +977,21 @@ const StaffAttendanceTracking: React.FC = () => {
                       Приход:{' '}
                       {record.actualStart
                         ? new Date(
-                            `1970-01-01T${record.actualStart}`,
-                          ).toLocaleTimeString('ru-RU', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
+                          `1970-01-01T${record.actualStart}`,
+                        ).toLocaleTimeString('ru-RU', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
                         : '-'}
                       <br />
                       Уход:{' '}
                       {record.actualEnd
                         ? new Date(
-                            `1970-01-01T${record.actualEnd}`,
-                          ).toLocaleTimeString('ru-RU', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
+                          `1970-01-01T${record.actualEnd}`,
+                        ).toLocaleTimeString('ru-RU', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
                         : '-'}
                     </Typography>
                   </Box>
@@ -1023,13 +1024,13 @@ const StaffAttendanceTracking: React.FC = () => {
                     label={
                       STATUS_TEXT[record.status as keyof typeof STATUS_TEXT] ||
                       STATUS_TEXT[
-                        record.originalStatus as keyof typeof STATUS_TEXT
+                      record.originalStatus as keyof typeof STATUS_TEXT
                       ] ||
                       record.status
                     }
                     color={
                       STATUS_COLORS[
-                        record.originalStatus as keyof typeof STATUS_COLORS
+                      record.originalStatus as keyof typeof STATUS_COLORS
                       ] as any
                     }
                     size='small'
@@ -1039,8 +1040,8 @@ const StaffAttendanceTracking: React.FC = () => {
                   <Typography variant='body2' color='error'>
                     {formatCurrency(
                       (record.penalties?.late?.amount || 0) +
-                        (record.penalties?.earlyLeave?.amount || 0) +
-                        (record.penalties?.unauthorized?.amount || 0),
+                      (record.penalties?.earlyLeave?.amount || 0) +
+                      (record.penalties?.unauthorized?.amount || 0),
                     )}
                   </Typography>
                 </TableCell>
@@ -1048,7 +1049,7 @@ const StaffAttendanceTracking: React.FC = () => {
                   <Typography variant='body2' color='success.main'>
                     {formatCurrency(
                       (record.bonuses?.overtime?.amount || 0) +
-                        (record.bonuses?.punctuality?.amount || 0),
+                      (record.bonuses?.punctuality?.amount || 0),
                     )}
                   </Typography>
                 </TableCell>
@@ -1111,7 +1112,17 @@ const StaffAttendanceTracking: React.FC = () => {
 
       <Paper sx={{ p: 2, mb: 2 }}>
         <DateNavigator />
-        <Box display='flex' gap={2} alignItems='center' flexWrap='wrap'>
+        <Box display='flex' flexWrap='wrap' gap={2} alignItems='center' p={2}>
+          {/* Выбор даты */}
+          <TextField
+            label='Дата'
+            type='date'
+            size='small'
+            value={format(selectedDate, 'yyyy-MM-dd')}
+            onChange={(e) => setSelectedDate(new Date(e.target.value))}
+            sx={{ minWidth: '180px' }}
+            InputLabelProps={{ shrink: true }}
+          />
           {(tabValue === 3 || tabValue === 4) && (
             <TextField
               label='Дата'
@@ -1317,9 +1328,9 @@ const StaffAttendanceTracking: React.FC = () => {
                     setSelectedRecord((prev) =>
                       prev
                         ? {
-                            ...prev,
-                            originalStatus: e.target.value as ShiftStatus,
-                          }
+                          ...prev,
+                          originalStatus: e.target.value as ShiftStatus,
+                        }
                         : null,
                     )
                   }

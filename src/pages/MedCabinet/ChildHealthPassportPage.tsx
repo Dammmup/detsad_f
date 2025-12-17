@@ -15,7 +15,7 @@ import { Document, Packer, Paragraph, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
 import childrenApi from '../../services/children';
 
-// Типы для формы
+
 interface ChildPassportForm {
   fio: string;
   iin: string;
@@ -63,12 +63,12 @@ export default function ChildHealthPassportPage() {
     childrenApi
       .getAll()
       .then((children) => {
-        setChildren(children as any); // Временное приведение типа для совместимости
+        setChildren(children as any);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  // При выборе ребенка автозаполняем основные поля
+
   React.useEffect(() => {
     const child = children.find(
       (c) => c.id === selectedId || c._id === selectedId,
@@ -79,8 +79,8 @@ export default function ChildHealthPassportPage() {
         fio: child.fullName || '',
         iin: child.iin || '',
         birthdate: child.birthday || '',
-        gender: '', // В базе нет поля gender, оставляем пустым или реализуем определение по notes
-        address: child.notes || '', // или child.address если есть
+        gender: '',
+        address: child.notes || '',
       }));
     }
   }, [selectedId, children]);
@@ -89,7 +89,7 @@ export default function ChildHealthPassportPage() {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   };
 
-  // Экспорт в Word (docx)
+
   const handleExport = () => {
     const doc = new Document({
       sections: [

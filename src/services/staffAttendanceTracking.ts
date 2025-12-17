@@ -7,7 +7,7 @@ export interface StaffAttendanceRecord {
     fullName: string;
     role: string;
   };
-  shiftId?: string; // Добавляем поле shiftId для связи с моделью смены
+  shiftId?: string;
   date: Date;
   actualStart?: Date;
   actualEnd?: Date;
@@ -69,17 +69,17 @@ export interface ClockInOutData {
 }
 
 export const staffAttendanceTrackingService = {
-  // Clock in/out
+
   clockIn: (data: ClockInOutData) =>
     apiClient.post('/attendance/clock-in', data),
   clockOut: (data: ClockInOutData) =>
     apiClient.post('/attendance/clock-out', data),
 
-  // Break management
+
   startBreak: () => apiClient.post('/attendance/start-break'),
   endBreak: () => apiClient.post('/attendance/end-break'),
 
-  // Get records
+
   getEntries: (params?: {
     page?: number;
     limit?: number;
@@ -115,7 +115,7 @@ export const staffAttendanceTrackingService = {
       params: { startDate, endDate, ...params },
     }),
 
-  // Record management
+
   createRecord: (data: Partial<StaffAttendanceRecord>) =>
     apiClient.post('/attendance', data),
   updateRecord: (id: string, data: Partial<StaffAttendanceRecord>) =>
@@ -132,7 +132,7 @@ export const staffAttendanceTrackingService = {
     data: { penalties: any; bonuses: any; notes: string },
   ) => apiClient.put(`/attendance/${id}/adjustments`, data),
 
-  // Approvals
+
   getPendingApprovals: () => apiClient.get('/attendance/pending-approvals'),
   getApprovedRecords: () => apiClient.get('/attendance/approved'),
   getRejectedRecords: () => apiClient.get('/attendance/rejected'),
@@ -141,7 +141,7 @@ export const staffAttendanceTrackingService = {
   rejectAttendance: (id: string, reason?: string) =>
     apiClient.put(`/attendance/${id}/attendance-reject`, { reason }),
 
-  // Statistics and analytics
+
   getStatistics: () => apiClient.get('/attendance/statistics'),
   getLateArrivals: (threshold?: number) =>
     apiClient.get('/attendance/late-arrivals', { params: { threshold } }),

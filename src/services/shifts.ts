@@ -7,17 +7,11 @@ import {
   ShiftStatus,
 } from '../types/common';
 
-/**
- * API клиент для работы со сменами
- */
 class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   protected endpoint = '/staff-shifts';
   private readonly CACHE_KEY = 'shifts';
-  private readonly CACHE_DURATION = 2 * 60 * 1000; // 2 минуты (смены меняются чаще)
+  private readonly CACHE_DURATION = 2 * 60 * 1000;
 
-  /**
-   * Получение смен с фильтрацией
-   */
   async getAll(filters?: ShiftFilters): Promise<Shift[]> {
     const cacheKey = `${this.CACHE_KEY}_${JSON.stringify(filters)}`;
 
@@ -32,9 +26,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return shifts;
   }
 
-  /**
-   * Получение смен по диапазону дат
-   */
   async getByDateRange(
     startDate: string,
     endDate: string,
@@ -49,9 +40,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return this.getAll(filters);
   }
 
-  /**
-   * Создание смены
-   */
   async create(shiftData: ShiftFormData): Promise<Shift> {
     const shift = await super.create({
       userId: shiftData.userId,
@@ -69,35 +57,23 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return shift;
   }
 
-  /**
-   * Обновление смены
-   */
   async update(id: ID, shiftData: Partial<Shift>): Promise<Shift> {
     const shift = await super.update(id, shiftData);
     this.clearCache();
     return shift;
   }
 
-  /**
-   * Удаление смены
-   */
   async deleteItem(id: ID): Promise<void> {
     await super.deleteItem(id);
     this.clearCache();
   }
 
-  /**
-   * Обновление статуса смены
-   */
   async updateStatus(id: ID, status: Shift['status']): Promise<Shift> {
     const shift = await this.put<Shift>(`${this.endpoint}/${id}`, { status });
     this.clearCache();
     return shift;
   }
 
-  /**
-   * Массовое создание смен
-   */
   async bulkCreate(shifts: ShiftFormData[]): Promise<{
     success: number;
     failed: number;
@@ -109,9 +85,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return result;
   }
 
-  /**
-   * Массовое обновление смен
-   */
   async bulkUpdate(updates: Array<{ id: ID; data: Partial<Shift> }>): Promise<{
     success: number;
     failed: number;
@@ -122,9 +95,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return result;
   }
 
-  /**
-   * Массовое удаление смен
-   */
   async bulkDelete(ids: ID[]): Promise<{
     success: number;
     failed: number;
@@ -135,9 +105,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return result;
   }
 
-  /**
-   * Копирование смен на другую неделю
-   */
   async copyWeek(
     fromDate: string,
     toDate: string,
@@ -157,9 +124,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return result;
   }
 
-  /**
-   * Получение конфликтов в расписании
-   */
   async getConflicts(
     startDate: string,
     endDate: string,
@@ -178,9 +142,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     });
   }
 
-  /**
-   * Автоматическое планирование смен
-   */
   async autoSchedule(params: {
     startDate: string;
     endDate: string;
@@ -193,14 +154,11 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   }): Promise<{
     suggestedShifts: ShiftFormData[];
     conflicts: Array<{ date: string; issue: string }>;
-    coverage: Record<string, number>; // процент покрытия по дням
+    coverage: Record<string, number>;
   }> {
     return this.post(`${this.endpoint}/auto-schedule`, params);
   }
 
-  /**
-   * Получение статистики смен
-   */
   async getStats(filters?: {
     startDate?: string;
     endDate?: string;
@@ -224,9 +182,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return this.get(`${this.endpoint}/stats`, { params: filters });
   }
 
-  /**
-   * Экспорт расписания
-   */
   async export(
     filters?: ShiftFilters,
     format: 'csv' | 'excel' | 'pdf' = 'excel',
@@ -239,9 +194,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     });
   }
 
-  /**
-   * Импорт расписания
-   */
   async import(
     file: File,
     options?: {
@@ -271,16 +223,13 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return result;
   }
 
-  /**
-   * Получение шаблонов смен
-   */
   async getTemplates(): Promise<
     Array<{
       id: ID;
       name: string;
       description?: string;
       shifts: Array<{
-        dayOfWeek: number; // 0-6 (воскресенье-суббота)
+        dayOfWeek: number;
         startTime: string;
         endTime: string;
       }>;
@@ -306,13 +255,10 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
 
     const templates = await this.get(`${this.endpoint}/templates`);
 
-    apiCache.set(cacheKey, templates, this.CACHE_DURATION * 5); // Шаблоны кэшируем дольше
+    apiCache.set(cacheKey, templates, this.CACHE_DURATION * 5);
     return templates;
   }
 
-  /**
-   * Создание смен из шаблона
-   */
   async createFromTemplate(
     templateId: ID,
     params: {
@@ -333,9 +279,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return result;
   }
 
-  /**
-   * Поиск доступных сотрудников для смены
-   */
   async findAvailableStaff(
     date: string,
     startTime: string,
@@ -354,19 +297,16 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     });
   }
 
-  /**
-   * Получение рекомендаций по оптимизации расписания
-   */
   async getOptimizationSuggestions(
     startDate: string,
     endDate: string,
   ): Promise<
     Array<{
       type:
-        | 'reduce_overtime'
-        | 'balance_workload'
-        | 'fill_gaps'
-        | 'reduce_conflicts';
+      | 'reduce_overtime'
+      | 'balance_workload'
+      | 'fill_gaps'
+      | 'reduce_conflicts';
       priority: 'high' | 'medium' | 'low';
       description: string;
       affectedShifts: ID[];
@@ -382,38 +322,26 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     });
   }
 
-  /**
-   * Очистка кэша смен
-   */
   clearCache(): void {
-    // Очищаем все кэши, связанные со сменами
-    apiCache.clear(); // Простое решение - очищаем весь кэш
-    // В продакшене лучше использовать более точную очистку по тегам
+
+    apiCache.clear();
+
   }
 
-  /**
-   * Отметка прихода по смене
-   */
   async checkIn(shiftId: ID): Promise<Shift> {
     const result = await this.post(`${this.endpoint}/checkin/${shiftId}`, {});
     this.clearCache();
     return result;
   }
 
-  /**
-   * Отметка ухода по смене
-   */
   async checkOut(shiftId: ID): Promise<Shift> {
     const result = await this.post(`${this.endpoint}/checkout/${shiftId}`, {});
     this.clearCache();
     return result;
   }
 
-  /**
-   * Запрос смены сотрудником
-   */
   async requestShift(shiftData: Omit<ShiftFormData, 'status'>): Promise<Shift> {
-    // При запросе смены статус всегда устанавливается в 'pending_approval'
+
     const result = await this.post(`${this.endpoint}/request`, {
       ...shiftData,
       status: 'pending_approval' as ShiftStatus,
@@ -422,7 +350,7 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return result;
   }
 }
-// Получить смены сотрудника по диапазону дат
+
 export const getStaffShifts = async ({
   staffId,
   startDate,
@@ -435,7 +363,7 @@ export const getStaffShifts = async ({
   return shiftsApi.getByDateRange(startDate, endDate, staffId);
 };
 
-// Экспортируем отдельные функции для обратной совместимости
+
 export const getShifts = (startDate?: string, endDate?: string) =>
   shiftsApi.getByDateRange(startDate || '', endDate || '');
 export const createShift = (shiftData: ShiftFormData) =>
@@ -446,10 +374,10 @@ export const deleteShift = (id: ID) => shiftsApi.deleteItem(id);
 export const updateShiftStatus = (id: ID, status: Shift['status']) =>
   shiftsApi.updateStatus(id, status);
 
-// Экспортируем экземпляр клиента
+
 export const shiftsApi = new ShiftsApiClient();
 
-// Новые методы для отметки прихода и ухода
+
 export const checkIn = async (shiftId: ID) => {
   return shiftsApi.checkIn(shiftId);
 };
@@ -458,7 +386,7 @@ export const checkOut = async (shiftId: ID) => {
   return shiftsApi.checkOut(shiftId);
 };
 
-// Новый метод для запроса смены
+
 export const requestShift = async (
   shiftData: Omit<ShiftFormData, 'status'>,
 ) => {

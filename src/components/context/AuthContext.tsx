@@ -11,7 +11,7 @@ import { User } from '../../types/common';
 import { useNavigate } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
 
-// Интерфейс контекста авторизации
+
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
@@ -21,7 +21,7 @@ interface AuthContextType {
   checkAuth: () => Promise<boolean>;
 }
 
-// Создаем контекст
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  // Вход
+
   const handleLogin = (userData: User, token: string) => {
     setUser(userData);
     setIsLoggedIn(true);
@@ -76,9 +76,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🔐 Пользователь вошел в систему:', userData.fullName);
   };
 
-  // Выход
+
   const handleLogout = async () => {
-    // Если уже идёт процесс выхода — не повторяем
+
     if (logoutInProgress) {
       console.log('⚠️ Выход уже выполняется, повторный вызов отклонён.');
       return;
@@ -93,16 +93,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       setIsLoggedIn(false);
 
-      // Чистим локальные данные
+
       localStorage.removeItem('user');
       localStorage.removeItem('auth_token');
 
-      // Перенаправляем
+
       window.location.href = '/login';
     } catch (error) {
       console.error('Ошибка при выходе:', error);
 
-      // Даже при ошибке очищаем данные
+
       setUser(null);
       setIsLoggedIn(false);
       localStorage.removeItem('user');
@@ -125,7 +125,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       }
 
-      // ❌ Не вызываем logout, просто возвращаем false
+
       setUser(null);
       setIsLoggedIn(false);
       return false;
@@ -147,7 +147,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Хук для использования контекста авторизации
+
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
 
@@ -158,7 +158,7 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
-// Компонент для защищённых маршрутов
+
 interface ProtectedRouteProps {
   children: ReactNode;
 }
@@ -176,7 +176,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
       if (!authValid) {
         console.log('🚫 Пользователь не авторизован, редиректим');
-        // Use window.location instead of navigate to avoid potential routing conflicts
+
         window.location.href = '/login';
       } else {
         setChecking(false);
@@ -186,8 +186,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     verifyAuth();
   }, [loading, checkAuth, navigate]);
 
-  // Show loading spinner only for initial auth check, not for route changes
- if (loading && checking) {
+
+  if (loading && checking) {
     return (
       <Box
         display='flex'
@@ -206,17 +206,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
- // If auth check is complete but user is not logged in, return null
+
   if (!loading && !isLoggedIn) {
     return null;
   }
 
-  // If auth check is complete and user is logged in, render children
+
   if (!checking) {
     return <>{children}</>;
   }
 
-  // Default fallback to avoid white screen
+
   return (
     <Box
       display='flex'

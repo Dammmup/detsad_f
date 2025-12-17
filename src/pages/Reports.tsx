@@ -64,7 +64,7 @@ import { useAuth } from '../components/context/AuthContext';
 import { getUsers } from '../services/users';
 import { ID, UserRole } from '../types/common';
 import childrenApi from '../services/children';
-// import { groupsApi } from '../services/groups'; // This import is not being used
+
 import { getChildAttendance } from '../services/childAttendance';
 import { getShifts } from '../services/shifts';
 import {
@@ -79,14 +79,14 @@ import {
 } from '../services/payroll';
 import DateNavigator from '../components/DateNavigator';
 
-// Интерфейс для сотрудника
+
 interface StaffMember {
   id?: ID;
   fullName: string;
   role?: UserRole;
 }
 
-// Интерфейс для фильтрации отчетов
+
 interface ReportFilters {
   type?: string;
   status?: string;
@@ -101,11 +101,11 @@ interface ReportFilters {
 
 const Reports: React.FC = () => {
   const { currentDate } = useDate();
-  // Состояния для данных
+
   const [reports, setReports] = useState<Report[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
 
-  // Состояния для UI
+
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
@@ -114,7 +114,7 @@ const Reports: React.FC = () => {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const { user: authUser } = useAuth();
 
-  // Новые состояния для расширенного экспорта
+
   const [exportType, setExportType] = useState<
     'salary' | 'children' | 'attendance' | 'schedule'
   >('salary');
@@ -126,7 +126,7 @@ const Reports: React.FC = () => {
   >('monthly');
   const [scheduleRecipients, setScheduleRecipients] = useState<string>('');
 
-  // Недостающие переменные
+
   const selectedUserId = useRef<string>('');
   const selectedGroupId = useRef<string>('');
   const [reportType, setReportType] = useState<string>('attendance');
@@ -143,12 +143,12 @@ const Reports: React.FC = () => {
     search: '',
   });
 
-  // Состояния для сортировки и поиска
+
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortField] = useState<string>('createdAt');
   const [sortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Состояния для сводок
+
   const [childrenSummary, setChildrenSummary] = useState<any>(null);
   const [attendanceSummary, setAttendanceSummary] = useState<any>(null);
   const fetchData = React.useCallback(async () => {
@@ -156,7 +156,7 @@ const Reports: React.FC = () => {
     setError(null);
 
     try {
-  
+
       const reportsData = await getReports();
       setReports(reportsData);
 
@@ -169,7 +169,7 @@ const Reports: React.FC = () => {
         })),
       );
 
-      // Получение сводок
+
 
       const [childrenSumm, attendanceSumm] = await Promise.all([
         getChildrenSummary({
@@ -189,9 +189,9 @@ const Reports: React.FC = () => {
       setLoading(false);
     }
   }, [currentDate, selectedGroupId]);
-  // Загрузка данных при монтировании компонента
+
   useEffect(() => {
-    // Загружаем информацию о текущем пользователе
+
     const fetchCurrentUser = async () => {
       try {
         const response = await fetch('/auth/me', {});
@@ -205,7 +205,7 @@ const Reports: React.FC = () => {
     fetchCurrentUser();
     fetchData();
 
-    // Устанавливаем начальное название отчета
+
     setReportTitle(
       `Отчет за ${currentDate.toLocaleDateString('ru-RU')} - ${currentDate.toLocaleDateString('ru-RU')}`,
     );
@@ -213,12 +213,12 @@ const Reports: React.FC = () => {
 
 
 
-  // Обработчик изменения вкладки
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
-  // Обработчик экспорта отчета
+
   const handleExport = async (
     reportId: string,
     format: 'pdf' | 'excel' | 'csv',
@@ -226,9 +226,9 @@ const Reports: React.FC = () => {
     setLoading(true);
 
     try {
-      // Ограничиваем формат только Excel
+
       await exportReport(reportId, 'excel');
-      // В реальном приложении здесь будет скачивание файла
+
       alert(`Отчет успешно экспортирован в формате Excel`);
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта отчета');
@@ -237,31 +237,31 @@ const Reports: React.FC = () => {
     }
   };
 
-  // Обработчик создания отчета
+
   const handleCreateReport = async () => {
     setLoading(true);
 
     try {
       const startDate = startOfMonth(currentDate);
       const endDate = endOfMonth(currentDate);
-      // Форматируем даты для API
+
       const formattedStartDate = format(startDate, 'yyyy-MM-dd');
       const formattedEndDate = format(endDate, 'yyyy-MM-dd');
 
-      // Создаем отчет
+
       const newReport = await generateCustomReport({
         type: reportType as any,
         startDate: formattedStartDate,
         endDate: formattedEndDate,
         userId: selectedUserId.current || undefined,
-        format: 'excel', // Всегда используем формат Excel
+        format: 'excel',
       });
 
-      // Обновляем список отчетов
+
       if (newReport)
         setReports([...(reports as Report[]), newReport] as Report[]);
 
-      // Закрываем диалог
+
       setDialogOpen(false);
     } catch (err: any) {
       setError(err?.message || 'Ошибка создания отчета');
@@ -270,7 +270,7 @@ const Reports: React.FC = () => {
     }
   };
 
-  // Обработчик удаления отчета
+
   const handleDeleteReport = async (id: string) => {
     if (!window.confirm('Вы уверены, что хотите удалить этот отчет?')) {
       return;
@@ -281,7 +281,7 @@ const Reports: React.FC = () => {
     try {
       await deleteReport(id);
 
-      // Обновляем список отчетов
+
       setReports(reports.filter((report) => report.id !== id));
     } catch (err: any) {
       setError(err?.message || 'Ошибка удаления отчета');
@@ -290,11 +290,11 @@ const Reports: React.FC = () => {
     }
   };
 
-  // Обработчик изменения типа отчета
+
   const handleReportTypeChange = (e: SelectChangeEvent) => {
     setReportType(e.target.value);
 
-    // Обновляем название отчета в зависимости от типа
+
     const typeText =
       e.target.value === 'attendance'
         ? 'посещаемости'
@@ -309,18 +309,18 @@ const Reports: React.FC = () => {
     );
   };
 
-  // ===== НОВЫЕ ОБРАБОТЧИКИ ДЛЯ РАСШИРЕННОГО ЭКСПОРТА =====
 
-  // Обработчик экспорта зарплат
+
+
   const handleExportSalary = async () => {
     setLoading(true);
     try {
-      const period = format(currentDate, 'yyyy-MM'); // YYYY-MM
+      const period = format(currentDate, 'yyyy-MM');
 
-      // First, generate the payroll sheets for the period
+
       await generatePayrollSheets(period);
 
-      // Then, fetch the payrolls
+
       const payrolls = await getPayrollsByUsers({
         period: period,
         userId: selectedUserId.current || undefined,
@@ -335,7 +335,7 @@ const Reports: React.FC = () => {
     }
   };
 
-  // Обработчик отправки отчета на почту
+
   const handleSendByEmail = async () => {
     if (!emailRecipients.trim()) {
       setError('Введите email получателей');
@@ -349,7 +349,7 @@ const Reports: React.FC = () => {
         recipients: emailRecipients.split(',').map((email) => email.trim()),
         subject: emailSubject || `Отчет по ${exportType}`,
         message: emailMessage,
-        format: 'excel', // Всегда используем формат Excel
+        format: 'excel',
         reportParams: {
           startDate: format(startOfMonth(currentDate), 'yyyy-MM-dd'),
           endDate: format(endOfMonth(currentDate), 'yyyy-MM-dd'),
@@ -369,11 +369,11 @@ const Reports: React.FC = () => {
     }
   };
 
-  // Универсальный обработчик расширенного экспорта
+
   const handleAdvancedExport = async (
     type: 'salary' | 'children' | 'attendance' | 'schedule',
   ) => {
-    // Устанавливаем формат экспорта как Excel по умолчанию
+
 
     switch (type) {
       case 'salary':
@@ -389,7 +389,7 @@ const Reports: React.FC = () => {
     }
   };
 
-  // Обработчик экспорта отчета по детям
+
   const handleExportChildren = async () => {
     setLoading(true);
     try {
@@ -403,7 +403,7 @@ const Reports: React.FC = () => {
     }
   };
 
-  // Обработчик экспорта отчета посещаемости
+
   const handleExportAttendance = async () => {
     setLoading(true);
     try {
@@ -415,10 +415,10 @@ const Reports: React.FC = () => {
       const allChildren = await childrenApi.getAll();
       const children = selectedGroupId.current
         ? allChildren.filter(
-            (c) =>
-              (typeof c.groupId === 'object' ? c.groupId?._id : c.groupId) ===
-              selectedGroupId.current,
-          )
+          (c) =>
+            (typeof c.groupId === 'object' ? c.groupId?._id : c.groupId) ===
+            selectedGroupId.current,
+        )
         : allChildren;
       const groupName = selectedGroupId.current
         ? staff.find((s) => s.id === selectedGroupId.current)?.fullName
@@ -438,7 +438,7 @@ const Reports: React.FC = () => {
     }
   };
 
-  // Обработчик экспорта отчета по расписанию
+
   const handleExportSchedule = async () => {
     setLoading(true);
     try {
@@ -458,7 +458,7 @@ const Reports: React.FC = () => {
     }
   };
 
-  // Получение текста для типа отчета
+
   const getReportTypeText = (
     type:
       | 'attendance'
@@ -486,23 +486,23 @@ const Reports: React.FC = () => {
     }
   };
 
-  // Фильтрация отчетов
+
   const filteredReports = reports.filter((report) => {
-    // Фильтрация по типу
+
     if (filters.type && report.type !== filters.type) return false;
 
-    // Фильтрация по статусу
+
     if (filters.status && report.status !== filters.status) return false;
 
-    // Фильтрация по пользователю
+
     if (filters.userId && report.filters?.userId !== filters.userId)
       return false;
 
-    // Фильтрация по группе
+
     if (filters.groupId && report.filters?.groupId !== filters.groupId)
       return false;
 
-    // Фильтрация по дате
+
     if (
       filters.dateRange?.startDate &&
       report.dateRange.startDate < filters.dateRange.startDate
@@ -514,7 +514,7 @@ const Reports: React.FC = () => {
     )
       return false;
 
-    // Фильтрация по поиску
+
     if (
       searchTerm &&
       !report.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -526,7 +526,7 @@ const Reports: React.FC = () => {
     return true;
   });
 
-  // Сортировка отчетов
+
   const sortedReports = [...filteredReports].sort((a, b) => {
     if (sortField === 'createdAt') {
       const dateA = new Date(a.createdAt || 0);
@@ -550,7 +550,7 @@ const Reports: React.FC = () => {
     return 0;
   });
 
-  // Обработчик изменения фильтров
+
   const handleFilterChange = (field: keyof ReportFilters, value: any) => {
     setFilters((prev) => ({
       ...prev,
@@ -558,7 +558,7 @@ const Reports: React.FC = () => {
     }));
   };
 
-  // Обработчик сброса фильтров
+
   const resetFilters = () => {
     setFilters({
       type: '',
@@ -682,7 +682,7 @@ const Reports: React.FC = () => {
           Сбросить
         </Button>
 
-        <Button variant='outlined' startIcon={<Sort />} onClick={() => {}}>
+        <Button variant='outlined' startIcon={<Sort />} onClick={() => { }}>
           Сортировка
         </Button>
       </Box>
@@ -1186,15 +1186,15 @@ const Reports: React.FC = () => {
                       <TableCell>{getReportTypeText(report.type)}</TableCell>
                       <TableCell>
                         {report.dateRange?.startDate &&
-                        report.dateRange?.endDate
+                          report.dateRange?.endDate
                           ? `${new Date(report.dateRange.startDate).toLocaleDateString('ru-RU')} - ${new Date(report.dateRange.endDate).toLocaleDateString('ru-RU')}`
                           : 'Не указан'}
                       </TableCell>
                       <TableCell>
                         {report.createdAt
                           ? new Date(report.createdAt).toLocaleDateString(
-                              'ru-RU',
-                            )
+                            'ru-RU',
+                          )
                           : '-'}
                       </TableCell>
                       <TableCell>
@@ -1320,9 +1320,9 @@ const Reports: React.FC = () => {
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Формат</InputLabel>
-          
-                  <MenuItem value='excel'>Excel</MenuItem>
-           
+
+                <MenuItem value='excel'>Excel</MenuItem>
+
               </FormControl>
             </Grid>
           </Grid>
@@ -1426,9 +1426,9 @@ const Reports: React.FC = () => {
               <FormControl fullWidth>
                 <InputLabel>Формат файла</InputLabel>
                 <Select
-                  value='excel' // Установлено значение Excel по умолчанию
+                  value='excel'
                   label='Формат файла'
-                  disabled // Отключено, так как формат всегда Excel
+                  disabled
                 >
                   <MenuItem value='excel'>Excel</MenuItem>
                 </Select>
@@ -1484,10 +1484,10 @@ const Reports: React.FC = () => {
                   onChange={(e) =>
                     setExportType(
                       e.target.value as
-                        | 'salary'
-                        | 'children'
-                        | 'attendance'
-                        | 'schedule',
+                      | 'salary'
+                      | 'children'
+                      | 'attendance'
+                      | 'schedule',
                     )
                   }
                   label='Тип отчета'
@@ -1524,9 +1524,9 @@ const Reports: React.FC = () => {
               <FormControl fullWidth>
                 <InputLabel>Формат файла</InputLabel>
                 <Select
-                  value='excel' // Установлено значение Excel по умолчанию
+                  value='excel'
                   label='Формат файла'
-                  disabled // Отключено, так как формат всегда Excel
+                  disabled
                 >
                   <MenuItem value='excel'>Excel</MenuItem>
                 </Select>

@@ -4,37 +4,37 @@ import axios from 'axios';
 import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-// Стили удалены для упрощения структуры
+
 import { App } from './components/App';
 import * as serviceWorker from './serviceWorker';
 import { LayoutProvider } from './components/context/LayoutContext';
-// UserProvider removed during refactoring
+
 import { TimeTrackingProvider } from './components/context/TimeTrackingContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import './sentry'; // Инициализируем Sentry
+import './sentry';
 
-// Простая тема MUI для детского сада
+
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1890ff', // Antd синий
+      main: '#1890ff',
     },
     secondary: {
-      main: '#52c41a', // Antd зеленый
+      main: '#52c41a',
     },
     success: {
-      main: '#52c41a', // Зеленый
+      main: '#52c41a',
     },
     warning: {
-      main: '#faad14', // Желтый
+      main: '#faad14',
     },
     error: {
-      main: '#ff4d4f', // Красный
+      main: '#ff4d4f',
     },
     background: {
-      default: '#f0f2f5', // Antd фон
+      default: '#f0f2f5',
       paper: '#ffffff',
     },
     text: {
@@ -68,7 +68,7 @@ const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          textTransform: 'none', // Убираем CAPS
+          textTransform: 'none',
           borderRadius: 8,
         },
       },
@@ -79,13 +79,13 @@ const theme = createTheme({
 
 console.log('REACT_APP_API_URL from env:', process.env.REACT_APP_API_URL);
 axios.defaults.baseURL =
-  process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
+  process.env.REACT_APP_API_URL || 'https:
 console.log('Final axios baseURL:', axios.defaults.baseURL);
 axios.defaults.headers.common['Content-Type'] = 'application/json';
-// Токен теперь передается в заголовке Authorization с каждым запросом
-// Токен добавляется из localStorage в заголовок Authorization
 
-// Добавляем перехватчик запросов для автоматического добавления токена авторизации
+
+
+
 axios.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token');
@@ -100,15 +100,15 @@ axios.interceptors.request.use(
   },
 );
 
-// Добавляем перехватчик ответов для обработки 401 ошибок
+
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Удаляем данные аутентификации из localStorage
+
       localStorage.removeItem('user');
       localStorage.removeItem('auth_token');
-      // Перенаправляем на страницу входа
+
       window.location.href = '/login';
     }
     return Promise.reject(error);

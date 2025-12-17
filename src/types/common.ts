@@ -1,4 +1,4 @@
-// Common types for the application
+
 
 import Children from "../services/children";
 
@@ -28,11 +28,11 @@ export interface Group {
   name: string;
   description?: string;
   childrenCount?: number;
-  teacher?: string; // Добавляем поле для учителя
-     teacherId?: string;
-  isActive?: boolean; // Добавляем поле для статуса активности
-  maxStudents?: number; // Добавляем поле для максимального количества студентов
-  ageGroup?: string[]; // Добавляем поле для возрастной группы
+  teacher?: string;
+  teacherId?: string;
+  isActive?: boolean;
+  maxStudents?: number;
+  ageGroup?: string[];
   createdAt?: string;
   updatedAt?: string;
   children?: Child[];
@@ -47,7 +47,7 @@ export interface Child {
   address?: string;
   parentName?: string;
   parentPhone?: string;
-  staffId?: string; // Добавляем staffId как альтернативное поле для userId
+  staffId?: string;
   groupId?: Group | string;
   active?: boolean;
   gender?: string;
@@ -85,25 +85,25 @@ export interface User {
   groupId?: string;
   birthday?: string;
   photo?: string;
-  // Поля для детей (наследуются от интерфейса Child)
+
   parentName?: string;
   parentPhone?: string;
-  email?: string; // Добавляем email
-  initialPassword?: string; // Добавляем начальный пароль
-  salary?: number; // Добавляем зарплату
-  salaryType?: 'shift' | 'month' | 'day'; // Добавляем тип зарплаты
+  email?: string;
+  initialPassword?: string;
+  salary?: number;
+  salaryType?: 'shift' | 'month' | 'day';
   penaltyType?:
-    | 'fixed'
-    | 'percent'
-    | 'per_minute'
-    | 'per_5_minutes'
-    | 'per_10_minutes'; // Добавляем тип штрафа
-  penaltyAmount?: number; // Добавляем сумму штрафа
-  shiftRate?: number; // Добавляем ставку за смену
-  // Добавляем поля, которые могут отсутствовать в User, но есть в других интерфейсах
+  | 'fixed'
+  | 'percent'
+  | 'per_minute'
+  | 'per_5_minutes'
+  | 'per_10_minutes';
+  penaltyAmount?: number;
+  shiftRate?: number;
+
   staffId?: string;
   staffName?: string;
-  tenant?: boolean; // Для арендаторов
+  tenant?: boolean;
 }
 
 export interface IRent {
@@ -146,7 +146,7 @@ export interface IChildPayment {
   comments?: string;
   paidAmount?: number;
   paymentDate?: string;
-  paidAt?: string; // Дата оплаты
+  paidAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -164,7 +164,7 @@ export interface IAttendance {
   updatedAt: string;
 }
 
-// Добавляем недостающие типы
+
 export interface LoginCredentials {
   phone: string;
   password: string;
@@ -202,19 +202,19 @@ export type StatusColor =
   | 'warning';
 
 export const STATUS_COLORS: Record<string, StatusColor> = {
-  // Статусы для смен
+
   scheduled: 'default',
   completed: 'success',
   late: 'primary',
   pending_approval: 'info',
   in_progress: 'warning',
-  // Статусы для посещений
+
   on_break: 'warning',
   overtime: 'secondary',
   absent: 'error',
   early_departure: 'warning',
   present: 'success',
-  // Статусы аренды и оплаты детей
+
   active_rent: 'warning',
   overdue_rent: 'error',
   paid_rent: 'success',
@@ -223,7 +223,7 @@ export const STATUS_COLORS: Record<string, StatusColor> = {
   overdue_payment: 'error',
   paid_payment: 'success',
   draft_payment: 'default',
-  // Добавляем недостающие статусы
+
   absent_shift: 'error',
   on_break_shift: 'warning',
   overtime_shift: 'secondary',
@@ -231,17 +231,17 @@ export const STATUS_COLORS: Record<string, StatusColor> = {
   present_shift: 'success',
 };
 
-// Обновляем STATUS_TEXT
+
 export const STATUS_TEXT: Record<string, string> = {
-  // Статусы для смен
+
   scheduled: 'Запланирована',
   completed: 'Завершена',
   in_progress: 'В процессе',
   pending_approval: 'Ожидает подтверждения',
   late: 'Опоздание',
-  // Статусы для посещений
+
   absent: 'Отсутствует',
-  // Статусы аренды и оплаты детей
+
   active_rent: 'Активна',
   overdue_rent: 'Просрочена',
   paid_rent: 'Оплачена',
@@ -253,7 +253,7 @@ export const STATUS_TEXT: Record<string, string> = {
   paid: 'Оплачено',
   active: 'Активно',
 
-  // Добавляем недостающие статусы
+
   absent_shift: 'Отсутствует',
   pending_approval_shift: 'Ожидает подтверждения',
   late_shift: 'Опоздание',
@@ -272,8 +272,8 @@ export interface Shift {
   _id: ID;
   id?: ID;
   userId: string;
-  staffId?: string; // Добавляем staffId как альтернативное поле для userId
-  staffName?: string; // Добавляем staffName для отображения
+  staffId?: string;
+  staffName?: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -281,7 +281,7 @@ export interface Shift {
   notes?: string;
   createdAt: string;
   updatedAt: string;
-  alternativeStaffId?: string; // Альтернативный сотрудник для отметки посещаемости
+  alternativeStaffId?: string;
 }
 
 export interface ShiftFormData {
@@ -293,7 +293,7 @@ export interface ShiftFormData {
   endTime: string;
   notes?: string;
   status?: ShiftStatus;
-  alternativeStaffId?: string; // Альтернативный сотрудник для отметки посещаемости
+  alternativeStaffId?: string;
 }
 
 export interface ShiftFilters {
@@ -313,14 +313,14 @@ export interface UserFilters {
   search?: string;
 }
 
-// 🇷🇺 Переводы ролей с английского на русский
+
 export const ROLE_TRANSLATIONS: Record<string, string> = {
-  // Административные роли
+
   admin: 'Администратор',
   manager: 'Менеджер',
   director: 'Директор',
 
-  // Педагогические роли
+
   teacher: 'Воспитатель',
   assistant: 'Помощник воспитателя',
   psychologist: 'Психолог',
@@ -328,18 +328,18 @@ export const ROLE_TRANSLATIONS: Record<string, string> = {
   music_teacher: 'Музыкальный руководитель',
   physical_education: 'Инструктор по физкультуре',
 
-  // Медицинские роли
+
   nurse: 'Медсестра',
   doctor: 'Врач',
 
-  // Обслуживающий персонал
+
   cook: 'Повар',
   cleaner: 'Уборщица',
   security: 'Охранник',
   maintenance: 'Завхоз',
   laundry: 'Прачка',
 
-  // Дополнительные роли
+
   staff: 'Сотрудник',
   substitute: 'Подменный сотрудник',
   intern: 'Стажер',

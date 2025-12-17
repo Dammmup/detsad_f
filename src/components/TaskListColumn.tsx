@@ -33,7 +33,7 @@ import { TaskList } from '../types/taskList';
 import { getUsers } from '../services/users';
 
 interface TaskListColumnProps {
-  onTaskChange?: () => void; // Callback для обновления при изменении задач
+  onTaskChange?: () => void;
 }
 
 const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
@@ -53,7 +53,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
 
-  // Загрузка задач и пользователей
+
   useEffect(() => {
     const fetchTasks = async () => {
       if (!currentUser) return;
@@ -61,7 +61,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
       setLoading(true);
       setError(null);
       try {
-        // Все пользователи видят все задачи
+
         const taskList = await getTaskList({});
         setTasks(taskList);
       } catch (err: any) {
@@ -94,11 +94,11 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
         title: newTaskTitle,
         description: newTaskDescription,
         assignedTo: currentUser.id,
-        assignedBy: currentUser.id, // Автор задачи - текущий пользователь
+        assignedBy: currentUser.id,
         priority: newTaskPriority,
-        status: 'pending' as const, // Начальный статус задачи
+        status: 'pending' as const,
         category: newTaskCategory,
-        assignedToSpecificUser: newTaskAssignedToSpecificUser || undefined, // Добавляем новое поле, если оно выбрано
+        assignedToSpecificUser: newTaskAssignedToSpecificUser || undefined,
       };
 
       const createdTask = await createTask(newTask);
@@ -107,7 +107,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
       setNewTaskDescription('');
       setNewTaskPriority('medium');
       setNewTaskCategory('');
-      setNewTaskAssignedToSpecificUser(''); // Сбрасываем выбор сотрудника
+      setNewTaskAssignedToSpecificUser('');
       setShowAddTaskDialog(false);
 
       if (onTaskChange) onTaskChange();
@@ -125,16 +125,16 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
     try {
       let updatedTask: TaskList;
 
-      // В зависимости от текущего статуса, меняем на противоположный
+
       if (task.status === 'completed') {
-        // Если задача выполнена, возвращаем в статус pending
+
         updatedTask = await toggleTaskStatus(taskId, currentUser.id);
       } else {
-        // Если задача не выполнена, отмечаем как выполненную
+
         updatedTask = await markTaskAsCompleted(taskId, currentUser.id);
       }
 
-      // Обновляем список задач
+
       setTasks(tasks.map((t) => (t._id === taskId ? updatedTask : t)));
 
       if (onTaskChange) onTaskChange();
@@ -286,13 +286,12 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                   backgroundColor: 'white',
                   borderRadius: 2,
                   boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
-                  borderLeft: `4px solid ${
-                    task.priority === 'high'
+                  borderLeft: `4px solid ${task.priority === 'high'
                       ? '#dc3545'
                       : task.priority === 'medium'
                         ? '#ffc107'
                         : '#28a745'
-                  }`,
+                    }`,
                   transition: 'all 0.3s ease-in-out',
                   '&:hover': {
                     boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
@@ -368,7 +367,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                       ? typeof task.completedBy === 'object'
                         ? task.completedBy.fullName
                         : users.find((u) => u._id === task.completedBy)
-                            ?.fullName
+                          ?.fullName
                       : 'Пользователь'}{' '}
                     {task.completedAt
                       ? `(${formatDate(task.completedAt)})`
@@ -391,7 +390,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                       ? typeof task.cancelledBy === 'object'
                         ? task.cancelledBy.fullName
                         : users.find((u) => u._id === task.cancelledBy)
-                            ?.fullName
+                          ?.fullName
                       : 'Пользователь'}{' '}
                     {task.cancelledAt
                       ? `(${formatDate(task.cancelledAt)})`
@@ -490,8 +489,8 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                         ? typeof task.assignedToSpecificUser === 'object'
                           ? task.assignedToSpecificUser.fullName
                           : users.find(
-                              (u) => u.id === task.assignedToSpecificUser,
-                            )?.fullName
+                            (u) => u.id === task.assignedToSpecificUser,
+                          )?.fullName
                         : 'Сотрудник'}
                     </Typography>
                   )}

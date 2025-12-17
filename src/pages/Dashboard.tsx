@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
-// Локальный импорт компонентов
+
 import StaffAttendanceButton from '../components/StaffAttendanceButton';
 import ChildrenModal from '../components/ChildrenModal';
 import TaskListColumn from '../components/TaskListColumn';
@@ -43,9 +43,9 @@ const Dashboard = () => {
       currentUser.role === 'substitute');
 
   const handleAttendanceStatusChange = () => {
-    // Обновление статуса отметки посещаемости
-    // В данном случае, StaffScheduleWidget должен самостоятельно обновлять данные
-    // при изменении статуса через onStatusChange callback
+
+
+
   };
 
   const handleOpenAttendancePage = () => {
@@ -427,25 +427,25 @@ const Dashboard = () => {
 
         {/* Правая колонка - шторка уведомлений */}
         {!isStaff && (
-        <Box
-          sx={{
-            width: 350,
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: '#f8f9fa',
-            border: '1px solid #e9ecef',
-            borderRadius: 2,
-            boxShadow:
-              '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)',
-            overflow: 'hidden',
-            transition: 'transform 0.3s ease-in-out',
-            '&:hover': {
-              transform: 'translateX(-5px)',
-            },
-          }}
-        >
-          <TaskListColumn />
-        </Box>
+          <Box
+            sx={{
+              width: 350,
+              display: 'flex',
+              flexDirection: 'column',
+              backgroundColor: '#f8f9fa',
+              border: '1px solid #e9ecef',
+              borderRadius: 2,
+              boxShadow:
+                '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)',
+              overflow: 'hidden',
+              transition: 'transform 0.3s ease-in-out',
+              '&:hover': {
+                transform: 'translateX(-5px)',
+              },
+            }}
+          >
+            <TaskListColumn />
+          </Box>
         )}
       </Box>
 

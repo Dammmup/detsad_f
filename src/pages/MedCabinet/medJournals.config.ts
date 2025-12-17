@@ -1,5 +1,5 @@
-// Структура журналов медкабинета для автогенерации UI и шаблонов документов
-// Типы: 'children' — журналы по детям, 'food' — журналы по питанию/пищеблоку
+
+
 
 export type MedJournalType = 'children' | 'food';
 
@@ -122,7 +122,7 @@ export const medJournals: MedJournalConfig[] = [
       { key: 'reason', label: 'Основание', type: 'string' },
     ],
   },
-  // --- FOOD ---
+
 
   {
     id: 'organoleptic',

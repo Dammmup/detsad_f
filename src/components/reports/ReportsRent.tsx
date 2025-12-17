@@ -28,7 +28,7 @@ import {
   Close as CloseIcon,
   Visibility as VisibilityIcon,
 } from '@mui/icons-material';
-import { generateRentSheets } from '../../services/reports'; // Импортируем новые сервисы для работы с арендой
+import { generateRentSheets } from '../../services/reports';
 import RentTenantSelector from './RentTenantSelector';
 
 interface Props {
@@ -48,25 +48,25 @@ interface Summary {
 
 interface RentRow {
   tenantName: string;
-  amount: number; // Сумма аренды
-  paidAmount: number; // Оплачено или предоплачено
+  amount: number;
+  paidAmount: number;
   status: string;
   tenantId: string;
   _id?: string;
-  paymentDate?: string; // Дата оплаты
-  accruals?: number; // Начисления
+  paymentDate?: string;
+  accruals?: number;
 }
 
-// Функция для определения просроченного платежа по дате оплаты
+
 const isOverduePayment = (paymentDate: string | undefined): boolean => {
   if (!paymentDate) {
-    return false; // Если дата оплаты не указана, не считаем просроченным
+    return false;
   }
 
   const paymentDateObj = new Date(paymentDate);
-  const currentDate = new Date(); // Текущая дата
+  const currentDate = new Date();
 
-  // Сравниваем даты, игнорируя время
+
   const paymentDateOnly = new Date(
     paymentDateObj.getFullYear(),
     paymentDateObj.getMonth(),
@@ -97,7 +97,7 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
   useEffect(() => {
     let mounted = true;
 
-    // Определяем текущий месяц
+
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
@@ -105,19 +105,19 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
       setLoading(true);
       setError(null);
       try {
-        // Импортируем сервисы
+
         const { getCurrentUser } = await import('../../services/auth');
-        // Используем новый сервис для получения аренды
+
         const { getRents } = await import('../../services/reports');
 
-        // Получаем информацию о текущем пользователе через сервис
+
         let currentUserData = null;
         try {
           const userData = getCurrentUser();
           if (userData) {
             currentUserData = {
               id: userData.id,
-              role: userData.role || 'staff', // Устанавливаем значение по умолчанию
+              role: userData.role || 'staff',
             };
             setCurrentUser(currentUserData);
           }
@@ -125,37 +125,37 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
           console.error('Ошибка получения данных пользователя:', userError);
         }
 
-        // Формируем параметры запроса - теперь используем текущий месяц
+
         const params: any = {
-          month: currentMonth, // используем месяц вместо startDate/endDate
+          month: currentMonth,
         };
 
-        // Если пользователь не администратор, он может видеть только свои данные
+
         if (currentUserData && currentUserData.role !== 'admin') {
           params.userId = currentUserData.id;
         } else if (userId) {
-          // Администратор может фильтровать по userId
+
           params.userId = userId;
         }
 
-        // Используем новый сервис для получения аренды
+
         const rentsData = await getRents(params);
 
         if (!mounted) return;
         const data = (rentsData?.data || rentsData || []) as any[];
 
-        // Вычисляем сводку на основе данных
+
         const summaryData: Summary = {
           totalTenants: data.length,
           totalAmount: data.reduce((sum, p) => {
             const amount = p.amount || p.accruals || 0;
-            return sum + amount; // Суммируем все amount без учета предоплаты
+            return sum + amount;
           }, 0),
           totalReceivable: data.reduce((sum, p) => {
-            // Рассчитываем "Итого" для каждой записи как сумму аренды минус оплаченная сумма
+
             const amount = p.amount || p.accruals || 0;
             const paid = p.paidAmount || 0;
-            return sum + Math.max(0, amount - paid); // Остаток к оплате, не допускаем отрицательных значений
+            return sum + Math.max(0, amount - paid);
           }, 0),
         };
 
@@ -168,13 +168,13 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
             paidAmount: Math.max(
               0,
               p.paidAmount ||
-                (p.accruals && p.total ? p.accruals - p.total : 0) ||
-                0,
-            ), // Вычисляем оплаченную сумму как разницу между начислениями итогом, не допускаем отрицательных значений
+              (p.accruals && p.total ? p.accruals - p.total : 0) ||
+              0,
+            ),
             accruals: p.accruals || p.amount || 0,
             status: p.status && p.status !== 'draft' ? p.status : 'active',
             tenantId: p.tenantId?._id || p.tenantId?.id || p.tenantId || '',
-            _id: p._id || undefined, // Добавляем ID записи аренды
+            _id: p._id || undefined,
             paymentDate: p.paymentDate || undefined,
           })),
         );
@@ -188,7 +188,7 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
     return () => {
       mounted = false;
     };
-  }, [userId]); // убрали startDate и endDate из зависимостей
+  }, [userId]);
 
   const handleEditClick = (row: RentRow) => {
     setEditingId(row.tenantId);
@@ -202,73 +202,73 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
 
   const handleSaveClick = async (rowId: string) => {
     try {
-      // Найдем оригинальный объект аренды для получения полного ID
+
       const originalRow = rows.find((r) => r.tenantId === rowId);
       if (originalRow) {
-        // Используем _id записи аренды, если он есть, иначе tenantId
+
         const rentId = originalRow._id || rowId;
 
-        // Обновляем данные, используя только доступные поля
+
         const updatedData = {
           ...editData,
-          // Обновляем paidAmount, если оно было изменено
+
           paidAmount: Math.max(
             0,
             editData.paidAmount !== undefined
               ? editData.paidAmount
               : originalRow.paidAmount,
           ),
-          // Вычисляем total как сумму аренды минус оплаченная сумма, не допускаем отрицательных значений
+
           total: Math.max(
             0,
             (editData.amount !== undefined
               ? editData.amount
               : originalRow.amount) -
-              (editData.paidAmount !== undefined
-                ? editData.paidAmount
-                : originalRow.paidAmount),
+            (editData.paidAmount !== undefined
+              ? editData.paidAmount
+              : originalRow.paidAmount),
           ),
         };
 
-        // Выведем ID для отладки
+
         console.log('Updating rent with ID:', rentId);
         console.log('Edit data:', updatedData);
 
-        // Импортируем новый сервис для обновления аренды
+
         const { updateRent } = await import('../../services/reports');
 
-        // Обновляем через API, используя новый сервис
+
         await updateRent(rentId, updatedData);
-        // Обновляем локальный массив
+
         const updatedRows = rows.map((r) =>
           r.tenantId === rowId
             ? ({
-                ...r,
-                ...updatedData,
-                // Убедимся, что paidAmount обновляется корректно
-                paidAmount:
-                  updatedData.paidAmount !== undefined
-                    ? updatedData.paidAmount
-                    : r.paidAmount,
-              } as RentRow)
+              ...r,
+              ...updatedData,
+
+              paidAmount:
+                updatedData.paidAmount !== undefined
+                  ? updatedData.paidAmount
+                  : r.paidAmount,
+            } as RentRow)
             : r,
         );
 
         setRows(updatedRows);
 
-        // Обновляем сводную информацию
+
         setSummary((prev) => {
           if (!prev) return null;
           const updatedTotalReceivable = updatedRows.reduce((sum, p) => {
             const amount = p.amount || p.accruals || 0;
             const paid = p.paidAmount || 0;
             const diff = amount - paid;
-            return sum + Math.max(0, diff); // Не допускаем отрицательных значений
+            return sum + Math.max(0, diff);
           }, 0);
 
           const updatedTotalAmount = updatedRows.reduce((sum, p) => {
             const amount = p.amount || p.accruals || 0;
-            return sum + amount; // Суммируем все amount без учета предоплаты
+            return sum + amount;
           }, 0);
 
           return {
@@ -307,14 +307,14 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
   };
 
   const handleExportToExcel = () => {
-    // Создаем CSV-данные
+
     let csvContent = 'data:text/csv;charset=utf-8,';
 
-    // Заголовки
+
     csvContent +=
       'Арендатор;Сумма аренды;Оплачено/Предоплачено;Остаток к оплате;Статус;Дата оплаты\n';
 
-    // Данные
+
     rows.forEach((row) => {
       const total = Math.max(
         0,
@@ -323,7 +323,7 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
       csvContent += `${row.tenantName};${row.amount || row.accruals || 0};${row.paidAmount};${total};${row.status};${row.paymentDate || ''}\n`;
     });
 
-    // Создаем ссылку для скачивания
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -333,10 +333,10 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
     );
     document.body.appendChild(link);
 
-    // Имитируем клик для скачивания
+
     link.click();
 
-    // Удаляем ссылку
+
     document.body.removeChild(link);
   };
 
@@ -351,12 +351,12 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
 
     const monthToGenerate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-    // Подготовим параметры для генерации
+
     const generationParams: any = {
       period: monthToGenerate,
     };
 
-    // Если выбраны конкретные арендаторы, добавим их в параметры
+
     if (selectedTenantIds.length > 0) {
       generationParams.tenantIds = selectedTenantIds;
     }
@@ -368,19 +368,19 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
     ) {
       try {
         setGenerating(true);
-        // Используем специальную функцию для генерации арендных листов с учетом выбранных арендаторов
+
         await generateRentSheets(generationParams);
         setSnackbarMessage(
           `Арендные листы успешно сгенерированы за ${monthToGenerate}`,
         );
         setSnackbarOpen(true);
 
-        // Обновляем данные
+
         const now = new Date();
         const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
         const { getCurrentUser } = await import('../../services/auth');
-        // Используем новый сервис для получения аренды
+
         const { getRents } = await import('../../services/reports');
 
         let currentUserData = null;
@@ -389,7 +389,7 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
           if (userData) {
             currentUserData = {
               id: userData.id,
-              role: userData.role || 'staff', // Устанавливаем значение по умолчанию
+              role: userData.role || 'staff',
             };
             setCurrentUser(currentUserData);
           }
@@ -398,33 +398,33 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
         }
 
         const params: any = {
-          month: currentMonth, // используем месяц вместо startDate/endDate
+          month: currentMonth,
         };
 
         if (currentUserData && currentUserData.role !== 'admin') {
           params.userId = currentUserData.id;
         } else if (userId) {
-          // Администратор может фильтровать по userId
+
           params.userId = userId;
         }
 
-        // Используем новый сервис для получения аренды
+
         const rentsData = await getRents(params);
 
         const data = (rentsData?.data || rentsData || []) as any[];
 
-        // Вычисляем сводку на основе данных
+
         const summaryData: Summary = {
           totalTenants: data.length,
           totalAmount: data.reduce((sum, p) => {
             const amount = p.amount || p.accruals || 0;
-            return sum + amount; // Суммируем все amount без учета предоплаты
+            return sum + amount;
           }, 0),
           totalReceivable: data.reduce((sum, p) => {
-            // Рассчитываем "Итого" для каждой записи как сумму аренды минус оплаченная сумма
+
             const amount = p.amount || p.accruals || 0;
             const paid = p.paidAmount || 0;
-            return sum + Math.max(0, amount - paid); // Остаток к оплате, не допускаем отрицательных значений
+            return sum + Math.max(0, amount - paid);
           }, 0),
         };
 
@@ -437,13 +437,13 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
             paidAmount: Math.max(
               0,
               p.paidAmount ||
-                (p.accruals && p.total ? p.accruals - p.total : 0) ||
-                0,
-            ), // Вычисляем оплаченную сумму как разницу между начислениями итогом, не допускаем отрицательных значений
+              (p.accruals && p.total ? p.accruals - p.total : 0) ||
+              0,
+            ),
             accruals: p.accruals || p.amount || 0,
             status: p.status && p.status !== 'draft' ? p.status : 'active',
             tenantId: p.tenantId?._id || p.tenantId?.id || p.tenantId || '',
-            _id: p._id || undefined, // Добавляем ID записи аренды
+            _id: p._id || undefined,
             paymentDate: p.paymentDate || undefined,
           })),
         );
@@ -689,7 +689,7 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
                   {rows
                     .reduce((sum, r) => {
                       const diff = (r.amount || r.accruals || 0) - r.paidAmount;
-                      return sum + Math.max(0, diff); // Не допускаем отрицательных значений
+                      return sum + Math.max(0, diff);
                     }, 0)
                     .toLocaleString()}{' '}
                   тг
@@ -716,7 +716,7 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
                     .filter((r) => isOverduePayment(r.paymentDate))
                     .reduce((sum, r) => {
                       const diff = (r.amount || r.accruals || 0) - r.paidAmount;
-                      return sum + Math.max(0, diff); // Не допускаем отрицательных значений
+                      return sum + Math.max(0, diff);
                     }, 0)
                     .toLocaleString()}{' '}
                   тг
@@ -1013,11 +1013,11 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
                               fontWeight: 'medium',
                               px: 1.5,
                               py: 0.5,
-                              // Добавляем цветовую индикацию в зависимости от статуса и даты оплаты
+
                               backgroundColor: isOverduePayment(r.paymentDate)
-                                ? 'error.light' // Красный для просроченных
+                                ? 'error.light'
                                 : r.status === 'paid'
-                                  ? 'success.light' // Зеленый для оплаченных
+                                  ? 'success.light'
                                   : 'default',
                             }}
                           />

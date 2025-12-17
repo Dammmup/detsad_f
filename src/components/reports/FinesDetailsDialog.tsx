@@ -36,7 +36,7 @@ interface Props {
     onClose: () => void;
     fines: Fine[];
     onAddFine: (fine: { amount: number; reason: string; type: 'manual' }) => void;
-    onDeleteFine?: (fineId: string) => void; // Optional if we implement deletion later
+    onDeleteFine?: (fineId: string) => void;
     staffName: string;
 }
 
@@ -67,7 +67,7 @@ const FinesDetailsDialog: React.FC<Props> = ({
             case 'late':
                 return <Chip label="Опоздание" color="warning" size="small" variant="outlined" />;
             case 'manual':
-                return <Chip label="Ручной" color="error" size="small" />; // Error color for manual fines checks out visually
+                return <Chip label="Ручной" color="error" size="small" />;
             case 'absence':
                 return <Chip label="Прогул" color="error" size="small" variant="outlined" />;
             default:
@@ -82,10 +82,10 @@ const FinesDetailsDialog: React.FC<Props> = ({
             <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
                 <Box>
                     <Typography variant="h5" component="div" sx={{ fontWeight: 'bold' }}>
-                        Детализация штрафов: {staffName}
+                        Детализация Вычетов: {staffName}
                     </Typography>
                     <Typography variant="subtitle1" color="text.secondary">
-                        Всего штрафов: <span style={{ color: '#d32f2f', fontWeight: 'bold' }}>{totalFines.toLocaleString()} тг</span>
+                        Всего Вычетов: <span style={{ color: '#d32f2f', fontWeight: 'bold' }}>{totalFines.toLocaleString()} тг</span>
                     </Typography>
                 </Box>
                 <Button
@@ -94,14 +94,14 @@ const FinesDetailsDialog: React.FC<Props> = ({
                     startIcon={<AddCircleOutlineIcon />}
                     onClick={() => setShowAddForm(!showAddForm)}
                 >
-                    {showAddForm ? 'Отмена' : 'Добавить штраф'}
+                    {showAddForm ? 'Отмена' : 'Добавить Вычет'}
                 </Button>
             </DialogTitle>
 
             <DialogContent dividers sx={{ minHeight: '60vh' }}>
                 {showAddForm && (
                     <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'grey.50', border: '1px solid #eee', borderRadius: 2 }}>
-                        <Typography variant="h6" gutterBottom>Новый штраф</Typography>
+                        <Typography variant="h6" gutterBottom>Новый Вычет</Typography>
                         <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) 2fr auto', gap: 2, alignItems: 'center' }}>
                             <TextField
                                 label="Сумма"
@@ -129,7 +129,7 @@ const FinesDetailsDialog: React.FC<Props> = ({
 
                 {fines.length === 0 ? (
                     <Box sx={{ p: 10, textAlign: 'center', color: 'text.secondary', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <Typography variant="h6">Штрафов нет</Typography>
+                        <Typography variant="h6">Вычетов нет</Typography>
                         <Typography variant="body2">У этого сотрудника нет зарегистрированных нарушений за этот период.</Typography>
                     </Box>
                 ) : (

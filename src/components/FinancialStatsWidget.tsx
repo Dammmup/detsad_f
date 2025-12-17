@@ -25,7 +25,7 @@ import { formatCurrency } from '../utils/format';
 import { apiClient } from '../utils/api';
 
 interface FinancialStatsWidgetProps {
-  onStatsChange?: () => void; // Callback для обновления статистики
+  onStatsChange?: () => void;
 }
 
 const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
@@ -38,7 +38,7 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
   const [stats, setStats] = useState<any>(null);
   const [chartData, setChartData] = useState<any[]>([]);
 
-  // Загрузка финансовой статистики
+
   useEffect(() => {
     const fetchFinancialStats = async () => {
       if (!currentUser) return;
@@ -69,7 +69,7 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
 
         setStats(statsData);
 
-        // Подготовка данных для графика
+
         const chartDataArray = [
           {
             name: 'Начисления',
@@ -77,7 +77,12 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
             color: '#4caf50',
           },
           {
-            name: 'Штрафы',
+            name: 'Авансы',
+            value: statsData.totalAdvance || 0,
+            color: '#2196f3',
+          },
+          {
+            name: 'Вычеты',
             value: statsData.totalPenalties || 0,
             color: '#f44336',
           },
@@ -109,19 +114,19 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
     fetchFinancialStats();
   }, [currentUser, currentDate]);
 
-  // const getPriorityColor = (priority: string) => {
-  //   switch (priority) {
-  //     case 'high': return 'error';
-  //     case 'medium': return 'warning';
-  //     case 'low': return 'success';
-  //     default: return 'default';
-  //   }
-  // };
 
-  // const formatDate = (dateString?: string) => {
-  //   if (!dateString) return '';
-  //   return new Date(dateString).toLocaleDateString('ru-RU');
-  // };
+
+
+
+
+
+
+
+
+
+
+
+
 
   return (
     <Card
@@ -230,7 +235,28 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={6} sm={3}></Grid>
+              <Grid item xs={6} sm={3}>
+                <Card
+                  sx={{
+                    height: '100%',
+                    backgroundColor: '#e3f2fd',
+                    border: '1px solid #bbdefb',
+                  }}
+                >
+                  <CardContent>
+                    <Typography variant='h6' align='center' color='info.main'>
+                      {formatCurrency(stats.totalAdvance || 0)}
+                    </Typography>
+                    <Typography
+                      variant='body2'
+                      align='center'
+                      color='text.secondary'
+                    >
+                      Авансы
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
               <Grid item xs={6} sm={3}>
                 <Card
                   sx={{
@@ -248,7 +274,7 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
                       align='center'
                       color='text.secondary'
                     >
-                      Штрафы
+                      Вычеты
                     </Typography>
                   </CardContent>
                 </Card>
@@ -330,7 +356,7 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
                   }}
                 />
                 <Chip
-                  label={`Штрафов: ${stats.totalPenaltiesCount || 0}`}
+                  label={`Вычетов: ${stats.totalPenaltiesCount || 0}`}
                   size='small'
                   color='error'
                   variant='outlined'

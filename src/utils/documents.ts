@@ -1,4 +1,4 @@
-// ===== УТИЛИТЫ ДЛЯ РАБОТЫ С ДОКУМЕНТАМИ =====
+
 
 import {
   Document,
@@ -10,9 +10,9 @@ import {
   TemplateCategory,
 } from '../types/documents';
 
-// ===== ТИПЫ И ИНТЕРФЕЙСЫ =====
 
-// Интерфейс для фильтров документов
+
+
 export interface DocumentFilters {
   type?: string;
   category?: string;
@@ -26,7 +26,7 @@ export interface DocumentFilters {
   order?: 'asc' | 'desc';
 }
 
-// Интерфейс для фильтров шаблонов
+
 export interface TemplateFilters {
   type?: string;
   category?: string;
@@ -38,9 +38,9 @@ export interface TemplateFilters {
   order?: 'asc' | 'desc';
 }
 
-// ===== УТИЛИТЫ ДЛЯ РАБОТЫ С ДОКУМЕНТАМИ =====
 
-// Форматирование размера файла
+
+
 export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -49,7 +49,7 @@ export const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-// Форматирование даты
+
 export const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
   return date.toLocaleDateString('ru-RU', {
@@ -59,7 +59,7 @@ export const formatDate = (dateString: string): string => {
   });
 };
 
-// Форматирование даты с днем недели
+
 export const formatDateWithWeekday = (dateString: string): string => {
   const date = new Date(dateString);
   const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -68,7 +68,7 @@ export const formatDateWithWeekday = (dateString: string): string => {
   return `${formattedDate} (${weekday})`;
 };
 
-// Получение иконки для типа документа
+
 export const getDocumentTypeIcon = (type: DocumentType): string => {
   switch (type) {
     case 'contract':
@@ -86,7 +86,7 @@ export const getDocumentTypeIcon = (type: DocumentType): string => {
   }
 };
 
-// Получение текста для типа документа
+
 export const getDocumentTypeText = (type: DocumentType): string => {
   switch (type) {
     case 'contract':
@@ -104,7 +104,7 @@ export const getDocumentTypeText = (type: DocumentType): string => {
   }
 };
 
-// Получение текста для категории документа
+
 export const getDocumentCategoryText = (category: DocumentCategory): string => {
   switch (category) {
     case 'staff':
@@ -122,7 +122,7 @@ export const getDocumentCategoryText = (category: DocumentCategory): string => {
   }
 };
 
-// Получение текста для статуса документа
+
 export const getDocumentStatusText = (status: DocumentStatus): string => {
   switch (status) {
     case 'active':
@@ -134,7 +134,7 @@ export const getDocumentStatusText = (status: DocumentStatus): string => {
   }
 };
 
-// Получение цвета для статуса документа
+
 export const getDocumentStatusColor = (
   status: DocumentStatus,
 ): 'success' | 'warning' | 'default' | 'error' => {
@@ -148,9 +148,9 @@ export const getDocumentStatusColor = (
   }
 };
 
-// ===== УТИЛИТЫ ДЛЯ РАБОТЫ С ШАБЛОНАМИ =====
 
-// Получение текста для типа шаблона
+
+
 export const getTemplateTypeText = (type: TemplateType): string => {
   switch (type) {
     case 'contract':
@@ -168,7 +168,7 @@ export const getTemplateTypeText = (type: TemplateType): string => {
   }
 };
 
-// Получение текста для категории шаблона
+
 export const getTemplateCategoryText = (category: TemplateCategory): string => {
   switch (category) {
     case 'staff':
@@ -186,38 +186,38 @@ export const getTemplateCategoryText = (category: TemplateCategory): string => {
   }
 };
 
-// Получение цвета для активности шаблона
+
 export const getTemplateActiveColor = (
   isActive: boolean,
 ): 'success' | 'default' | 'error' => {
   return isActive ? 'success' : 'default';
 };
 
-// ===== ФИЛЬТРАЦИЯ И СОРТИРОВКА =====
 
-// Фильтрация документов
+
+
 export const filterDocuments = (
   documents: Document[],
   filters: DocumentFilters,
 ): Document[] => {
   let filtered = [...documents];
 
-  // Фильтр по типу
+
   if (filters.type) {
     filtered = filtered.filter((doc) => doc.type === filters.type);
   }
 
-  // Фильтр по категории
+
   if (filters.category) {
     filtered = filtered.filter((doc) => doc.category === filters.category);
   }
 
-  // Фильтр по статусу
+
   if (filters.status) {
     filtered = filtered.filter((doc) => doc.status === filters.status);
   }
 
-  // Фильтр по связанному объекту
+
   if (filters.relatedId && filters.relatedType) {
     filtered = filtered.filter(
       (doc) =>
@@ -226,7 +226,7 @@ export const filterDocuments = (
     );
   }
 
-  // Поиск по тексту
+
   if (filters.search) {
     const searchLower = filters.search.toLowerCase();
     filtered = filtered.filter(
@@ -239,17 +239,17 @@ export const filterDocuments = (
     );
   }
 
-  // Сортировка
+
   if (filters.sort) {
     filtered.sort((a, b) => {
       let aValue: any = (a as any)[filters.sort as keyof Document];
       let bValue: any = (b as any)[filters.sort as keyof Document];
 
-      // Преобразование дат в числа для сравнения
+
       if (aValue instanceof Date) aValue = aValue.getTime();
       if (bValue instanceof Date) bValue = bValue.getTime();
 
-      // Преобразование строк в нижний регистр для сравнения
+
       if (typeof aValue === 'string') aValue = aValue.toLowerCase();
       if (typeof bValue === 'string') bValue = bValue.toLowerCase();
 
@@ -264,33 +264,33 @@ export const filterDocuments = (
   return filtered;
 };
 
-// Фильтрация шаблонов
+
 export const filterTemplates = (
   templates: DocumentTemplate[],
   filters: TemplateFilters,
 ): DocumentTemplate[] => {
   let filtered = [...templates];
 
-  // Фильтр по типу
+
   if (filters.type) {
     filtered = filtered.filter((template) => template.type === filters.type);
   }
 
-  // Фильтр по категории
+
   if (filters.category) {
     filtered = filtered.filter(
       (template) => template.category === filters.category,
     );
   }
 
-  // Фильтр по активности
+
   if (filters.isActive !== undefined) {
     filtered = filtered.filter(
       (template) => template.isActive === filters.isActive,
     );
   }
 
-  // Поиск по тексту
+
   if (filters.search) {
     const searchLower = filters.search.toLowerCase();
     filtered = filtered.filter(
@@ -303,17 +303,17 @@ export const filterTemplates = (
     );
   }
 
-  // Сортировка
+
   if (filters.sort) {
     filtered.sort((a, b) => {
       let aValue: any = (a as any)[filters.sort as keyof DocumentTemplate];
       let bValue: any = (b as any)[filters.sort as keyof DocumentTemplate];
 
-      // Преобразование дат в числа для сравнения
+
       if (aValue instanceof Date) aValue = aValue.getTime();
       if (bValue instanceof Date) bValue = bValue.getTime();
 
-      // Преобразование строк в нижний регистр для сравнения
+
       if (typeof aValue === 'string') aValue = aValue.toLowerCase();
       if (typeof bValue === 'string') bValue = bValue.toLowerCase();
 
@@ -328,9 +328,9 @@ export const filterTemplates = (
   return filtered;
 };
 
-// ===== ПАГИНАЦИЯ =====
 
-// Пагинация массива
+
+
 export const paginateArray = <T>(
   array: T[],
   page: number,
@@ -341,15 +341,15 @@ export const paginateArray = <T>(
   return array.slice(startIndex, endIndex);
 };
 
-// ===== ВАЛИДАЦИЯ =====
 
-// Валидация данных документа
+
+
 export const validateDocument = (
   document: Partial<Document>,
 ): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
 
-  // Проверка обязательных полей
+
   if (!document.title) {
     errors.push('Поле "title" обязательно');
   }
@@ -398,7 +398,7 @@ export const validateDocument = (
     errors.push('Недопустимый статус документа');
   }
 
-  // Проверка даты истечения срока
+
   if (document.expiryDate) {
     const expiryDate = new Date(document.expiryDate);
     const uploadDate = document.uploadDate
@@ -416,13 +416,13 @@ export const validateDocument = (
   };
 };
 
-// Валидация данных шаблона документа
+
 export const validateDocumentTemplate = (
   template: Partial<DocumentTemplate>,
 ): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
 
-  // Проверка обязательных полей
+
   if (!template.name) {
     errors.push('Поле "name" обязательно');
   }
@@ -469,7 +469,7 @@ export const validateDocumentTemplate = (
     errors.push('Поле "isActive" обязательно');
   }
 
-  // Проверка версии
+
   if (template.version) {
     const versionRegex = /^\d+\.\d+$/;
     if (!versionRegex.test(template.version)) {
@@ -483,14 +483,14 @@ export const validateDocumentTemplate = (
   };
 };
 
-// ===== УТИЛИТЫ ДЛЯ РАБОТЫ С ФАЙЛАМИ =====
 
-// Получение расширения файла
+
+
 export const getFileExtension = (fileName: string): string => {
   return fileName.split('.').pop()?.toLowerCase() || '';
 };
 
-// Получение MIME-типа по расширению файла
+
 export const getMimeType = (extension: string): string => {
   const mimeTypes: Record<string, string> = {
     pdf: 'application/pdf',
@@ -509,4 +509,4 @@ export const getMimeType = (extension: string): string => {
   return mimeTypes[extension] || 'application/octet-stream';
 };
 
-// ===== ЭКСПОРТ =====
+

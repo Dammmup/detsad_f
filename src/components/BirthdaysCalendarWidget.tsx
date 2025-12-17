@@ -111,7 +111,7 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // === Загрузка детей ===
+
   useEffect(() => {
     const fetchChildren = async () => {
       setLoading(true);
@@ -130,7 +130,7 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = () => {
     fetchChildren();
   }, []);
 
-  // === Получение детей с днями рождения в текущем месяце ===
+
   const getChildrenWithBirthdays = (date: Date) => {
     const start = startOfMonth(date);
     const end = endOfMonth(date);
@@ -153,7 +153,7 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = () => {
 
 
   const daysWithBirthdays = getChildrenWithBirthdays(currentDate);
-  const startWeekDay = (startOfMonth(currentDate).getDay() + 6) % 7; // Пн = 0
+  const startWeekDay = (startOfMonth(currentDate).getDay() + 6) % 7;
 
   return (
     <Card

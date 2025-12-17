@@ -1,44 +1,44 @@
 import { apiClient } from '../utils/api';
 
-// Интерфейс для API ошибки
+
 interface ApiError extends Error {
   status?: number;
   data?: any;
 }
 
-// Интерфейс для активности в циклограмме
+
 export interface CyclogramActivity {
   id?: string;
   name: string;
   description?: string;
-  duration: number; // в минутах
+  duration: number;
   type:
-    | 'educational'
-    | 'physical'
-    | 'creative'
-    | 'rest'
-    | 'meal'
-    | 'hygiene'
-    | 'outdoor';
-  ageGroup: string; // например: "3-4", "4-5", "5-6"
+  | 'educational'
+  | 'physical'
+  | 'creative'
+  | 'rest'
+  | 'meal'
+  | 'hygiene'
+  | 'outdoor';
+  ageGroup: string;
   materials?: string[];
   goals?: string[];
   methods?: string[];
 }
 
-// Интерфейс для временного слота в циклограмме
+
 export interface CyclogramTimeSlot {
   id?: string;
-  startTime: string; // HH:MM
-  endTime: string; // HH:MM
+  startTime: string;
+  endTime: string;
   activity: CyclogramActivity;
-  dayOfWeek: number; // 1-7 (понедельник-воскресенье)
+  dayOfWeek: number;
   groupId?: string;
   teacherId?: string;
   notes?: string;
 }
 
-// Интерфейс для недельной циклограммы
+
 export interface WeeklyCyclogram {
   id?: string;
   title: string;
@@ -46,14 +46,14 @@ export interface WeeklyCyclogram {
   ageGroup: string;
   groupId: string;
   teacherId: string;
-  weekStartDate: string; // YYYY-MM-DD
+  weekStartDate: string;
   timeSlots: CyclogramTimeSlot[];
   status: 'draft' | 'active' | 'archived';
   createdAt?: string;
   updatedAt?: string;
 }
 
-// Интерфейс для шаблона циклограммы
+
 export interface CyclogramTemplate {
   id?: string;
   name: string;
@@ -64,12 +64,12 @@ export interface CyclogramTemplate {
   createdAt?: string;
 }
 
-// Helper function to handle API errors
+
 const handleApiError = (error: any, context = '') => {
   const errorMessage = error.response?.data?.message || error.message;
   console.error(`Error ${context}:`, errorMessage);
 
-  // Create a more detailed error object
+
   const apiError = new Error(`Error ${context}: ${errorMessage}`) as ApiError;
   apiError.status = error.response?.status;
   apiError.data = error.response?.data;
@@ -77,13 +77,8 @@ const handleApiError = (error: any, context = '') => {
   throw apiError;
 };
 
-// Add delay between requests to prevent rate limiting
 
-/**
- * Get all cyclograms
- * @param {string} groupId - Optional group ID to filter
- * @returns {Promise<WeeklyCyclogram[]>} List of cyclograms
- */
+
 export const getCyclograms = async (groupId?: string) => {
   try {
     const params: any = {};
@@ -108,11 +103,6 @@ export const getCyclograms = async (groupId?: string) => {
   }
 };
 
-/**
- * Get a single cyclogram by ID
- * @param {string} id - Cyclogram ID
- * @returns {Promise<WeeklyCyclogram>} Cyclogram data
- */
 export const getCyclogram = async (id: string) => {
   try {
     const response = await apiClient.get(`/cyclogram/${id}`);
@@ -135,11 +125,6 @@ export const getCyclogram = async (id: string) => {
   }
 };
 
-/**
- * Create a new cyclogram
- * @param {WeeklyCyclogram} cyclogram - Cyclogram data to create
- * @returns {Promise<WeeklyCyclogram>} Created cyclogram
- */
 export const createCyclogram = async (cyclogram: WeeklyCyclogram) => {
   try {
     const response = await apiClient.post('/cyclogram', cyclogram);
@@ -162,12 +147,6 @@ export const createCyclogram = async (cyclogram: WeeklyCyclogram) => {
   }
 };
 
-/**
- * Update an existing cyclogram
- * @param {string} id - Cyclogram ID
- * @param {WeeklyCyclogram} cyclogram - Updated cyclogram data
- * @returns {Promise<WeeklyCyclogram>} Updated cyclogram
- */
 export const updateCyclogram = async (
   id: string,
   cyclogram: WeeklyCyclogram,
@@ -193,11 +172,6 @@ export const updateCyclogram = async (
   }
 };
 
-/**
- * Delete a cyclogram
- * @param {string} id - Cyclogram ID
- * @returns {Promise<void>}
- */
 export const deleteCyclogram = async (id: string) => {
   try {
     await apiClient.delete(`/cyclogram/${id}`);
@@ -207,11 +181,6 @@ export const deleteCyclogram = async (id: string) => {
   }
 };
 
-/**
- * Get cyclogram templates
- * @param {string} ageGroup - Optional age group to filter
- * @returns {Promise<CyclogramTemplate[]>} List of templates
- */
 export const getCyclogramTemplates = async (ageGroup?: string) => {
   try {
     const params: any = {};
@@ -234,12 +203,6 @@ export const getCyclogramTemplates = async (ageGroup?: string) => {
   }
 };
 
-/**
- * Create cyclogram from template
- * @param {string} templateId - Template ID
- * @param {object} params - Parameters for creating cyclogram
- * @returns {Promise<WeeklyCyclogram>} Created cyclogram
- */
 export const createCyclogramFromTemplate = async (
   templateId: string,
   params: {
@@ -275,38 +238,35 @@ export const createCyclogramFromTemplate = async (
   }
 };
 
-/**
- * Generate mock cyclograms for testing
- */
-// const generateMockCyclograms = (): WeeklyCyclogram[] => {
-//   return [
-//     {
-//       id: '1',
-//       title: 'Циклограмма для средней группы (4-5 лет) - Неделя 1',
-//       description: 'Стандартная циклограмма для детей 4-5 лет согласно требованиям МОН РК',
-//       ageGroup: '4-5',
-//       groupId: '1',
-//       teacherId: '2',
-//       weekStartDate: '2025-09-08',
-//       timeSlots: generateMockTimeSlots(),
-//       status: 'active',
-//       createdAt: '2025-09-01T00:00:00',
-//       updatedAt: '2025-09-07T00:00:00'
-//     },
-//     {
-//       id: '2',
-//       title: 'Циклограмма для старшей группы (5-6 лет) - Неделя 1',
-//       description: 'Циклограмма для подготовительной группы',
-//       ageGroup: '5-6',
-//       groupId: '2',
-//       teacherId: '3',
-//       weekStartDate: '2025-09-08',
-//       timeSlots: generateMockTimeSlots(),
-//       status: 'active',
-//       createdAt: '2025-09-01T00:00:00',
-//       updatedAt: '2025-09-07T00:00:00'
-//     }
-//   ];
-// };
 
-// Удалены функции генерации моковых данных, так как теперь используются реальные API вызовы
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

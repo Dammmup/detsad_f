@@ -1,4 +1,4 @@
-// Базовые типы для фронтенда
+
 
 export interface IBaseEntity {
   createdAt?: string;

@@ -44,7 +44,7 @@ interface ChildReportRow {
   groupId: string;
   parentName: string;
   parentPhone: string;
-  attendanceRate: number; // Процент посещаемости
+  attendanceRate: number;
   paymentStatus: 'paid' | 'partial' | 'unpaid';
   healthStatus: 'good' | 'needs_attention' | 'requires_care';
   age: number;
@@ -79,13 +79,13 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
       setLoading(true);
       setError(null);
       try {
-        // Импортируем сервисы
+
         const childrenApi = await import('../../services/children');
         const { getChildAttendance } = await import(
           '../../services/childAttendance'
         );
 
-        // Загружаем данные
+
         const [childrenData, groupsData, attendanceData] = await Promise.all([
           childrenApi.default.getAll(),
           getGroups(),
@@ -96,12 +96,12 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
 
         setGroups(groupsData);
 
-        // Обработка данных детей
+
         const processedChildren = childrenData.map((child: any) => {
-          // Найти группу ребенка
+
           const group = groupsData.find((g: any) => g._id === child.groupId);
 
-          // Рассчитать посещаемость для ребенка
+
           const childAttendance = attendanceData.filter(
             (att: any) => att.childId === child._id,
           );
@@ -112,14 +112,14 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
           ).length;
 
           const attendanceRate =
-            totalDays > 0 ? Math.round((attendedDays / totalDays) * 100) : 100; // Если нет данных, считаем 100%
+            totalDays > 0 ? Math.round((attendedDays / totalDays) * 100) : 100;
 
-          // Рассчитать возраст
+
           const birthDate = new Date(child.birthDate);
           const today = new Date();
           const age = today.getFullYear() - birthDate.getFullYear();
 
-          // Определить статус оплаты (предполагаем, что у ребенка есть поле payments)
+
           let paymentStatus: 'paid' | 'partial' | 'unpaid' = 'unpaid';
           if (child.payments && child.payments.length > 0) {
             const latestPayment = child.payments[child.payments.length - 1];
@@ -132,7 +132,7 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
             }
           }
 
-          // Определить статус здоровья (предполагаем, что у ребенка есть поле healthStatus)
+
           let healthStatus: 'good' | 'needs_attention' | 'requires_care' =
             'good';
           if (child.healthStatus) {
@@ -160,19 +160,19 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
           };
         });
 
-        // Вычисляем сводку
+
         const summaryData: Summary = {
           totalChildren: processedChildren.length,
           totalGroups: groupsData.length,
           attendanceRate:
             processedChildren.length > 0
               ? Math.round(
-                  processedChildren.reduce(
-                    (sum: number, child: ChildReportRow) =>
-                      sum + child.attendanceRate,
-                    0,
-                  ) / processedChildren.length,
-                )
+                processedChildren.reduce(
+                  (sum: number, child: ChildReportRow) =>
+                    sum + child.attendanceRate,
+                  0,
+                ) / processedChildren.length,
+              )
               : 0,
           paidChildren: processedChildren.filter(
             (child: ChildReportRow) => child.paymentStatus === 'paid',
@@ -208,26 +208,26 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
 
   const handleSaveClick = async (rowId: string) => {
     try {
-      // Найдем оригинальный объект ребенка для получения полного ID
+
       const originalRow = rows.find((r) => r.id === rowId);
       if (originalRow) {
-        // Подготовим данные для обновления
+
         const updatedData: any = {
           ...editData,
         };
 
-        // Обновляем через API
+
         const childrenApi = await import('../../services/children');
         await childrenApi.default.update(rowId, updatedData);
 
-        // Обновляем локальный массив
+
         setRows((prev) =>
           prev.map((r) =>
             r.id === rowId ? ({ ...r, ...updatedData } as ChildReportRow) : r,
           ),
         );
 
-        // Обновляем сводку
+
         if (summary) {
           setSummary((prev) => {
             if (!prev) return null;
@@ -277,19 +277,19 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
   };
 
   const handleExportToExcel = () => {
-    // Создаем CSV-данные
+
     let csvContent = 'data:text/csv;charset=utf-8,';
 
-    // Заголовки
+
     csvContent +=
       'ФИО ребенка;Группа;ФИО родителя;Телефон родителя;Посещаемость (%);Статус оплаты;Статус здоровья;Возраст;Статус\n';
 
-    // Данные
+
     rows.forEach((row) => {
       csvContent += `${row.fullName};${row.groupName};${row.parentName};${row.parentPhone};${row.attendanceRate}%;${row.paymentStatus};${row.healthStatus};${row.age};${row.status}\n`;
     });
 
-    // Создаем ссылку для скачивания
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -299,14 +299,14 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
     );
     document.body.appendChild(link);
 
-    // Имитируем клик для скачивания
+
     link.click();
 
-    // Удаляем ссылку
+
     document.body.removeChild(link);
   };
 
-  // Фильтрация строк по группе и поисковому запросу
+
   const filteredRows = rows.filter((row) => {
     const matchesGroup = !filterGroup || row.groupId === filterGroup;
     const matchesSearch =
@@ -1017,11 +1017,11 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
                 const avgAttendance =
                   totalChildren > 0
                     ? Math.round(
-                        groupChildren.reduce(
-                          (sum, child) => sum + child.attendanceRate,
-                          0,
-                        ) / totalChildren,
-                      )
+                      groupChildren.reduce(
+                        (sum, child) => sum + child.attendanceRate,
+                        0,
+                      ) / totalChildren,
+                    )
                     : 0;
                 const paidChildren = groupChildren.filter(
                   (child) => child.paymentStatus === 'paid',

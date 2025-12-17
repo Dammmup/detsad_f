@@ -8,6 +8,6 @@ export interface SomaticRecord {
   diagnosis: string;
   date: string;
   notes?: string;
-  days?: number; // e.g., "Mon, Wed, Fri"
+  days?: number;
   address: string;
 }

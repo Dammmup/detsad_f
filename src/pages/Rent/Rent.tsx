@@ -56,14 +56,14 @@ import { useAuth } from '../../components/context/AuthContext';
 import ExportButton from '../../components/ExportButton';
 import { exportData } from '../../utils/exportUtils';
 
-// 🇷🇺 Переводы ролей с английского на русский
+
 const roleTranslations: Record<string, string> = {
-  // Административные роли
+
   admin: 'Администратор',
   manager: 'Менеджер',
   director: 'Директор',
 
-  // Педагогические роли
+
   teacher: 'Воспитатель',
   assistant: 'Помощник воспитателя',
   psychologist: 'Психолог',
@@ -71,29 +71,29 @@ const roleTranslations: Record<string, string> = {
   music_teacher: 'Музыкальный руководитель',
   physical_education: 'Инструктор по физкультуре',
 
-  // Медицинские роли
+
   nurse: 'Медсестра',
   doctor: 'Врач',
 
-  // Обслуживающий персонал
+
   cook: 'Повар',
   cleaner: 'Уборщица',
   security: 'Охранник',
   maintenance: 'Завхоз',
   laundry: 'Прачка',
 
-  // Дополнительные роли
+
   staff: 'Сотрудник',
   substitute: 'Подменный сотрудник',
   intern: 'Стажер',
 };
 
-// Функция для перевода роли на русский
+
 const translateRole = (role: string): string => {
-  return roleTranslations[role] || role; // Если перевода нет, возвращаем оригинал
+  return roleTranslations[role] || role;
 };
 
-// Функция для получения английской роли по русскому названию
+
 const getRoleByTranslation = (translation: string): string => {
   const entry = Object.entries(roleTranslations).find(
     ([_, value]) => value === translation,
@@ -130,7 +130,7 @@ const Rent = () => {
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const { user: currentUser } = useAuth();
 
-  // 🇷🇺 Список доступных ролей на русском языке (автоматически из переводов)
+
   const availableRoles = [roleTranslations['tenant']].sort();
 
   const fetchStaff = useCallback(() => {
@@ -147,7 +147,7 @@ const Rent = () => {
       .finally(() => setLoading(false));
   }, [currentUser?.role]);
 
-  // Загрузка списка групп
+
   const fetchGroups = async () => {
     try {
       await getGroups();
@@ -161,12 +161,12 @@ const Rent = () => {
     fetchGroups();
   }, [fetchStaff]);
 
-  // Фильтрация сотрудников при изменении поисковой строки или фильтра ролей
+
   useEffect(() => {
     if (!staff.length) return;
 
     let filtered = staff.filter((member) => member.role === 'tenant');
-    // Фильтрация по поисковой строке
+
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -180,7 +180,7 @@ const Rent = () => {
       );
     }
 
-    // 🇷🇺 Фильтрация по роли (сравниваем русские переводы)
+
     if (filterRole.length > 0) {
       filtered = filtered.filter((member) => {
         const russianRole = translateRole(member.role || '');
@@ -207,30 +207,30 @@ const Rent = () => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
 
-    // Очистка ошибки при изменении поля
+
     if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 
-  // Обработчик для Select
+
   const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
 
-    // Очистка ошибки при изменении поля
+
     if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 
-  // Обработчик для фильтра ролей
+
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
     const { value } = event.target;
     setFilterRole(typeof value === 'string' ? value.split(',') : value);
   };
 
-  // Валидация формы
+
   const validateForm = () => {
     const errors: { [key: string]: string } = {};
 
@@ -245,7 +245,7 @@ const Rent = () => {
   };
 
   const handleSave = async () => {
-    // Валидация формы перед сохранением
+
     if (!validateForm()) {
       return;
     }
@@ -262,7 +262,7 @@ const Rent = () => {
         });
         handleCloseModal();
       } else {
-        // Создание нового сотрудника
+
         await createUser(form);
         handleCloseModal();
       }

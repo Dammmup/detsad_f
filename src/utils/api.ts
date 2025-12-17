@@ -1,25 +1,19 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { ApiError, DelayFunction, ErrorHandler } from '../types/common';
 
-// ===== КОНФИГУРАЦИЯ API =====
+
 
 export const API_BASE_URL =
-  process.env.REACT_APP_API_URL || 'https://detsad-b.onrender.com';
-export const API_TIMEOUT = 120000; // 120 секунд
-export const RETRY_DELAY = 2000; // 2 секунды
+  process.env.REACT_APP_API_URL || 'https:
+export const API_TIMEOUT = 120000;
+export const RETRY_DELAY = 2000;
 export const MAX_RETRIES = 3;
 
-// ===== УТИЛИТЫ =====
 
-/**
- * Функция задержки для предотвращения rate limiting
- */
+
 export const delay: DelayFunction = (ms = RETRY_DELAY) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-/**
- * Обработчик API ошибок
- */
 export const handleApiError: ErrorHandler = (error: any, context = '') => {
   const errorMessage = error.response?.data?.message || error.message;
   console.error(`Error ${context}:`, errorMessage);
@@ -31,9 +25,6 @@ export const handleApiError: ErrorHandler = (error: any, context = '') => {
   throw apiError;
 };
 
-/**
- * Создание экземпляра axios с базовой конфигурацией
- */
 export const createApiInstance = (
   baseURL: string = API_BASE_URL,
 ): AxiosInstance => {
@@ -42,14 +33,14 @@ export const createApiInstance = (
     timeout: API_TIMEOUT,
     headers: {
       'Content-Type': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest', // Помогает идентифицировать запросы как AJAX
+      'X-Requested-With': 'XMLHttpRequest',
     },
   });
 
-  // Request interceptor
+
   api.interceptors.request.use(
     (config) => {
-      // Добавляем токен из localStorage в заголовок Authorization
+
       const token = localStorage.getItem('auth_token');
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -64,7 +55,7 @@ export const createApiInstance = (
     },
   );
 
-  // Response interceptor для обработки ошибок и retry логики
+
   api.interceptors.response.use(
     (response) => {
       console.log('✅ API ответ:', response.status, response.config.url);
@@ -73,12 +64,12 @@ export const createApiInstance = (
     async (error) => {
       const originalRequest = error.config;
 
-      // Обработка 401 ошибки (неавторизован)
+
       if (error.response?.status === 401) {
         console.warn('🔒 Ошибка 401: Требуется авторизация');
 
         if (typeof window !== 'undefined') {
-          // Удаляем данные аутентификации из localStorage
+
           localStorage.removeItem('user');
           localStorage.removeItem('auth_token');
           window.location.href = '/login';
@@ -87,7 +78,7 @@ export const createApiInstance = (
         return Promise.reject(new Error('Требуется авторизация'));
       }
 
-      // Обработка 429 ошибки (Too Many Requests) с retry
+
       if (error.response?.status === 429 && !originalRequest._retry) {
         originalRequest._retry = true;
         const retryAfter = error.response.headers['retry-after'] || 2;
@@ -112,7 +103,7 @@ export const createApiInstance = (
   return api;
 };
 
-// ===== БАЗОВЫЙ API КЛИЕНТ =====
+
 
 export class BaseApiClient {
   protected api: AxiosInstance;
@@ -121,9 +112,6 @@ export class BaseApiClient {
     this.api = createApiInstance(baseURL);
   }
 
-  /**
-   * GET запрос
-   */
   protected async get<T = any>(
     url: string,
     config?: AxiosRequestConfig,
@@ -136,9 +124,6 @@ export class BaseApiClient {
     }
   }
 
-  /**
-   * POST запрос
-   */
   protected async post<T = any>(
     url: string,
     data?: any,
@@ -152,9 +137,6 @@ export class BaseApiClient {
     }
   }
 
-  /**
-   * PUT запрос
-   */
   protected async put<T = any>(
     url: string,
     data?: any,
@@ -168,9 +150,6 @@ export class BaseApiClient {
     }
   }
 
-  /**
-   * DELETE запрос
-   */
   protected async delete<T = any>(
     url: string,
     config?: AxiosRequestConfig,
@@ -183,9 +162,6 @@ export class BaseApiClient {
     }
   }
 
-  /**
-   * PATCH запрос
-   */
   protected async patch<T = any>(
     url: string,
     data?: any,
@@ -203,16 +179,13 @@ export class BaseApiClient {
     }
   }
 
-  /**
-   * Обработка ошибок
-   */
   private handleError(error: any, context: string): ApiError {
     try {
       handleApiError(error, context);
     } catch (apiError) {
       return apiError as ApiError;
     }
-    // Если handleApiError не бросил ошибку, создаем свою
+
     const errorObj = new Error(
       `Error ${context}: ${error.message || 'Неизвестная ошибка'}`,
     ) as ApiError;
@@ -221,15 +194,12 @@ export class BaseApiClient {
     return errorObj;
   }
 
-  /**
-   * Добавление задержки между запросами
-   */
   protected async delayRequest(ms?: number): Promise<void> {
     await delay(ms);
   }
 }
 
-// ===== КЭШИРОВАНИЕ =====
+
 
 interface CacheItem<T> {
   data: T;
@@ -240,9 +210,6 @@ interface CacheItem<T> {
 export class ApiCache {
   private cache = new Map<string, CacheItem<any>>();
 
-  /**
-   * Получение данных из кэша
-   */
   get<T>(key: string): T | null {
     const item = this.cache.get(key);
 
@@ -259,9 +226,6 @@ export class ApiCache {
     return item.data;
   }
 
-  /**
-   * Сохранение данных в кэш
-   */
   set<T>(key: string, data: T, expiresIn: number = 5 * 60 * 1000): void {
     this.cache.set(key, {
       data,
@@ -270,36 +234,24 @@ export class ApiCache {
     });
   }
 
-  /**
-   * Удаление данных из кэша
-   */
   delete(key: string): void {
     this.cache.delete(key);
   }
 
-  /**
-   * Очистка всего кэша
-   */
   clear(): void {
     this.cache.clear();
   }
 
-  /**
-   * Получение размера кэша
-   */
   size(): number {
     return this.cache.size;
   }
 }
 
-// Глобальный экземпляр кэша
+
 export const apiCache = new ApiCache();
 
-// ===== УТИЛИТЫ ДЛЯ РАБОТЫ С ДАННЫМИ =====
 
-/**
- * Преобразование MongoDB объекта в стандартный формат
- */
+
 export const normalizeMongoObject = <T extends Record<string, any>>(
   obj: T,
 ): T => {
@@ -309,18 +261,12 @@ export const normalizeMongoObject = <T extends Record<string, any>>(
   return obj;
 };
 
-/**
- * Преобразование массива MongoDB объектов
- */
 export const normalizeMongoArray = <T extends Record<string, any>>(
   arr: T[],
 ): T[] => {
   return arr.map(normalizeMongoObject);
 };
 
-/**
- * Создание параметров запроса из объекта
- */
 export const createQueryParams = (
   params: Record<string, any>,
 ): URLSearchParams => {
@@ -335,9 +281,6 @@ export const createQueryParams = (
   return searchParams;
 };
 
-/**
- * Безопасное выполнение API запроса с retry
- */
 export const safeApiCall = async <T>(
   apiCall: () => Promise<T>,
   maxRetries: number = MAX_RETRIES,
@@ -351,7 +294,7 @@ export const safeApiCall = async <T>(
     } catch (error: any) {
       lastError = error;
 
-      // Не повторяем запрос для определенных ошибок
+
       if (
         error.status === 401 ||
         error.status === 403 ||
@@ -365,7 +308,7 @@ export const safeApiCall = async <T>(
           `Попытка ${attempt} неудачна, повторяем через ${retryDelay}ms...`,
         );
         await delay(retryDelay);
-        retryDelay *= 2; // Экспоненциальная задержка
+        retryDelay *= 2;
       }
     }
   }
@@ -373,7 +316,7 @@ export const safeApiCall = async <T>(
   throw lastError;
 };
 
-// ===== ТИПЫ ДЛЯ РАСШИРЕННЫХ API КЛИЕНТОВ =====
+
 
 export interface CrudApiClient<T, CreateT = Partial<T>, UpdateT = Partial<T>> {
   getAll(params?: any): Promise<T[]>;
@@ -393,16 +336,15 @@ export interface PaginatedApiClient<T> {
   }>;
 }
 
-// ===== БАЗОВЫЙ CRUD КЛИЕНТ =====
+
 
 export abstract class BaseCrudApiClient<
-    T extends Record<string, any>,
-    CreateT = Partial<T>,
-    UpdateT = Partial<T>,
-  >
+  T extends Record<string, any>,
+  CreateT = Partial<T>,
+  UpdateT = Partial<T>,
+>
   extends BaseApiClient
-  implements CrudApiClient<T, CreateT, UpdateT>
-{
+  implements CrudApiClient<T, CreateT, UpdateT> {
   protected abstract endpoint: string;
 
   async getAll(params?: any): Promise<T[]> {
@@ -431,7 +373,7 @@ export abstract class BaseCrudApiClient<
   }
 }
 
-// ===== ЭКСПОРТ ОСНОВНОГО API КЛИЕНТА =====
+
 
 export const apiClient = createApiInstance();
 export default apiClient;

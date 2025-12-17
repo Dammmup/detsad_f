@@ -5,7 +5,7 @@ import { getStaffShifts, checkIn, checkOut } from '../services/shifts';
 import { settingsService } from '../services/settings';
 
 interface StaffAttendanceButtonProps {
-  onStatusChange?: () => void; // Callback для обновления статуса
+  onStatusChange?: () => void;
 }
 
 const haversineDistance = (
@@ -15,7 +15,7 @@ const haversineDistance = (
   lon2: number,
 ) => {
   const toRad = (value: number) => (value * Math.PI) / 180;
-  const R = 6371000; // Радиус Земли в метрах
+  const R = 6371000;
   const φ1 = toRad(lat1);
   const φ2 = toRad(lat2);
   const Δφ = toRad(lat2 - lat1);
@@ -53,10 +53,10 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
     radius: number;
   } | null>(null);
 
-  // Проверка времени для активации кнопки
-  // Этот useEffect больше не нужен, так как доступность кнопки будет определяться наличием смены.
 
-  // Загрузка статуса посещаемости для текущего пользователя
+
+
+
   useEffect(() => {
     const fetchShiftStatus = async () => {
       if (!currentUser || !currentUser.id) return;
@@ -68,7 +68,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
           endDate: today,
         });
         const myShift = shifts.find((s) => {
-          // staffId может быть как строкой, так и объектом с _id
+
           if (
             typeof s.staffId === 'object' &&
             s.staffId !== null &&
@@ -81,11 +81,11 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         if (myShift) {
           setStatus(
             myShift.status as
-              | 'scheduled'
-              | 'in_progress'
-              | 'completed'
-              | 'late'
-              | 'pending_approval',
+            | 'scheduled'
+            | 'in_progress'
+            | 'completed'
+            | 'late'
+            | 'pending_approval',
           );
         } else {
           setStatus('no_record');
@@ -117,9 +117,9 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
     if (!currentUser || !currentUser.id) return;
     setLoading(true);
     try {
-      // Проверяем геолокацию
+
       if (geolocation) {
-        // запрашиваем геолокацию
+
         const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
@@ -135,10 +135,10 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         if (dist > geolocation.radius) {
           setSnackbarMessage(
             'Вы вне разрешённой зоны для отметки прихода.\nДопустимо ' +
-              Math.round(geolocation.radius) +
-              'м, у вас ' +
-              Math.round(dist) +
-              'м.',
+            Math.round(geolocation.radius) +
+            'м, у вас ' +
+            Math.round(dist) +
+            'м.',
           );
           setSnackbarSeverity('error');
           setSnackbarOpen(true);
@@ -147,13 +147,13 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         }
       }
 
-      // Проверяем время смены (допустимый диапазон)
+
       const now = new Date();
       const currentHours = now.getHours();
       const currentMinutes = now.getMinutes();
       const currentTimeInMinutes = currentHours * 60 + currentMinutes;
 
-      // Получаем смену на сегодня
+
       const today = new Date().toISOString().split('T')[0];
       const shifts = await getStaffShifts({
         staffId: currentUser.id,
@@ -161,7 +161,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         endDate: today,
       });
       const myShift = shifts.find((s) => {
-        // staffId может быть как строкой, так и объектом с _id
+
         if (
           typeof s.staffId === 'object' &&
           s.staffId !== null &&
@@ -173,7 +173,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
       });
 
       if (myShift && myShift.id) {
-        // Преобразуем время начала и окончания смены в минуты для сравнения
+
         const [shiftStartHour, shiftStartMinute] = myShift.startTime
           .split(':')
           .map(Number);
@@ -183,16 +183,16 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         const shiftStartInMinutes = shiftStartHour * 60 + shiftStartMinute;
         const shiftEndInMinutes = shiftEndHour * 60 + shiftEndMinute;
 
-        // Проверяем, находится ли текущее время в допустимом диапазоне
-        // Допускаем отметку за 30 минут до начала и 30 минут после окончания смены
-        const allowedStartRange = shiftStartInMinutes - 30; // 30 минут до начала
-        const allowedEndRange = shiftEndInMinutes + 30; // 30 минут после окончания
+
+
+        const allowedStartRange = shiftStartInMinutes - 30;
+        const allowedEndRange = shiftEndInMinutes + 30;
 
         if (
           currentTimeInMinutes < allowedStartRange ||
           currentTimeInMinutes > allowedEndRange
         ) {
-          // Проверяем, до или после разрешенного диапазона
+
           if (currentTimeInMinutes < allowedStartRange) {
             const minutesUntilStart = allowedStartRange - currentTimeInMinutes;
             const hours = Math.floor(minutesUntilStart / 60);
@@ -214,11 +214,11 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
           return;
         }
 
-        // Выполняем отметку прихода
+
         if (myShift.id) {
           await checkIn(myShift.id);
         }
-        // После успешной отметки прихода обновляем статус локально и вызываем onStatusChange для обновления извне
+
         setStatus('in_progress');
         setSnackbarMessage('Отметка о приходе успешно сохранена');
         setSnackbarSeverity('success');
@@ -243,9 +243,9 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
     if (!currentUser || !currentUser.id) return;
     setLoading(true);
     try {
-      // Проверяем геолокацию при уходе (если включена)
+
       if (geolocation) {
-        // запрашиваем геолокацию
+
         const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
@@ -261,10 +261,10 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         if (dist > geolocation.radius) {
           setSnackbarMessage(
             'Вы вне разрешённой зоны для отметки ухода.\nДопустимо ' +
-              Math.round(geolocation.radius) +
-              'м, у вас ' +
-              Math.round(dist) +
-              'м.',
+            Math.round(geolocation.radius) +
+            'м, у вас ' +
+            Math.round(dist) +
+            'м.',
           );
           setSnackbarSeverity('error');
           setSnackbarOpen(true);
@@ -273,7 +273,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         }
       }
 
-      // Получаем смену на сегодня
+
       const today = new Date().toISOString().split('T')[0];
       const shifts = await getStaffShifts({
         staffId: currentUser.id,
@@ -281,7 +281,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         endDate: today,
       });
       const myShift = shifts.find((s) => {
-        // staffId может быть как строкой, так и объектом с _id
+
         if (
           typeof s.staffId === 'object' &&
           s.staffId !== null &&
@@ -293,13 +293,13 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
       });
 
       if (myShift && myShift.id) {
-        // Проверяем время смены при уходе (допустимый диапазон)
+
         const now = new Date();
         const currentHours = now.getHours();
         const currentMinutes = now.getMinutes();
         const currentTimeInMinutes = currentHours * 60 + currentMinutes;
 
-        // Преобразуем время начала и окончания смены в минуты для сравнения
+
         const [shiftStartHour, shiftStartMinute] = myShift.startTime
           .split(':')
           .map(Number);
@@ -309,16 +309,16 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         const shiftStartInMinutes = shiftStartHour * 60 + shiftStartMinute;
         const shiftEndInMinutes = shiftEndHour * 60 + shiftEndMinute;
 
-        // Проверяем, находится ли текущее время в допустимом диапазоне
-        // Допускаем отметку за 30 минут до начала и 30 минут после окончания смены
-        const allowedStartRange = shiftStartInMinutes - 30; // 30 минут до начала
-        const allowedEndRange = shiftEndInMinutes + 30; // 30 минут после окончания
+
+
+        const allowedStartRange = shiftStartInMinutes - 30;
+        const allowedEndRange = shiftEndInMinutes + 30;
 
         if (
           currentTimeInMinutes < allowedStartRange ||
           currentTimeInMinutes > allowedEndRange
         ) {
-          // Проверяем, до или после разрешенного диапазона
+
           if (currentTimeInMinutes < allowedStartRange) {
             const minutesUntilStart = allowedStartRange - currentTimeInMinutes;
             const hours = Math.floor(minutesUntilStart / 60);
@@ -340,7 +340,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
           return;
         }
 
-        // Выполняем отметку ухода
+
         if (myShift.id) {
           await checkOut(myShift.id);
         }
@@ -368,13 +368,13 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
     setSnackbarOpen(false);
   };
 
-  // Определение текста и обработчика кнопки в зависимости от статуса
+
   let buttonText = '';
   let buttonAction: (() => void) | undefined = undefined;
   let buttonDisabled = false;
 
   if (currentUser && currentUser.role === 'admin') {
-    return null; // Не отображаем кнопку для администраторов
+    return null;
   }
   if (
     status === 'scheduled' ||

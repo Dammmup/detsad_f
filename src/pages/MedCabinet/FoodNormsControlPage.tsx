@@ -46,21 +46,21 @@ const FoodNormsControlPage: React.FC = () => {
   const [status, setStatus] = useState('Все');
   const [note, setNote] = useState('');
 
-  // Фильтруем строки при изменении rows или фильтров
+
   const filteredRows = rows.filter((row) => {
-    // Фильтр по поиску
+
     const matchesSearch = !search ||
       row.product.toLowerCase().includes(search.toLowerCase());
-    
-    // Фильтр по статусу
+
+
     const matchesStatus = status === 'Все' || row.status === status;
-    
+
     return matchesSearch && matchesStatus;
   });
 
   const handleAutoFill = () => {
-    // Placeholder for auto-fill logic
- };
+
+  };
 
   const handleAdd = () => {
     setRows((prev) => [
@@ -232,13 +232,13 @@ const FoodNormsControlPage: React.FC = () => {
                         prev.map((r, i) =>
                           i === idx
                             ? {
-                                ...r,
-                                actual: v,
-                                deviation: r.norm
-                                  ? Math.round(((v - r.norm) / r.norm) * 100)
-                                  : 0,
-                                status: getStatus(r.norm, v),
-                              }
+                              ...r,
+                              actual: v,
+                              deviation: r.norm
+                                ? Math.round(((v - r.norm) / r.norm) * 100)
+                                : 0,
+                              status: getStatus(r.norm, v),
+                            }
                             : r,
                         ),
                       );

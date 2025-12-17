@@ -57,18 +57,18 @@ interface CurrentUser {
 interface PayrollRow {
   staffName: string;
   accruals: number;
-  penalties: number; // Общая сумма штрафов (опоздания + неявки)
-  latePenalties: number; // Штрафы за опоздания
-  absencePenalties: number; // Штрафы за неявки
+  penalties: number;
+  latePenalties: number;
+  absencePenalties: number;
   latePenaltyRate: number;
-  advance: number; // Аванс
+  advance: number;
   total: number;
   status: string;
   staffId: string;
   _id?: string;
-  baseSalary: number; // New field
-  fines?: any[]; // For tooltip
-  userFines?: number; // Manual fines total
+  baseSalary: number;
+  fines?: any[];
+  userFines?: number;
 }
 
 const ReportsSalary: React.FC<Props> = ({ userId }) => {
@@ -98,18 +98,18 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
       setLoading(true);
       setError(null);
       try {
-        // Импортируем сервисы
+
         const { getCurrentUser } = await import('../../services/auth');
         const { getPayrolls } = await import('../../services/payroll');
 
-        // Получаем информацию о текущем пользователе через сервис
+
         let currentUserData = null;
         try {
           const userData = getCurrentUser();
           if (userData) {
             currentUserData = {
               id: userData.id || userData._id,
-              role: userData.role || 'staff', // Устанавливаем значение по умолчанию
+              role: userData.role || 'staff',
             };
             setCurrentUser(currentUserData);
           }
@@ -117,12 +117,12 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           console.error('Ошибка получения данных пользователя:', userError);
         }
 
-        // Формируем параметры запроса - теперь используем текущий месяц
+
         const params: any = {
-          period: selectedMonth, // используем период формата YYYY-MM
+          period: selectedMonth,
         };
 
-        // Если пользователь не администратор, он может видеть только свои данные
+
         if (
           currentUserData &&
           currentUserData.role !== 'admin' &&
@@ -130,7 +130,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         ) {
           params.userId = currentUserData.id;
         } else if (userId) {
-          // Администратор может фильтровать по userId
+
           params.userId = userId;
         }
 
@@ -139,7 +139,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         if (!mounted) return;
         const data = (payrollsData?.data || payrollsData || []) as any[];
 
-        // Вычисляем сводку на основе данных
+
         const summaryData = {
           totalEmployees: data.length,
           totalAccruals: data.reduce(
@@ -148,12 +148,12 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           ),
           totalPenalties: data.reduce((sum, p) => sum + (p.penalties || 0), 0),
           totalPayout: data.reduce((sum, p) => {
-            // Рассчитываем "Итого" для каждой записи (без бонусов)
+
             const accruals = p.accruals || p.baseSalary || 0;
             const penalties = p.penalties || 0;
             const advance = p.advance || 0;
-            const total = accruals - penalties - advance; // Упрощенный расчет
-            // Не добавляем отрицательные значения в сумму
+            const total = accruals - penalties - advance;
+
             return sum + (total >= 0 ? total : 0);
           }, 0),
         };
@@ -163,18 +163,18 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           data.map((p: any) => ({
             staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
             accruals: p.accruals || p.baseSalary || 0,
-            // Рассчитываем общую сумму штрафов
+
             penalties:
               p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0),
             latePenalties: p.latePenalties || 0,
             absencePenalties: p.absencePenalties || 0,
-            latePenaltyRate: p.latePenaltyRate || 13,// Значение по умолчанию
-            advance: p.advance || 0, // Аванс
-            // Рассчитываем поле "Итого" в реальном времени (без бонусов)
+            latePenaltyRate: p.latePenaltyRate || 13,
+            advance: p.advance || 0,
+
             total:
               (p.accruals || p.baseSalary || 0) -
               ((p.latePenalties || 0) + (p.absencePenalties || 0)) -
-              (p.advance || 0), // Упрощенный расчет
+              (p.advance || 0),
             status: p.status && p.status !== 'draft' ? p.status : 'calculated',
             staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
             _id: p._id || undefined,
@@ -193,7 +193,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
     return () => {
       mounted = false;
     };
-  }, [userId, selectedMonth]); // обновляем данные при смене месяца
+  }, [userId, selectedMonth]);
 
   const handleEditClick = (row: PayrollRow) => {
     setEditingId(row.staffId);
@@ -209,13 +209,13 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
 
   const handleSaveClick = async (rowId: string) => {
     try {
-      // Найдем оригинальный объект зарплаты для получения полного ID
-      // Найдем оригинальный объект зарплаты для получения полного ID
+
+
       const originalRow = rows.find((r) => r.staffId === rowId);
       if (originalRow) {
         let payrollId = originalRow._id;
 
-        // Рассчитываем поле "Итого" в реальном времени
+
         const accruals =
           editData.accruals !== undefined
             ? editData.accruals
@@ -235,13 +235,13 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
               ? originalRow.status
               : 'calculated';
 
-        // Map 'calculated' to 'draft' for API compliance
+
         const apiStatus = status === 'calculated' ? 'draft' : status;
 
-        // Обновленный расчет итоговой суммы (без бонусов)
+
         const total = accruals - penalties - advance;
 
-        // Добавляем рассчитанное поле "Итого" в данные для обновления
+
         const updatedData = {
           ...editData,
           total,
@@ -249,7 +249,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         };
 
         if (!payrollId) {
-          // Create payroll record first if it's virtual
+
           console.log('Creating new payroll for virtual record');
           const newPayroll = await createPayroll({
             staffId: { _id: originalRow.staffId } as any,
@@ -260,12 +260,12 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           });
           payrollId = newPayroll._id;
         } else {
-          // Обновляем через API
+
           console.log('Updating payroll with ID:', payrollId);
           await updatePayroll(payrollId, updatedData as Partial<Payroll>);
         }
 
-        // Обновляем локальный массив
+
         setRows((prev) =>
           prev.map((r) =>
             r.staffId === rowId ? ({ ...r, ...updatedData, _id: payrollId, staffId: rowId } as PayrollRow) : r,
@@ -308,15 +308,15 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
       )
     ) {
       try {
-        // Найдем оригинальный объект зарплаты для получения полного ID
+
         const originalRow = rows.find((r) => r.staffId === rowId);
         if (originalRow) {
-          // Используем _id записи зарплаты, если он есть, иначе staffId
+
           const payrollId = originalRow._id || rowId;
 
-          // Удаляем через API
+
           await deletePayroll(payrollId);
-          // Обновляем локальный массив
+
           setRows((prev) => prev.filter((r) => r.staffId !== rowId));
           setSnackbarMessage('Расчетный лист успешно удален');
           setSnackbarOpen(true);
@@ -334,19 +334,19 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   };
 
   const handleExportToExcel = () => {
-    // Создаем CSV-данные
+
     let csvContent = 'data:text/csv;charset=utf-8,';
 
-    // Заголовки
-    csvContent +=
-      'Сотрудник;Начисления;Аванс;Штрафы;Ставка за опоздание (тг/мин);Итого;Статус\n';
 
-    // Данные
+    csvContent +=
+      'Сотрудник;Начисления;Аванс;Вычеты;Ставка за опоздание (тг/мин);Итого;Статус\n';
+
+
     rows.forEach((row) => {
       csvContent += `${row.staffName};${row.accruals};${row.advance};${row.penalties};${row.latePenaltyRate};${row.total};${row.status}\n`;
     });
 
-    // Создаем ссылку для скачивания
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -356,10 +356,10 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
     );
     document.body.appendChild(link);
 
-    // Имитируем клик для скачивания
+
     link.click();
 
-    // Удаляем ссылку
+
     document.body.removeChild(link);
   };
 
@@ -385,7 +385,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         setSnackbarMessage('Расчетные листы успешно сгенерированы');
         setSnackbarOpen(true);
 
-        // Обновляем данные
+
         const { getCurrentUser } = await import('../../services/auth');
         const { getPayrolls } = await import('../../services/payroll');
 
@@ -395,7 +395,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           if (userData) {
             currentUserData = {
               id: userData.id || userData._id,
-              role: userData.role || 'staff', // Устанавливаем значение по умолчанию
+              role: userData.role || 'staff',
             };
             setCurrentUser(currentUserData);
           }
@@ -404,7 +404,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         }
 
         const params: any = {
-          period: selectedMonth, // используем месяц вместо startDate/endDate
+          period: selectedMonth,
         };
 
         if (
@@ -414,7 +414,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         ) {
           params.userId = currentUserData.id;
         } else if (userId) {
-          // Администратор может фильтровать по userId
+
           params.userId = userId;
         }
 
@@ -422,7 +422,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
 
         const data = (payrollsData?.data || payrollsData || []) as any[];
 
-        // Вычисляем сводку на основе данных
+
         const summaryData = {
           totalEmployees: data.length,
           totalAccruals: data.reduce(
@@ -431,12 +431,12 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           ),
           totalPenalties: data.reduce((sum, p) => sum + (p.penalties || 0), 0),
           totalPayout: data.reduce((sum, p) => {
-            // Рассчитываем "Итого" для каждой записи
+
             const accruals = p.accruals || p.baseSalary || 0;
             const penalties = p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0);
             const advance = p.advance || 0;
-            const total = accruals - penalties - advance; // Упрощенный расчет (без бонусов)
-            // Не добавляем отрицательные значения в сумму
+            const total = accruals - penalties - advance;
+
             return sum + (total >= 0 ? total : 0);
           }, 0),
         };
@@ -446,21 +446,21 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           data.map((p: any) => ({
             staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
             accruals: p.accruals || p.baseSalary || 0,
-            // Рассчитываем общую сумму штрафов
+
             penalties:
               p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0),
             latePenalties: p.latePenalties || 0,
             absencePenalties: p.absencePenalties || 0,
-            latePenaltyRate: p.latePenaltyRate || 13, // Значение по умолчанию
-            advance: p.advance || 0, // Аванс
-            // Рассчитываем поле "Итого" в реальном времени (без бонусов)
+            latePenaltyRate: p.latePenaltyRate || 13,
+            advance: p.advance || 0,
+
             total:
               (p.accruals || p.baseSalary || 0) -
               (p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0)) -
-              (p.advance || 0), // Упрощенный расчет
+              (p.advance || 0),
             status: p.status && p.status !== 'draft' ? p.status : 'calculated',
             staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
-            _id: p._id || undefined, // Добавляем ID записи зарплаты
+            _id: p._id || undefined,
             baseSalary: p.baseSalary || 0,
             fines: p.fines || [],
             userFines: p.userFines || 0,
@@ -479,7 +479,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   };
 
   const handleOpenFineDialog = (row: PayrollRow) => {
-    setCurrentFinePayrollId(row._id || row.staffId); // Use _id if available, logic handles missing locally
+    setCurrentFinePayrollId(row._id || row.staffId);
     setCurrentFineStaffName(row.staffName);
     setCurrentFines(row.fines || []);
     setFineDialogOpen(true);
@@ -489,12 +489,12 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
     if (!currentFinePayrollId) return;
 
     try {
-      // Find the row
+
       const row = rows.find(r => r._id === currentFinePayrollId || r.staffId === currentFinePayrollId);
       let payrollId = row?._id;
 
       if (!payrollId && row) {
-        // Create payroll record first if it's virtual
+
         const { createPayroll } = await import('../../services/payroll');
         const newPayroll = await createPayroll({
           staffId: { _id: row.staffId } as any,
@@ -513,18 +513,18 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         type: 'manual'
       }));
 
-      setSnackbarMessage('Штраф добавлен');
+      setSnackbarMessage('Вычет добавлен');
       setSnackbarOpen(true);
 
-      // Update local state to reflect change immediately in modal and table
+
       setCurrentFines(updatedPayroll.fines || []);
 
-      // Update main table rows
-      // We can reload or manually update
+
+
       window.location.reload();
 
     } catch (e: any) {
-      setSnackbarMessage('Ошибка добавления штрафа: ' + (e.message || 'Unknown'));
+      setSnackbarMessage('Ошибка добавления Вычета: ' + (e.message || 'Unknown'));
       setSnackbarOpen(true);
     }
   };
@@ -752,7 +752,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                     {(summary?.totalPenalties ?? 0)?.toLocaleString()} тг
                   </Typography>
                   <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                    Штрафы
+                    Вычеты
                   </Typography>
                 </Box>
 
@@ -854,7 +854,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                         align='right'
                         sx={{ color: 'primary.main', fontWeight: 'bold' }}
                       >
-                        Штрафы
+                        Вычеты
                       </TableCell>
                       <TableCell
                         align='right'

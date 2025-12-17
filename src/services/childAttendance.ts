@@ -36,7 +36,7 @@ export interface BulkAttendanceResponse {
   }>;
 }
 
-// Get attendance records with filters
+
 export const getChildAttendance = async (params?: {
   groupId?: string;
   childId?: string;
@@ -56,7 +56,7 @@ export const getChildAttendance = async (params?: {
   }
 };
 
-// Create or update single attendance record
+
 export const saveChildAttendance = async (
   record: Omit<ChildAttendanceRecord, '_id' | 'createdAt' | 'updatedAt'>,
 ): Promise<ChildAttendanceRecord> => {
@@ -71,7 +71,7 @@ export const saveChildAttendance = async (
   }
 };
 
-// Bulk save attendance records (for grid)
+
 export const bulkSaveChildAttendance = async (
   records: Array<{
     childId: string;
@@ -95,7 +95,7 @@ export const bulkSaveChildAttendance = async (
   }
 };
 
-// Get attendance statistics
+
 export const getAttendanceStats = async (params?: {
   groupId?: string;
   startDate?: string;
@@ -112,7 +112,7 @@ export const getAttendanceStats = async (params?: {
   }
 };
 
-// Delete attendance record
+
 export const deleteChildAttendance = async (id: string): Promise<void> => {
   try {
     await apiClient.delete(`/child-attendance/${id}`);
@@ -122,7 +122,7 @@ export const deleteChildAttendance = async (id: string): Promise<void> => {
   }
 };
 
-// Debug function to check database status
+
 export const debugChildAttendance = async (): Promise<any> => {
   try {
     const response = await apiClient.get('/child-attendance/debug');
@@ -136,7 +136,7 @@ export const debugChildAttendance = async (): Promise<any> => {
   }
 };
 
-// Helper function to convert attendance grid to bulk records
+
 export const convertGridToBulkRecords = (
   attendanceGrid: { [childId: string]: { [date: string]: boolean } },
   comments: { [childId: string]: { [date: string]: string } } = {},

@@ -36,35 +36,35 @@ export const Sidebar = ({
     setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
-  // Функция для проверки видимости элемента меню
+
   const isItemVisible = (item: any): boolean => {
-    // Если у элемента нет ограничений по ролям, он виден всем
+
     if (!item.visibleFor) return true;
 
-    // Проверяем, есть ли роль текущего пользователя в списке разрешенных ролей
+
     const userRole = currentUser?.role || 'staff';
     return item.visibleFor.includes(userRole);
   };
 
-  // Рекурсивный рендер пунктов меню с красивым дизайном
+
   const renderMenuItems = (items: any[], level = 0) => (
     <List component='div' disablePadding>
       {items
-        .filter((item) => isItemVisible(item)) // Фильтруем элементы по ролям
+        .filter((item) => isItemVisible(item))
         .map((item, idx) => {
           const hasChildren =
             Array.isArray(item.children) && item.children.length > 0;
           const isOpen = openMenus[item.label];
 
-          // Проверяем, является ли текущий элемент активным
-          // Определяем активный элемент по точному совпадению пути
+
+
           let isActive = false;
           if (item.link) {
-            // Для главной страницы проверяем точное совпадение
+
             if (item.link === '/app') {
               isActive = location?.pathname === '/app';
             } else {
-              // Для других элементов проверяем точное совпадение
+
               isActive = location?.pathname === item.link;
             }
           }
@@ -119,10 +119,10 @@ export const Sidebar = ({
                   },
                   ...(hasChildren &&
                     level === 0 && {
-                      fontWeight: 600,
-                      fontSize: '0.95rem',
-                      color: isActive ? 'white' : '#374151',
-                    }),
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    color: isActive ? 'white' : '#374151',
+                  }),
                   ...(level > 0 && {
                     fontSize: '0.875rem',
                     color: isActive ? 'white' : '#6B7280',
@@ -219,7 +219,7 @@ export const Sidebar = ({
             bottom: 0,
             left: 0,
             background:
-              'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Cpath d="m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+              'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http:
             opacity: 0.1,
           },
         }}

@@ -18,7 +18,7 @@ import {
   AttachFile as AttachFileIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-import {  useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Qwen3ApiService } from '../services/qwen3-api';
 import { initUIStateCollector } from '../utils/uiStateCollector';
 
@@ -87,7 +87,7 @@ const Qwen3Chat: React.FC = () => {
     setIsProcessing(true);
 
     try {
-      // Симулируем “печатает...”
+
       setMessages((prev) => [
         ...prev,
         {
@@ -105,7 +105,7 @@ const Qwen3Chat: React.FC = () => {
         sessionId,
       );
 
-      // Убираем временное сообщение “...”
+
       setMessages((prev) => prev.filter((msg) => msg.text !== '...'));
 
       const aiMessage: Message = {

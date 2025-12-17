@@ -1,5 +1,5 @@
 import apiClient from './base';
-// Holiday интерфейс определен здесь, так как его нет в общих типах
+
 export interface Holiday {
   _id: string;
   id?: string;
@@ -22,7 +22,7 @@ export interface HolidayFormData {
   description?: string;
 }
 
-// Импортируем базовый API клиент
+
 
 const HOLIDAYS_API_BASE = '/holidays';
 
@@ -67,7 +67,7 @@ export const deleteHoliday = async (id: string): Promise<void> => {
   return apiClient.delete(`${HOLIDAYS_API_BASE}/${id}`);
 };
 
-// Проверить, является ли дата праздничной
+
 export const checkIfHoliday = async (
   date: string,
 ): Promise<{ isHoliday: boolean; date: Date }> => {
