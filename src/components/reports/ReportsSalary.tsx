@@ -28,6 +28,7 @@ import {
   Close as CloseIcon,
   Visibility as VisibilityIcon,
   Add as AddIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import {
   Dialog,
@@ -90,6 +91,8 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   const [currentFineStaffName, setCurrentFineStaffName] = useState('');
   const [currentFines, setCurrentFines] = useState<any[]>([]);
   const [newFine, setNewFine] = useState({ amount: '', reason: '' });
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -363,7 +366,8 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
     document.body.removeChild(link);
   };
 
-  const handleGeneratePayrollSheets = async () => {
+  // Open confirmation dialog for generate
+  const handleOpenConfirmDialog = () => {
     if (!currentUser || !currentUser.id || currentUser.role !== 'admin') {
       setSnackbarMessage(
         'Только администратор может генерировать расчетные листы',
@@ -371,110 +375,134 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
       setSnackbarOpen(true);
       return;
     }
+    setConfirmDialogOpen(true);
+  };
 
-    const monthToGenerate = selectedMonth || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  // Helper to reload payrolls
+  const reloadPayrolls = async () => {
+    const { getCurrentUser } = await import('../../services/auth');
+    const { getPayrolls } = await import('../../services/payroll');
+
+    let currentUserData = null;
+    try {
+      const userData = getCurrentUser();
+      if (userData) {
+        currentUserData = {
+          id: userData.id || userData._id,
+          role: userData.role || 'staff',
+        };
+        setCurrentUser(currentUserData);
+      }
+    } catch (userError) {
+      console.error('Ошибка получения данных пользователя:', userError);
+    }
+
+    const params: any = {
+      period: selectedMonth,
+    };
 
     if (
-      window.confirm(
-        `Вы уверены, что хотите сгенерировать расчетные листы за ${monthToGenerate}? Это действие перезапишет существующие данные.`,
-      )
+      currentUserData &&
+      currentUserData.role !== 'admin' &&
+      currentUserData.id
     ) {
-      try {
-        setGenerating(true);
-        await generatePayrollSheets(monthToGenerate);
-        setSnackbarMessage('Расчетные листы успешно сгенерированы');
-        setSnackbarOpen(true);
+      params.userId = currentUserData.id;
+    } else if (userId) {
+      params.userId = userId;
+    }
 
+    const payrollsData = await getPayrolls(params);
+    const data = (payrollsData?.data || payrollsData || []) as any[];
 
-        const { getCurrentUser } = await import('../../services/auth');
-        const { getPayrolls } = await import('../../services/payroll');
+    const summaryData = {
+      totalEmployees: data.length,
+      totalAccruals: data.reduce(
+        (sum, p) => sum + (p.accruals || p.baseSalary || 0),
+        0,
+      ),
+      totalPenalties: data.reduce((sum, p) => sum + (p.penalties || 0), 0),
+      totalPayout: data.reduce((sum, p) => {
+        const accruals = p.accruals || p.baseSalary || 0;
+        const penalties = p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0);
+        const advance = p.advance || 0;
+        const total = accruals - penalties - advance;
+        return sum + (total >= 0 ? total : 0);
+      }, 0),
+    };
 
-        let currentUserData = null;
-        try {
-          const userData = getCurrentUser();
-          if (userData) {
-            currentUserData = {
-              id: userData.id || userData._id,
-              role: userData.role || 'staff',
-            };
-            setCurrentUser(currentUserData);
-          }
-        } catch (userError) {
-          console.error('Ошибка получения данных пользователя:', userError);
-        }
+    setSummary(summaryData);
+    setRows(
+      data.map((p: any) => ({
+        staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
+        accruals: p.accruals || p.baseSalary || 0,
+        penalties:
+          p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0),
+        latePenalties: p.latePenalties || 0,
+        absencePenalties: p.absencePenalties || 0,
+        latePenaltyRate: p.latePenaltyRate || 13,
+        advance: p.advance || 0,
+        total:
+          (p.accruals || p.baseSalary || 0) -
+          (p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0)) -
+          (p.advance || 0),
+        status: p.status && p.status !== 'draft' ? p.status : 'calculated',
+        staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
+        _id: p._id || undefined,
+        baseSalary: p.baseSalary || 0,
+        fines: p.fines || [],
+        userFines: p.userFines || 0,
+      })),
+    );
+  };
 
-        const params: any = {
-          period: selectedMonth,
-        };
+  // Confirmed generate
+  const handleConfirmGenerate = async () => {
+    setConfirmDialogOpen(false);
+    const monthToGenerate = selectedMonth || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-        if (
-          currentUserData &&
-          currentUserData.role !== 'admin' &&
-          currentUserData.id
-        ) {
-          params.userId = currentUserData.id;
-        } else if (userId) {
+    try {
+      setGenerating(true);
+      await generatePayrollSheets(monthToGenerate);
+      setSnackbarMessage('Расчетные листы успешно сгенерированы');
+      setSnackbarOpen(true);
+      await reloadPayrolls();
+    } catch (error: any) {
+      console.error('Error generating payroll sheets:', error);
+      setSnackbarMessage(
+        error?.message || 'Ошибка генерации расчетных листов',
+      );
+      setSnackbarOpen(true);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
-          params.userId = userId;
-        }
+  // Refresh all payrolls (recalculate based on current attendance)
+  const handleRefreshPayrolls = async () => {
+    if (!currentUser || !currentUser.id || currentUser.role !== 'admin') {
+      setSnackbarMessage(
+        'Только администратор может обновлять расчетные листы',
+      );
+      setSnackbarOpen(true);
+      return;
+    }
 
-        const payrollsData = await getPayrolls(params);
+    const monthToRefresh = selectedMonth || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-        const data = (payrollsData?.data || payrollsData || []) as any[];
-
-
-        const summaryData = {
-          totalEmployees: data.length,
-          totalAccruals: data.reduce(
-            (sum, p) => sum + (p.accruals || p.baseSalary || 0),
-            0,
-          ),
-          totalPenalties: data.reduce((sum, p) => sum + (p.penalties || 0), 0),
-          totalPayout: data.reduce((sum, p) => {
-
-            const accruals = p.accruals || p.baseSalary || 0;
-            const penalties = p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0);
-            const advance = p.advance || 0;
-            const total = accruals - penalties - advance;
-
-            return sum + (total >= 0 ? total : 0);
-          }, 0),
-        };
-
-        setSummary(summaryData);
-        setRows(
-          data.map((p: any) => ({
-            staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
-            accruals: p.accruals || p.baseSalary || 0,
-
-            penalties:
-              p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0),
-            latePenalties: p.latePenalties || 0,
-            absencePenalties: p.absencePenalties || 0,
-            latePenaltyRate: p.latePenaltyRate || 13,
-            advance: p.advance || 0,
-
-            total:
-              (p.accruals || p.baseSalary || 0) -
-              (p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0)) -
-              (p.advance || 0),
-            status: p.status && p.status !== 'draft' ? p.status : 'calculated',
-            staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
-            _id: p._id || undefined,
-            baseSalary: p.baseSalary || 0,
-            fines: p.fines || [],
-            userFines: p.userFines || 0,
-          })),
-        );
-      } catch (error: any) {
-        console.error('Error generating payroll sheets:', error);
-        setSnackbarMessage(
-          error?.message || 'Ошибка генерации расчетных листов',
-        );
-        setSnackbarOpen(true);
-      } finally {
-        setGenerating(false);
-      }
+    try {
+      setRefreshing(true);
+      await generatePayrollSheets(monthToRefresh);
+      setSnackbarMessage('Все расчетные листы успешно обновлены');
+      setSnackbarOpen(true);
+      await reloadPayrolls();
+    } catch (error: any) {
+      console.error('Error refreshing payroll sheets:', error);
+      setSnackbarMessage(
+        error?.message || 'Ошибка обновления расчетных листов',
+      );
+      setSnackbarOpen(true);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -667,23 +695,43 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                   Экспорт
                 </Button>
                 {currentUser?.id && currentUser?.role === 'admin' && (
-                  <Button
-                    variant='contained'
-                    color='success'
-                    startIcon={
-                      generating ? <CircularProgress size={20} /> : <SaveIcon />
-                    }
-                    onClick={handleGeneratePayrollSheets}
-                    disabled={generating}
-                    sx={{
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
-                      color: 'white',
-                      fontWeight: 'medium',
-                    }}
-                  >
-                    {generating ? 'Генерация...' : 'Сгенерировать'}
-                  </Button>
+                  <>
+                    <Tooltip title="Пересчитать все расчетные листы на основе текущих данных посещаемости">
+                      <Button
+                        variant='contained'
+                        startIcon={
+                          refreshing ? <CircularProgress size={20} color="inherit" /> : <RefreshIcon />
+                        }
+                        onClick={handleRefreshPayrolls}
+                        disabled={refreshing || generating}
+                        sx={{
+                          backgroundColor: 'rgba(255,255,255,0.2)',
+                          '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                          color: 'white',
+                          fontWeight: 'medium',
+                        }}
+                      >
+                        {refreshing ? 'Обновление...' : 'Обновить всё'}
+                      </Button>
+                    </Tooltip>
+                    <Button
+                      variant='contained'
+                      color='success'
+                      startIcon={
+                        generating ? <CircularProgress size={20} color="inherit" /> : <AddIcon />
+                      }
+                      onClick={handleOpenConfirmDialog}
+                      disabled={generating || refreshing}
+                      sx={{
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                        color: 'white',
+                        fontWeight: 'medium',
+                      }}
+                    >
+                      {generating ? 'Генерация...' : 'Сгенерировать'}
+                    </Button>
+                  </>
                 )}
               </Box>
             </Box>
@@ -1199,6 +1247,35 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         onAddFine={handleAddFine}
         staffName={currentFineStaffName}
       />
+
+      {/* Confirmation Dialog for Generate Payroll */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={() => setConfirmDialogOpen(false)}
+        aria-labelledby="confirm-dialog-title"
+        aria-describedby="confirm-dialog-description"
+      >
+        <DialogTitle id="confirm-dialog-title">
+          Подтверждение генерации
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="confirm-dialog-description">
+            Вы уверены, что хотите сгенерировать расчетные листы за{' '}
+            <strong>{selectedMonth}</strong>?
+            <br /><br />
+            Это действие пересчитает все расчетные листы на основе текущих данных посещаемости.
+            Существующие данные будут обновлены.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialogOpen(false)} color="inherit">
+            Отмена
+          </Button>
+          <Button onClick={handleConfirmGenerate} variant="contained" color="primary" autoFocus>
+            Сгенерировать
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
