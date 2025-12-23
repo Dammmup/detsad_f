@@ -147,6 +147,12 @@ const sidebarStructure: SidebarItem[] = [
         link: '/app/settings',
         icon: <SettingsIcon />,
       },
+      {
+        id: 'food-products',
+        label: 'Учет продуктов',
+        link: '/app/food/products',
+        icon: <AssessmentIcon />,
+      },
     ],
     visibleFor: ['admin'],
   },
