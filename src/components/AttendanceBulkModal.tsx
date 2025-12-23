@@ -21,8 +21,9 @@ import {
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { ru } from 'date-fns/locale';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import moment from 'moment';
+import 'moment/locale/ru';
 import childrenApi, { Child } from '../services/children';
 import { bulkSaveChildAttendance } from '../services/childAttendance';
 
@@ -50,12 +51,12 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
 }) => {
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildren, setSelectedChildren] = useState<string[]>([]);
-  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [selectedDates, setSelectedDates] = useState<moment.Moment[]>([]);
   const [selectedStatus, setSelectedStatus] =
     useState<AttendanceStatus>('present');
   const [dateRange, setDateRange] = useState<{
-    start: Date | null;
-    end: Date | null;
+    start: moment.Moment | null;
+    end: moment.Moment | null;
   }>({ start: null, end: null });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,12 +105,13 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
 
   const handleDateRangeChange = () => {
     if (dateRange.start && dateRange.end) {
-      const dates: Date[] = [];
-      const currentDate = new Date(dateRange.start);
+      const dates: moment.Moment[] = [];
+      const currentDate = moment(dateRange.start);
+      const endDate = moment(dateRange.end);
 
-      while (currentDate <= dateRange.end) {
-        dates.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
+      while (currentDate.isSameOrBefore(endDate)) {
+        dates.push(currentDate.clone());
+        currentDate.add(1, 'day');
       }
 
       setSelectedDates(dates);
@@ -134,7 +136,7 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
         return selectedDates.map((date) => {
           return {
             childId,
-            date: date.toISOString().split('T')[0],
+            date: date.format('YYYY-MM-DD'),
             status: selectedStatus,
             notes: notes || undefined,
           };
@@ -193,23 +195,23 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
           </Alert>
         )}
 
-        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+        <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale="ru">
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} md={6}>
-              <DatePicker<Date>
+              <DatePicker
                 label='Начальная дата'
                 value={dateRange.start}
-                onChange={(newValue: Date | null) =>
+                onChange={(newValue: moment.Moment | null) =>
                   setDateRange({ ...dateRange, start: newValue })
                 }
                 renderInput={(params) => <TextField {...params} fullWidth />}
               />
             </Grid>
             <Grid item xs={12} md={6}>
-              <DatePicker<Date>
+              <DatePicker
                 label='Конечная дата'
                 value={dateRange.end}
-                onChange={(newValue: Date | null) =>
+                onChange={(newValue: moment.Moment | null) =>
                   setDateRange({ ...dateRange, end: newValue })
                 }
                 renderInput={(params) => <TextField {...params} fullWidth />}
@@ -242,7 +244,7 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
               >
                 {selectedDates.map((date, index) => (
                   <Typography key={index} variant='body2'>
-                    {date.toLocaleDateString('ru-RU')}
+                    {date.format('DD.MM.YYYY')}
                   </Typography>
                 ))}
               </Box>

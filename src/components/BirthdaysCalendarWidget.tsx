@@ -11,17 +11,13 @@ import {
   Chip,
   Paper,
 } from '@mui/material';
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  isSameMonth,
-  isSameDay,
-} from 'date-fns';
+import moment from 'moment';
+import 'moment/locale/ru';
 import { useDate } from './context/DateContext';
 import { Child } from '../types/common';
 import childrenApi from '../services/children';
+
+moment.locale('ru');
 
 interface BirthdayAvatarProps {
   child: Child;
@@ -50,8 +46,8 @@ const BirthdayAvatar: React.FC<BirthdayAvatarProps> = ({
   };
 
   const calculateAge = (birthday: string, year: number) => {
-    const birthDate = new Date(birthday);
-    return year - birthDate.getFullYear();
+    const birthDate = moment(birthday);
+    return year - birthDate.year();
   };
 
   return (
@@ -132,28 +128,36 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = () => {
 
 
   const getChildrenWithBirthdays = (date: Date) => {
-    const start = startOfMonth(date);
-    const end = endOfMonth(date);
-    const daysInMonth = eachDayOfInterval({ start, end });
+    const start = moment(date).startOf('month');
+    const end = moment(date).endOf('month');
+    const daysInMonth: Date[] = [];
 
-    return daysInMonth.map((day) => {
+    let day = start.clone();
+    while (day.isSameOrBefore(end)) {
+      daysInMonth.push(day.toDate());
+      day.add(1, 'day');
+    }
+
+    return daysInMonth.map((dayDate) => {
       const childrenWithBirthday = children.filter((child) => {
         if (!child.birthday) return false;
-        const birth = new Date(child.birthday);
+        const birth = moment(child.birthday);
+        const currentDayMoment = moment(dayDate);
         return (
-          birth.getDate() === day.getDate() &&
-          birth.getMonth() === day.getMonth()
+          birth.date() === currentDayMoment.date() &&
+          birth.month() === currentDayMoment.month()
         );
       });
 
-      return { day, children: childrenWithBirthday };
+      return { day: dayDate, children: childrenWithBirthday };
     });
   };
 
-
-
   const daysWithBirthdays = getChildrenWithBirthdays(currentDate);
-  const startWeekDay = (startOfMonth(currentDate).getDay() + 6) % 7;
+  // Moment.js day(): 0=Sun, 1=Mon, ..., 6=Sat
+  // We want Mon=0, ..., Sun=6 for grid offset if we start week on Mon
+  // actually standard formula (day + 6) % 7 converts Sun(0)->6, Mon(1)->0
+  const startWeekDay = (moment(currentDate).startOf('month').day() + 6) % 7;
 
   return (
     <Card
@@ -240,8 +244,9 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = () => {
 
                 {daysWithBirthdays.map((dayData, index) => {
                   const day = dayData.day;
-                  const isCurrentMonth = isSameMonth(day, currentDate);
+                  const isCurrentMonth = moment(day).isSame(currentDate, 'month');
                   const hasBirthdays = dayData.children.length > 0;
+                  const isToday = moment(day).isSame(new Date(), 'day');
 
                   return (
                     <Grid item xs={12 / 7} key={index}>
@@ -266,17 +271,17 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = () => {
                         <Typography
                           variant='caption'
                           sx={{
-                            fontWeight: isSameDay(day, new Date())
+                            fontWeight: isToday
                               ? 'bold'
                               : 'normal',
-                            color: isSameDay(day, new Date())
+                            color: isToday
                               ? 'primary.main'
                               : 'inherit',
                             alignSelf: 'flex-start',
                             mb: 0.5,
                           }}
                         >
-                          {format(day, 'd')}
+                          {moment(day).format('D')}
                         </Typography>
 
                         {/* Фото детей */}

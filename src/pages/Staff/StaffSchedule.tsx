@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-} from 'date-fns';
-import { ru } from 'date-fns/locale';
+import moment from 'moment';
+import 'moment/locale/ru';
 import { useSnackbar } from 'notistack';
 import {
   Box,
@@ -47,7 +42,7 @@ import {
   Add as AddIcon,
 } from '@mui/icons-material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { Search as SearchIcon } from '@mui/icons-material';
 import ExportButton from '../../components/ExportButton';
 import {
@@ -149,14 +144,14 @@ const StaffSchedule: React.FC = () => {
     exportType: string,
     exportFormat: 'pdf' | 'excel' | 'csv',
   ) => {
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(currentDate);
-    const period = `${format(new Date(monthStart), 'dd.MM.yyyy')} - ${format(new Date(monthEnd), 'dd.MM.yyyy')}`;
+    const monthStart = moment(currentDate).startOf('month');
+    const monthEnd = moment(currentDate).endOf('month');
+    const period = `${monthStart.format('DD.MM.YYYY')} - ${monthEnd.format('DD.MM.YYYY')}`;
 
 
     const shiftsForMonth = await getShifts(
-      format(monthStart, 'yyyy-MM-dd'),
-      format(monthEnd, 'yyyy-MM-dd'),
+      monthStart.format('YYYY-MM-DD'),
+      monthEnd.format('YYYY-MM-DD'),
     );
 
     try {
@@ -173,7 +168,7 @@ const StaffSchedule: React.FC = () => {
     userId: '',
     staffId: '',
     staffName: '',
-    date: format(new Date(), 'yyyy-MM-dd'),
+    date: moment().format('YYYY-MM-DD'),
     startTime: '08:00',
     endTime: '18:30',
     notes: '',
@@ -188,13 +183,13 @@ const StaffSchedule: React.FC = () => {
       setError(null);
 
       try {
-        const monthStart = startOfMonth(currentDate);
-        const monthEnd = endOfMonth(currentDate);
+        const monthStart = moment(currentDate).startOf('month');
+        const monthEnd = moment(currentDate).endOf('month');
         const [staffData, shiftsData] = await Promise.all([
           getUsers(),
           getShifts(
-            format(monthStart, 'yyyy-MM-dd'),
-            format(monthEnd, 'yyyy-MM-dd'),
+            monthStart.format('YYYY-MM-DD'),
+            monthEnd.format('YYYY-MM-DD'),
           ),
         ]);
 
@@ -216,12 +211,12 @@ const StaffSchedule: React.FC = () => {
   useEffect(() => {
     const fetchHolidays = async () => {
       try {
-        const monthStart = startOfMonth(currentDate);
+        const monthStart = moment(currentDate).startOf('month');
 
 
         const holidaysData = await getAllHolidays({
-          month: monthStart.getMonth() + 1,
-          year: monthStart.getFullYear(),
+          month: monthStart.month() + 1,
+          year: monthStart.year(),
         });
 
 
@@ -305,7 +300,7 @@ const StaffSchedule: React.FC = () => {
     date: Date,
   ) => {
     setAnchorEl(event.currentTarget);
-    setSelectedHolidayDate(format(date, 'yyyy-MM-dd'));
+    setSelectedHolidayDate(moment(date).format('YYYY-MM-DD'));
   };
 
 
@@ -456,16 +451,16 @@ const StaffSchedule: React.FC = () => {
       console.log('Loading set to true');
 
 
-      const monthStart = startOfMonth(currentDate);
-      const monthEnd = endOfMonth(currentDate);
+      const monthStart = moment(currentDate).startOf('month');
+      const monthEnd = moment(currentDate).endOf('month');
       console.log('Current date:', currentDate, 'End of month:', monthEnd);
 
 
       const dates = [];
-      let current = new Date(monthStart);
-      while (current <= monthEnd) {
-        dates.push(new Date(current));
-        current.setDate(current.getDate() + 1);
+      let current = monthStart.clone();
+      while (current.isSameOrBefore(monthEnd)) {
+        dates.push(current.toDate());
+        current.add(1, 'day');
       }
       console.log('Dates array created, length:', dates.length);
 
@@ -481,7 +476,7 @@ const StaffSchedule: React.FC = () => {
       console.log('Schedule blocks created, length:', scheduleBlocks.length);
 
 
-      const finalSchedule = scheduleBlocks.filter((date) => date <= monthEnd);
+      const finalSchedule = scheduleBlocks.filter((date) => moment(date).isSameOrBefore(monthEnd));
       console.log('Final schedule filtered, length:', finalSchedule.length);
 
       console.log('Selected staff:', selectedStaff);
@@ -492,8 +487,8 @@ const StaffSchedule: React.FC = () => {
 
 
         const existingShifts = await getShifts(
-          format(monthStart, 'yyyy-MM-dd'),
-          format(monthEnd, 'yyyy-MM-dd'),
+          monthStart.format('YYYY-MM-DD'),
+          monthEnd.format('YYYY-MM-DD'),
         );
         const existingShiftDates = new Set(
           existingShifts
@@ -505,7 +500,7 @@ const StaffSchedule: React.FC = () => {
         const createdShiftDates = new Set<string>();
 
         for (const date of finalSchedule) {
-          const dateStr = format(date, 'yyyy-MM-dd');
+          const dateStr = moment(date).format('YYYY-MM-DD');
 
 
           if (
@@ -573,11 +568,11 @@ const StaffSchedule: React.FC = () => {
       enqueueSnackbar('График 5/2 успешно назначен', { variant: 'success' });
 
 
-      const monthStartUpdated = startOfMonth(currentDate);
-      const monthEndUpdated = endOfMonth(currentDate);
+      const monthStartUpdated = moment(currentDate).startOf('month');
+      const monthEndUpdated = moment(currentDate).endOf('month');
       const shiftsData = await getShifts(
-        format(monthStartUpdated, 'yyyy-MM-dd'),
-        format(monthEndUpdated, 'yyyy-MM-dd'),
+        monthStartUpdated.format('YYYY-MM-DD'),
+        monthEndUpdated.format('YYYY-MM-DD'),
       );
       setShifts(shiftsData);
 
@@ -620,7 +615,7 @@ const StaffSchedule: React.FC = () => {
     if (date) {
       setFormData((prev) => ({
         ...prev,
-        date: format(date, 'yyyy-MM-dd'),
+        date: moment(date).format('YYYY-MM-DD'),
       }));
     } else {
       setFormData((prev) => ({
@@ -711,11 +706,11 @@ const StaffSchedule: React.FC = () => {
       }
 
 
-      const monthStart = startOfMonth(currentDate);
-      const monthEnd = endOfMonth(currentDate);
+      const monthStart = moment(currentDate).startOf('month');
+      const monthEnd = moment(currentDate).endOf('month');
       const shiftsData = await getShifts(
-        format(monthStart, 'yyyy-MM-dd'),
-        format(monthEnd, 'yyyy-MM-dd'),
+        monthStart.format('YYYY-MM-DD'),
+        monthEnd.format('YYYY-MM-DD'),
       );
       setShifts(shiftsData);
 
@@ -751,7 +746,7 @@ const StaffSchedule: React.FC = () => {
       userId: '',
       staffId: '',
       staffName: '',
-      date: format(new Date(), 'yyyy-MM-dd'),
+      date: moment().format('YYYY-MM-DD'),
       startTime: '08:00',
       endTime: '18:30',
       status: 'scheduled' as ShiftStatus,
@@ -761,9 +756,14 @@ const StaffSchedule: React.FC = () => {
   };
 
 
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const monthStart = moment(currentDate).startOf('month');
+  const monthEnd = moment(currentDate).endOf('month');
+  const monthDays: Date[] = [];
+  const day = monthStart.clone();
+  while (day.isSameOrBefore(monthEnd)) {
+    monthDays.push(day.toDate());
+    day.add(1, 'day');
+  }
 
 
   const getShiftsForDay = (staffId: string, date: Date) => {
@@ -774,12 +774,12 @@ const StaffSchedule: React.FC = () => {
       if (typeof shift.staffId === 'string') {
 
         const shiftDate = shift.date.split('T')[0];
-        const compareDate = format(date, 'yyyy-MM-dd');
+        const compareDate = moment(date).format('YYYY-MM-DD');
         return shift.staffId === staffId && shiftDate === compareDate;
       } else {
 
         const shiftDate = shift.date.split('T')[0];
-        const compareDate = format(date, 'yyyy-MM-dd');
+        const compareDate = moment(date).format('YYYY-MM-DD');
         return (
           (shift.staffId as any)._id === staffId && shiftDate === compareDate
         );
@@ -811,7 +811,7 @@ const StaffSchedule: React.FC = () => {
   }
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+    <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale="ru">
       <Box p={3}>
         <Card>
           <CardHeader
@@ -952,8 +952,8 @@ const StaffSchedule: React.FC = () => {
                           }}
                         >
                           <Box>
-                            <Box>{format(day, 'EEEEEE', { locale: ru })}</Box>
-                            <Box>{format(day, 'd', { locale: ru })}</Box>
+                            <Box>{moment(day).format('dd')}</Box>
+                            <Box>{moment(day).format('D')}</Box>
                           </Box>
                         </TableCell>
                       );
@@ -1070,7 +1070,7 @@ const StaffSchedule: React.FC = () => {
                                       ...formData,
                                       staffId: staffId,
                                       staffName: staffMember.fullName,
-                                      date: format(day, 'yyyy-MM-dd'),
+                                      date: moment(day).format('YYYY-MM-DD'),
                                     });
                                     setModalOpen(true);
                                   }
@@ -1257,8 +1257,8 @@ const StaffSchedule: React.FC = () => {
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
                     <LocalizationProvider
-                      dateAdapter={AdapterDateFns}
-                      adapterLocale={ru}
+                      dateAdapter={AdapterMoment}
+                      adapterLocale="ru"
                     >
                       <DatePicker
                         label='Дата смены'

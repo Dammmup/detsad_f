@@ -1,21 +1,23 @@
 import React from 'react';
 import { useDate } from './context/DateContext';
 import { Button, Typography, Box } from '@mui/material';
-import { format } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import moment from 'moment';
+import 'moment/locale/ru';
+
+moment.locale('ru');
 
 const DateNavigator = () => {
   const { currentDate, setCurrentDate } = useDate();
 
   const handlePrevMonth = () => {
     setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
+      moment(currentDate).subtract(1, 'month').startOf('month').toDate(),
     );
   };
 
   const handleNextMonth = () => {
     setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
+      moment(currentDate).add(1, 'month').startOf('month').toDate(),
     );
   };
 
@@ -29,8 +31,8 @@ const DateNavigator = () => {
       }}
     >
       <Button onClick={handlePrevMonth}>&lt;</Button>
-      <Typography variant='h6' sx={{ mx: 2 }}>
-        {format(currentDate, 'LLLL yyyy', { locale: ru })}
+      <Typography variant='h6' sx={{ mx: 2, textTransform: 'capitalize' }}>
+        {moment(currentDate).format('MMMM YYYY')}
       </Typography>
       <Button onClick={handleNextMonth}>&gt;</Button>
     </Box>

@@ -29,7 +29,7 @@ import {
   Autocomplete,
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import moment from 'moment';
 import { useDate } from '../../components/context/DateContext';
 import { IChildPayment, Child, Group } from '../../types/common';
 import childPaymentApi from '../../services/childPayment';
@@ -132,13 +132,13 @@ const ChildPayments: React.FC = () => {
 
 
   useEffect(() => {
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(currentDate);
+    const monthStart = moment(currentDate).startOf('month');
+    const monthEnd = moment(currentDate).endOf('month');
 
     let result = payments.filter((payment) => {
       if (!payment.period || !payment.period.start) return false;
-      const paymentDate = new Date(payment.period.start);
-      return paymentDate >= monthStart && paymentDate <= monthEnd;
+      const paymentDate = moment(payment.period.start);
+      return paymentDate.isBetween(monthStart, monthEnd, undefined, '[]');
     });
 
 
@@ -216,10 +216,10 @@ const ChildPayments: React.FC = () => {
         childId: (childIdValue as any) || '',
         period: {
           start: payment.period?.start
-            ? format(new Date(payment.period.start), 'yyyy-MM-dd')
+            ? moment(payment.period.start).format('YYYY-MM-DD')
             : '',
           end: payment.period?.end
-            ? format(new Date(payment.period.end), 'yyyy-MM-dd')
+            ? moment(payment.period.end).format('YYYY-MM-DD')
             : '',
         },
         amount: payment.amount || 0,
@@ -751,7 +751,7 @@ const ChildPayments: React.FC = () => {
                   </TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>
                     {payment.period.start && payment.period.end
-                      ? `${format(new Date(payment.period.start), 'dd.MM.yyyy')} - ${format(new Date(payment.period.end), 'dd.MM.yyyy')}`
+                      ? `${moment(payment.period.start).format('DD.MM.YYYY')} - ${moment(payment.period.end).format('DD.MM.YYYY')}`
                       : 'Не указан'}
                   </TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>

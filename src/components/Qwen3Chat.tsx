@@ -18,9 +18,10 @@ import {
   AttachFile as AttachFileIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
-import { Qwen3ApiService } from '../services/qwen3-api';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Qwen3ApiService, Qwen3Response } from '../services/qwen3-api';
 import { initUIStateCollector } from '../utils/uiStateCollector';
+import { getCurrentUser } from '../services';
 
 interface Message {
   id: number;
@@ -37,6 +38,7 @@ const Qwen3Chat: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [accessError, setAccessError] = useState<string | null>(null);
   const [sessionId] = useState(() => {
     let id = localStorage.getItem('qwen3-session-id');
     if (!id) {
@@ -48,13 +50,43 @@ const Qwen3Chat: React.FC = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Проверяем, является ли пользователь админом
+  const currentUser = getCurrentUser();
+  const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
     const cleanup = initUIStateCollector(sessionId);
     return () => cleanup();
   }, [sessionId]);
 
-  const toggleChat = () => setIsOpen(!isOpen);
+  // Показываем приветственное сообщение при открытии чата
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      const welcomeMessage: Message = {
+        id: Date.now(),
+        text: 'Привет! Я AI-ассистент детского сада. Могу помочь:\n\n' +
+          '📊 Получить данные (например: "Сколько активных сотрудников?")\n' +
+          '🗺️ Найти нужную страницу (например: "Где страница аренды?")\n' +
+          '❓ Ответить на вопросы о системе\n\n' +
+          'Чем могу помочь?',
+        sender: 'ai',
+        timestamp: new Date(),
+      };
+      setMessages([welcomeMessage]);
+    }
+  }, [isOpen, messages.length]);
+
+  const toggleChat = () => {
+    if (!isAdmin) {
+      setAccessError('AI-ассистент доступен только для администраторов');
+      setTimeout(() => setAccessError(null), 3000);
+      return;
+    }
+    setIsOpen(!isOpen);
+    setAccessError(null);
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,7 +119,7 @@ const Qwen3Chat: React.FC = () => {
     setIsProcessing(true);
 
     try {
-
+      // Добавляем индикатор загрузки
       setMessages((prev) => [
         ...prev,
         {
@@ -98,25 +130,51 @@ const Qwen3Chat: React.FC = () => {
         },
       ]);
 
-      const aiResponse = await Qwen3ApiService.sendMessage(
-        [...messages, userMessage],
+      const response: Qwen3Response = await Qwen3ApiService.sendMessage(
+        [...messages.filter(m => m.text !== '...'), userMessage],
         location.pathname,
         selectedImage || undefined,
         sessionId,
       );
 
-
+      // Убираем индикатор загрузки
       setMessages((prev) => prev.filter((msg) => msg.text !== '...'));
 
-      const aiMessage: Message = {
+      // Обрабатываем навигацию
+      if (response.action === 'navigate' && response.navigateTo) {
+        const aiMessage: Message = {
+          id: Date.now() + 2,
+          text: response.content,
+          sender: 'ai',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+
+        // Небольшая задержка перед навигацией
+        setTimeout(() => {
+          navigate(response.navigateTo!);
+          setIsOpen(false);
+        }, 1000);
+      } else {
+        const aiMessage: Message = {
+          id: Date.now() + 2,
+          text: response.content || 'Не удалось получить ответ от ИИ.',
+          sender: 'ai',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+      }
+    } catch (e: any) {
+      console.error(e);
+      setMessages((prev) => prev.filter((msg) => msg.text !== '...'));
+
+      const errorMessage: Message = {
         id: Date.now() + 2,
-        text: aiResponse,
+        text: e.message || 'Произошла ошибка при обращении к AI.',
         sender: 'ai',
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, aiMessage]);
-    } catch (e) {
-      console.error(e);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsProcessing(false);
       removeImage();
@@ -134,8 +192,33 @@ const Qwen3Chat: React.FC = () => {
     }
   };
 
+  // Не показываем кнопку для не-админов
+  if (!isAdmin) {
+    return null;
+  }
+
   return (
     <Box sx={{ position: 'fixed', bottom: 20, right: 20, zIndex: 2000 }}>
+      {accessError && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+        >
+          <Paper
+            sx={{
+              p: 2,
+              mb: 1,
+              bgcolor: '#ff5252',
+              color: 'white',
+              borderRadius: 2,
+            }}
+          >
+            <Typography variant="body2">{accessError}</Typography>
+          </Paper>
+        </motion.div>
+      )}
+
       {!isOpen ? (
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
           <Button
@@ -148,6 +231,7 @@ const Qwen3Chat: React.FC = () => {
               height: 56,
               borderRadius: '50%',
               boxShadow: 4,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             }}
           >
             <ChatIcon />
@@ -163,8 +247,8 @@ const Qwen3Chat: React.FC = () => {
             <Paper
               elevation={5}
               sx={{
-                width: 380,
-                height: 520,
+                width: 400,
+                height: 550,
                 display: 'flex',
                 flexDirection: 'column',
                 borderRadius: 3,
@@ -182,13 +266,18 @@ const Qwen3Chat: React.FC = () => {
                   alignItems: 'center',
                   px: 2,
                   py: 1.5,
-                  background: 'linear-gradient(90deg, #1976d2, #42a5f5)',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
                 }}
               >
-                <Typography variant='subtitle1' sx={{ fontWeight: 600 }}>
-                  Qwen3 Ассистент
-                </Typography>
+                <Box>
+                  <Typography variant='subtitle1' sx={{ fontWeight: 600 }}>
+                    AI Ассистент
+                  </Typography>
+                  <Typography variant='caption' sx={{ opacity: 0.8 }}>
+                    Доступ к данным • Навигация
+                  </Typography>
+                </Box>
                 <IconButton
                   size='small'
                   onClick={toggleChat}
@@ -219,13 +308,19 @@ const Qwen3Chat: React.FC = () => {
                           <Box
                             sx={{
                               bgcolor:
-                                msg.sender === 'user' ? '#1976d2' : 'white',
+                                msg.sender === 'user'
+                                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                  : 'white',
+                              background: msg.sender === 'user'
+                                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                : 'white',
                               color: msg.sender === 'user' ? 'white' : 'black',
                               px: 1.5,
                               py: 1,
                               borderRadius: 3,
-                              maxWidth: '75%',
+                              maxWidth: '85%',
                               boxShadow: 1,
+                              whiteSpace: 'pre-wrap',
                             }}
                           >
                             {msg.text === '...' ? (
@@ -271,7 +366,7 @@ const Qwen3Chat: React.FC = () => {
                               </Box>
                             ) : (
                               <>
-                                <Typography variant='body2'>
+                                <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap' }}>
                                   {msg.text}
                                 </Typography>
                                 {msg.imageUrl && (
@@ -328,7 +423,7 @@ const Qwen3Chat: React.FC = () => {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder={
-                    isProcessing ? 'ИИ думает...' : 'Введите сообщение...'
+                    isProcessing ? 'AI думает...' : 'Спросите что угодно...'
                   }
                   multiline
                   maxRows={4}

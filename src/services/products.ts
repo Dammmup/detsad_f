@@ -20,7 +20,7 @@ export interface Product {
     maxStockLevel: number;
     expirationDate?: string;
     batchNumber?: string;
-    storageConditions: string;
+    storageConditions?: string;
     notes?: string;
     status: 'active' | 'inactive' | 'discontinued';
     childCount: number;

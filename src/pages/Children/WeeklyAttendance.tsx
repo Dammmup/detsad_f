@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-} from 'date-fns';
-import { ru } from 'date-fns/locale';
+import moment from 'moment';
+import 'moment/locale/ru';
 import { useSnackbar } from 'notistack';
 import {
   Box,
@@ -46,7 +41,7 @@ import {
   EventNote as EventNoteIcon,
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 
 
 import childrenApi, { Child } from '../../services/children';
@@ -126,14 +121,14 @@ const WeeklyAttendance: React.FC = () => {
       const group = groups.find((g) => (g.id || g._id) === selectedGroup);
       const groupName = group ? group.name : 'Unknown Group';
 
-      const monthStart = startOfMonth(currentDate);
-      const monthEnd = endOfMonth(currentDate);
-      const period = `${format(new Date(monthStart), 'dd.MM.yyyy')} - ${format(new Date(monthEnd), 'dd.MM.yyyy')}`;
+      const monthStart = moment(currentDate).startOf('month');
+      const monthEnd = moment(currentDate).endOf('month');
+      const period = `${monthStart.format('DD.MM.YYYY')} - ${monthEnd.format('DD.MM.YYYY')}`;
 
       const attendanceRecordsForExport = await getChildAttendance({
         groupId: selectedGroup,
-        startDate: format(monthStart, 'yyyy-MM-dd'),
-        endDate: format(monthEnd, 'yyyy-MM-dd'),
+        startDate: monthStart.format('YYYY-MM-DD'),
+        endDate: monthEnd.format('YYYY-MM-DD'),
       });
 
       await exportChildrenAttendance(
@@ -200,13 +195,13 @@ const WeeklyAttendance: React.FC = () => {
 
       setLoading(true);
       try {
-        const monthStart = startOfMonth(currentDate);
-        const monthEnd = endOfMonth(currentDate);
+        const monthStart = moment(currentDate).startOf('month');
+        const monthEnd = moment(currentDate).endOf('month');
 
         const records = await getChildAttendance({
           groupId: selectedGroup,
-          startDate: format(monthStart, 'yyyy-MM-dd'),
-          endDate: format(monthEnd, 'yyyy-MM-dd'),
+          startDate: monthStart.format('YYYY-MM-DD'),
+          endDate: monthEnd.format('YYYY-MM-DD'),
         });
 
 
@@ -277,19 +272,24 @@ const WeeklyAttendance: React.FC = () => {
     : [];
 
 
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const monthStart = moment(currentDate).startOf('month');
+  const monthEnd = moment(currentDate).endOf('month');
+  const monthDays: Date[] = [];
+  const day = monthStart.clone();
+  while (day.isSameOrBefore(monthEnd)) {
+    monthDays.push(day.toDate());
+    day.add(1, 'day');
+  }
 
 
   const getAttendanceForDay = (childId: string, date: Date) => {
-    const dateString = format(date, 'yyyy-MM-dd');
+    const dateString = moment(date).format('YYYY-MM-DD');
     return attendanceData[childId]?.[dateString];
   };
 
 
   const handleAttendanceClick = async (child: Child, date: Date) => {
-    const dateString = format(date, 'yyyy-MM-dd');
+    const dateString = moment(date).format('YYYY-MM-DD');
     const existingAttendance = getAttendanceForDay(child.id!, date);
 
 
@@ -364,7 +364,7 @@ const WeeklyAttendance: React.FC = () => {
   }
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+    <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale="ru">
       <Box p={3}>
         <Card>
           <CardHeader
@@ -414,7 +414,7 @@ const WeeklyAttendance: React.FC = () => {
 
               <Box textAlign='center'>
                 <Typography variant='h6'>
-                  {format(currentDate, 'LLLL yyyy', { locale: ru })}
+                  {moment(currentDate).format('MMMM YYYY')}
                 </Typography>
                 <Button
                   variant='outlined'
@@ -458,8 +458,8 @@ const WeeklyAttendance: React.FC = () => {
                       {monthDays.map((day) => (
                         <TableCell key={day.toString()} align='center'>
                           <Box>
-                            <Box>{format(day, 'EEEEEE', { locale: ru })}</Box>
-                            <Box>{format(day, 'd', { locale: ru })}</Box>
+                            <Box>{moment(day).format('dd')}</Box>
+                            <Box>{moment(day).format('D')}</Box>
                           </Box>
                         </TableCell>
                       ))}
@@ -531,9 +531,7 @@ const WeeklyAttendance: React.FC = () => {
                                         {child.fullName}
                                       </Typography>
                                       <Typography variant='body2'>
-                                        {format(day, 'd MMMM yyyy', {
-                                          locale: ru,
-                                        })}
+                                        {moment(day).format('D MMMM YYYY')}
                                       </Typography>
                                       <Typography variant='body2'>
                                         Статус:{' '}
@@ -563,14 +561,14 @@ const WeeklyAttendance: React.FC = () => {
                                       borderRadius: 1,
                                       bgcolor: 'background.paper',
                                       borderLeft: `4px solid ${attendance.status === 'present'
-                                          ? theme.palette.success.main
-                                          : attendance.status === 'sick'
-                                            ? theme.palette.warning.main
-                                            : attendance.status === 'vacation'
-                                              ? theme.palette.info.main
-                                              : attendance.status === 'late'
-                                                ? theme.palette.warning.main
-                                                : theme.palette.error.main
+                                        ? theme.palette.success.main
+                                        : attendance.status === 'sick'
+                                          ? theme.palette.warning.main
+                                          : attendance.status === 'vacation'
+                                            ? theme.palette.info.main
+                                            : attendance.status === 'late'
+                                              ? theme.palette.warning.main
+                                              : theme.palette.error.main
                                         }`,
                                       cursor: 'pointer',
                                       '&:hover': {
@@ -601,9 +599,7 @@ const WeeklyAttendance: React.FC = () => {
                                         {child.fullName}
                                       </Typography>
                                       <Typography variant='body2'>
-                                        {format(day, 'd MMMM yyyy', {
-                                          locale: ru,
-                                        })}
+                                        {moment(day).format('D MMMM YYYY')}
                                       </Typography>
                                       <Typography variant='caption'>
                                         Нажмите для отметки посещаемости
@@ -678,13 +674,13 @@ const WeeklyAttendance: React.FC = () => {
         groupId={selectedGroup}
         onSuccess={() => {
 
-          const monthStart = startOfMonth(currentDate);
-          const monthEnd = endOfMonth(currentDate);
+          const monthStart = moment(currentDate).startOf('month');
+          const monthEnd = moment(currentDate).endOf('month');
 
           getChildAttendance({
             groupId: selectedGroup,
-            startDate: format(monthStart, 'yyyy-MM-dd'),
-            endDate: format(monthEnd, 'yyyy-MM-dd'),
+            startDate: monthStart.format('YYYY-MM-DD'),
+            endDate: monthEnd.format('YYYY-MM-DD'),
           })
             .then((records) => {
 

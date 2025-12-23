@@ -41,7 +41,8 @@ import {
   Person,
   Search as SearchIcon,
 } from '@mui/icons-material';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import moment from 'moment';
+import 'moment/locale/ru';
 import { useDate } from '../../components/context/DateContext';
 import { getUsers } from '../../services/users';
 import shiftsApi from '../../services/shifts';
@@ -54,6 +55,7 @@ import {
 } from '../../types/common';
 import DateNavigator from '../../components/DateNavigator';
 
+moment.locale('ru');
 
 interface TimeRecord {
   id: string;
@@ -97,6 +99,7 @@ interface TimeRecord {
 
 
 
+
 const StaffAttendanceTracking: React.FC = () => {
   const { currentDate } = useDate();
   const [staffList, setStaffList] = useState<any[]>([]);
@@ -112,6 +115,7 @@ const StaffAttendanceTracking: React.FC = () => {
   const [checkInDialogOpen, setCheckInDialogOpen] = useState(false);
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
   const [currentStaffId, setCurrentStaffId] = useState('');
+
 
 
 
@@ -155,7 +159,7 @@ const StaffAttendanceTracking: React.FC = () => {
     const fetchRecords = async () => {
       try {
 
-        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        const dateStr = moment(selectedDate).format('YYYY-MM-DD');
         let filters: any = {
           startDate: dateStr,
           endDate: dateStr,
@@ -463,11 +467,11 @@ const StaffAttendanceTracking: React.FC = () => {
 
 
         const fetchRecords = async () => {
-          const startDate = startOfMonth(currentDate);
-          const endDate = endOfMonth(currentDate);
+          const startDate = moment(currentDate).startOf('month');
+          const endDate = moment(currentDate).endOf('month');
           let filters: any = {
-            startDate: format(startDate, 'yyyy-MM-dd'),
-            endDate: format(endDate, 'yyyy-MM-dd'),
+            startDate: startDate.format('YYYY-MM-DD'),
+            endDate: endDate.format('YYYY-MM-DD'),
           };
           if (selectedStaff !== 'all') filters.staffId = selectedStaff;
 
@@ -562,11 +566,11 @@ const StaffAttendanceTracking: React.FC = () => {
         setCheckOutDialogOpen(false);
 
         const fetchRecords = async () => {
-          const startDate = startOfMonth(currentDate);
-          const endDate = endOfMonth(currentDate);
+          const startDate = moment(currentDate).startOf('month');
+          const endDate = moment(currentDate).endOf('month');
           let filters: any = {
-            startDate: format(startDate, 'yyyy-MM-dd'),
-            endDate: format(endDate, 'yyyy-MM-dd'),
+            startDate: startDate.format('YYYY-MM-DD'),
+            endDate: endDate.format('YYYY-MM-DD'),
           };
           if (selectedStaff !== 'all') filters.staffId = selectedStaff;
 
@@ -641,11 +645,11 @@ const StaffAttendanceTracking: React.FC = () => {
 
       setMarkDialogOpen(false);
 
-      const startDate = startOfMonth(currentDate);
-      const endDate = endOfMonth(currentDate);
+      const startDate = moment(currentDate).startOf('month');
+      const endDate = moment(currentDate).endOf('month');
       let filters: any = {
-        startDate: format(startDate, 'yyyy-MM-dd'),
-        endDate: format(endDate, 'yyyy-MM-dd'),
+        startDate: startDate.format('YYYY-MM-DD'),
+        endDate: endDate.format('YYYY-MM-DD'),
       };
       if (selectedStaff !== 'all') filters.staffId = selectedStaff;
 
@@ -837,11 +841,11 @@ const StaffAttendanceTracking: React.FC = () => {
       await staffAttendanceTrackingService.deleteRecord(id);
 
 
-      const startDate = startOfMonth(currentDate);
-      const endDate = endOfMonth(currentDate);
+      const startDate = moment(currentDate).startOf('month');
+      const endDate = moment(currentDate).endOf('month');
       let filters: any = {
-        startDate: format(startDate, 'yyyy-MM-dd'),
-        endDate: format(endDate, 'yyyy-MM-dd'),
+        startDate: startDate.format('YYYY-MM-DD'),
+        endDate: endDate.format('YYYY-MM-DD'),
       };
       if (selectedStaff !== 'all') filters.staffId = selectedStaff;
 
@@ -1118,7 +1122,7 @@ const StaffAttendanceTracking: React.FC = () => {
             label='Дата'
             type='date'
             size='small'
-            value={format(selectedDate, 'yyyy-MM-dd')}
+            value={moment(selectedDate).format('YYYY-MM-DD')}
             onChange={(e) => setSelectedDate(new Date(e.target.value))}
             sx={{ minWidth: '180px' }}
             InputLabelProps={{ shrink: true }}

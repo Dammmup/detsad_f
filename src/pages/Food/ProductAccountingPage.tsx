@@ -78,6 +78,10 @@ import {
     removeDishFromMeal,
     getMealTypeName
 } from '../../services/dailyMenu';
+import WeeklyMenuTab from '../../components/food/WeeklyMenuTab';
+import PurchasesTab from '../../components/food/PurchasesTab';
+import ReportsTab from '../../components/food/ReportsTab';
+import DishDialog from '../../components/food/DishDialog';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -264,13 +268,13 @@ const ProductAccountingPage: React.FC = () => {
         setDishDialogOpen(true);
     };
 
-    const handleSaveDish = async () => {
+    const handleSaveDish = async (dishData: Partial<Dish>) => {
         try {
             if (editingDish) {
-                await updateDish(editingDish._id || editingDish.id || '', dishForm);
+                await updateDish(editingDish._id || editingDish.id || '', dishData);
                 toast.success('Блюдо обновлено');
             } else {
-                await createDish(dishForm);
+                await createDish(dishData);
                 toast.success('Блюдо создано');
             }
             setDishDialogOpen(false);
@@ -397,10 +401,15 @@ const ProductAccountingPage: React.FC = () => {
                     value={tabValue}
                     onChange={(_, v) => setTabValue(v)}
                     sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: '#f5f5f5' }}
+                    variant="scrollable"
+                    scrollButtons="auto"
                 >
                     <Tab label="📦 Продукты" />
                     <Tab label="🍽️ Блюда" />
                     <Tab label="📋 Меню дня" />
+                    <Tab label="📅 Недельное меню" />
+                    <Tab label="🛒 Закупки" />
+                    <Tab label="📊 Отчёты" />
                 </Tabs>
 
                 {/* Products Tab */}
@@ -604,6 +613,21 @@ const ProductAccountingPage: React.FC = () => {
                         )}
                     </Box>
                 </TabPanel>
+
+                {/* Weekly Menu Tab */}
+                <TabPanel value={tabValue} index={3}>
+                    <WeeklyMenuTab />
+                </TabPanel>
+
+                {/* Purchases Tab */}
+                <TabPanel value={tabValue} index={4}>
+                    <PurchasesTab />
+                </TabPanel>
+
+                {/* Reports Tab */}
+                <TabPanel value={tabValue} index={5}>
+                    <ReportsTab />
+                </TabPanel>
             </Paper>
 
             {/* Product Dialog */}
@@ -718,59 +742,12 @@ const ProductAccountingPage: React.FC = () => {
             </Dialog>
 
             {/* Dish Dialog */}
-            <Dialog open={dishDialogOpen} onClose={() => setDishDialogOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>{editingDish ? 'Редактировать блюдо' : 'Добавить блюдо'}</DialogTitle>
-                <DialogContent>
-                    <Grid container spacing={2} sx={{ mt: 1 }}>
-                        <Grid item xs={12}>
-                            <TextField
-                                fullWidth
-                                label="Название блюда"
-                                value={dishForm.name || ''}
-                                onChange={(e) => setDishForm({ ...dishForm, name: e.target.value })}
-                            />
-                        </Grid>
-                        <Grid item xs={6}>
-                            <FormControl fullWidth>
-                                <InputLabel>Категория</InputLabel>
-                                <Select
-                                    value={dishForm.category || 'breakfast'}
-                                    label="Категория"
-                                    onChange={(e) => setDishForm({ ...dishForm, category: e.target.value as Dish['category'] })}
-                                >
-                                    <MenuItem value="breakfast">Завтрак</MenuItem>
-                                    <MenuItem value="lunch">Обед</MenuItem>
-                                    <MenuItem value="dinner">Ужин</MenuItem>
-                                    <MenuItem value="snack">Полдник</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={6}>
-                            <TextField
-                                fullWidth
-                                label="Количество порций"
-                                type="number"
-                                value={dishForm.servingsCount || 1}
-                                onChange={(e) => setDishForm({ ...dishForm, servingsCount: parseInt(e.target.value) || 1 })}
-                            />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                fullWidth
-                                multiline
-                                rows={2}
-                                label="Описание"
-                                value={dishForm.description || ''}
-                                onChange={(e) => setDishForm({ ...dishForm, description: e.target.value })}
-                            />
-                        </Grid>
-                    </Grid>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDishDialogOpen(false)}>Отмена</Button>
-                    <Button variant="contained" onClick={handleSaveDish}>Сохранить</Button>
-                </DialogActions>
-            </Dialog>
+            <DishDialog
+                open={dishDialogOpen}
+                onClose={() => setDishDialogOpen(false)}
+                onSave={handleSaveDish}
+                dish={editingDish}
+            />
 
             {/* Add Dish to Meal Dialog */}
             <Dialog open={addDishDialogOpen} onClose={() => setAddDishDialogOpen(false)} maxWidth="sm" fullWidth>

@@ -23,4 +23,5 @@ class FineApiClient extends BaseCrudApiClient<Fine> {
 
 const fineApi = new FineApiClient();
 export default fineApi;
-export { Fine, FineApiClient };
+export type { Fine };
+export { FineApiClient };

@@ -45,7 +45,7 @@ import {
   Search,
   Sort,
 } from '@mui/icons-material';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import moment from 'moment';
 import { useDate } from '../components/context/DateContext';
 import {
   getReports,
@@ -176,8 +176,8 @@ const Reports: React.FC = () => {
           groupId: selectedGroupId.current || undefined,
         }),
         getAttendanceSummary({
-          startDate: format(startOfMonth(currentDate), 'yyyy-MM-dd'),
-          endDate: format(endOfMonth(currentDate), 'yyyy-MM-dd'),
+          startDate: moment(currentDate).startOf('month').format('YYYY-MM-DD'),
+          endDate: moment(currentDate).endOf('month').format('YYYY-MM-DD'),
         }),
       ]);
 
@@ -242,11 +242,11 @@ const Reports: React.FC = () => {
     setLoading(true);
 
     try {
-      const startDate = startOfMonth(currentDate);
-      const endDate = endOfMonth(currentDate);
+      const startDate = moment(currentDate).startOf('month');
+      const endDate = moment(currentDate).endOf('month');
 
-      const formattedStartDate = format(startDate, 'yyyy-MM-dd');
-      const formattedEndDate = format(endDate, 'yyyy-MM-dd');
+      const formattedStartDate = startDate.format('YYYY-MM-DD');
+      const formattedEndDate = endDate.format('YYYY-MM-DD');
 
 
       const newReport = await generateCustomReport({
@@ -305,7 +305,7 @@ const Reports: React.FC = () => {
             : 'пользовательский';
 
     setReportTitle(
-      `Отчет по ${typeText} за ${format(startOfMonth(currentDate), 'yyyy-MM-dd')} - ${format(endOfMonth(currentDate), 'yyyy-MM-dd')}`,
+      `Отчет по ${typeText} за ${moment(currentDate).startOf('month').format('YYYY-MM-DD')} - ${moment(currentDate).endOf('month').format('YYYY-MM-DD')}`,
     );
   };
 
@@ -315,7 +315,7 @@ const Reports: React.FC = () => {
   const handleExportSalary = async () => {
     setLoading(true);
     try {
-      const period = format(currentDate, 'yyyy-MM');
+      const period = moment(currentDate).format('YYYY-MM');
 
 
       await generatePayrollSheets(period);
@@ -351,8 +351,8 @@ const Reports: React.FC = () => {
         message: emailMessage,
         format: 'excel',
         reportParams: {
-          startDate: format(startOfMonth(currentDate), 'yyyy-MM-dd'),
-          endDate: format(endOfMonth(currentDate), 'yyyy-MM-dd'),
+          startDate: moment(currentDate).startOf('month').format('YYYY-MM-DD'),
+          endDate: moment(currentDate).endOf('month').format('YYYY-MM-DD'),
           userId: selectedUserId.current || undefined,
         },
       });
@@ -408,8 +408,8 @@ const Reports: React.FC = () => {
     setLoading(true);
     try {
       const attendanceData = await getChildAttendance({
-        startDate: format(startOfMonth(currentDate), 'yyyy-MM-dd'),
-        endDate: format(endOfMonth(currentDate), 'yyyy-MM-dd'),
+        startDate: moment(currentDate).startOf('month').format('YYYY-MM-DD'),
+        endDate: moment(currentDate).endOf('month').format('YYYY-MM-DD'),
         groupId: selectedGroupId.current || undefined,
       });
       const allChildren = await childrenApi.getAll();
@@ -427,7 +427,7 @@ const Reports: React.FC = () => {
       await exportChildrenAttendance(
         attendanceData,
         groupName || 'All Groups',
-        `${format(startOfMonth(currentDate), 'yyyy-MM-dd')}_${format(endOfMonth(currentDate), 'yyyy-MM-dd')}`,
+        `${moment(currentDate).startOf('month').format('YYYY-MM-DD')}_${moment(currentDate).endOf('month').format('YYYY-MM-DD')}`,
         children,
       );
       alert('Отчет по посещаемости успешно экспортирован!');
@@ -443,12 +443,12 @@ const Reports: React.FC = () => {
     setLoading(true);
     try {
       const shifts = await getShifts(
-        format(startOfMonth(currentDate), 'yyyy-MM-dd'),
-        format(endOfMonth(currentDate), 'yyyy-MM-dd'),
+        moment(currentDate).startOf('month').format('YYYY-MM-DD'),
+        moment(currentDate).endOf('month').format('YYYY-MM-DD'),
       );
       await exportStaffAttendance(
         shifts,
-        `${format(startOfMonth(currentDate), 'yyyy-MM-dd')}_${format(endOfMonth(currentDate), 'yyyy-MM-dd')}`,
+        `${moment(currentDate).startOf('month').format('YYYY-MM-DD')}_${moment(currentDate).endOf('month').format('YYYY-MM-DD')}`,
       );
       alert('Отчет по расписанию успешно экспортирован!');
     } catch (err: any) {
@@ -1551,7 +1551,7 @@ const Reports: React.FC = () => {
                 label='Тема письма'
                 value={emailSubject}
                 onChange={(e) => setEmailSubject(e.target.value)}
-                placeholder={`Отчет по ${exportType} за ${format(startOfMonth(currentDate), 'yyyy-MM-dd')} - ${format(endOfMonth(currentDate), 'yyyy-MM-dd')}`}
+                placeholder={`Отчет по ${exportType} за ${moment(currentDate).startOf('month').format('YYYY-MM-DD')} - ${moment(currentDate).endOf('month').format('YYYY-MM-DD')}`}
               />
             </Grid>
 

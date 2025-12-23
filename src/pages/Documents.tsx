@@ -41,14 +41,14 @@ import {
   Search as SearchIcon,
   FilterList as FilterIcon,
 } from '@mui/icons-material';
-import { format } from 'date-fns';
 import {
   formatFileSize,
   getFileIcon,
   getTypeText,
   getCategoryText,
 } from '../utils/documentUtils';
-import { ru } from 'date-fns/locale';
+import moment from 'moment';
+import 'moment/locale/ru';
 import { Document as DocumentType } from '../types/documents';
 import { getStatusColor } from '../utils/format';
 import {
@@ -547,9 +547,7 @@ export const Documents = () => {
                     </TableCell>
                     <TableCell>
                       {document.uploadDate
-                        ? format(new Date(document.uploadDate), 'dd.MM.yyyy', {
-                          locale: ru,
-                        })
+                        ? moment(document.uploadDate).format('DD.MM.YYYY')
                         : '-'}
                     </TableCell>
                     <TableCell>{document.uploader?.fullName || '-'}</TableCell>

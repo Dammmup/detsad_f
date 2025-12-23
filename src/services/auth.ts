@@ -11,7 +11,7 @@ class AuthApiClient extends BaseApiClient {
       const response = await this.post<{
         user: any;
         token: string;
-      }>('/auth/login', credentials);
+      }>('/api/auth/login', credentials);
 
       const authData: AuthResponse = {
         success: true,
@@ -64,7 +64,7 @@ class AuthApiClient extends BaseApiClient {
   async logout(): Promise<void> {
     try {
 
-      await this.post('/auth/logout', {});
+      await this.post('/api/auth/logout', {});
     } catch (error) {
       console.warn('Ошибка при выходе на backend:', error);
     } finally {
@@ -129,7 +129,7 @@ class AuthApiClient extends BaseApiClient {
   async validateToken(): Promise<boolean> {
     try {
 
-      const response = await this.get('/auth/validate');
+      const response = await this.get('/api/auth/validate');
 
 
       if (
