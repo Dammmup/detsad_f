@@ -23,10 +23,9 @@ import {
 import ExportButton from '../../components/ExportButton';
 import { exportData } from '../../utils/exportUtils';
 
-const defaultForm: FoodStaffHealth = {
+const defaultForm: Partial<FoodStaffHealth> = {
   date: '',
   staffName: '',
-  healthStatus: '',
   notes: '',
 };
 
@@ -140,7 +139,7 @@ const FoodStaffHealthPage: React.FC = () => {
           <TableBody>
             {rows.map((row) => (
               <TableRow key={row._id}>
-                <TableCell>{row.date}</TableCell>
+                <TableCell>{typeof row.date === 'string' ? row.date : row.date?.toLocaleDateString?.() || ''}</TableCell>
                 <TableCell>{row.staffName}</TableCell>
                 <TableCell>{row.healthStatus}</TableCell>
                 <TableCell>{row.notes}</TableCell>

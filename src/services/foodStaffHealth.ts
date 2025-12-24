@@ -1,12 +1,6 @@
 import { BaseCrudApiClient } from '../utils/api';
-
-export interface FoodStaffHealth {
-  _id?: string;
-  date: string;
-  staffName: string;
-  healthStatus: string;
-  notes?: string;
-}
+import { FoodStaffHealth } from '../types/foodStaffHealth';
+export type { FoodStaffHealth } from '../types/foodStaffHealth';
 
 class FoodStaffHealthApiClient extends BaseCrudApiClient<FoodStaffHealth> {
   protected endpoint = '/food-staff-health';

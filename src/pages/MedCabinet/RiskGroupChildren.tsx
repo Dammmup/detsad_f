@@ -17,7 +17,7 @@ import {
   MenuItem,
   CircularProgress,
 } from '@mui/material';
-import { getUsers } from '../../services/users';
+import childrenApi from '../../services/children';
 import { User } from '../../types/common';
 import { RiskGroupChild } from '../../types/riskGroupChild';
 import {
@@ -39,8 +39,7 @@ export default function RiskGroupChildren() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      getUsers().then((users) => {
-        const children = users.filter((u) => u.birthday && u.parentName);
+      childrenApi.getAll().then((children: any) => {
         setUsers(children);
       }),
       getRiskGroupChildren().then(setRecords),
@@ -51,12 +50,12 @@ export default function RiskGroupChildren() {
     let filtered = [...records];
     if (search)
       filtered = filtered.filter((r) =>
-        r.fio.toLowerCase().includes(search.toLowerCase()),
+        (r.fio || '').toLowerCase().includes(search.toLowerCase()),
       );
     if (group) filtered = filtered.filter((r) => r.group === group);
     if (reason)
       filtered = filtered.filter((r) =>
-        r.reason.toLowerCase().includes(reason.toLowerCase()),
+        (r.reason || '').toLowerCase().includes(reason.toLowerCase()),
       );
     return filtered;
   }, [records, search, group, reason]);
@@ -162,26 +161,32 @@ export default function RiskGroupChildren() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {filteredRecords.map((r, idx) => (
-            <TableRow key={r.id}>
-              <TableCell>{idx + 1}</TableCell>
-              <TableCell>{r.fio}</TableCell>
-              <TableCell>{r.birthdate}</TableCell>
-              <TableCell>{r.group}</TableCell>
-              <TableCell>{r.address}</TableCell>
-              <TableCell>{r.reason}</TableCell>
-              <TableCell>{r.notes}</TableCell>
-              <TableCell>
-                <Button
-                  color='error'
-                  size='small'
-                  onClick={() => handleDelete(r.id)}
-                >
-                  Удалить
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+          {filteredRecords.map((r, idx) => {
+            const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
+            const fio = r.fio || childInfo?.fullName || '';
+            const birthdate = r.birthdate || (childInfo?.birthday ? new Date(childInfo.birthday).toLocaleDateString('ru-RU') : '');
+            const address = r.address || childInfo?.address || '';
+            return (
+              <TableRow key={r.id || r._id}>
+                <TableCell>{idx + 1}</TableCell>
+                <TableCell>{fio}</TableCell>
+                <TableCell>{birthdate}</TableCell>
+                <TableCell>{r.group}</TableCell>
+                <TableCell>{address}</TableCell>
+                <TableCell>{r.reason}</TableCell>
+                <TableCell>{r.notes}</TableCell>
+                <TableCell>
+                  <Button
+                    color='error'
+                    size='small'
+                    onClick={() => handleDelete(r.id || r._id || '')}
+                  >
+                    Удалить
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>

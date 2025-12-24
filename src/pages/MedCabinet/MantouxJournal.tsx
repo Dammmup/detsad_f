@@ -68,7 +68,7 @@ export default function MantouxJournal() {
   const filteredRecords = useMemo(() => {
     if (!search) return records;
     return records.filter((r) =>
-      r.fio.toLowerCase().includes(search.toLowerCase()),
+      (r.fio || '').toLowerCase().includes(search.toLowerCase()),
     );
   }, [records, search]);
 
@@ -230,32 +230,40 @@ export default function MantouxJournal() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {filteredRecords.map((r, idx) => (
-            <TableRow key={r.id}>
-              <TableCell>{idx + 1}</TableCell>
-              <TableCell>{r.fio}</TableCell>
-              <TableCell>{r.address}</TableCell>
-              <TableCell>{r.birthdate}</TableCell>
-              <TableCell>{r.year}</TableCell>
-              <TableCell>{r.atr}</TableCell>
-              <TableCell>{r.diagnosis}</TableCell>
-              <TableCell>{r.mm}</TableCell>
-              <TableCell>{r.reactionSize}</TableCell>
-              <TableCell>{r.reactionType}</TableCell>
-              <TableCell>{r.injectionSite}</TableCell>
-              <TableCell>{r.has063 ? 'Да' : 'Нет'}</TableCell>
-              <TableCell>
-                <Button
-                  color='error'
-                  size='small'
-                  onClick={() => handleDelete(r.id)}
-                >
-                  Удалить
-                </Button>
-                {/* Для редактирования можно добавить отдельную кнопку/диалог */}
-              </TableCell>
-            </TableRow>
-          ))}
+          {filteredRecords.map((r, idx) => {
+            // Get child info from populated childId or use legacy fields
+            const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
+            const fio = r.fio || childInfo?.fullName || '';
+            const birthdate = r.birthdate || (childInfo?.birthday ? new Date(childInfo.birthday).toLocaleDateString('ru-RU') : '');
+            const address = r.address || childInfo?.address || '';
+
+            return (
+              <TableRow key={r.id || r._id}>
+                <TableCell>{idx + 1}</TableCell>
+                <TableCell>{fio}</TableCell>
+                <TableCell>{address}</TableCell>
+                <TableCell>{birthdate}</TableCell>
+                <TableCell>{r.year}</TableCell>
+                <TableCell>{r.atr}</TableCell>
+                <TableCell>{r.diagnosis}</TableCell>
+                <TableCell>{r.mm}</TableCell>
+                <TableCell>{r.reactionSize}</TableCell>
+                <TableCell>{r.reactionType}</TableCell>
+                <TableCell>{r.injectionSite}</TableCell>
+                <TableCell>{r.has063 ? 'Да' : 'Нет'}</TableCell>
+                <TableCell>
+                  <Button
+                    color='error'
+                    size='small'
+                    onClick={() => handleDelete(r.id || r._id)}
+                  >
+                    Удалить
+                  </Button>
+                  {/* Для редактирования можно добавить отдельную кнопку/диалог */}
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>

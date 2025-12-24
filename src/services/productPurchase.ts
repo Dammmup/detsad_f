@@ -8,9 +8,13 @@ export interface ProductPurchase {
         name: string;
         category: string;
         unit: string;
+        weight?: number;
+        weightUnit?: 'г' | 'кг' | 'мл' | 'л';
     };
     quantity: number;
     unit: string;
+    weight?: number; // Вес единицы продукта
+    weightUnit?: 'г' | 'кг' | 'мл' | 'л';
     pricePerUnit: number;
     totalPrice: number;
     supplier: string;

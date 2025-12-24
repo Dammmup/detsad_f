@@ -13,6 +13,8 @@ export interface Product {
     description?: string;
     category: string;
     unit: string;
+    weight?: number; // Вес единицы продукта (например, 250г)
+    weightUnit?: 'г' | 'кг' | 'мл' | 'л'; // Единица измерения веса
     supplier: string;
     price: number;
     stockQuantity: number;

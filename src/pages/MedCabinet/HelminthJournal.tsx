@@ -29,6 +29,7 @@ import {
   createHelminthRecord,
   deleteHelminthRecord,
 } from '../../services/helminthJournal';
+import { HelminthRecord } from '../../types/helminth';
 import {
   Document,
   Packer,
@@ -59,18 +60,9 @@ const YEARS = Array.from({ length: CURRENT_YEAR - 2019 }, (_, i) =>
   (2020 + i).toString(),
 );
 
-interface HelminthRecord {
-  id: string;
-  childId: string;
-  fio: string;
-  birthdate: string;
-  address: string;
-  month: string;
-  year: string;
-  examType: 'primary' | 'annual';
-  result: 'positive' | 'negative';
-  notes?: string;
-}
+// Используем HelminthRecord из types/helminth.ts (импортирован через сервис)
+// Локальные UI-поля (fio, birthdate, address, month, year, examType) теперь опциональные
+
 
 export default function HelminthJournal() {
   const [records, setRecords] = useState<HelminthRecord[]>([]);
@@ -130,8 +122,13 @@ export default function HelminthJournal() {
       return;
     setLoading(true);
     try {
+      // Generate date from month and year
+      const monthIndex = MONTHS.indexOf(newRecord.month);
+      const dateObj = new Date(parseInt(newRecord.year), monthIndex, 1);
+
       const created = await createHelminthRecord({
         ...newRecord,
+        date: dateObj.toISOString(),
         notes: newRecord.notes || '',
         birthdate: newRecord.birthdate || '',
         address: newRecord.address || '',
@@ -187,14 +184,16 @@ export default function HelminthJournal() {
                     new DocxTableRow({
                       children: [
                         String(idx + 1),
-                        r.fio,
-                        r.birthdate,
-                        r.address,
-                        r.month,
-                        r.year,
+                        r.fio || '',
+                        r.birthdate || '',
+                        r.address || '',
+                        r.month || '',
+                        r.year || '',
                         r.examType === 'primary'
                           ? 'При поступлении'
-                          : 'Ежегодное',
+                          : r.examType === 'annual'
+                            ? 'Ежегодное'
+                            : '',
                         r.result === 'positive'
                           ? 'Положительно'
                           : 'Отрицательно',
@@ -326,32 +325,38 @@ export default function HelminthJournal() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {filteredRecords.map((r, idx) => (
-            <TableRow key={r.id}>
-              <TableCell>{idx + 1}</TableCell>
-              <TableCell>{r.fio}</TableCell>
-              <TableCell>{r.birthdate}</TableCell>
-              <TableCell>{r.address}</TableCell>
-              <TableCell>{r.month}</TableCell>
-              <TableCell>{r.year}</TableCell>
-              <TableCell>
-                {r.examType === 'primary' ? 'При поступлении' : 'Ежегодное'}
-              </TableCell>
-              <TableCell>
-                {r.result === 'positive' ? 'Положительно' : 'Отрицательно'}
-              </TableCell>
-              <TableCell>{r.notes}</TableCell>
-              <TableCell>
-                <Button
-                  color='error'
-                  size='small'
-                  onClick={() => handleDelete(r.id)}
-                >
-                  Удалить
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+          {filteredRecords.map((r, idx) => {
+            const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
+            const fio = r.fio || childInfo?.fullName || '';
+            const birthdate = r.birthdate || (childInfo?.birthday ? new Date(childInfo.birthday).toLocaleDateString('ru-RU') : '');
+            const address = r.address || childInfo?.address || '';
+            return (
+              <TableRow key={r.id || r._id}>
+                <TableCell>{idx + 1}</TableCell>
+                <TableCell>{fio}</TableCell>
+                <TableCell>{birthdate}</TableCell>
+                <TableCell>{address}</TableCell>
+                <TableCell>{r.month}</TableCell>
+                <TableCell>{r.year}</TableCell>
+                <TableCell>
+                  {r.examType === 'primary' ? 'При поступлении' : 'Ежегодное'}
+                </TableCell>
+                <TableCell>
+                  {r.result === 'positive' ? 'Положительно' : 'Отрицательно'}
+                </TableCell>
+                <TableCell>{r.notes}</TableCell>
+                <TableCell>
+                  <Button
+                    color='error'
+                    size='small'
+                    onClick={() => handleDelete(r.id || r._id || '')}
+                  >
+                    Удалить
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>

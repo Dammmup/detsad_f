@@ -52,7 +52,7 @@ export default function ContactInfectionJournal() {
     let filtered = [...records];
     if (search)
       filtered = filtered.filter((r) =>
-        r.fio.toLowerCase().includes(search.toLowerCase()),
+        (r.fio || '').toLowerCase().includes(search.toLowerCase()),
       );
     if (group) filtered = filtered.filter((r) => r.group === group);
     return filtered;
@@ -145,27 +145,32 @@ export default function ContactInfectionJournal() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {filteredRecords.map((r, idx) => (
-            <TableRow key={r.id}>
-              <TableCell>{idx + 1}</TableCell>
-              <TableCell>{r.fio}</TableCell>
-              <TableCell>{r.birthdate}</TableCell>
-              <TableCell>{r.group}</TableCell>
-              <TableCell>{r.date}</TableCell>
-              <TableCell>{r.symptoms}</TableCell>
-              <TableCell>{r.stool}</TableCell>
-              <TableCell>{r.notes}</TableCell>
-              <TableCell>
-                <Button
-                  color='error'
-                  size='small'
-                  onClick={() => handleDelete(r.id)}
-                >
-                  Удалить
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+          {filteredRecords.map((r, idx) => {
+            const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
+            const fio = r.fio || childInfo?.fullName || '';
+            const birthdate = r.birthdate || (childInfo?.birthday ? new Date(childInfo.birthday).toLocaleDateString('ru-RU') : '');
+            return (
+              <TableRow key={r.id || r._id}>
+                <TableCell>{idx + 1}</TableCell>
+                <TableCell>{fio}</TableCell>
+                <TableCell>{birthdate}</TableCell>
+                <TableCell>{r.group}</TableCell>
+                <TableCell>{typeof r.date === 'string' ? r.date : r.date?.toLocaleDateString?.() || ''}</TableCell>
+                <TableCell>{Array.isArray(r.symptoms) ? r.symptoms.join(', ') : r.symptoms}</TableCell>
+                <TableCell>{r.stool}</TableCell>
+                <TableCell>{r.notes}</TableCell>
+                <TableCell>
+                  <Button
+                    color='error'
+                    size='small'
+                    onClick={() => handleDelete(r.id || r._id || '')}
+                  >
+                    Удалить
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
@@ -202,10 +207,11 @@ export default function ContactInfectionJournal() {
           />
           <TextField
             label='Симптомы'
-            value={newRecord.symptoms || ''}
+            value={Array.isArray(newRecord.symptoms) ? newRecord.symptoms.join(', ') : (newRecord.symptoms || '')}
             onChange={(e) =>
-              setNewRecord((r) => ({ ...r, symptoms: e.target.value }))
+              setNewRecord((r) => ({ ...r, symptoms: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))
             }
+            helperText='Через запятую'
             fullWidth
             margin='dense'
           />

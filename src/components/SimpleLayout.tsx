@@ -1,4 +1,4 @@
-import MenuItemsAdminPage from '../pages/MedCabinet/MenuItemsAdminPage';
+import MenuItemsAdminPage from '../pages/Food/MenuItemsAdminPage';
 import React from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import {
@@ -44,16 +44,16 @@ import ContactInfectionJournal from '../pages/MedCabinet/ContactInfectionJournal
 import RiskGroupChildren from '../pages/MedCabinet/RiskGroupChildren';
 import MedCabinetPage from '../pages/MedCabinet/MedCabinetPage';
 import ChildHealthPassportPage from '../pages/MedCabinet/ChildHealthPassportPage';
-import FoodNormsControlPage from '../pages/MedCabinet/FoodNormsControlPage';
+import FoodNormsControlPage from '../pages/Food/FoodNormsControlPage';
 import HelminthJournal from '../pages/MedCabinet/HelminthJournal';
 import MantouxJournal from '../pages/MedCabinet/MantouxJournal';
-import OrganolepticJournalPage from '../pages/MedCabinet/OrganolepticJournalPage';
+import OrganolepticJournalPage from '../pages/Food/OrganolepticJournalPage';
 import SomaticJournal from '../pages/MedCabinet/SomaticJournal';
-import PerishableBrakPage from '../pages/MedCabinet/PerishableBrakPage';
-import ProductCertificatePage from '../pages/MedCabinet/ProductCertificatePage';
-import DetergentLogPage from '../pages/MedCabinet/DetergentLogPage';
-import FoodStockLogPage from '../pages/MedCabinet/FoodStockLogPage';
-import FoodStaffHealthPage from '../pages/MedCabinet/FoodStaffHealthPage';
+import PerishableBrakPage from '../pages/Food/PerishableBrakPage';
+import ProductCertificatePage from '../pages/Food/ProductCertificatePage';
+import DetergentLogPage from '../pages/Food/DetergentLogPage';
+import FoodStockLogPage from '../pages/Food/FoodStockLogPage';
+import FoodStaffHealthPage from '../pages/Food/FoodStaffHealthPage';
 import ReportsRent from './reports/ReportsRent';
 import ChildPayments from '../pages/Children/ChildPayments';
 import Qwen3Chat from './Qwen3Chat';

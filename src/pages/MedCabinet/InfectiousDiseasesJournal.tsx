@@ -53,12 +53,12 @@ export default function InfectiousDiseasesJournal() {
     let filtered = [...records];
     if (search)
       filtered = filtered.filter((r) =>
-        r.fio.toLowerCase().includes(search.toLowerCase()),
+        (r.fio || '').toLowerCase().includes(search.toLowerCase()),
       );
     if (group) filtered = filtered.filter((r) => r.group === group);
     if (diagnosis)
       filtered = filtered.filter((r) =>
-        r.diagnosis.toLowerCase().includes(diagnosis.toLowerCase()),
+        (r.diagnosis || '').toLowerCase().includes(diagnosis.toLowerCase()),
       );
     return filtered;
   }, [records, search, group, diagnosis]);
@@ -165,28 +165,33 @@ export default function InfectiousDiseasesJournal() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {filteredRecords.map((r, idx) => (
-            <TableRow key={r.id}>
-              <TableCell>{idx + 1}</TableCell>
-              <TableCell>{r.fio}</TableCell>
-              <TableCell>{r.birthdate}</TableCell>
-              <TableCell>{r.group}</TableCell>
-              <TableCell>{r.date}</TableCell>
-              <TableCell>{r.diagnosis}</TableCell>
-              <TableCell>{r.quarantine_days}</TableCell>
-              <TableCell>{r.observation}</TableCell>
-              <TableCell>{r.notes}</TableCell>
-              <TableCell>
-                <Button
-                  color='error'
-                  size='small'
-                  onClick={() => handleDelete(r.id)}
-                >
-                  Удалить
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+          {filteredRecords.map((r, idx) => {
+            const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
+            const fio = r.fio || childInfo?.fullName || '';
+            const birthdate = r.birthdate || (childInfo?.birthday ? new Date(childInfo.birthday).toLocaleDateString('ru-RU') : '');
+            return (
+              <TableRow key={r.id || r._id}>
+                <TableCell>{idx + 1}</TableCell>
+                <TableCell>{fio}</TableCell>
+                <TableCell>{birthdate}</TableCell>
+                <TableCell>{r.group}</TableCell>
+                <TableCell>{typeof r.date === 'string' ? r.date : r.date?.toLocaleDateString?.() || ''}</TableCell>
+                <TableCell>{r.diagnosis}</TableCell>
+                <TableCell>{r.quarantine_days}</TableCell>
+                <TableCell>{r.observation}</TableCell>
+                <TableCell>{r.notes}</TableCell>
+                <TableCell>
+                  <Button
+                    color='error'
+                    size='small'
+                    onClick={() => handleDelete(r.id || r._id || '')}
+                  >
+                    Удалить
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>

@@ -40,6 +40,7 @@ import {
 import { saveAs } from 'file-saver';
 
 import { SomaticRecord } from '../../types/somatic';
+import { AnyAaaaRecord } from 'dns';
 
 export default function SomaticJournal() {
   const [records, setRecords] = useState<SomaticRecord[]>([]);
@@ -68,7 +69,7 @@ export default function SomaticJournal() {
     let filtered = [...records];
     if (search) {
       filtered = filtered.filter((r) =>
-        r.fio.toLowerCase().includes(search.toLowerCase()),
+        (r.fio || '').toLowerCase().includes(search.toLowerCase()),
       );
     }
     if (diagnosisFilter) {
@@ -77,17 +78,22 @@ export default function SomaticJournal() {
       );
     }
     if (fromDate) {
-      filtered = filtered.filter((r) => r.fromDate >= fromDate);
+      filtered = filtered.filter((r) => (r.fromDate || '') >= fromDate);
     }
     if (toDate) {
-      filtered = filtered.filter((r) => r.toDate <= toDate);
+      filtered = filtered.filter((r) => (r.toDate || '') <= toDate);
     }
     if (onlyCurrentYear) {
       const year = new Date().getFullYear();
       filtered = filtered.filter(
-        (r) =>
-          r.fromDate.startsWith(year.toString()) ||
-          r.toDate.startsWith(year.toString()),
+        (r) => {
+          // Check date field (from backend)
+          const dateStr = r.date ? String(r.date).substring(0, 4) : '';
+          // Also check legacy fromDate/toDate fields
+          return dateStr === year.toString() ||
+            (r.fromDate || '').startsWith(year.toString()) ||
+            (r.toDate || '').startsWith(year.toString());
+        }
       );
     }
     return filtered;
@@ -123,6 +129,8 @@ export default function SomaticJournal() {
       );
       const created = await createSomaticRecord({
         ...newRecord,
+        date: newRecord.fromDate, // Backend requires 'date' field
+        treatment: newRecord.treatment || 'Не указано', // Backend requires 'treatment'
         days,
         notes: newRecord.notes || '',
         birthdate: newRecord.birthdate || '',
@@ -301,29 +309,41 @@ export default function SomaticJournal() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {filteredRecords.map((r, idx) => (
-            <TableRow key={r.id}>
-              <TableCell>{idx + 1}</TableCell>
-              <TableCell>{r.fio}</TableCell>
-              <TableCell>{r.birthdate}</TableCell>
-              <TableCell>{r.address}</TableCell>
-              <TableCell>{r.diagnosis}</TableCell>
-              <TableCell>{r.fromDate}</TableCell>
-              <TableCell>{r.toDate}</TableCell>
-              <TableCell>{r.days}</TableCell>
-              <TableCell>{r.notes}</TableCell>
-              <TableCell>
-                <Button
-                  color='error'
-                  size='small'
-                  onClick={() => handleDelete(r.id)}
-                >
-                  Удалить
-                </Button>
-                {/* Для редактирования можно добавить отдельную кнопку/диалог */}
-              </TableCell>
-            </TableRow>
-          ))}
+          {filteredRecords.map((r, idx) => {
+            // Get child info from populated childId or use legacy fields
+            const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
+            const fio = r.fio || childInfo?.fullName || '';
+            const birthdate = r.birthdate || (childInfo?.birthday ? new Date(childInfo.birthday).toLocaleDateString('ru-RU') : '');
+            const address = r.address || childInfo?.address || '';
+            // Format dates
+            const dateStr = r.date ? new Date(r.date).toLocaleDateString('ru-RU') : '';
+            const fromDateStr = r.fromDate || dateStr;
+            const toDateStr = r.toDate || dateStr;
+
+            return (
+              <TableRow key={r.id || r._id}>
+                <TableCell>{idx + 1}</TableCell>
+                <TableCell>{fio}</TableCell>
+                <TableCell>{birthdate}</TableCell>
+                <TableCell>{address}</TableCell>
+                <TableCell>{r.diagnosis}</TableCell>
+                <TableCell>{fromDateStr}</TableCell>
+                <TableCell>{toDateStr}</TableCell>
+                <TableCell>{r.days || ''}</TableCell>
+                <TableCell>{r.notes}</TableCell>
+                <TableCell>
+                  <Button
+                    color='error'
+                    size='small'
+                    onClick={() => handleDelete(r.id || r._id as any)}
+                  >
+                    Удалить
+                  </Button>
+                  {/* Для редактирования можно добавить отдельную кнопку/диалог */}
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
@@ -355,6 +375,17 @@ export default function SomaticJournal() {
             }
             fullWidth
             margin='dense'
+          />
+          <TextField
+            label='Лечение'
+            value={newRecord.treatment || ''}
+            onChange={(e) =>
+              setNewRecord((r) => ({ ...r, treatment: e.target.value }))
+            }
+            fullWidth
+            margin='dense'
+            multiline
+            rows={2}
           />
           <TextField
             label='С даты'

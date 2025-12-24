@@ -1,13 +1,6 @@
 import { BaseCrudApiClient } from '../utils/api';
-
-export interface PerishableBrak {
-  _id?: string;
-  date: string;
-  product: string;
-  assessment: string;
-  expiry: string;
-  notes?: string;
-}
+import { PerishableBrak } from '../types/perishableBrak';
+export type { PerishableBrak } from '../types/perishableBrak';
 
 class PerishableBrakApiClient extends BaseCrudApiClient<PerishableBrak> {
   protected endpoint = '/perishable-brak';
