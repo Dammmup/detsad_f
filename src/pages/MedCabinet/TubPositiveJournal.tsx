@@ -160,10 +160,8 @@ export default function TubPositiveJournal() {
             <TableCell>№</TableCell>
             <TableCell>ФИО</TableCell>
             <TableCell>Дата рождения</TableCell>
-            <TableCell>Группа</TableCell>
             <TableCell>Дата</TableCell>
-            <TableCell>Направление</TableCell>
-            <TableCell>Врач</TableCell>
+            <TableCell>Результат</TableCell>
             <TableCell>Примечания</TableCell>
             <TableCell>Действия</TableCell>
           </TableRow>
@@ -178,11 +176,9 @@ export default function TubPositiveJournal() {
                 <TableCell>{idx + 1}</TableCell>
                 <TableCell>{fio}</TableCell>
                 <TableCell>{birthdate}</TableCell>
-                <TableCell>{r.group}</TableCell>
-                <TableCell>{typeof r.date === 'string' ? r.date : r.date?.toLocaleDateString?.() || ''}</TableCell>
-                <TableCell>{r.referral}</TableCell>
-                <TableCell>{typeof r.doctor === 'object' ? (r.doctor as any)?.fullName : r.doctor}</TableCell>
-                <TableCell>{r.notes}</TableCell>
+                <TableCell>{typeof r.date === 'string' ? new Date(r.date).toLocaleDateString('ru-RU') : r.date?.toLocaleDateString?.('ru-RU') || ''}</TableCell>
+                <TableCell>{r.result || '-'}</TableCell>
+                <TableCell>{r.notes || '-'}</TableCell>
                 <TableCell>
                   <Button
                     color='error'

@@ -155,11 +155,9 @@ export default function InfectiousDiseasesJournal() {
             <TableCell>№</TableCell>
             <TableCell>ФИО</TableCell>
             <TableCell>Дата рождения</TableCell>
-            <TableCell>Группа</TableCell>
             <TableCell>Дата</TableCell>
+            <TableCell>Заболевание</TableCell>
             <TableCell>Диагноз</TableCell>
-            <TableCell>Карантинные дни</TableCell>
-            <TableCell>Меднаблюдение</TableCell>
             <TableCell>Примечания</TableCell>
             <TableCell>Действия</TableCell>
           </TableRow>
@@ -174,12 +172,10 @@ export default function InfectiousDiseasesJournal() {
                 <TableCell>{idx + 1}</TableCell>
                 <TableCell>{fio}</TableCell>
                 <TableCell>{birthdate}</TableCell>
-                <TableCell>{r.group}</TableCell>
-                <TableCell>{typeof r.date === 'string' ? r.date : r.date?.toLocaleDateString?.() || ''}</TableCell>
-                <TableCell>{r.diagnosis}</TableCell>
-                <TableCell>{r.quarantine_days}</TableCell>
-                <TableCell>{r.observation}</TableCell>
-                <TableCell>{r.notes}</TableCell>
+                <TableCell>{typeof r.date === 'string' ? new Date(r.date).toLocaleDateString('ru-RU') : r.date?.toLocaleDateString?.('ru-RU') || ''}</TableCell>
+                <TableCell>{r.disease || '-'}</TableCell>
+                <TableCell>{r.diagnosis || '-'}</TableCell>
+                <TableCell>{r.notes || '-'}</TableCell>
                 <TableCell>
                   <Button
                     color='error'

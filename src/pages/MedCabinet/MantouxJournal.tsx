@@ -255,7 +255,7 @@ export default function MantouxJournal() {
                   <Button
                     color='error'
                     size='small'
-                    onClick={() => handleDelete(r.id || r._id)}
+                    onClick={() => handleDelete(r.id || r._id || '')}
                   >
                     Удалить
                   </Button>

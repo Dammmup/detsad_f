@@ -11,6 +11,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import CalendarViewWeekIcon from '@mui/icons-material/CalendarViewWeek';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 
 export interface SidebarItem {
   id: string;
@@ -128,6 +129,13 @@ const sidebarStructure: SidebarItem[] = [
         icon: <AssessmentIcon />,
       },
     ],
+    visibleFor: ['admin'],
+  },
+  {
+    id: 'statistics',
+    label: 'Статистика',
+    icon: <AnalyticsIcon />,
+    link: '/app/statistics',
     visibleFor: ['admin'],
   },
   {

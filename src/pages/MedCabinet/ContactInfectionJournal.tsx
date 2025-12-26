@@ -136,10 +136,8 @@ export default function ContactInfectionJournal() {
             <TableCell>№</TableCell>
             <TableCell>ФИО</TableCell>
             <TableCell>Дата рождения</TableCell>
-            <TableCell>Группа</TableCell>
             <TableCell>Дата</TableCell>
-            <TableCell>Симптомы</TableCell>
-            <TableCell>Стул</TableCell>
+            <TableCell>Тип инфекции</TableCell>
             <TableCell>Примечания</TableCell>
             <TableCell>Действия</TableCell>
           </TableRow>
@@ -154,11 +152,9 @@ export default function ContactInfectionJournal() {
                 <TableCell>{idx + 1}</TableCell>
                 <TableCell>{fio}</TableCell>
                 <TableCell>{birthdate}</TableCell>
-                <TableCell>{r.group}</TableCell>
-                <TableCell>{typeof r.date === 'string' ? r.date : r.date?.toLocaleDateString?.() || ''}</TableCell>
-                <TableCell>{Array.isArray(r.symptoms) ? r.symptoms.join(', ') : r.symptoms}</TableCell>
-                <TableCell>{r.stool}</TableCell>
-                <TableCell>{r.notes}</TableCell>
+                <TableCell>{typeof r.date === 'string' ? new Date(r.date).toLocaleDateString('ru-RU') : r.date?.toLocaleDateString?.('ru-RU') || ''}</TableCell>
+                <TableCell>{r.infectionType || '-'}</TableCell>
+                <TableCell>{r.notes || '-'}</TableCell>
                 <TableCell>
                   <Button
                     color='error'

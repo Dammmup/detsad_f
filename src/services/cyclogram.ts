@@ -1,74 +1,13 @@
 import { apiClient } from '../utils/api';
 
-
 interface ApiError extends Error {
   status?: number;
   data?: any;
 }
 
-
-export interface CyclogramActivity {
-  id?: string;
-  name: string;
-  description?: string;
-  duration: number;
-  type:
-  | 'educational'
-  | 'physical'
-  | 'creative'
-  | 'rest'
-  | 'meal'
-  | 'hygiene'
-  | 'outdoor';
-  ageGroup: string;
-  materials?: string[];
-  goals?: string[];
-  methods?: string[];
-}
-
-
-export interface CyclogramTimeSlot {
-  id?: string;
-  startTime: string;
-  endTime: string;
-  activity: CyclogramActivity;
-  dayOfWeek: number;
-  groupId?: string;
-  teacherId?: string;
-  notes?: string;
-}
-
-
-export interface WeeklyCyclogram {
-  id?: string;
-  title: string;
-  description?: string;
-  ageGroup: string;
-  groupId: string;
-  teacherId: string;
-  weekStartDate: string;
-  timeSlots: CyclogramTimeSlot[];
-  status: 'draft' | 'active' | 'archived';
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-
-export interface CyclogramTemplate {
-  id?: string;
-  name: string;
-  description?: string;
-  ageGroup: string;
-  timeSlots: Omit<CyclogramTimeSlot, 'id' | 'groupId' | 'teacherId'>[];
-  isDefault: boolean;
-  createdAt?: string;
-}
-
-
 const handleApiError = (error: any, context = '') => {
   const errorMessage = error.response?.data?.message || error.message;
   console.error(`Error ${context}:`, errorMessage);
-
 
   const apiError = new Error(`Error ${context}: ${errorMessage}`) as ApiError;
   apiError.status = error.response?.status;
@@ -77,196 +16,146 @@ const handleApiError = (error: any, context = '') => {
   throw apiError;
 };
 
+// =====================================================
+// Activity Templates API
+// =====================================================
 
+export interface ActivityTemplate {
+  _id: string;
+  name: string;
+  type: string;
+  category: string;
+  content: string;
+  goal?: string;
+  ageGroups: string[];
+  duration?: number;
+  order: number;
+  isActive: boolean;
+}
 
-export const getCyclograms = async (groupId?: string) => {
+export interface ScheduleBlock {
+  order: number;
+  time?: string;
+  activityType: string;
+  templateId?: string;
+  content: string;
+  topic?: string;
+  goal?: string;
+}
+
+export interface DailySchedule {
+  _id: string;
+  groupId: string | { _id: string; name: string };
+  date: string;
+  dayOfWeek: string;
+  weekNumber?: number;
+  blocks: ScheduleBlock[];
+  createdBy?: string | { _id: string; fullName: string };
+  isTemplate: boolean;
+  templateName?: string;
+}
+
+// Activity Templates
+export const getActivityTemplates = async (filters?: { type?: string; ageGroup?: string }): Promise<ActivityTemplate[]> => {
   try {
     const params: any = {};
-    if (groupId) params.groupId = groupId;
-    const response = await apiClient.get('/cyclogram', { params });
-    const cyclograms: WeeklyCyclogram[] = response.data.map((item: any) => ({
-      id: item._id,
-      title: item.title,
-      description: item.description,
-      ageGroup: item.ageGroup,
-      groupId: item.groupId,
-      teacherId: item.teacherId,
-      weekStartDate: item.weekStartDate,
-      timeSlots: item.timeSlots,
-      status: item.status,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    }));
-    return cyclograms;
+    if (filters?.type) params.type = filters.type;
+    if (filters?.ageGroup) params.ageGroup = filters.ageGroup;
+    const response = await apiClient.get('/cyclogram/activity-templates', { params });
+    return response.data;
   } catch (error) {
-    return handleApiError(error, 'fetching cyclograms');
+    return handleApiError(error, 'fetching activity templates');
   }
 };
 
-export const getCyclogram = async (id: string) => {
+export const getActivityTypes = async (): Promise<{ value: string; label: string }[]> => {
   try {
-    const response = await apiClient.get(`/cyclogram/${id}`);
-    const cyclogram: WeeklyCyclogram = {
-      id: response.data._id,
-      title: response.data.title,
-      description: response.data.description,
-      ageGroup: response.data.ageGroup,
-      groupId: response.data.groupId,
-      teacherId: response.data.teacherId,
-      weekStartDate: response.data.weekStartDate,
-      timeSlots: response.data.timeSlots,
-      status: response.data.status,
-      createdAt: response.data.createdAt,
-      updatedAt: response.data.updatedAt,
-    };
-    return cyclogram;
+    const response = await apiClient.get('/cyclogram/activity-templates/types');
+    return response.data;
   } catch (error) {
-    return handleApiError(error, `fetching cyclogram ${id}`);
+    return handleApiError(error, 'fetching activity types');
   }
 };
 
-export const createCyclogram = async (cyclogram: WeeklyCyclogram) => {
+export const createActivityTemplate = async (data: Partial<ActivityTemplate>): Promise<ActivityTemplate> => {
   try {
-    const response = await apiClient.post('/cyclogram', cyclogram);
-    const created: WeeklyCyclogram = {
-      id: response.data._id,
-      title: response.data.title,
-      description: response.data.description,
-      ageGroup: response.data.ageGroup,
-      groupId: response.data.groupId,
-      teacherId: response.data.teacherId,
-      weekStartDate: response.data.weekStartDate,
-      timeSlots: response.data.timeSlots,
-      status: response.data.status,
-      createdAt: response.data.createdAt,
-      updatedAt: response.data.updatedAt,
-    };
-    return created;
+    const response = await apiClient.post('/cyclogram/activity-templates', data);
+    return response.data;
   } catch (error) {
-    return handleApiError(error, 'creating cyclogram');
+    return handleApiError(error, 'creating activity template');
   }
 };
 
-export const updateCyclogram = async (
-  id: string,
-  cyclogram: WeeklyCyclogram,
-) => {
+export const updateActivityTemplate = async (id: string, data: Partial<ActivityTemplate>): Promise<ActivityTemplate> => {
   try {
-    const response = await apiClient.put(`/cyclogram/${id}`, cyclogram);
-    const updated: WeeklyCyclogram = {
-      id: response.data._id,
-      title: response.data.title,
-      description: response.data.description,
-      ageGroup: response.data.ageGroup,
-      groupId: response.data.groupId,
-      teacherId: response.data.teacherId,
-      weekStartDate: response.data.weekStartDate,
-      timeSlots: response.data.timeSlots,
-      status: response.data.status,
-      createdAt: response.data.createdAt,
-      updatedAt: response.data.updatedAt,
-    };
-    return updated;
+    const response = await apiClient.put(`/cyclogram/activity-templates/${id}`, data);
+    return response.data;
   } catch (error) {
-    return handleApiError(error, `updating cyclogram ${id}`);
+    return handleApiError(error, 'updating activity template');
   }
 };
 
-export const deleteCyclogram = async (id: string) => {
+export const deleteActivityTemplate = async (id: string): Promise<void> => {
   try {
-    await apiClient.delete(`/cyclogram/${id}`);
-    return { success: true };
+    await apiClient.delete(`/cyclogram/activity-templates/${id}`);
   } catch (error) {
-    return handleApiError(error, `deleting cyclogram ${id}`);
+    return handleApiError(error, 'deleting activity template');
   }
 };
 
-export const getCyclogramTemplates = async (ageGroup?: string) => {
+// Daily Schedules
+export const getDailySchedules = async (filters?: { groupId?: string; date?: string }): Promise<DailySchedule[]> => {
   try {
     const params: any = {};
-    if (ageGroup) params.ageGroup = ageGroup;
-
-    const response = await apiClient.get('/cyclogram/templates', { params });
-    const templates: CyclogramTemplate[] = response.data.map((item: any) => ({
-      id: item._id,
-      name: item.name,
-      description: item.description,
-      ageGroup: item.ageGroup,
-      timeSlots: item.timeSlots,
-      isDefault: item.isDefault,
-      createdAt: item.createdAt,
-    }));
-
-    return templates;
+    if (filters?.groupId) params.groupId = filters.groupId;
+    if (filters?.date) params.date = filters.date;
+    const response = await apiClient.get('/cyclogram/daily-schedules', { params });
+    return response.data;
   } catch (error) {
-    return handleApiError(error, 'fetching cyclogram templates');
+    return handleApiError(error, 'fetching daily schedules');
   }
 };
 
-export const createCyclogramFromTemplate = async (
-  templateId: string,
-  params: {
-    title: string;
-    groupId: string;
-    teacherId: string;
-    weekStartDate: string;
-  },
-) => {
+export const getWeekSchedule = async (groupId: string, startDate: string): Promise<DailySchedule[]> => {
   try {
-    const response = await apiClient.post(
-      `/cyclogram/templates/${templateId}/create`,
-      params,
-    );
-
-    const createdCyclogram: WeeklyCyclogram = {
-      id: response.data._id,
-      title: response.data.title,
-      description: response.data.description,
-      ageGroup: response.data.ageGroup,
-      groupId: response.data.groupId,
-      teacherId: response.data.teacherId,
-      weekStartDate: response.data.weekStartDate,
-      timeSlots: response.data.timeSlots,
-      status: response.data.status,
-      createdAt: response.data.createdAt,
-      updatedAt: response.data.updatedAt,
-    };
-
-    return createdCyclogram;
+    const response = await apiClient.get('/cyclogram/daily-schedules/week', { params: { groupId, startDate } });
+    return response.data;
   } catch (error) {
-    return handleApiError(error, 'creating cyclogram from template');
+    return handleApiError(error, 'fetching week schedule');
   }
 };
 
+export const createDailySchedule = async (data: Partial<DailySchedule>): Promise<DailySchedule> => {
+  try {
+    const response = await apiClient.post('/cyclogram/daily-schedules', data);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, 'creating daily schedule');
+  }
+};
 
+export const updateDailyScheduleBlocks = async (id: string, blocks: ScheduleBlock[]): Promise<DailySchedule> => {
+  try {
+    const response = await apiClient.put(`/cyclogram/daily-schedules/${id}/blocks`, { blocks });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, 'updating schedule blocks');
+  }
+};
 
+export const deleteDailySchedule = async (id: string): Promise<void> => {
+  try {
+    await apiClient.delete(`/cyclogram/daily-schedules/${id}`);
+  } catch (error) {
+    return handleApiError(error, 'deleting daily schedule');
+  }
+};
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+export const copyFromPreviousWeek = async (groupId: string, targetDate: string): Promise<DailySchedule[]> => {
+  try {
+    const response = await apiClient.post('/cyclogram/daily-schedules/copy-week', { groupId, targetDate });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, 'copying from previous week');
+  }
+};

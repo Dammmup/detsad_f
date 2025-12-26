@@ -59,6 +59,7 @@ import ChildPayments from '../pages/Children/ChildPayments';
 import Qwen3Chat from './Qwen3Chat';
 import ProfilePage from '../pages/Staff/ProfilePage';
 import ProductAccountingPage from '../pages/Food/ProductAccountingPage';
+import Statistics from '../pages/Statistics';
 
 interface SimpleLayoutProps {
   children?: React.ReactNode;
@@ -263,6 +264,9 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path='reports' element={<Reports />} />
             <Route path='reports/payroll' element={<ReportsSalary />} />
             <Route path='reports/rent' element={<ReportsRent />} />
+
+            {/* Статистика */}
+            <Route path='statistics' element={<Statistics />} />
 
             {/* Организация/Настройки */}
             <Route path='groups' element={<Groups />} />
