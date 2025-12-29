@@ -39,6 +39,7 @@ import {
   BeachAccess,
   Schedule,
   EventNote as EventNoteIcon,
+  FileUpload as FileUploadIcon,
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -60,6 +61,7 @@ import {
 } from '../../utils/excelExport';
 import AttendanceBulkModal from '../../components/AttendanceBulkModal';
 import ExportButton from '../../components/ExportButton';
+import { importChildAttendance } from '../../services/importService';
 
 
 const ATTENDANCE_STATUSES = {
@@ -106,6 +108,7 @@ const WeeklyAttendance: React.FC = () => {
   const [attendanceData, setAttendanceData] = useState<AttendanceData>({});
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
+  const [isImporting, setIsImporting] = useState(false);
 
   const handleExport = async (
     exportType: string,
@@ -340,6 +343,45 @@ const WeeklyAttendance: React.FC = () => {
     }
   };
 
+  // Импорт посещаемости детей из Excel
+  const handleImportChildAttendance = async () => {
+    try {
+      setIsImporting(true);
+      const year = moment(currentDate).year();
+      const result = await importChildAttendance(year);
+      if (result.success) {
+        enqueueSnackbar(`Импорт завершён: создано ${result.stats.created || 0}, обновлено ${result.stats.updated || 0}`, { variant: 'success' });
+        // Перезагружаем данные
+        if (selectedGroup) {
+          setLoading(true);
+          const monthStart = moment(currentDate).startOf('month');
+          const monthEnd = moment(currentDate).endOf('month');
+          const records = await getChildAttendance({
+            groupId: selectedGroup,
+            startDate: monthStart.format('YYYY-MM-DD'),
+            endDate: monthEnd.format('YYYY-MM-DD'),
+          });
+          const attendanceMap: AttendanceData = {};
+          records.forEach((record: ChildAttendanceRecord) => {
+            const childId = record.childId;
+            const date = record.date.split('T')[0];
+            if (!attendanceMap[childId]) attendanceMap[childId] = {};
+            attendanceMap[childId][date] = { status: record.status, notes: record.notes };
+          });
+          setAttendanceData(attendanceMap);
+          setLoading(false);
+        }
+      } else {
+        enqueueSnackbar(result.error || 'Ошибка импорта', { variant: 'error' });
+      }
+    } catch (error: any) {
+      console.error('Error importing child attendance:', error);
+      enqueueSnackbar(error?.message || 'Ошибка импорта', { variant: 'error' });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
 
   if (loading && Object.keys(attendanceData).length === 0) {
     return (
@@ -395,6 +437,17 @@ const WeeklyAttendance: React.FC = () => {
                     ]}
                     onExport={handleExport}
                   />
+                  <Tooltip title="Импортировать из Excel (docs/Посещаемость детей.xlsx)">
+                    <Button
+                      variant='outlined'
+                      color='primary'
+                      startIcon={isImporting ? <CircularProgress size={20} /> : <FileUploadIcon />}
+                      onClick={handleImportChildAttendance}
+                      disabled={isImporting || loading}
+                    >
+                      {isImporting ? 'Импорт...' : 'Импорт'}
+                    </Button>
+                  </Tooltip>
                 </Box>
               </Box>
             }

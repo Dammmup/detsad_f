@@ -29,6 +29,7 @@ import {
   Visibility as VisibilityIcon,
   Add as AddIcon,
   Refresh as RefreshIcon,
+  FileUpload as FileUploadIcon,
 } from '@mui/icons-material';
 import {
   Dialog,
@@ -44,6 +45,7 @@ import {
   Payroll,
   generatePayrollSheets,
 } from '../../services/payroll';
+import { importPayrolls } from '../../services/importService';
 import FinesDetailsDialog from './FinesDetailsDialog';
 
 interface Props {
@@ -93,6 +95,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   const [newFine, setNewFine] = useState({ amount: '', reason: '' });
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -506,6 +509,33 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
     }
   };
 
+  // Импорт зарплат из Excel
+  const handleImportPayrolls = async () => {
+    if (!currentUser || !currentUser.id || currentUser.role !== 'admin') {
+      setSnackbarMessage('Только администратор может импортировать зарплаты');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    try {
+      setImporting(true);
+      const result = await importPayrolls(selectedMonth);
+      if (result.success) {
+        setSnackbarMessage(`Импорт завершён: создано ${result.stats.created || 0}, обновлено ${result.stats.updated || 0}`);
+        await reloadPayrolls();
+      } else {
+        setSnackbarMessage(result.error || 'Ошибка импорта');
+      }
+      setSnackbarOpen(true);
+    } catch (error: any) {
+      console.error('Error importing payrolls:', error);
+      setSnackbarMessage(error?.message || 'Ошибка импорта зарплат');
+      setSnackbarOpen(true);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleOpenFineDialog = (row: PayrollRow) => {
     setCurrentFinePayrollId(row._id || row.staffId);
     setCurrentFineStaffName(row.staffName);
@@ -731,6 +761,24 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                     >
                       {generating ? 'Генерация...' : 'Сгенерировать'}
                     </Button>
+                    <Tooltip title="Импортировать зарплаты из файла Excel (docs/Payrolls.xlsx)">
+                      <Button
+                        variant='contained'
+                        startIcon={
+                          importing ? <CircularProgress size={20} color="inherit" /> : <FileUploadIcon />
+                        }
+                        onClick={handleImportPayrolls}
+                        disabled={importing || refreshing || generating}
+                        sx={{
+                          backgroundColor: 'rgba(255,255,255,0.2)',
+                          '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                          color: 'white',
+                          fontWeight: 'medium',
+                        }}
+                      >
+                        {importing ? 'Импорт...' : 'Импорт из Excel'}
+                      </Button>
+                    </Tooltip>
                   </>
                 )}
               </Box>
@@ -988,14 +1036,14 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                             <TextField
                               size='small'
                               type='number'
-                              value={editData.accruals ?? ''}
-                              onChange={(e) => handleInputChange('accruals', Number(e.target.value))}
+                              value={editData.baseSalary ?? ''}
+                              onChange={(e) => handleInputChange('baseSalary', Number(e.target.value))}
                               inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
                               sx={{ width: '100px' }}
                               variant='standard'
                             />
                           ) : (
-                            r.accruals?.toLocaleString()
+                            r.baseSalary?.toLocaleString()
                           )}
                         </TableCell>
 

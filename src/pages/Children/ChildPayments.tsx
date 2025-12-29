@@ -28,7 +28,7 @@ import {
   Snackbar,
   Autocomplete,
 } from '@mui/material';
-import { Edit, Delete, Add } from '@mui/icons-material';
+import { Edit, Delete, Add, FileUpload } from '@mui/icons-material';
 import moment from 'moment';
 import { useDate } from '../../components/context/DateContext';
 import { IChildPayment, Child, Group } from '../../types/common';
@@ -38,6 +38,7 @@ import { groupsApi } from '../../services/groups';
 import ExportButton from '../../components/ExportButton';
 import { exportChildPayments } from '../../utils/excelExport';
 import DateNavigator from '../../components/DateNavigator';
+import { importChildPayments } from '../../services/importService';
 
 const ChildPayments: React.FC = () => {
   const { currentDate } = useDate();
@@ -72,6 +73,8 @@ const ChildPayments: React.FC = () => {
   const [filteredPayments, setFilteredPayments] = useState<IChildPayment[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationAttempted, setGenerationAttempted] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
   const isMobile = useMediaQuery('(max-width:900px)');
 
@@ -367,6 +370,30 @@ const ChildPayments: React.FC = () => {
     exportChildPayments(filteredPayments, children, groups);
   };
 
+  // Импорт оплаты детей из Excel
+  const handleImportChildPayments = async () => {
+    try {
+      setIsImporting(true);
+      const year = moment(currentDate).year();
+      const month = moment(currentDate).month();
+      const result = await importChildPayments(year, month);
+      if (result.success) {
+        setSnackbar({
+          open: true,
+          message: `Импорт завершён: создано ${result.stats.created || 0}, обновлено ${result.stats.updated || 0}`
+        });
+        await fetchPayments();
+      } else {
+        setSnackbar({ open: true, message: result.error || 'Ошибка импорта' });
+      }
+    } catch (error: any) {
+      console.error('Error importing child payments:', error);
+      setSnackbar({ open: true, message: error?.message || 'Ошибка импорта' });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   return (
     <Box>
       <DateNavigator />
@@ -422,7 +449,28 @@ const ChildPayments: React.FC = () => {
           exportTypes={[{ value: 'child-payments', label: 'Экспорт оплат' }]}
           onExport={handleExport}
         />
+        <Tooltip title="Импортировать оплаты из Excel (docs/ChildPayment.xlsx)">
+          <Button
+            variant='outlined'
+            color='primary'
+            startIcon={isImporting ? <CircularProgress size={20} /> : <FileUpload />}
+            onClick={handleImportChildPayments}
+            disabled={isImporting || loading}
+            sx={{ width: isMobile ? '100%' : 'auto', mt: isMobile ? 1 : 0 }}
+          >
+            {isImporting ? 'Импорт...' : 'Импорт из Excel'}
+          </Button>
+        </Tooltip>
       </Box>
+
+      {/* Snackbar для сообщений импорта */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        message={snackbar.message}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
 
       {/* Фильтры */}
       <Box

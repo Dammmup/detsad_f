@@ -40,6 +40,7 @@ import {
   Schedule,
   Person,
   Search as SearchIcon,
+  FileUpload as FileUploadIcon,
 } from '@mui/icons-material';
 import moment from 'moment';
 import 'moment/locale/ru';
@@ -54,6 +55,8 @@ import {
   ROLE_TRANSLATIONS,
 } from '../../types/common';
 import DateNavigator from '../../components/DateNavigator';
+import { importStaffAttendance } from '../../services/importService';
+import { useSnackbar } from 'notistack';
 
 moment.locale('ru');
 
@@ -102,6 +105,7 @@ interface TimeRecord {
 
 const StaffAttendanceTracking: React.FC = () => {
   const { currentDate } = useDate();
+  const { enqueueSnackbar } = useSnackbar();
   const [staffList, setStaffList] = useState<any[]>([]);
   const [records, setRecords] = useState<TimeRecord[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -115,6 +119,7 @@ const StaffAttendanceTracking: React.FC = () => {
   const [checkInDialogOpen, setCheckInDialogOpen] = useState(false);
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
   const [currentStaffId, setCurrentStaffId] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
 
 
 
@@ -1110,6 +1115,29 @@ const StaffAttendanceTracking: React.FC = () => {
             sx={{ mr: 1 }}
           >
             Создать смену
+          </Button>
+          <Button
+            variant='outlined'
+            startIcon={isImporting ? <AccessTime /> : <FileUploadIcon />}
+            onClick={async () => {
+              try {
+                setIsImporting(true);
+                const year = moment(currentDate).year();
+                const result = await importStaffAttendance(year);
+                if (result.success) {
+                  enqueueSnackbar(`Импорт завершён: смен ${result.stats.shiftsCreated || 0}, посещаемость ${result.stats.attendanceCreated || 0}`, { variant: 'success' });
+                } else {
+                  enqueueSnackbar(result.error || 'Ошибка импорта', { variant: 'error' });
+                }
+              } catch (error: any) {
+                enqueueSnackbar(error?.message || 'Ошибка импорта', { variant: 'error' });
+              } finally {
+                setIsImporting(false);
+              }
+            }}
+            disabled={isImporting}
+          >
+            {isImporting ? 'Импорт...' : 'Импорт'}
           </Button>
         </Box>
       </Box>
