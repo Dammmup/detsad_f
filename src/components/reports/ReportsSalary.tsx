@@ -72,6 +72,7 @@ interface PayrollRow {
   baseSalary: number;
   fines?: any[];
   userFines?: number;
+  bonuses: number;
 }
 
 const ReportsSalary: React.FC<Props> = ({ userId }) => {
@@ -156,9 +157,10 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           totalPayout: data.reduce((sum, p) => {
 
             const accruals = p.accruals || p.baseSalary || 0;
+            const bonuses = p.bonuses || 0;
             const penalties = p.penalties || 0;
             const advance = p.advance || 0;
-            const total = accruals - penalties - advance;
+            const total = accruals + bonuses - penalties - advance;
 
             return sum + (total >= 0 ? total : 0);
           }, 0),
@@ -176,9 +178,11 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
             absencePenalties: p.absencePenalties || 0,
             latePenaltyRate: p.latePenaltyRate || 13,
             advance: p.advance || 0,
+            bonuses: p.bonuses || 0,
 
             total:
-              (p.accruals || p.baseSalary || 0) -
+              (p.accruals || p.baseSalary || 0) +
+              (p.bonuses || 0) -
               ((p.latePenalties || 0) + (p.absencePenalties || 0)) -
               (p.advance || 0),
             status: p.status && p.status !== 'draft' ? p.status : 'calculated',
@@ -207,6 +211,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
       accruals: row.accruals || undefined,
       penalties: row.penalties || undefined,
       advance: row.advance || undefined,
+      bonuses: row.bonuses || undefined,
       latePenaltyRate: row.latePenaltyRate || undefined,
       baseSalary: row.baseSalary || undefined,
       status: row.status && row.status !== 'draft' ? row.status : 'calculated',
@@ -234,6 +239,10 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           editData.advance !== undefined
             ? editData.advance
             : originalRow.advance || 0;
+        const bonuses =
+          editData.bonuses !== undefined
+            ? editData.bonuses
+            : originalRow.bonuses || 0;
         const status =
           editData.status && editData.status !== 'draft'
             ? editData.status
@@ -245,7 +254,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         const apiStatus = status === 'calculated' ? 'draft' : status;
 
 
-        const total = accruals - penalties - advance;
+        const total = accruals + bonuses - penalties - advance;
 
 
         const updatedData = {
@@ -261,6 +270,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
             staffId: { _id: originalRow.staffId } as any,
             period: selectedMonth,
             baseSalary: editData.baseSalary ?? originalRow.baseSalary ?? 0,
+            bonuses: editData.bonuses ?? originalRow.bonuses ?? 0,
             latePenaltyRate: editData.latePenaltyRate ?? originalRow.latePenaltyRate,
             ...updatedData
           });
@@ -345,11 +355,11 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
 
 
     csvContent +=
-      'Сотрудник;Начисления;Аванс;Вычеты;Ставка за опоздание (тг/мин);Итого;Статус\n';
+      'Сотрудник;Начисления;Премия;Аванс;Вычеты;Ставка за опоздание (тг/мин);Итого;Статус\n';
 
 
     rows.forEach((row) => {
-      csvContent += `${row.staffName};${row.accruals};${row.advance};${row.penalties};${row.latePenaltyRate};${row.total};${row.status}\n`;
+      csvContent += `${row.staffName};${row.accruals};${row.bonuses};${row.advance};${row.penalties};${row.latePenaltyRate};${row.total};${row.status}\n`;
     });
 
 
@@ -428,7 +438,8 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         const accruals = p.accruals || p.baseSalary || 0;
         const penalties = p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0);
         const advance = p.advance || 0;
-        const total = accruals - penalties - advance;
+        const bonuses = p.bonuses || 0;
+        const total = accruals + bonuses - penalties - advance;
         return sum + (total >= 0 ? total : 0);
       }, 0),
     };
@@ -444,8 +455,10 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         absencePenalties: p.absencePenalties || 0,
         latePenaltyRate: p.latePenaltyRate || 13,
         advance: p.advance || 0,
+        bonuses: p.bonuses || 0,
         total:
-          (p.accruals || p.baseSalary || 0) -
+          (p.accruals || p.baseSalary || 0) +
+          (p.bonuses || 0) -
           (p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0)) -
           (p.advance || 0),
         status: p.status && p.status !== 'draft' ? p.status : 'calculated',
@@ -944,6 +957,12 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                         align='right'
                         sx={{ color: 'primary.main', fontWeight: 'bold' }}
                       >
+                        Премия
+                      </TableCell>
+                      <TableCell
+                        align='right'
+                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
+                      >
                         Аванс
                       </TableCell>
                       <TableCell
@@ -1044,6 +1063,29 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                             />
                           ) : (
                             r.baseSalary?.toLocaleString()
+                          )}
+                        </TableCell>
+
+
+
+                        <TableCell
+                          align='right'
+                          sx={{ fontSize: '1rem', fontWeight: 'medium', color: 'primary.main' }}
+                        >
+                          {editingId === r.staffId ? (
+                            <TextField
+                              size='small'
+                              type='number'
+                              value={editData.bonuses ?? ''}
+                              onChange={(e) => handleInputChange('bonuses', Number(e.target.value))}
+                              inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
+                              sx={{ width: '80px' }}
+                              variant='standard'
+                            />
+                          ) : r.bonuses ? (
+                            r.bonuses?.toLocaleString()
+                          ) : (
+                            '0'
                           )}
                         </TableCell>
 

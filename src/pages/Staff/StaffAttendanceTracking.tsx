@@ -265,7 +265,7 @@ const StaffAttendanceTracking: React.FC = () => {
               overtimeDuration: undefined,
               lateMinutes: undefined,
               earlyLeaveMinutes: undefined,
-              notes: `Смена: ${shift.startTime} - ${shift.endTime}`,
+              notes: `Смена запланирована`,
               penalties: {
                 late: { minutes: 0, amount: 0 },
                 earlyLeave: { minutes: 0, amount: 0 },

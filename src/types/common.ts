@@ -275,8 +275,8 @@ export interface Shift {
   staffId?: string;
   staffName?: string;
   date: string;
-  startTime: string;
-  endTime: string;
+  startTime?: string;
+  endTime?: string;
   status: ShiftStatus;
   notes?: string;
   createdAt: string;
@@ -289,8 +289,6 @@ export interface ShiftFormData {
   staffId?: string;
   staffName?: string;
   date: string;
-  startTime: string;
-  endTime: string;
   notes?: string;
   status?: ShiftStatus;
   alternativeStaffId?: string;

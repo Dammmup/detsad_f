@@ -16,12 +16,10 @@ import {
   DialogTitle,
   Divider,
   FormControl,
-  FormControlLabel,
   Grid,
   InputLabel,
   MenuItem,
   Paper,
-  Popover,
   Select,
   SelectChangeEvent,
   Table,
@@ -37,9 +35,13 @@ import {
   InputAdornment,
   Checkbox,
   ListItemText,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Add as AddIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -67,12 +69,8 @@ import {
 } from '../../services/shifts';
 import { getUsers } from '../../services/users';
 import { User } from '../../types/common';
-import {
-  getAllHolidays,
-  createHoliday,
-  deleteHoliday,
-  Holiday,
-} from '../../services/holidays';
+import { KindergartenSettings } from '../../services/settings';
+import { getHolidays } from '../../services/common';
 
 
 
@@ -111,6 +109,8 @@ const ROLE_LABELS: Record<string, string> = {
   intern: 'Стажер',
 };
 
+const DAY_NAMES = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
 
 
 
@@ -118,6 +118,10 @@ const StaffSchedule: React.FC = () => {
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
   const { currentDate } = useDate();
+
+  useEffect(() => {
+    moment.locale('ru');
+  }, []);
 
 
   const [modalOpen, setModalOpen] = useState<boolean>(false);
@@ -133,12 +137,75 @@ const StaffSchedule: React.FC = () => {
   const [shifts, setShifts] = useState<Shift[]>([]);
 
 
-  const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [selectedHolidayDate, setSelectedHolidayDate] = useState<string | null>(
-    null,
-  );
-  const [isHolidayLoading, setIsHolidayLoading] = useState(false);
+  const [holidays, setHolidays] = useState<string[]>([]);
+
+  // Bulk Delete State
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<'selected' | 'all'>('selected');
+  const [deleteStartDate, setDeleteStartDate] = useState<moment.Moment | null>(moment());
+  const [deleteEndDate, setDeleteEndDate] = useState<moment.Moment | null>(moment());
+
+  const handleBulkDelete = async () => {
+    if (!deleteStartDate || !deleteEndDate) {
+      enqueueSnackbar('Выберите период', { variant: 'warning' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Prepare date range
+      const start = deleteStartDate.format('YYYY-MM-DD');
+      const end = deleteEndDate.format('YYYY-MM-DD');
+
+      // Filter shifts
+      const shiftsToDelete = shifts.filter(shift => {
+        const shiftDate = shift.date.split('T')[0];
+        const inRange = shiftDate >= start && shiftDate <= end;
+
+        if (!inRange) return false;
+
+        if (deleteTarget === 'selected') {
+          const sId = typeof shift.staffId === 'string' ? shift.staffId : (shift.staffId as any)._id;
+          return selectedStaff.includes(sId);
+        }
+
+        return true; // 'all'
+      });
+
+      const idsToDelete = shiftsToDelete.map(s => s.id || s._id);
+
+      if (idsToDelete.length === 0) {
+        enqueueSnackbar('Смены для удаления не найдены', { variant: 'info' });
+        setLoading(false);
+        return;
+      }
+
+      if (!window.confirm(`Будет удалено ${idsToDelete.length} смен. Продолжить?`)) {
+        setLoading(false);
+        return;
+      }
+
+      // Dynamic import to avoid circular dependencies if any, good practice from previous code
+      const { shiftsApi } = await import('../../services/shifts');
+      await shiftsApi.bulkDelete(idsToDelete);
+
+      enqueueSnackbar(`Удалено ${idsToDelete.length} смен`, { variant: 'success' });
+
+      // Refresh
+      const monthStart = moment(currentDate).startOf('month');
+      const monthEnd = moment(currentDate).endOf('month');
+      const newData = await getShifts(monthStart.format('YYYY-MM-DD'), monthEnd.format('YYYY-MM-DD'));
+      setShifts(newData);
+
+      setDeleteDialogOpen(false);
+    } catch (e) {
+      console.error(e);
+      enqueueSnackbar('Ошибка при удалении', { variant: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleExport = async (
     exportType: string,
@@ -169,8 +236,6 @@ const StaffSchedule: React.FC = () => {
     staffId: '',
     staffName: '',
     date: moment().format('YYYY-MM-DD'),
-    startTime: '08:00',
-    endTime: '18:30',
     notes: '',
     status: ShiftStatus.scheduled,
     alternativeStaffId: '',
@@ -195,6 +260,16 @@ const StaffSchedule: React.FC = () => {
 
         setStaff(staffData);
         setShifts(shiftsData);
+
+        try {
+          const hData = await getHolidays();
+          if (hData && hData.holidays) {
+            setHolidays(hData.holidays);
+          }
+        } catch (hErr) {
+          console.error("Error fetching holidays:", hErr);
+          // Don't block UI if holidays fail
+        }
       } catch (err: any) {
         console.error('Error loading data:', err);
         setError('Не удалось загрузить данные');
@@ -208,84 +283,9 @@ const StaffSchedule: React.FC = () => {
   }, [currentDate, enqueueSnackbar]);
 
 
-  useEffect(() => {
-    const fetchHolidays = async () => {
-      try {
-        const monthStart = moment(currentDate).startOf('month');
-
-
-        const holidaysData = await getAllHolidays({
-          month: monthStart.month() + 1,
-          year: monthStart.year(),
-        });
-
-
-        if (Array.isArray(holidaysData)) {
-
-          const uniqueHolidays = holidaysData.filter(
-            (holiday, index, self) =>
-              index ===
-              self.findIndex(
-                (h) =>
-                  h.day === holiday.day &&
-                  h.month === holiday.month &&
-                  (h.isRecurring ||
-                    holiday.isRecurring ||
-                    h.year === holiday.year),
-              ),
-          );
-
-          console.log('Fetched holidays:', holidaysData);
-          console.log('Unique holidays:', uniqueHolidays);
-
-          setHolidays(uniqueHolidays);
-        } else {
-          console.error('Holidays data is not an array:', holidaysData);
-          setHolidays([]);
-        }
-      } catch (err) {
-        console.error('Error loading holidays:', err);
-        setHolidays([]);
-      }
-    };
-
-    fetchHolidays();
-  }, [currentDate]);
-
-
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
     const { value } = event.target;
     setFilterRole(typeof value === 'string' ? value.split(',') : value);
-  };
-
-
-  const isHoliday = (date: Date): boolean => {
-
-    if (!holidays || !Array.isArray(holidays)) {
-      console.log('Holidays is not available or not an array:', holidays);
-      return false;
-    }
-
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
-
-    console.log(
-      `Checking if ${day}.${month}.${year} is holiday. Total holidays: ${holidays.length}`,
-    );
-    console.log('Holidays array:', holidays);
-
-
-    const holiday = holidays.find(
-      (h) =>
-        h.day === day &&
-        h.month === month &&
-        (h.isRecurring || h.year === year),
-    );
-
-    console.log(`Holiday found: ${holiday ? holiday.name : 'None'}`);
-
-    return holiday !== undefined;
   };
 
 
@@ -294,155 +294,6 @@ const StaffSchedule: React.FC = () => {
     return dayOfWeek === 0 || dayOfWeek === 6;
   };
 
-
-  const handleDayHeaderClick = (
-    event: React.MouseEvent<HTMLElement>,
-    date: Date,
-  ) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedHolidayDate(moment(date).format('YYYY-MM-DD'));
-  };
-
-
-  const handleHolidayToggle = async () => {
-    if (!selectedHolidayDate) return;
-
-    setIsHolidayLoading(true);
-
-    try {
-      const date = new Date(selectedHolidayDate);
-      const day = date.getDate();
-      const month = date.getMonth() + 1;
-      const year = date.getFullYear();
-
-      console.log(`Toggling holiday for date: ${day}.${month}.${year}`);
-      console.log('Current holidays array:', holidays);
-
-
-      const existingHoliday =
-        holidays && Array.isArray(holidays)
-          ? holidays.find(
-            (h) =>
-              h.day === day &&
-              h.month === month &&
-              (h.isRecurring || h.year === year),
-          )
-          : undefined;
-
-      console.log(
-        `Existing holiday: ${existingHoliday ? existingHoliday.name : 'None'}`,
-      );
-
-      if (existingHoliday) {
-
-        await deleteHoliday(existingHoliday._id);
-        setHolidays((prev) =>
-          Array.isArray(prev)
-            ? prev.filter((h) => h._id !== existingHoliday._id)
-            : [],
-        );
-
-
-        const shiftsToDelete = shifts.filter(
-          (shift) => shift.date === selectedHolidayDate,
-        );
-        for (const shift of shiftsToDelete) {
-          await deleteShift(shift.id!);
-        }
-
-        setShifts(shifts.filter((shift) => shift.date !== selectedHolidayDate));
-
-        enqueueSnackbar(
-          `День ${selectedHolidayDate} больше не является праздником`,
-          { variant: 'info' },
-        );
-      } else {
-
-        const duplicateHoliday =
-          holidays && Array.isArray(holidays)
-            ? holidays.find(
-              (h) =>
-                h.day === day &&
-                h.month === month &&
-                h.year === year &&
-                !h.isRecurring,
-            )
-            : undefined;
-
-        console.log(
-          `Duplicate holiday: ${duplicateHoliday ? duplicateHoliday.name : 'None'}`,
-        );
-
-        if (duplicateHoliday) {
-          enqueueSnackbar(
-            `День ${selectedHolidayDate} уже отмечен как праздник`,
-            { variant: 'warning' },
-          );
-          return;
-        }
-
-
-        const newHoliday = await createHoliday({
-          name: `Праздник ${selectedHolidayDate}`,
-          day,
-          month,
-          year,
-          isRecurring: false,
-          description: `Праздничный день ${selectedHolidayDate}`,
-        });
-
-
-        setHolidays((prev) => {
-          if (Array.isArray(prev)) {
-
-            const alreadyExists = prev.some(
-              (h) =>
-                h.day === newHoliday.day &&
-                h.month === newHoliday.month &&
-                (h.isRecurring || h.year === newHoliday.year),
-            );
-
-            if (!alreadyExists) {
-              return [...prev, newHoliday];
-            } else {
-              return prev;
-            }
-          } else {
-            return [newHoliday];
-          }
-        });
-
-
-        const shiftsToDelete = shifts.filter(
-          (shift) => shift.date === selectedHolidayDate,
-        );
-        for (const shift of shiftsToDelete) {
-          await deleteShift(shift.id!);
-        }
-
-        setShifts(shifts.filter((shift) => shift.date !== selectedHolidayDate));
-
-        enqueueSnackbar(`День ${selectedHolidayDate} отмечен как праздник`, {
-          variant: 'success',
-        });
-      }
-    } catch (err) {
-      console.error('Error toggling holiday:', err);
-      enqueueSnackbar('Ошибка при изменении статуса праздника', {
-        variant: 'error',
-      });
-    } finally {
-      setIsHolidayLoading(false);
-      setAnchorEl(null);
-      setSelectedHolidayDate(null);
-    }
-  };
-
-
-  const handleClosePopover = () => {
-    setAnchorEl(null);
-    setSelectedHolidayDate(null);
-  };
 
   const assignFiveTwoSchedule = async () => {
     console.log('assignFiveTwoSchedule called');
@@ -521,8 +372,6 @@ const StaffSchedule: React.FC = () => {
               staffName:
                 staff.find((s) => (s.id || s._id) === staffId)?.fullName || '',
               date: dateStr,
-              startTime: '08:00',
-              endTime: '18:30',
               notes: 'Рабочий день по графику 5/2',
               status: ShiftStatus.scheduled,
             });
@@ -645,12 +494,6 @@ const StaffSchedule: React.FC = () => {
       enqueueSnackbar('Укажите дату смены', { variant: 'error' });
       return false;
     }
-    if (!formData.startTime || !formData.endTime) {
-      enqueueSnackbar('Укажите время начала и окончания смены', {
-        variant: 'error',
-      });
-      return false;
-    }
     return true;
   };
 
@@ -670,8 +513,6 @@ const StaffSchedule: React.FC = () => {
         staffId: formData.staffId || '',
         staffName: formData.staffName || '',
         date: formData.date,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
         notes: formData.notes || '',
         status: formData.status || ShiftStatus.scheduled,
         createdAt: editingShift?.createdAt || new Date().toISOString(),
@@ -698,8 +539,8 @@ const StaffSchedule: React.FC = () => {
       } else {
 
         const newShift = await createShift({
-          ...shiftData,
-          alternativeStaffId: formData.alternativeStaffId,
+          ...shiftData as any,
+          alternativeStaffId: formData.alternativeStaffId as any,
         });
         setShifts((prev) => [...prev, newShift]);
         enqueueSnackbar('Смена успешно создана', { variant: 'success' });
@@ -729,8 +570,6 @@ const StaffSchedule: React.FC = () => {
       staffId: (shift.staffId as any)?._id || shift.staffId || '',
       staffName: shift.staffName || '',
       date: shift.date,
-      startTime: shift.startTime,
-      endTime: shift.endTime,
       status: shift.status,
       notes: shift.notes || '',
       alternativeStaffId: shift.alternativeStaffId || '',
@@ -747,8 +586,6 @@ const StaffSchedule: React.FC = () => {
       staffId: '',
       staffName: '',
       date: moment().format('YYYY-MM-DD'),
-      startTime: '08:00',
-      endTime: '18:30',
       status: 'scheduled' as ShiftStatus,
       notes: '',
       alternativeStaffId: '',
@@ -863,6 +700,22 @@ const StaffSchedule: React.FC = () => {
                   >
                     Назначить график 5/2
                   </Button>
+                  <Button
+                    variant='contained'
+                    color='error'
+                    sx={{ ml: 2 }}
+                    startIcon={<DeleteIcon />}
+                    onClick={() => {
+                      // Initialize dates to current selection context or current month view if needed
+                      // For simplicity, default to current day or current month start/end
+                      setDeleteStartDate(moment(currentDate));
+                      setDeleteEndDate(moment(currentDate));
+                      setDeleteTarget(selectedStaff.length > 0 ? 'selected' : 'all');
+                      setDeleteDialogOpen(true);
+                    }}
+                  >
+                    Удалить смены
+                  </Button>
                 </Box>
               </Box>
             }
@@ -933,26 +786,22 @@ const StaffSchedule: React.FC = () => {
                   <TableRow>
                     <TableCell>Сотрудник</TableCell>
                     {monthDays.map((day) => {
-                      const isDayHoliday = isHoliday(day);
                       return (
                         <TableCell
                           key={day.toString()}
                           align='center'
-                          onClick={(e) => handleDayHeaderClick(e, day)}
                           sx={{
-                            cursor: 'pointer',
-                            backgroundColor: isDayHoliday
-                              ? 'error.light'
-                              : 'inherit',
-                            '&:hover': {
-                              backgroundColor: isDayHoliday
-                                ? 'error.light'
-                                : 'action.hover',
-                            },
+                            backgroundColor:
+                              holidays.includes(moment(day).format('YYYY-MM-DD')) ? '#ffcdd2' : // Red 100
+                                isWeekend(day)
+                                  ? 'grey.100'
+                                  : 'inherit',
+                            color: holidays.includes(moment(day).format('YYYY-MM-DD')) ? '#c62828' : 'inherit', // Red 800
+                            border: holidays.includes(moment(day).format('YYYY-MM-DD')) ? '1px solid #e57373' : undefined
                           }}
                         >
                           <Box>
-                            <Box>{moment(day).format('dd')}</Box>
+                            <Box>{DAY_NAMES[day.getDay()]}</Box>
                             <Box>{moment(day).format('D')}</Box>
                           </Box>
                         </TableCell>
@@ -1058,102 +907,75 @@ const StaffSchedule: React.FC = () => {
                             </Box>
                           </TableCell>
                           {monthDays.map((day) => {
-                            const isDayHoliday = isHoliday(day);
                             const dayShifts = getShiftsForDay(staffId, day);
                             return (
                               <TableCell
                                 key={day.toString()}
                                 onClick={() => {
-                                  if (!isDayHoliday) {
-
-                                    setFormData({
-                                      ...formData,
-                                      staffId: staffId,
-                                      staffName: staffMember.fullName,
-                                      date: moment(day).format('YYYY-MM-DD'),
-                                    });
-                                    setModalOpen(true);
-                                  }
+                                  setFormData({
+                                    ...formData,
+                                    staffId: staffId,
+                                    staffName: staffMember.fullName,
+                                    date: moment(day).format('YYYY-MM-DD'),
+                                  });
+                                  setModalOpen(true);
                                 }}
                                 sx={{
                                   minHeight: '100px',
                                   border: '1px solid',
                                   borderColor: 'divider',
-                                  backgroundColor: isDayHoliday
-                                    ? 'error.light'
-                                    : isWeekend(day)
-                                      ? 'grey.100'
-                                      : 'inherit',
+                                  backgroundColor:
+                                    holidays.includes(moment(day).format('YYYY-MM-DD')) ? '#ffcdd2' :
+                                      isWeekend(day)
+                                        ? 'grey.100'
+                                        : 'inherit',
                                   '&:hover': {
-                                    backgroundColor: isDayHoliday
-                                      ? 'error.light'
-                                      : isWeekend(day)
-                                        ? 'grey.200'
-                                        : 'action.hover',
-                                    cursor:
-                                      isDayHoliday
-                                        ? 'not-allowed'
-                                        : 'pointer',
+                                    backgroundColor:
+                                      holidays.includes(moment(day).format('YYYY-MM-DD')) ? '#e57373' :
+                                        isWeekend(day)
+                                          ? 'grey.200'
+                                          : 'action.hover',
+                                    cursor: 'pointer',
                                   },
                                 }}
                               >
-                                {isDayHoliday ? (
+                                {dayShifts.map((shift) => (
                                   <Box
-                                    display='flex'
-                                    alignItems='center'
-                                    justifyContent='center'
-                                    height='100%'
-                                    color='error.main'
-                                    fontSize='0.8rem'
+                                    key={shift.id}
+                                    sx={{
+                                      p: 1,
+                                      mb: 1,
+                                      borderRadius: 1,
+                                      bgcolor: 'background.paper',
+                                      borderLeft: `4px solid ${theme.palette.primary.main}`,
+                                      '&:hover': {
+                                        bgcolor: 'action.selected',
+                                      },
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditShift(shift);
+                                    }}
                                   >
-                                    {isDayHoliday ? 'Праздник' : 'Выходной'}
-                                  </Box>
-                                ) : (
-                                  dayShifts.map((shift) => (
-                                    <Box
-                                      key={shift.id}
-                                      sx={{
-                                        p: 1,
-                                        mb: 1,
-                                        borderRadius: 1,
-                                        bgcolor: 'background.paper',
-                                        borderLeft: `4px solid ${theme.palette.primary.main}`,
-                                        '&:hover': {
-                                          bgcolor: 'action.selected',
-                                        },
-                                      }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
 
-                                        const shiftDate = new Date(shift.date);
-                                        if (
-                                          !isHoliday(shiftDate)
-                                        ) {
-                                          handleEditShift(shift);
+                                    <Box mt={0.5}>
+                                      <Chip
+                                        label={
+                                          STATUS_TEXT[
+                                          shift.status as keyof typeof STATUS_TEXT
+                                          ] || shift.status
                                         }
-                                      }}
-                                    >
-                                      <Box sx={{ fontSize: 12 }}>
-                                        {shift.startTime} - {shift.endTime}
-                                      </Box>
-                                      <Box mt={0.5}>
-                                        <Chip
-                                          label={
-                                            STATUS_TEXT[
-                                            shift.status as keyof typeof STATUS_TEXT
-                                            ] || shift.status
-                                          }
-                                          size='small'
-                                          color={
-                                            STATUS_COLORS[
-                                            shift.status as keyof typeof STATUS_COLORS
-                                            ] || 'default'
-                                          }
-                                        />
-                                      </Box>
+                                        size='small'
+                                        color={
+                                          STATUS_COLORS[
+                                          shift.status as keyof typeof STATUS_COLORS
+                                          ] || 'default'
+                                        }
+                                      />
                                     </Box>
-                                  ))
-                                )}
+                                  </Box>
+                                ))
+                                }
                               </TableCell>
                             );
                           })}
@@ -1163,38 +985,6 @@ const StaffSchedule: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-
-            {/* Popover для установки праздника */}
-            <Popover
-              open={Boolean(anchorEl)}
-              anchorEl={anchorEl}
-              onClose={handleClosePopover}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'center',
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'center',
-              }}
-            >
-              <Box p={2}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={
-                        selectedHolidayDate
-                          ? isHoliday(new Date(selectedHolidayDate))
-                          : false
-                      }
-                      onChange={handleHolidayToggle}
-                      disabled={isHolidayLoading}
-                    />
-                  }
-                  label='Является праздником'
-                />
-              </Box>
-            </Popover>
           </CardContent>
         </Card>
 
@@ -1272,41 +1062,6 @@ const StaffSchedule: React.FC = () => {
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={6} sm={3}>
-                  <TextField
-                    label='Начало'
-                    type='time'
-                    name='startTime'
-                    value={formData.startTime}
-                    onChange={handleInputChange}
-                    fullWidth
-                    required
-                    InputLabelProps={{
-                      shrink: true,
-                    }}
-                    inputProps={{
-                      step: 300,
-                    }}
-                  />
-                </Grid>
-
-                <Grid item xs={6} sm={3}>
-                  <TextField
-                    label='Окончание'
-                    type='time'
-                    name='endTime'
-                    value={formData.endTime}
-                    onChange={handleInputChange}
-                    fullWidth
-                    required
-                    InputLabelProps={{
-                      shrink: true,
-                    }}
-                    inputProps={{
-                      step: 300,
-                    }}
-                  />
-                </Grid>
 
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth required>
@@ -1395,7 +1150,53 @@ const StaffSchedule: React.FC = () => {
               </Grid>
             </DialogContent>
             <DialogActions sx={{ p: 2 }}>
-              <Button onClick={handleCloseModal} color='inherit'>
+              {editingShift && editingShift.id && (
+                <Button
+                  onClick={async () => {
+                    if (window.confirm('Вы уверены, что хотите удалить эту смену?')) {
+                      try {
+                        await deleteShift(editingShift.id!);
+                        enqueueSnackbar('Смена удалена', { variant: 'success' });
+                        const monthStart = moment(currentDate).startOf('month');
+                        const monthEnd = moment(currentDate).endOf('month');
+                        const shiftsData = await getShifts(
+                          monthStart.format('YYYY-MM-DD'),
+                          monthEnd.format('YYYY-MM-DD'),
+                        );
+                        setShifts(shiftsData);
+                        handleCloseModal();
+                      } catch (e) {
+                        console.error(e);
+                        enqueueSnackbar('Ошибка при удалении', { variant: 'error' });
+                      }
+                    }
+                  }}
+                  color="error"
+                >
+                  Удалить
+                </Button>
+              )}
+              {editingShift && editingShift.status !== 'scheduled' && (
+                // Only show for existing shifts perhaps? Or just always if staff is known.
+                // Actually, editingShift always exists in this context.
+                <Button
+                  onClick={() => {
+                    if (editingShift.staffId) {
+                      const sId = typeof editingShift.staffId === 'string' ? editingShift.staffId : (editingShift.staffId as any)._id;
+                      setSelectedStaff([sId]);
+                      setDeleteTarget('selected');
+                      setDeleteStartDate(moment(currentDate));
+                      setDeleteEndDate(moment(currentDate)); // or end of month? default is fine
+                      setDeleteDialogOpen(true);
+                      setModalOpen(false);
+                    }
+                  }}
+                  color="warning"
+                >
+                  Удалить за период
+                </Button>
+              )}
+              <Button onClick={handleCloseModal} color='primary'>
                 Отмена
               </Button>
               <Button
@@ -1409,6 +1210,51 @@ const StaffSchedule: React.FC = () => {
               </Button>
             </DialogActions>
           </form>
+        </Dialog>
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+        >
+          <DialogTitle>Удаление смен</DialogTitle>
+          <DialogContent>
+            <Box pt={1} display="flex" flexDirection="column" gap={2}>
+              <FormControl>
+                <RadioGroup
+                  value={deleteTarget}
+                  onChange={(e) => setDeleteTarget(e.target.value as 'selected' | 'all')}
+                >
+                  <FormControlLabel
+                    value="selected"
+                    control={<Radio />}
+                    label={`Только выбранные сотрудники (${selectedStaff.length})`}
+                    disabled={selectedStaff.length === 0}
+                  />
+                  <FormControlLabel value="all" control={<Radio />} label="Все сотрудники" />
+                </RadioGroup>
+              </FormControl>
+
+              <Box display="flex" gap={2} mt={2}>
+                <DatePicker
+                  label="С даты"
+                  value={deleteStartDate}
+                  onChange={(newValue: moment.Moment | null) => setDeleteStartDate(newValue)}
+                  renderInput={(params: any) => <TextField {...params} size='small' />}
+                />
+                <DatePicker
+                  label="По дату"
+                  value={deleteEndDate}
+                  onChange={(newValue: moment.Moment | null) => setDeleteEndDate(newValue)}
+                  renderInput={(params: any) => <TextField {...params} size='small' />}
+                />
+              </Box>
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
+            <Button onClick={handleBulkDelete} color="error" variant="contained">
+              Удалить
+            </Button>
+          </DialogActions>
         </Dialog>
       </Box>
     </LocalizationProvider>

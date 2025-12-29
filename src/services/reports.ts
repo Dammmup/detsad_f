@@ -210,7 +210,7 @@ export const getAttendanceStatistics = async (
     await delay(500);
 
 
-    const response = await apiClient.get('/reports/attendance-statistics', {
+    const response = await apiClient.get('/attendance/statistics', {
       params: { startDate, endDate, userId },
       timeout: 30000,
     });
@@ -230,7 +230,7 @@ export const getScheduleStatistics = async (
     await delay(500);
 
 
-    const response = await apiClient.get('/reports/schedule-statistics', {
+    const response = await apiClient.get('/attendance/statistics', {
       params: { startDate, endDate, userId },
       timeout: 30000,
     });

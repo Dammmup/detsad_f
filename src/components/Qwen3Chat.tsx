@@ -20,7 +20,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Qwen3ApiService, Qwen3Response } from '../services/qwen3-api';
-import { initUIStateCollector } from '../utils/uiStateCollector';
+
 import { getCurrentUser } from '../services';
 
 interface Message {
@@ -56,10 +56,7 @@ const Qwen3Chat: React.FC = () => {
   const currentUser = getCurrentUser();
   const isAdmin = currentUser?.role === 'admin';
 
-  useEffect(() => {
-    const cleanup = initUIStateCollector(sessionId);
-    return () => cleanup();
-  }, [sessionId]);
+
 
   // Показываем приветственное сообщение при открытии чата
   useEffect(() => {

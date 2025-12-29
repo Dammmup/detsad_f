@@ -46,8 +46,6 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
       staffId: shiftData.staffId,
       staffName: shiftData.staffName,
       date: shiftData.date,
-      startTime: shiftData.startTime,
-      endTime: shiftData.endTime,
       status: shiftData.status || ShiftStatus.scheduled,
       notes: shiftData.notes,
       alternativeStaffId: shiftData.alternativeStaffId,
