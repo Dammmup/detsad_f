@@ -38,6 +38,9 @@ export interface KindergartenSettings {
   timezone: string;
   language: string;
   currency: string;
+  payroll?: {
+    latePenaltyRate: number;
+  };
   holidays?: string[];
 }
 
@@ -160,6 +163,9 @@ export const getKindergartenSettings = async () => {
       timezone: response.data.timezone,
       language: response.data.language,
       currency: response.data.currency,
+      payroll: {
+        latePenaltyRate: response.data.payroll?.latePenaltyRate || 50,
+      }
     };
 
     console.log('Kindergarten settings data:', settings);
@@ -185,6 +191,7 @@ export const updateKindergartenSettings = async (
       timezone: settings.timezone,
       language: settings.language,
       currency: settings.currency,
+      payroll: settings.payroll,
     });
 
     const updatedSettings: KindergartenSettings = {
@@ -202,6 +209,9 @@ export const updateKindergartenSettings = async (
       timezone: response.data.timezone,
       language: response.data.language,
       currency: response.data.currency,
+      payroll: {
+        latePenaltyRate: response.data.payroll?.latePenaltyRate || 50,
+      }
     };
 
     return updatedSettings;

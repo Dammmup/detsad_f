@@ -454,6 +454,24 @@ const Settings: React.FC = () => {
 
               <Grid item xs={12} md={6}>
                 <TextField
+                  label='Штраф за опоздание (за минуту)'
+                  type='number'
+                  fullWidth
+                  value={kindergartenSettings.payroll?.latePenaltyRate || 50}
+                  onChange={(e) =>
+                    setKindergartenSettings({
+                      ...kindergartenSettings,
+                      payroll: {
+                        ...kindergartenSettings.payroll,
+                        latePenaltyRate: parseInt(e.target.value) || 0,
+                      },
+                    })
+                  }
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
                   label='Время начала работы'
                   type='time'
                   fullWidth

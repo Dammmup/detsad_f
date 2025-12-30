@@ -47,6 +47,7 @@ import {
 } from '../../services/payroll';
 import { importPayrolls } from '../../services/importService';
 import FinesDetailsDialog from './FinesDetailsDialog';
+import PayrollTotalDialog from './PayrollTotalDialog';
 
 interface Props {
   userId?: string;
@@ -70,9 +71,19 @@ interface PayrollRow {
   staffId: string;
   _id?: string;
   baseSalary: number;
+  baseSalaryType?: 'month' | 'shift';
   fines?: any[];
   userFines?: number;
   bonuses: number;
+  bonusDetails?: {
+    weekendWork?: number;
+    performance?: number;
+    holidayWork?: number;
+  };
+  workedShifts: number;
+  workedDays: number;
+  shiftRate: number;
+  normDays?: number;
 }
 
 const ReportsSalary: React.FC<Props> = ({ userId }) => {
@@ -81,6 +92,9 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   const [summary, setSummary] = useState<any>(null);
   const [rows, setRows] = useState<PayrollRow[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [globalPenaltyRate, setGlobalPenaltyRate] = useState<number>(50);
+  const [rateDialogOpen, setRateDialogOpen] = useState(false);
+  const [newRate, setNewRate] = useState<number>(50);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<PayrollRow>>({});
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -97,6 +111,9 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [importing, setImporting] = useState(false);
+
+  const [totalDialogOpen, setTotalDialogOpen] = useState(false);
+  const [currentTotalRow, setCurrentTotalRow] = useState<PayrollRow | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -141,6 +158,10 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           params.userId = userId;
         }
 
+        const { getKindergartenSettings } = await import('../../services/settings');
+        const settings = await getKindergartenSettings();
+        const globalLatePenaltyRate = settings?.payroll?.latePenaltyRate || 50;
+
         const payrollsData = await getPayrolls(params);
 
         if (!mounted) return;
@@ -150,18 +171,16 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         const summaryData = {
           totalEmployees: data.length,
           totalAccruals: data.reduce(
-            (sum, p) => sum + (p.accruals || p.baseSalary || 0),
+            (sum, p) => sum + (p.accruals || (p.baseSalaryType === 'shift' ? ((p.workedShifts || 0) * (p.shiftRate || p.baseSalary || 0)) : (p.baseSalary || 0))),
             0,
           ),
           totalPenalties: data.reduce((sum, p) => sum + (p.penalties || 0), 0),
           totalPayout: data.reduce((sum, p) => {
-
-            const accruals = p.accruals || p.baseSalary || 0;
+            const accruals = p.accruals || (p.baseSalaryType === 'shift' ? ((p.workedShifts || 0) * (p.shiftRate || p.baseSalary || 0)) : (p.baseSalary || 0));
             const bonuses = p.bonuses || 0;
-            const penalties = p.penalties || 0;
+            const penalties = p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0);
             const advance = p.advance || 0;
             const total = accruals + bonuses - penalties - advance;
-
             return sum + (total >= 0 ? total : 0);
           }, 0),
         };
@@ -170,29 +189,35 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         setRows(
           data.map((p: any) => ({
             staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
-            accruals: p.accruals || p.baseSalary || 0,
-
-            penalties:
-              p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0),
+            accruals: p.accruals || (p.baseSalaryType === 'shift' ? ((p.workedShifts || 0) * (p.shiftRate || p.baseSalary || 0)) : 0),
+            bonuses: p.bonuses || 0,
+            deductions: p.deductions || 0,
+            penalties: (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0),
             latePenalties: p.latePenalties || 0,
             absencePenalties: p.absencePenalties || 0,
-            latePenaltyRate: p.latePenaltyRate || 13,
+            latePenaltyRate: globalLatePenaltyRate,
             advance: p.advance || 0,
-            bonuses: p.bonuses || 0,
-
             total:
-              (p.accruals || p.baseSalary || 0) +
+              (p.accruals || (p.baseSalaryType === 'shift' ? ((p.workedShifts || 0) * (p.shiftRate || p.baseSalary || 0)) : 0)) +
               (p.bonuses || 0) -
-              ((p.latePenalties || 0) + (p.absencePenalties || 0)) -
+              ((p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0)) -
               (p.advance || 0),
             status: p.status && p.status !== 'draft' ? p.status : 'calculated',
             staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
             _id: p._id || undefined,
             baseSalary: p.baseSalary || 0,
+            baseSalaryType: p.baseSalaryType || 'month',
             fines: p.fines || [],
             userFines: p.userFines || 0,
+            workedShifts: p.workedShifts || 0,
+            workedDays: p.workedDays || 0,
+            shiftRate: p.shiftRate || 0,
+            bonusDetails: p.bonusDetails,
+            normDays: p.normDays || 0,
           })),
         );
+        setGlobalPenaltyRate(globalLatePenaltyRate);
+        setNewRate(globalLatePenaltyRate);
       } catch (e: any) {
         if (mounted) setError(e?.message || 'Ошибка загрузки зарплат');
       } finally {
@@ -212,10 +237,15 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
       penalties: row.penalties || undefined,
       advance: row.advance || undefined,
       bonuses: row.bonuses || undefined,
-      latePenaltyRate: row.latePenaltyRate || undefined,
+      bonusDetails: row.bonusDetails,
       baseSalary: row.baseSalary || undefined,
       status: row.status && row.status !== 'draft' ? row.status : 'calculated',
     });
+  };
+
+  const handleOpenTotalDialog = (row: PayrollRow) => {
+    setCurrentTotalRow(row);
+    setTotalDialogOpen(true);
   };
 
   const handleSaveClick = async (rowId: string) => {
@@ -271,7 +301,6 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
             period: selectedMonth,
             baseSalary: editData.baseSalary ?? originalRow.baseSalary ?? 0,
             bonuses: editData.bonuses ?? originalRow.bonuses ?? 0,
-            latePenaltyRate: editData.latePenaltyRate ?? originalRow.latePenaltyRate,
             ...updatedData
           });
           payrollId = newPayroll._id;
@@ -355,11 +384,11 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
 
 
     csvContent +=
-      'Сотрудник;Начисления;Премия;Аванс;Вычеты;Ставка за опоздание (тг/мин);Итого;Статус\n';
+      'Сотрудник;Начисления;Премия;Аванс;Вычеты;Ставка за опоздание (общая: ' + globalPenaltyRate + ' тг/мин);Итого;Статус\n';
 
 
     rows.forEach((row) => {
-      csvContent += `${row.staffName};${row.accruals};${row.bonuses};${row.advance};${row.penalties};${row.latePenaltyRate};${row.total};${row.status}\n`;
+      csvContent += `${row.staffName};${row.accruals};${row.bonuses};${row.advance};${row.penalties};${globalPenaltyRate};${row.total};${row.status}\n`;
     });
 
 
@@ -465,8 +494,14 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
         _id: p._id || undefined,
         baseSalary: p.baseSalary || 0,
+        baseSalaryType: p.baseSalaryType || 'month',
         fines: p.fines || [],
         userFines: p.userFines || 0,
+        workedShifts: p.workedShifts || 0,
+        workedDays: p.workedDays || 0,
+        shiftRate: p.shiftRate || 0,
+        bonusDetails: p.bonusDetails,
+        normDays: p.normDays || 0,
       })),
     );
   };
@@ -597,6 +632,35 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
     } catch (e: any) {
       setSnackbarMessage('Ошибка добавления Вычета: ' + (e.message || 'Unknown'));
       setSnackbarOpen(true);
+    }
+  };
+
+  const handleOpenRateDialog = () => {
+    setNewRate(globalPenaltyRate);
+    setRateDialogOpen(true);
+  };
+
+  const handleSaveRate = async () => {
+    try {
+      const { getKindergartenSettings, updateKindergartenSettings } = await import('../../services/settings');
+      const settings = await getKindergartenSettings();
+      if (settings) {
+        await updateKindergartenSettings({
+          ...settings,
+          payroll: {
+            ...settings.payroll,
+            latePenaltyRate: newRate
+          }
+        });
+        setGlobalPenaltyRate(newRate);
+        setSnackbarMessage('Глобальная ставка штрафа обновлена');
+        setSnackbarOpen(true);
+        setRateDialogOpen(false);
+        // Optionally reload payrolls to reflect visual changes if any (though they use stored values usually until recalc)
+        // But for "future" or "recalc" actions it matters.
+      }
+    } catch (e: any) {
+      setError(e.message || 'Ошибка обновления ставки');
     }
   };
 
@@ -794,6 +858,21 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                     </Tooltip>
                   </>
                 )}
+                {currentUser?.id && currentUser?.role === 'admin' && (
+                  <Button
+                    variant='contained'
+                    color='info'
+                    onClick={handleOpenRateDialog}
+                    sx={{
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                      color: 'white',
+                      fontWeight: 'medium',
+                    }}
+                  >
+                    Ставка: {globalPenaltyRate} ₸
+                  </Button>
+                )}
               </Box>
             </Box>
 
@@ -971,12 +1050,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                       >
                         Вычеты
                       </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                      >
-                        Ставка за опоздание (тг/мин)
-                      </TableCell>
+
                       <TableCell
                         align='right'
                         sx={{ color: 'primary.main', fontWeight: 'bold' }}
@@ -1052,17 +1126,36 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                           sx={{ fontSize: '1rem', fontWeight: 'medium' }}
                         >
                           {editingId === r.staffId ? (
-                            <TextField
-                              size='small'
-                              type='number'
-                              value={editData.baseSalary ?? ''}
-                              onChange={(e) => handleInputChange('baseSalary', Number(e.target.value))}
-                              inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
-                              sx={{ width: '100px' }}
-                              variant='standard'
-                            />
+                            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                              <TextField
+                                size='small'
+                                type='number'
+                                value={editData.baseSalary ?? ''}
+                                onChange={(e) => handleInputChange('baseSalary', Number(e.target.value))}
+                                inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
+                                sx={{ width: '80px' }}
+                                variant='standard'
+                              />
+                              <Select
+                                value={editData.baseSalaryType || 'month'}
+                                onChange={(e) => handleInputChange('baseSalaryType', e.target.value)}
+                                variant="standard"
+                                size="small"
+                                sx={{ fontSize: '0.75rem', minWidth: '40px' }}
+                              >
+                                <MenuItem value="month">Мес</MenuItem>
+                                <MenuItem value="shift">День</MenuItem>
+                              </Select>
+                            </Box>
                           ) : (
-                            r.baseSalary?.toLocaleString()
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                              <span>{r.baseSalary?.toLocaleString()}</span>
+                              {r.baseSalaryType === 'shift' && (
+                                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+                                  в день
+                                </Typography>
+                              )}
+                            </Box>
                           )}
                         </TableCell>
 
@@ -1072,21 +1165,41 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                           align='right'
                           sx={{ fontSize: '1rem', fontWeight: 'medium', color: 'primary.main' }}
                         >
-                          {editingId === r.staffId ? (
-                            <TextField
-                              size='small'
-                              type='number'
-                              value={editData.bonuses ?? ''}
-                              onChange={(e) => handleInputChange('bonuses', Number(e.target.value))}
-                              inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
-                              sx={{ width: '80px' }}
-                              variant='standard'
-                            />
-                          ) : r.bonuses ? (
-                            r.bonuses?.toLocaleString()
-                          ) : (
-                            '0'
-                          )}
+                          <Tooltip
+                            title={
+                              r.bonusDetails ? (
+                                <Box sx={{ p: 1 }}>
+                                  {r.bonusDetails?.weekendWork ? <div>Выходные: {r.bonusDetails.weekendWork}</div> : null}
+                                  {r.bonusDetails?.performance ? <div>Премия: {r.bonusDetails.performance}</div> : null}
+                                  {r.bonusDetails?.holidayWork ? <div>Праздники: {r.bonusDetails.holidayWork}</div> : null}
+                                  {!r.bonusDetails?.weekendWork && !r.bonusDetails?.performance && !r.bonusDetails?.holidayWork && 'Детали не указаны'}
+                                </Box>
+                              ) : 'Детали премии не указаны'
+                            }
+                            arrow
+                            placement="top"
+                          >
+                            <span style={{
+                              cursor: r.bonusDetails ? 'help' : 'default',
+                              borderBottom: r.bonusDetails ? '1px dashed #1976d2' : 'none'
+                            }}>
+                              {editingId === r.staffId ? (
+                                <TextField
+                                  size='small'
+                                  type='number'
+                                  value={editData.bonuses ?? ''}
+                                  onChange={(e) => handleInputChange('bonuses', Number(e.target.value))}
+                                  inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
+                                  sx={{ width: '80px' }}
+                                  variant='standard'
+                                />
+                              ) : r.bonuses ? (
+                                r.bonuses?.toLocaleString()
+                              ) : (
+                                '0'
+                              )}
+                            </span>
+                          </Tooltip>
                         </TableCell>
 
                         <TableCell
@@ -1172,36 +1285,6 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                         </TableCell>
                         <TableCell
                           align='right'
-                          sx={{ fontSize: '1rem', color: 'text.secondary' }}
-                        >
-                          {editingId === r.staffId ? (
-                            <TextField
-                              size='small'
-                              type='number'
-                              value={editData.latePenaltyRate ?? ''}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  'latePenaltyRate',
-                                  e.target.value ? Number(e.target.value) : '',
-                                )
-                              }
-                              inputProps={{
-                                style: { fontSize: 14 },
-                                step: 'any',
-                              }}
-                              InputProps={{
-                                style: { padding: '4px 8px' },
-                                disableUnderline: true,
-                              }}
-                              style={{ width: '100px' }}
-                              variant='outlined'
-                            />
-                          ) : r.latePenaltyRate ? (
-                            r.latePenaltyRate
-                          ) : 13}
-                        </TableCell>
-                        <TableCell
-                          align='right'
                           sx={{
                             fontWeight: 'bold',
                             fontSize: '1.1rem',
@@ -1226,9 +1309,20 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                               const total = accruals - penalties - advance;
                               return total?.toLocaleString() || '0';
                             })()
-                            : r.total
-                              ? r.total?.toLocaleString()
-                              : '0'}
+                            : (
+                              <Tooltip title="Нажмите для детализации" arrow placement="top">
+                                <span
+                                  onClick={() => handleOpenTotalDialog(r)}
+                                  style={{
+                                    cursor: 'pointer',
+                                    borderBottom: '1px dashed currentColor',
+                                    paddingBottom: '2px'
+                                  }}
+                                >
+                                  {r.total ? r.total?.toLocaleString() : '0'}
+                                </span>
+                              </Tooltip>
+                            )}
                         </TableCell>
                         <TableCell>
                           {editingId === r.staffId ? (
@@ -1241,7 +1335,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                                 style={{ fontSize: 14 }}
                                 variant='outlined'
                               >
-                                <MenuItem value='calculated'>Рассчитано</MenuItem>
+                                <MenuItem value='calculated'>К выплате</MenuItem>
                                 <MenuItem value='approved'>Подтвержден</MenuItem>
                                 <MenuItem value='paid'>Оплачен</MenuItem>
                               </Select>
@@ -1250,7 +1344,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                             <Chip
                               label={
                                 r.status === 'calculated'
-                                  ? 'Рассчитано'
+                                  ? 'К выплате'
                                   : r.status === 'approved'
                                     ? 'Подтвержден'
                                     : 'Оплачен'
@@ -1338,6 +1432,12 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         staffName={currentFineStaffName}
       />
 
+      <PayrollTotalDialog
+        open={totalDialogOpen}
+        onClose={() => setTotalDialogOpen(false)}
+        data={currentTotalRow}
+      />
+
       {/* Confirmation Dialog for Generate Payroll */}
       <Dialog
         open={confirmDialogOpen}
@@ -1366,8 +1466,36 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           </Button>
         </DialogActions>
       </Dialog>
+      <Dialog open={rateDialogOpen} onClose={() => setRateDialogOpen(false)}>
+        <DialogTitle>Изменение ставки штрафа</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Укажите новую глобальную ставку штрафа за опоздание (тенге в минуту).
+            Это значение будет использоваться при следующем расчете зарплат.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Ставка (тг/мин)"
+            type="number"
+            fullWidth
+            value={newRate}
+            onChange={(e) => setNewRate(Number(e.target.value))}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRateDialogOpen(false)}>Отмена</Button>
+          <Button onClick={handleSaveRate} variant="contained">Сохранить</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={snackbarMessage}
+      />
     </>
   );
 };
-
 export default ReportsSalary;
