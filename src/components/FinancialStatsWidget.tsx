@@ -18,6 +18,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  Cell,
 } from 'recharts';
 import { useAuth } from './context/AuthContext';
 import { useDate } from './context/DateContext';
@@ -151,16 +152,7 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
           },
         }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 2,
-            pb: 1,
-            borderBottom: '1px solid #dee2e6',
-          }}
-        ></Box>
+        {/* Удален пустой разделитель, так как заголовок находится в Dashboard.tsx */}
 
         {error && (
           <Alert severity='error' sx={{ mb: 2 }}>
@@ -213,22 +205,27 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
                 <Card
                   sx={{
                     height: '100%',
-                    backgroundColor: '#e8f5e9',
-                    border: '1px solid #c8e6c9',
+                    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: 2,
+                    boxShadow: '0 2px 4px rgba(76, 175, 80, 0.1)',
+                    transition: 'transform 0.2s',
+                    '&:hover': { transform: 'translateY(-2px)' }
                   }}
                 >
-                  <CardContent>
+                  <CardContent sx={{ p: '16px !important' }}>
                     <Typography
                       variant='h6'
                       align='center'
-                      color='success.main'
+                      sx={{ fontWeight: 700, color: '#166534' }}
                     >
                       {formatCurrency(stats.totalAccruals || 0)}
                     </Typography>
                     <Typography
-                      variant='body2'
+                      variant='caption'
+                      display='block'
                       align='center'
-                      color='text.secondary'
+                      sx={{ color: '#166534', opacity: 0.8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}
                     >
                       Начисления
                     </Typography>
@@ -239,18 +236,27 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
                 <Card
                   sx={{
                     height: '100%',
-                    backgroundColor: '#e3f2fd',
-                    border: '1px solid #bbdefb',
+                    background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: 2,
+                    boxShadow: '0 2px 4px rgba(33, 150, 243, 0.1)',
+                    transition: 'transform 0.2s',
+                    '&:hover': { transform: 'translateY(-2px)' }
                   }}
                 >
-                  <CardContent>
-                    <Typography variant='h6' align='center' color='info.main'>
+                  <CardContent sx={{ p: '16px !important' }}>
+                    <Typography
+                      variant='h6'
+                      align='center'
+                      sx={{ fontWeight: 700, color: '#1e40af' }}
+                    >
                       {formatCurrency(stats.totalAdvance || 0)}
                     </Typography>
                     <Typography
-                      variant='body2'
+                      variant='caption'
+                      display='block'
                       align='center'
-                      color='text.secondary'
+                      sx={{ color: '#1e40af', opacity: 0.8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}
                     >
                       Авансы
                     </Typography>
@@ -261,18 +267,27 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
                 <Card
                   sx={{
                     height: '100%',
-                    backgroundColor: '#ffebee',
-                    border: '1px solid #ffcdd2',
+                    background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                    border: '1px solid #fecaca',
+                    borderRadius: 2,
+                    boxShadow: '0 2px 4px rgba(244, 67, 54, 0.1)',
+                    transition: 'transform 0.2s',
+                    '&:hover': { transform: 'translateY(-2px)' }
                   }}
                 >
-                  <CardContent>
-                    <Typography variant='h6' align='center' color='error.main'>
+                  <CardContent sx={{ p: '16px !important' }}>
+                    <Typography
+                      variant='h6'
+                      align='center'
+                      sx={{ fontWeight: 700, color: '#991b1b' }}
+                    >
                       {formatCurrency(stats.totalPenalties || 0)}
                     </Typography>
                     <Typography
-                      variant='body2'
+                      variant='caption'
+                      display='block'
                       align='center'
-                      color='text.secondary'
+                      sx={{ color: '#991b1b', opacity: 0.8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}
                     >
                       Вычеты
                     </Typography>
@@ -282,23 +297,28 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
               <Grid item xs={6} sm={3}>
                 <Card
                   sx={{
-                    height: '10%',
-                    backgroundColor: '#fff3e0',
-                    border: '1px solid #ffe0b2',
+                    height: '100%',
+                    background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
+                    border: '1px solid #fed7aa',
+                    borderRadius: 2,
+                    boxShadow: '0 2px 4px rgba(255, 152, 0, 0.1)',
+                    transition: 'transform 0.2s',
+                    '&:hover': { transform: 'translateY(-2px)' }
                   }}
                 >
-                  <CardContent>
+                  <CardContent sx={{ p: '16px !important' }}>
                     <Typography
                       variant='h6'
                       align='center'
-                      color='warning.main'
+                      sx={{ fontWeight: 700, color: '#9a3412' }}
                     >
                       {formatCurrency(stats.totalPayout || 0)}
                     </Typography>
                     <Typography
-                      variant='body2'
+                      variant='caption'
+                      display='block'
                       align='center'
-                      color='text.secondary'
+                      sx={{ color: '#9a3412', opacity: 0.8, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}
                     >
                       К выплате
                     </Typography>
@@ -324,45 +344,49 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
                     ]}
                   />
                   <Legend />
-                  <Bar dataKey='value' fill='#8884d8' />
+                  <Bar dataKey='value'>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </Box>
 
             {/* Детализация по типам */}
-            <Box sx={{ mt: 2 }}>
-              <Typography variant='subtitle2' sx={{ mb: 1, fontWeight: 600 }}>
-                Детализация:
+            <Box sx={{ mt: 3, pt: 2, borderTop: '1px dashed #e2e8f0' }}>
+              <Typography variant='caption' sx={{ mb: 1.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', display: 'block' }}>
+                Статистика за период:
               </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
                 <Chip
                   label={`Сотрудников: ${stats.totalEmployees || 0}`}
                   size='small'
-                  color='primary'
-                  variant='outlined'
                   sx={{
-                    fontSize: '0.7rem',
-                    height: 20,
+                    fontWeight: 600,
+                    backgroundColor: '#f1f5f9',
+                    color: '#475569',
+                    border: '1px solid #e2e8f0',
                   }}
                 />
                 <Chip
                   label={`Начислений: ${stats.totalAccrualsCount || 0}`}
                   size='small'
-                  color='success'
-                  variant='outlined'
                   sx={{
-                    fontSize: '0.7rem',
-                    height: 20,
+                    fontWeight: 600,
+                    backgroundColor: '#f0fdf4',
+                    color: '#16a34a',
+                    border: '1px solid #dcfce7',
                   }}
                 />
                 <Chip
                   label={`Вычетов: ${stats.totalPenaltiesCount || 0}`}
                   size='small'
-                  color='error'
-                  variant='outlined'
                   sx={{
-                    fontSize: '0.7rem',
-                    height: 20,
+                    fontWeight: 600,
+                    backgroundColor: '#fef2f2',
+                    color: '#dc2626',
+                    border: '1px solid #fee2e2',
                   }}
                 />
               </Box>
