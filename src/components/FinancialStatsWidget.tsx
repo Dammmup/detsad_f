@@ -57,7 +57,7 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
           0,
         );
 
-        const response = await apiClient.get('/reports/salary/summary', {
+        const response = await apiClient.get('/payroll/summary', {
           params: {
             startDate: startDate.toISOString().split('T')[0],
             endDate: endDate.toISOString().split('T')[0],

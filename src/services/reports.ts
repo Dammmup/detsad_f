@@ -318,7 +318,7 @@ export const exportSalaryReport = async (params: {
 
 export const getSalarySummary = async (month: string) => {
   try {
-    const response = await apiClient.get('/reports/salary/summary', {
+    const response = await apiClient.get('/payroll/summary', {
       params: { month },
       timeout: 30000,
     });
