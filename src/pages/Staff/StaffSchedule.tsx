@@ -139,6 +139,7 @@ const StaffSchedule: React.FC = () => {
 
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [holidays, setHolidays] = useState<string[]>([]);
+  const [workingSaturdays, setWorkingSaturdays] = useState<string[]>([]);
 
   // Bulk Delete State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -263,8 +264,9 @@ const StaffSchedule: React.FC = () => {
 
         try {
           const hData = await getHolidays();
-          if (hData && hData.holidays) {
-            setHolidays(hData.holidays);
+          if (hData) {
+            if (hData.holidays) setHolidays(hData.holidays);
+            if (hData.workingSaturdays) setWorkingSaturdays(hData.workingSaturdays);
           }
         } catch (hErr) {
           console.error("Error fetching holidays:", hErr);
@@ -317,7 +319,20 @@ const StaffSchedule: React.FC = () => {
 
 
       const workDays = dates.filter((date) => {
+        const dateStr = moment(date).format('YYYY-MM-DD');
         const dayOfWeek = date.getDay();
+
+        // Если это рабочий перенесенный день (обычно суббота), то это рабочий день
+        if (workingSaturdays.includes(dateStr)) {
+          return true;
+        }
+
+        // Если это праздничный день, то это НЕ рабочий день
+        if (holidays.includes(dateStr)) {
+          return false;
+        }
+
+        // По умолчанию Пн-Пт - рабочие дни
         return dayOfWeek !== 0 && dayOfWeek !== 6;
       });
       console.log('Work days filtered, length:', workDays.length);
@@ -793,11 +808,12 @@ const StaffSchedule: React.FC = () => {
                           sx={{
                             backgroundColor:
                               holidays.includes(moment(day).format('YYYY-MM-DD')) ? '#ffcdd2' : // Red 100
-                                isWeekend(day)
-                                  ? 'grey.100'
-                                  : 'inherit',
+                                workingSaturdays.includes(moment(day).format('YYYY-MM-DD')) ? 'inherit' : // Working Saturday behaves like a weekday
+                                  isWeekend(day)
+                                    ? 'grey.100'
+                                    : 'inherit',
                             color: holidays.includes(moment(day).format('YYYY-MM-DD')) ? '#c62828' : 'inherit', // Red 800
-                            border: holidays.includes(moment(day).format('YYYY-MM-DD')) ? '1px solid #e57373' : undefined
+                            border: holidays.includes(moment(day).format('YYYY-MM-DD')) ? '1px solid #e57373' : undefined,
                           }}
                         >
                           <Box>
