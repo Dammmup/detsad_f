@@ -188,9 +188,10 @@ const ChildPayments: React.FC = () => {
       !isGenerating &&
       !generationAttempted
     ) {
-
       setGenerationAttempted(true);
-      handleGeneratePayments();
+      // Автоматическая генерация отключена во избежание дублей.
+      // Пользователь должен нажать на кнопку вручную.
+      // handleGeneratePayments();
     }
   }, [
     payments,
