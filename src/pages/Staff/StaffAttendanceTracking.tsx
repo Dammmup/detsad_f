@@ -54,6 +54,10 @@ import {
   STATUS_COLORS,
   ROLE_TRANSLATIONS,
 } from '../../types/common';
+import {
+  getKindergartenSettings,
+  KindergartenSettings,
+} from '../../services/settings';
 import DateNavigator from '../../components/DateNavigator';
 import { importStaffAttendance } from '../../services/importService';
 import { useSnackbar } from 'notistack';
@@ -94,6 +98,7 @@ interface TimeRecord {
     checkOut?: { address?: string };
   };
   notes?: string;
+  amount: number;
 }
 
 
@@ -163,6 +168,8 @@ const StaffAttendanceTracking: React.FC = () => {
   useEffect(() => {
     const fetchRecords = async () => {
       try {
+        const settings = await getKindergartenSettings();
+        const latePenaltyRate = settings.payroll?.latePenaltyRate || 50;
 
         const dateStr = moment(selectedDate).format('YYYY-MM-DD');
         let filters: any = {
@@ -171,14 +178,11 @@ const StaffAttendanceTracking: React.FC = () => {
         };
         if (selectedStaff !== 'all') filters.staffId = selectedStaff;
 
-
         const response =
           await staffAttendanceTrackingService.getAllRecords(filters);
         const attendanceRecords = response.data;
 
-
         const shifts = await shiftsApi.getAll(filters);
-
 
         const attendanceMap = new Map();
         attendanceRecords.forEach((record: any) => {
@@ -186,24 +190,54 @@ const StaffAttendanceTracking: React.FC = () => {
           attendanceMap.set(key, record);
         });
 
-
         const allRecords: TimeRecord[] = [];
 
+        // Вспомогательная функция для расчета рабочих дней в месяце
+        const getWorkDays = (date: Date) => {
+          const year = date.getFullYear();
+          const month = date.getMonth();
+          const lastDay = new Date(year, month + 1, 0).getDate();
+          let count = 0;
+          for (let d = 1; d <= lastDay; d++) {
+            const dayOfWeek = new Date(year, month, d).getDay();
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+          }
+          return count || 22;
+        };
+
+        const workDaysInMonth = getWorkDays(selectedDate);
 
         shifts.forEach((shift: any) => {
           const attendanceRecord = attendanceMap.get(
             `${shift.staffId._id || shift.staffId}-${shift.date}`,
           );
 
-          if (attendanceRecord) {
+          // Ищем данные о зарплате сотрудника
+          const staff = staffList.find(
+            (s) => s.id === shift.staffId._id || s.id === shift.staffId,
+          );
+          const baseSalary = staff?.baseSalary || 180000;
+          const salaryType = staff?.salaryType || 'month';
+          const shiftRate = staff?.shiftRate || 0;
 
-            const statusMap: Record<string, TimeRecord['status']> = {
-              scheduled: 'scheduled',
-              completed: 'checked_out',
-              in_progress: 'checked_in',
-              late: 'absent',
-              pending_approval: 'absent',
-            };
+          let dailyAccrual = 0;
+          if (salaryType === 'shift') {
+            dailyAccrual = shiftRate;
+          } else {
+            dailyAccrual = Math.round(baseSalary / workDaysInMonth);
+          }
+
+          if (attendanceRecord) {
+            const status =
+              attendanceRecord.status ||
+              (attendanceRecord.actualStart && !attendanceRecord.actualEnd
+                ? 'checked_in'
+                : attendanceRecord.actualEnd
+                  ? 'checked_out'
+                  : 'absent');
+
+            const lateMin = attendanceRecord.lateMinutes || 0;
+            const earlyLeaveMin = attendanceRecord.earlyLeaveMinutes || 0;
 
             allRecords.push({
               id: attendanceRecord._id || attendanceRecord.id || '',
@@ -228,27 +262,33 @@ const StaffAttendanceTracking: React.FC = () => {
                   { hour: '2-digit', minute: '2-digit' },
                 )
                 : undefined,
-              status:
-                statusMap[attendanceRecord.status] || attendanceRecord.status,
+              status: status as any,
               originalStatus: attendanceRecord.status as ShiftStatus,
               workDuration: attendanceRecord.workDuration,
               breakDuration: attendanceRecord.breakDuration,
               overtimeDuration: attendanceRecord.overtimeDuration,
-              lateMinutes: attendanceRecord.lateMinutes,
-              earlyLeaveMinutes: attendanceRecord.earlyLeaveMinutes,
+              lateMinutes: lateMin,
+              earlyLeaveMinutes: earlyLeaveMin,
               notes: attendanceRecord.notes || '',
-              penalties: attendanceRecord.penalties || {
-                late: { minutes: 0, amount: 0 },
-                earlyLeave: { minutes: 0, amount: 0 },
+              penalties: {
+                late: {
+                  minutes: lateMin,
+                  amount: lateMin * latePenaltyRate,
+                },
+                earlyLeave: {
+                  minutes: earlyLeaveMin,
+                  amount: 0, // Ранний уход пока не штрафуем по дефолту
+                },
                 unauthorized: { amount: 0 },
               },
               bonuses: attendanceRecord.bonuses || {
                 overtime: { minutes: 0, amount: 0 },
                 punctuality: { amount: 0 },
               },
-            });
+              // Добавляем начисления для отображения
+              amount: dailyAccrual,
+            } as any);
           } else {
-
             allRecords.push({
               id: shift._id || shift.id || '',
               staffId: shift.staffId._id || shift.staffId,
@@ -275,10 +315,10 @@ const StaffAttendanceTracking: React.FC = () => {
                 overtime: { minutes: 0, amount: 0 },
                 punctuality: { amount: 0 },
               },
-            });
+              amount: 0,
+            } as any);
           }
         });
-
 
         attendanceRecords.forEach((record: any) => {
           const key = `${record.staffId._id || record.staffId}-${new Date(record.date).toISOString().split('T')[0]}`;
@@ -288,13 +328,30 @@ const StaffAttendanceTracking: React.FC = () => {
           );
 
           if (!shiftExists) {
-            const statusMap: Record<string, TimeRecord['status']> = {
-              scheduled: 'scheduled',
-              completed: 'checked_out',
-              in_progress: 'checked_in',
-              late: 'absent',
-              pending_approval: 'absent',
-            };
+            const staff = staffList.find(
+              (s) => s.id === record.staffId._id || s.id === record.staffId,
+            );
+            const baseSalary = staff?.baseSalary || 180000;
+            const salaryType = staff?.salaryType || 'month';
+            const shiftRate = staff?.shiftRate || 0;
+
+            let dailyAccrual = 0;
+            if (salaryType === 'shift') {
+              dailyAccrual = shiftRate;
+            } else {
+              dailyAccrual = Math.round(baseSalary / workDaysInMonth);
+            }
+
+            const status =
+              record.status ||
+              (record.actualStart && !record.actualEnd
+                ? 'checked_in'
+                : record.actualEnd
+                  ? 'checked_out'
+                  : 'absent');
+
+            const lateMin = record.lateMinutes || 0;
+            const earlyLeaveMin = record.earlyLeaveMinutes || 0;
 
             allRecords.push({
               id: record._id || record.id || '',
@@ -315,30 +372,35 @@ const StaffAttendanceTracking: React.FC = () => {
                   minute: '2-digit',
                 })
                 : undefined,
-              status: statusMap[record.status] || record.status,
+              status: status as any,
               originalStatus: record.status as ShiftStatus,
               workDuration: record.workDuration,
               breakDuration: record.breakDuration,
               overtimeDuration: record.overtimeDuration,
-              lateMinutes: record.lateMinutes,
-              earlyLeaveMinutes: record.earlyLeaveMinutes,
+              lateMinutes: lateMin,
+              earlyLeaveMinutes: earlyLeaveMin,
               notes: record.notes || '',
-              penalties: record.penalties || {
-                late: { minutes: 0, amount: 0 },
-                earlyLeave: { minutes: 0, amount: 0 },
+              penalties: {
+                late: {
+                  minutes: lateMin,
+                  amount: lateMin * latePenaltyRate,
+                },
+                earlyLeave: {
+                  minutes: earlyLeaveMin,
+                  amount: 0,
+                },
                 unauthorized: { amount: 0 },
               },
               bonuses: record.bonuses || {
                 overtime: { minutes: 0, amount: 0 },
                 punctuality: { amount: 0 },
               },
-            });
+              amount: dailyAccrual,
+            } as any);
           }
         });
 
-
         let filteredRecords = [...allRecords];
-
 
         if (searchTerm) {
           const search = searchTerm.toLowerCase();
@@ -346,7 +408,6 @@ const StaffAttendanceTracking: React.FC = () => {
             record.staffName?.toLowerCase().includes(search),
           );
         }
-
 
         if (filterRole.length > 0) {
           filteredRecords = filteredRecords.filter((record) => {
@@ -366,7 +427,6 @@ const StaffAttendanceTracking: React.FC = () => {
       } catch (e) {
         console.error('Error fetching records:', e);
         setRecords([]);
-      } finally {
       }
     };
     fetchRecords();
@@ -960,7 +1020,7 @@ const StaffAttendanceTracking: React.FC = () => {
               <TableCell>Смена</TableCell>
               <TableCell>Время работы</TableCell>
               <TableCell>Статус</TableCell>
-              <TableCell>Адрес</TableCell>
+              <TableCell align='right'>Начислено</TableCell>
               <TableCell align='right'>Вычеты</TableCell>
               <TableCell align='right'>Действия</TableCell>
             </TableRow>
@@ -1046,19 +1106,16 @@ const StaffAttendanceTracking: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell align='right'>
+                  <Typography variant='body2' color='success.main'>
+                    {formatCurrency(record.amount || 0)}
+                  </Typography>
+                </TableCell>
+                <TableCell align='right'>
                   <Typography variant='body2' color='error'>
                     {formatCurrency(
                       (record.penalties?.late?.amount || 0) +
                       (record.penalties?.earlyLeave?.amount || 0) +
                       (record.penalties?.unauthorized?.amount || 0),
-                    )}
-                  </Typography>
-                </TableCell>
-                <TableCell align='right'>
-                  <Typography variant='body2' color='success.main'>
-                    {formatCurrency(
-                      (record.bonuses?.overtime?.amount || 0) +
-                      (record.bonuses?.punctuality?.amount || 0),
                     )}
                   </Typography>
                 </TableCell>

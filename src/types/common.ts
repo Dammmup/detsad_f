@@ -208,7 +208,8 @@ export const STATUS_COLORS: Record<string, StatusColor> = {
   late: 'primary',
   pending_approval: 'info',
   in_progress: 'warning',
-
+  checked_out: 'success',
+  checked_in: 'warning',
   on_break: 'warning',
   overtime: 'secondary',
   absent: 'error',
@@ -238,6 +239,8 @@ export const STATUS_TEXT: Record<string, string> = {
   completed: 'Завершена',
   in_progress: 'В процессе',
   pending_approval: 'Ожидает подтверждения',
+  checked_in: 'Пришел',
+  checked_out: 'Ушел',
   late: 'Опоздание',
 
   absent: 'Отсутствует',
