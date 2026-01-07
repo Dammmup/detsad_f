@@ -20,10 +20,11 @@ import {
   FormControl,
   InputLabel,
   CircularProgress,
+  Avatar,
 } from '@mui/material';
-import { getUsers } from '../../services/users';
+import { Person } from '@mui/icons-material';
 import childrenApi from '../../services/children';
-import { User } from '../../types/common';
+import { Child } from '../../types/common';
 import {
   getHelminthRecords,
   createHelminthRecord,
@@ -56,35 +57,45 @@ const MONTHS = [
   'Декабрь',
 ];
 const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: CURRENT_YEAR - 2019 }, (_, i) =>
-  (2020 + i).toString(),
+const YEARS = Array.from({ length: CURRENT_YEAR - 2018 }, (_, i) =>
+  (2019 + i).toString(),
 );
-
-// Используем HelminthRecord из types/helminth.ts (импортирован через сервис)
-// Локальные UI-поля (fio, birthdate, address, month, year, examType) теперь опциональные
-
 
 export default function HelminthJournal() {
   const [records, setRecords] = useState<HelminthRecord[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [newRecord, setNewRecord] = useState<Partial<HelminthRecord>>({});
+  const [newRecord, setNewRecord] = useState<Partial<HelminthRecord>>({
+    month: MONTHS[new Date().getMonth()],
+    year: CURRENT_YEAR.toString(),
+    examType: 'primary',
+    result: 'negative'
+  });
   const [month, setMonth] = useState('all');
   const [year, setYear] = useState('all');
   const [examType, setExamType] = useState('all');
   const [result, setResult] = useState('all');
 
-  React.useEffect(() => {
+  const fetchData = async () => {
     setLoading(true);
-    Promise.all([
-      childrenApi.getAll().then((children) => {
-        setUsers(children as any);
-      }),
-      getHelminthRecords().then(setRecords),
-    ]).finally(() => setLoading(false));
-  }, []);
+    try {
+      const [childrenData, recordsData] = await Promise.all([
+        childrenApi.getAll(),
+        getHelminthRecords(),
+      ]);
+      setChildren(childrenData);
+      setRecords(recordsData);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  React.useEffect(() => {
+    fetchData();
+  }, []);
 
   const filteredRecords = useMemo(() => {
     let filtered = [...records];
@@ -97,7 +108,6 @@ export default function HelminthJournal() {
     return filtered;
   }, [records, month, year, examType, result]);
 
-
   const stats = useMemo(() => {
     const total = filteredRecords.length;
     const positive = filteredRecords.filter(
@@ -109,49 +119,63 @@ export default function HelminthJournal() {
     return { total, positive, negative };
   }, [filteredRecords]);
 
-
   const handleAdd = async () => {
-    if (
-      !newRecord.childId ||
-      !newRecord.fio ||
-      !newRecord.month ||
-      !newRecord.year ||
-      !newRecord.examType ||
-      !newRecord.result
-    )
-      return;
-    setLoading(true);
     try {
-      // Generate date from month and year
+      if (
+        !newRecord.childId ||
+        !newRecord.month ||
+        !newRecord.year ||
+        !newRecord.examType ||
+        !newRecord.result
+      ) {
+        alert('Пожалуйста, заполните все обязательные поля');
+        return;
+      }
+
+      setLoading(true);
       const monthIndex = MONTHS.indexOf(newRecord.month);
       const dateObj = new Date(parseInt(newRecord.year), monthIndex, 1);
 
-      const created = await createHelminthRecord({
-        ...newRecord,
+      const requestData = {
+        childId: newRecord.childId,
         date: dateObj.toISOString(),
+        month: newRecord.month,
+        year: newRecord.year,
+        examType: newRecord.examType,
+        result: newRecord.result,
         notes: newRecord.notes || '',
-        birthdate: newRecord.birthdate || '',
-        address: newRecord.address || '',
-      });
-      setRecords((prev) => [...prev, created]);
+      };
+
+      const created = await createHelminthRecord(requestData as any);
+      // Refresh to get populated data or just add to list
+      setRecords((prev) => [created, ...prev]);
       setModalOpen(false);
-      setNewRecord({});
+      setNewRecord({
+        month: MONTHS[new Date().getMonth()],
+        year: CURRENT_YEAR.toString(),
+        examType: 'primary',
+        result: 'negative'
+      });
+    } catch (error: any) {
+      console.error('Error creating record:', error);
+      alert('Ошибка при создании записи: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
   };
 
-
   const handleDelete = async (id: string) => {
+    if (!window.confirm('Вы уверены, что хотите удалить эту запись?')) return;
     setLoading(true);
     try {
       await deleteHelminthRecord(id);
-      setRecords((prev) => prev.filter((r) => r.id !== id));
+      setRecords((prev) => prev.filter((r) => (r.id || r._id) !== id));
+    } catch (error: any) {
+      alert('Ошибка при удалении: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
-
 
   const handleExport = () => {
     const doc = new Document({
@@ -179,31 +203,25 @@ export default function HelminthJournal() {
                     (h) => new DocxTableCell({ children: [new Paragraph(h)] }),
                   ),
                 }),
-                ...filteredRecords.map(
-                  (r, idx) =>
-                    new DocxTableRow({
-                      children: [
-                        String(idx + 1),
-                        r.fio || '',
-                        r.birthdate || '',
-                        r.address || '',
-                        r.month || '',
-                        r.year || '',
-                        r.examType === 'primary'
-                          ? 'При поступлении'
-                          : r.examType === 'annual'
-                            ? 'Ежегодное'
-                            : '',
-                        r.result === 'positive'
-                          ? 'Положительно'
-                          : 'Отрицательно',
-                        r.notes || '',
-                      ].map(
-                        (val) =>
-                          new DocxTableCell({ children: [new Paragraph(val)] }),
-                      ),
-                    }),
-                ),
+                ...filteredRecords.map((r, idx) => {
+                  const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
+                  return new DocxTableRow({
+                    children: [
+                      String(idx + 1),
+                      childInfo?.fullName || r.fio || '',
+                      childInfo?.birthday ? new Date(childInfo.birthday).toLocaleDateString('ru-RU') : r.birthdate || '',
+                      childInfo?.address || r.address || '',
+                      r.month || '',
+                      r.year || '',
+                      r.examType === 'primary' ? 'При поступлении' : 'Ежегодное',
+                      r.result === 'positive' ? 'Положительно' : 'Отрицательно',
+                      r.notes || '',
+                    ].map(
+                      (val) =>
+                        new DocxTableCell({ children: [new Paragraph(val)] }),
+                    ),
+                  });
+                }),
               ],
             }),
           ],
@@ -215,20 +233,6 @@ export default function HelminthJournal() {
     });
   };
 
-
-  const handleChildSelect = (id: string) => {
-    const child = users.find((u) => u.id === id || u._id === id);
-    if (child) {
-      setNewRecord((r) => ({
-        ...r,
-        childId: id,
-        fio: child.fullName || '',
-        birthdate: child.birthday || '',
-        address: child.notes || '',
-      }));
-    }
-  };
-
   const handleClearFilters = () => {
     setMonth('all');
     setYear('all');
@@ -238,231 +242,223 @@ export default function HelminthJournal() {
 
   return (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
-      <Typography variant='h5' gutterBottom>
+      <Typography variant='h5' gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
         Журнал регистрации лиц, обследованных на гельминты
       </Typography>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
-        <Button variant='contained' onClick={() => setModalOpen(true)}>
+
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3} alignItems="center">
+        <Button variant='contained' onClick={() => setModalOpen(true)} startIcon={<Person />}>
           Новая запись
         </Button>
         <Button variant='outlined' onClick={handleExport}>
           Экспорт
         </Button>
+
+        <Box sx={{ flexGrow: 1 }} />
+
         <FormControl size='small' sx={{ minWidth: 140 }}>
           <InputLabel>Месяц</InputLabel>
-          <Select
-            value={month}
-            label='Месяц'
-            onChange={(e) => setMonth(e.target.value)}
-          >
+          <Select value={month} label='Месяц' onChange={(e) => setMonth(e.target.value)}>
             <MenuItem value='all'>Все месяцы</MenuItem>
             {MONTHS.map((m) => (
-              <MenuItem key={m} value={m}>
-                {m}
-              </MenuItem>
+              <MenuItem key={m} value={m}>{m}</MenuItem>
             ))}
           </Select>
         </FormControl>
-        <FormControl size='small' sx={{ minWidth: 120 }}>
+
+        <FormControl size='small' sx={{ minWidth: 100 }}>
           <InputLabel>Год</InputLabel>
-          <Select
-            value={year}
-            label='Год'
-            onChange={(e) => setYear(e.target.value)}
-          >
+          <Select value={year} label='Год' onChange={(e) => setYear(e.target.value)}>
             <MenuItem value='all'>Все годы</MenuItem>
             {YEARS.map((y) => (
-              <MenuItem key={y} value={y}>
-                {y}
-              </MenuItem>
+              <MenuItem key={y} value={y}>{y}</MenuItem>
             ))}
           </Select>
         </FormControl>
-        <FormControl size='small' sx={{ minWidth: 180 }}>
-          <InputLabel>Тип обследования</InputLabel>
-          <Select
-            value={examType}
-            label='Тип обследования'
-            onChange={(e) => setExamType(e.target.value)}
-          >
-            <MenuItem value='all'>Все</MenuItem>
-            <MenuItem value='primary'>При поступлении</MenuItem>
-            <MenuItem value='annual'>Ежегодное</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl size='small' sx={{ minWidth: 160 }}>
-          <InputLabel>Результат</InputLabel>
-          <Select
-            value={result}
-            label='Результат'
-            onChange={(e) => setResult(e.target.value)}
-          >
-            <MenuItem value='all'>Все</MenuItem>
-            <MenuItem value='positive'>Положительно</MenuItem>
-            <MenuItem value='negative'>Отрицательно</MenuItem>
-          </Select>
-        </FormControl>
-        <Button onClick={handleClearFilters}>Очистить фильтры</Button>
+
+        <Button size="small" onClick={handleClearFilters}>Очистить</Button>
       </Stack>
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography>Всего записей: {stats.total}</Typography>
-        <Typography>Положительных: {stats.positive}</Typography>
-        <Typography>Отрицательных: {stats.negative}</Typography>
-      </Paper>
-      <Table size='small' sx={{ minWidth: 900, overflowX: 'auto' }}>
-        <TableHead>
-          <TableRow>
-            <TableCell>№</TableCell>
-            <TableCell>ФИО</TableCell>
-            <TableCell>Дата рождения</TableCell>
-            <TableCell>Адрес</TableCell>
-            <TableCell>Месяц</TableCell>
-            <TableCell>Год</TableCell>
-            <TableCell>Тип обследования</TableCell>
-            <TableCell>Результат</TableCell>
-            <TableCell>Примечания</TableCell>
-            <TableCell>Действия</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {filteredRecords.map((r, idx) => {
-            const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
-            const fio = r.fio || childInfo?.fullName || '';
-            const birthdate = r.birthdate || (childInfo?.birthday ? new Date(childInfo.birthday).toLocaleDateString('ru-RU') : '');
-            const address = r.address || childInfo?.address || '';
-            return (
-              <TableRow key={r.id || r._id}>
-                <TableCell>{idx + 1}</TableCell>
-                <TableCell>{fio}</TableCell>
-                <TableCell>{birthdate}</TableCell>
-                <TableCell>{address}</TableCell>
-                <TableCell>{r.month}</TableCell>
-                <TableCell>{r.year}</TableCell>
-                <TableCell>
-                  {r.examType === 'primary' ? 'При поступлении' : 'Ежегодное'}
-                </TableCell>
-                <TableCell>
-                  {r.result === 'positive' ? 'Положительно' : 'Отрицательно'}
-                </TableCell>
-                <TableCell>{r.notes}</TableCell>
-                <TableCell>
-                  <Button
-                    color='error'
-                    size='small'
-                    onClick={() => handleDelete(r.id || r._id || '')}
-                  >
-                    Удалить
-                  </Button>
-                </TableCell>
+
+      <Stack direction="row" spacing={3} mb={3}>
+        <Paper sx={{ p: 2, flex: 1, textAlign: 'center', bgcolor: 'grey.50' }}>
+          <Typography color="text.secondary" variant="caption">ВСЕГО</Typography>
+          <Typography variant="h6">{stats.total}</Typography>
+        </Paper>
+        <Paper sx={{ p: 2, flex: 1, textAlign: 'center', bgcolor: 'error.50' }}>
+          <Typography color="error" variant="caption">ПОЛОЖИТЕЛЬНО</Typography>
+          <Typography variant="h6" color="error">{stats.positive}</Typography>
+        </Paper>
+        <Paper sx={{ p: 2, flex: 1, textAlign: 'center', bgcolor: 'success.50' }}>
+          <Typography color="success.main" variant="caption">ОТРИЦАТЕЛЬНО</Typography>
+          <Typography variant="h6" color="success.main">{stats.negative}</Typography>
+        </Paper>
+      </Stack>
+
+      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+        <Box sx={{ overflowX: 'auto' }}>
+          <Table size='small' stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell>№</TableCell>
+                <TableCell>Ребенок</TableCell>
+                <TableCell>Дата рождения</TableCell>
+                <TableCell>Адрес</TableCell>
+                <TableCell>Период</TableCell>
+                <TableCell>Тип</TableCell>
+                <TableCell>Результат</TableCell>
+                <TableCell>Примечания</TableCell>
+                <TableCell align="right">Действия</TableCell>
               </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-      <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
-        <DialogTitle>Новая запись</DialogTitle>
-        <DialogContent>
-          <TextField
-            select
-            label='Ребенок'
-            value={newRecord.childId || ''}
-            onChange={(e) => handleChildSelect(e.target.value)}
-            fullWidth
-            margin='dense'
-          >
-            <MenuItem value=''>—</MenuItem>
-            {users.map((child) => (
-              <MenuItem
-                key={child.id || child._id}
-                value={child.id || child._id}
+            </TableHead>
+            <TableBody>
+              {filteredRecords.map((r, idx) => {
+                const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
+                const fio = childInfo?.fullName || r.fio || '—';
+                const birthdate = childInfo?.birthday ? new Date(childInfo.birthday).toLocaleDateString('ru-RU') : r.birthdate || '—';
+                const address = childInfo?.address || r.address || '—';
+
+                return (
+                  <TableRow key={r.id || r._id} hover>
+                    <TableCell>{idx + 1}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Avatar sx={{ width: 24, height: 24, mr: 1, fontSize: 12 }}>{fio[0]}</Avatar>
+                        <Typography variant="body2">{fio}</Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>{birthdate}</TableCell>
+                    <TableCell sx={{ maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {address}
+                    </TableCell>
+                    <TableCell>{r.month} {r.year}</TableCell>
+                    <TableCell variant="body2">
+                      {r.examType === 'primary' ? 'При поступл.' : 'Ежегодное'}
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{
+                        color: r.result === 'positive' ? 'error.main' : 'success.main',
+                        fontWeight: 'bold',
+                        fontSize: '0.75rem'
+                      }}>
+                        {r.result === 'positive' ? 'ПОЛОЖИТ.' : 'ОТРИЦАТ.'}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.notes}</TableCell>
+                    <TableCell align="right">
+                      <Button
+                        color='error'
+                        size='small'
+                        onClick={() => handleDelete(r.id || r._id || '')}
+                      >
+                        Удалить
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+              {filteredRecords.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
+                    <Typography color="text.secondary">Нет записей за выбранный период</Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </Box>
+      </Paper>
+
+      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Добавление в журнал гельминтов</DialogTitle>
+        <DialogContent dividers>
+          <FormControl fullWidth margin='dense'>
+            <InputLabel>Ребенок</InputLabel>
+            <Select
+              value={newRecord.childId || ''}
+              label="Ребенок"
+              onChange={(e) => setNewRecord(prev => ({ ...prev, childId: e.target.value as string }))}
+            >
+              <MenuItem value=''><em>Выберите ребенка...</em></MenuItem>
+              {children.map((child) => (
+                <MenuItem key={child.id || child._id} value={child.id || child._id}>
+                  {child.fullName}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Stack direction="row" spacing={2}>
+            <FormControl fullWidth margin='dense'>
+              <InputLabel>Месяц</InputLabel>
+              <Select
+                value={newRecord.month || ''}
+                label='Месяц'
+                onChange={(e) => setNewRecord((r) => ({ ...r, month: e.target.value }))}
               >
-                {child.fullName}
-              </MenuItem>
-            ))}
-          </TextField>
-          <FormControl fullWidth margin='dense'>
-            <InputLabel>Месяц</InputLabel>
-            <Select
-              value={newRecord.month || ''}
-              label='Месяц'
-              onChange={(e) =>
-                setNewRecord((r) => ({ ...r, month: e.target.value }))
-              }
-            >
-              {MONTHS.map((m) => (
-                <MenuItem key={m} value={m}>
-                  {m}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth margin='dense'>
-            <InputLabel>Год</InputLabel>
-            <Select
-              value={newRecord.year || CURRENT_YEAR.toString()}
-              label='Год'
-              onChange={(e) =>
-                setNewRecord((r) => ({ ...r, year: e.target.value }))
-              }
-            >
-              {YEARS.map((y) => (
-                <MenuItem key={y} value={y}>
-                  {y}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth margin='dense'>
-            <InputLabel>Тип обследования</InputLabel>
-            <Select
-              value={newRecord.examType || ''}
-              label='Тип обследования'
-              onChange={(e) =>
-                setNewRecord((r) => ({
-                  ...r,
-                  examType: e.target.value as 'primary' | 'annual',
-                }))
-              }
-            >
-              <MenuItem value='primary'>При поступлении</MenuItem>
-              <MenuItem value='annual'>Ежегодное</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl fullWidth margin='dense'>
-            <InputLabel>Результат</InputLabel>
-            <Select
-              value={newRecord.result || ''}
-              label='Результат'
-              onChange={(e) =>
-                setNewRecord((r) => ({
-                  ...r,
-                  result: e.target.value as 'positive' | 'negative',
-                }))
-              }
-            >
-              <MenuItem value='positive'>Положительно</MenuItem>
-              <MenuItem value='negative'>Отрицательно</MenuItem>
-            </Select>
-          </FormControl>
+                {MONTHS.map((m) => (
+                  <MenuItem key={m} value={m}>{m}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth margin='dense'>
+              <InputLabel>Год</InputLabel>
+              <Select
+                value={newRecord.year || ''}
+                label='Год'
+                onChange={(e) => setNewRecord((r) => ({ ...r, year: e.target.value }))}
+              >
+                {YEARS.map((y) => (
+                  <MenuItem key={y} value={y}>{y}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
+
+          <Stack direction="row" spacing={2}>
+            <FormControl fullWidth margin='dense'>
+              <InputLabel>Тип обследования</InputLabel>
+              <Select
+                value={newRecord.examType || ''}
+                label='Тип обследования'
+                onChange={(e) => setNewRecord((r) => ({ ...r, examType: e.target.value as 'primary' | 'annual' }))}
+              >
+                <MenuItem value='primary'>При поступлении</MenuItem>
+                <MenuItem value='annual'>Ежегодное</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl fullWidth margin='dense'>
+              <InputLabel>Результат</InputLabel>
+              <Select
+                value={newRecord.result || ''}
+                label='Результат'
+                onChange={(e) => setNewRecord((r) => ({ ...r, result: e.target.value as 'positive' | 'negative' }))}
+              >
+                <MenuItem value='positive'>Положительно</MenuItem>
+                <MenuItem value='negative'>Отрицательно</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+
           <TextField
             label='Примечания'
             value={newRecord.notes || ''}
-            onChange={(e) =>
-              setNewRecord((r) => ({ ...r, notes: e.target.value }))
-            }
+            onChange={(e) => setNewRecord((r) => ({ ...r, notes: e.target.value }))}
             fullWidth
             margin='dense'
+            multiline
+            rows={2}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setModalOpen(false)}>Отмена</Button>
-          <Button onClick={handleAdd} variant='contained'>
-            Сохранить
+          <Button onClick={handleAdd} variant='contained' disabled={loading}>
+            {loading ? 'Сохранение...' : 'Сохранить'}
           </Button>
         </DialogActions>
       </Dialog>
+
       {loading && (
-        <CircularProgress sx={{ position: 'fixed', top: '50%', left: '50%' }} />
+        <CircularProgress sx={{ position: 'fixed', top: '50%', left: '50%', zIndex: 9999 }} />
       )}
     </Box>
   );

@@ -186,7 +186,9 @@ const StaffAttendanceTracking: React.FC = () => {
 
         const attendanceMap = new Map();
         attendanceRecords.forEach((record: any) => {
-          const key = `${record.staffId._id || record.staffId}-${new Date(record.date).toISOString().split('T')[0]}`;
+          // Используем фиксированное смещение +5 для Алматы
+          const localDate = moment(record.date).utcOffset(5).format('YYYY-MM-DD');
+          const key = `${record.staffId._id || record.staffId}-${localDate}`;
           attendanceMap.set(key, record);
         });
 
@@ -217,7 +219,7 @@ const StaffAttendanceTracking: React.FC = () => {
             (s) => s.id === shift.staffId._id || s.id === shift.staffId,
           );
           const baseSalary = staff?.baseSalary || 180000;
-          const salaryType = staff?.salaryType || 'month';
+          const salaryType = staff?.baseSalaryType || staff?.salaryType || 'month';
           const shiftRate = staff?.shiftRate || 0;
 
           let dailyAccrual = 0;
@@ -285,10 +287,20 @@ const StaffAttendanceTracking: React.FC = () => {
                 overtime: { minutes: 0, amount: 0 },
                 punctuality: { amount: 0 },
               },
-              // Добавляем начисления для отображения
-              amount: dailyAccrual,
+              // Добавляем начисления только если была отметка или статус не запланирован
+              amount: (status === 'absent' || status === 'scheduled') ? 0 : dailyAccrual,
             } as any);
           } else {
+            const shiftStatus = (shift.status || 'scheduled') as ShiftStatus;
+            const displayStatus = ({
+              scheduled: 'scheduled',
+              completed: 'checked_out',
+              late: 'absent',
+              absent: 'absent',
+              in_progress: 'checked_in',
+              pending_approval: 'absent'
+            } as any)[shiftStatus] || 'scheduled';
+
             allRecords.push({
               id: shift._id || shift.id || '',
               staffId: shift.staffId._id || shift.staffId,
@@ -298,14 +310,14 @@ const StaffAttendanceTracking: React.FC = () => {
               date: shift.date,
               actualStart: undefined,
               actualEnd: undefined,
-              status: 'scheduled',
-              originalStatus: shift.status as ShiftStatus,
+              status: displayStatus as any,
+              originalStatus: shiftStatus,
               workDuration: undefined,
               breakDuration: undefined,
               overtimeDuration: undefined,
-              lateMinutes: undefined,
-              earlyLeaveMinutes: undefined,
-              notes: `Смена запланирована`,
+              lateMinutes: 0,
+              earlyLeaveMinutes: 0,
+              notes: `Смена ${shiftStatus === 'completed' ? 'завершена' : 'запланирована'} по графику`,
               penalties: {
                 late: { minutes: 0, amount: 0 },
                 earlyLeave: { minutes: 0, amount: 0 },
@@ -315,13 +327,16 @@ const StaffAttendanceTracking: React.FC = () => {
                 overtime: { minutes: 0, amount: 0 },
                 punctuality: { amount: 0 },
               },
-              amount: 0,
+              // Начисляем, если смена завершена вручную (статус completed)
+              amount: (displayStatus === 'absent' || displayStatus === 'scheduled') ? 0 : dailyAccrual,
             } as any);
           }
         });
 
         attendanceRecords.forEach((record: any) => {
-          const key = `${record.staffId._id || record.staffId}-${new Date(record.date).toISOString().split('T')[0]}`;
+          // Используем фиксированное смещение +5 для Алматы
+          const localDate = moment(record.date).utcOffset(5).format('YYYY-MM-DD');
+          const key = `${record.staffId._id || record.staffId}-${localDate}`;
           const shiftExists = shifts.some(
             (shift: any) =>
               `${shift.staffId._id || shift.staffId}-${shift.date}` === key,
@@ -332,7 +347,7 @@ const StaffAttendanceTracking: React.FC = () => {
               (s) => s.id === record.staffId._id || s.id === record.staffId,
             );
             const baseSalary = staff?.baseSalary || 180000;
-            const salaryType = staff?.salaryType || 'month';
+            const salaryType = staff?.baseSalaryType || staff?.salaryType || 'month';
             const shiftRate = staff?.shiftRate || 0;
 
             let dailyAccrual = 0;
@@ -395,7 +410,7 @@ const StaffAttendanceTracking: React.FC = () => {
                 overtime: { minutes: 0, amount: 0 },
                 punctuality: { amount: 0 },
               },
-              amount: dailyAccrual,
+              amount: (status === 'absent' || status === 'scheduled') ? 0 : dailyAccrual,
             } as any);
           }
         });
@@ -1043,25 +1058,9 @@ const StaffAttendanceTracking: React.FC = () => {
                   <Box>
                     <Typography variant='body2'>Смена</Typography>
                     <Typography variant='caption' color='text.secondary'>
-                      Приход:{' '}
-                      {record.actualStart
-                        ? new Date(
-                          `1970-01-01T${record.actualStart}`,
-                        ).toLocaleTimeString('ru-RU', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                        : '-'}
+                      Приход: {record.actualStart || '-'}
                       <br />
-                      Уход:{' '}
-                      {record.actualEnd
-                        ? new Date(
-                          `1970-01-01T${record.actualEnd}`,
-                        ).toLocaleTimeString('ru-RU', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                        : '-'}
+                      Уход: {record.actualEnd || '-'}
                     </Typography>
                   </Box>
                 </TableCell>
@@ -1098,9 +1097,7 @@ const StaffAttendanceTracking: React.FC = () => {
                       record.status
                     }
                     color={
-                      STATUS_COLORS[
-                      record.originalStatus as keyof typeof STATUS_COLORS
-                      ] as any
+                      STATUS_COLORS[record.status as keyof typeof STATUS_COLORS] as any
                     }
                     size='small'
                   />
@@ -1113,9 +1110,11 @@ const StaffAttendanceTracking: React.FC = () => {
                 <TableCell align='right'>
                   <Typography variant='body2' color='error'>
                     {formatCurrency(
-                      (record.penalties?.late?.amount || 0) +
-                      (record.penalties?.earlyLeave?.amount || 0) +
-                      (record.penalties?.unauthorized?.amount || 0),
+                      Math.min(record.amount || 0,
+                        (record.penalties?.late?.amount || 0) +
+                        (record.penalties?.earlyLeave?.amount || 0) +
+                        (record.penalties?.unauthorized?.amount || 0)
+                      )
                     )}
                   </Typography>
                 </TableCell>
