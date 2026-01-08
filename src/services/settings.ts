@@ -40,6 +40,7 @@ export interface KindergartenSettings {
   currency: string;
   payroll?: {
     latePenaltyRate: number;
+    latePenaltyType: 'fixed' | 'per_minute' | 'per_5_minutes' | 'per_10_minutes';
   };
   holidays?: string[];
 }
@@ -165,6 +166,7 @@ export const getKindergartenSettings = async () => {
       currency: response.data.currency,
       payroll: {
         latePenaltyRate: response.data.payroll?.latePenaltyRate || 50,
+        latePenaltyType: response.data.payroll?.latePenaltyType || 'per_minute'
       }
     };
 
@@ -211,6 +213,7 @@ export const updateKindergartenSettings = async (
       currency: response.data.currency,
       payroll: {
         latePenaltyRate: response.data.payroll?.latePenaltyRate || 50,
+        latePenaltyType: response.data.payroll?.latePenaltyType || 'per_minute'
       }
     };
 

@@ -13,7 +13,7 @@ class UsersApiClient extends BaseCrudApiClient<User> {
   ): Promise<
     Pick<
       User,
-      'salary' | 'shiftRate' | 'salaryType' | 'penaltyType' | 'penaltyAmount'
+      'salary' | 'shiftRate' | 'salaryType'
     >
   > {
     return this.get(`${this.endpoint}/${id}`);
@@ -24,7 +24,7 @@ class UsersApiClient extends BaseCrudApiClient<User> {
     data: Partial<
       Pick<
         User,
-        'salary' | 'shiftRate' | 'salaryType' | 'penaltyType' | 'penaltyAmount'
+        'salary' | 'shiftRate' | 'salaryType'
       >
     >,
   ): Promise<User> {

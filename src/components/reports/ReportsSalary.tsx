@@ -93,8 +93,10 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   const [rows, setRows] = useState<PayrollRow[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [globalPenaltyRate, setGlobalPenaltyRate] = useState<number>(50);
+  const [penaltyType, setPenaltyType] = useState<string>('per_minute');
   const [rateDialogOpen, setRateDialogOpen] = useState(false);
   const [newRate, setNewRate] = useState<number>(50);
+  const [newPenaltyType, setNewPenaltyType] = useState<string>('per_minute');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<PayrollRow>>({});
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -161,6 +163,9 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         const { getKindergartenSettings } = await import('../../services/settings');
         const settings = await getKindergartenSettings();
         const globalLatePenaltyRate = settings?.payroll?.latePenaltyRate || 50;
+        const globalLatePenaltyType = settings?.payroll?.latePenaltyType || 'per_minute';
+        setGlobalPenaltyRate(globalLatePenaltyRate);
+        setPenaltyType(globalLatePenaltyType);
 
         const payrollsData = await getPayrolls(params);
 
@@ -637,6 +642,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
 
   const handleOpenRateDialog = () => {
     setNewRate(globalPenaltyRate);
+    setNewPenaltyType(penaltyType);
     setRateDialogOpen(true);
   };
 
@@ -649,15 +655,15 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           ...settings,
           payroll: {
             ...settings.payroll,
-            latePenaltyRate: newRate
+            latePenaltyRate: newRate,
+            latePenaltyType: newPenaltyType as 'fixed' | 'per_minute' | 'per_5_minutes' | 'per_10_minutes'
           }
         });
         setGlobalPenaltyRate(newRate);
-        setSnackbarMessage('Глобальная ставка штрафа обновлена');
+        setPenaltyType(newPenaltyType);
+        setSnackbarMessage('Настройки штрафа за опоздание обновлены');
         setSnackbarOpen(true);
         setRateDialogOpen(false);
-        // Optionally reload payrolls to reflect visual changes if any (though they use stored values usually until recalc)
-        // But for "future" or "recalc" actions it matters.
       }
     } catch (e: any) {
       setError(e.message || 'Ошибка обновления ставки');
@@ -1029,7 +1035,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                         align='right'
                         sx={{ minWidth: 150 }}
                       >
-                        Базовый Оклад
+                        Базовый Оклад / Тип
                       </TableCell>
 
                       <TableCell
@@ -1149,12 +1155,10 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                             </Box>
                           ) : (
                             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                              <span>{r.baseSalary?.toLocaleString()}</span>
-                              {r.baseSalaryType === 'shift' && (
-                                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
-                                  в день
-                                </Typography>
-                              )}
+                              <span>{r.baseSalary?.toLocaleString()} тг</span>
+                              <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', fontWeight: 'bold' }}>
+                                {r.baseSalaryType === 'shift' ? 'за смену' : 'в месяц'}
+                              </Typography>
                             </Box>
                           )}
                         </TableCell>
@@ -1466,22 +1470,42 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={rateDialogOpen} onClose={() => setRateDialogOpen(false)}>
-        <DialogTitle>Изменение ставки штрафа</DialogTitle>
+      <Dialog open={rateDialogOpen} onClose={() => setRateDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Настройки штрафа за опоздание</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Укажите новую глобальную ставку штрафа за опоздание (тенге в минуту).
+            Укажите ставку штрафа и тип расчета.
             Это значение будет использоваться при следующем расчете зарплат.
           </DialogContentText>
+          <FormControl fullWidth margin="dense" sx={{ mb: 2 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
+              Тип расчета штрафа
+            </Typography>
+            <Select
+              value={newPenaltyType}
+              onChange={(e) => setNewPenaltyType(e.target.value)}
+              variant="outlined"
+            >
+              <MenuItem value="per_minute">За каждую минуту</MenuItem>
+              <MenuItem value="per_5_minutes">За каждые 5 минут</MenuItem>
+              <MenuItem value="per_10_minutes">За каждые 10 минут</MenuItem>
+              <MenuItem value="fixed">Фиксированный штраф</MenuItem>
+            </Select>
+          </FormControl>
           <TextField
-            autoFocus
             margin="dense"
-            label="Ставка (тг/мин)"
+            label={newPenaltyType === 'fixed' ? 'Сумма штрафа (тг)' : `Ставка (тг/${newPenaltyType === 'per_minute' ? 'мин' : newPenaltyType === 'per_5_minutes' ? '5 мин' : '10 мин'})`}
             type="number"
             fullWidth
             value={newRate}
             onChange={(e) => setNewRate(Number(e.target.value))}
           />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            {newPenaltyType === 'per_minute' && 'Пример: при опоздании на 15 мин штраф = 15 × ставка'}
+            {newPenaltyType === 'per_5_minutes' && 'Пример: при опоздании на 15 мин штраф = 3 × ставка (15÷5=3)'}
+            {newPenaltyType === 'per_10_minutes' && 'Пример: при опоздании на 15 мин штраф = 2 × ставка (15÷10≈2)'}
+            {newPenaltyType === 'fixed' && 'Фиксированный штраф за любое опоздание'}
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRateDialogOpen(false)}>Отмена</Button>

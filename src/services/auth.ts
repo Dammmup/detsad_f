@@ -38,8 +38,6 @@ class AuthApiClient extends BaseApiClient {
           initialPassword: response.user.initialPassword,
           salary: response.user.salary,
           salaryType: response.user.salaryType,
-          penaltyType: response.user.penaltyType,
-          penaltyAmount: response.user.penaltyAmount,
           shiftRate: response.user.shiftRate,
           staffId: response.user.staffId,
           staffName: response.user.staffName,

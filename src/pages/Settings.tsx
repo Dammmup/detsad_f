@@ -453,16 +453,47 @@ const Settings: React.FC = () => {
               </Grid>
 
               <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Тип штрафа за опоздание</InputLabel>
+                  <Select
+                    value={kindergartenSettings.payroll?.latePenaltyType || 'per_minute'}
+                    label="Тип штрафа за опоздание"
+                    onChange={(e) =>
+                      setKindergartenSettings({
+                        ...kindergartenSettings,
+                        payroll: {
+                          ...kindergartenSettings.payroll!,
+                          latePenaltyType: e.target.value as any,
+                        },
+                      })
+                    }
+                  >
+                    <MenuItem value="fixed">Фиксированный</MenuItem>
+                    <MenuItem value="per_minute">За минуту</MenuItem>
+                    <MenuItem value="per_5_minutes">За каждые 5 минут</MenuItem>
+                    <MenuItem value="per_10_minutes">За каждые 10 минут</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
                 <TextField
-                  label='Штраф за опоздание (за минуту)'
+                  label={`Сумма штрафа ${kindergartenSettings.payroll?.latePenaltyType === 'fixed'
+                      ? '(фиксированная)'
+                      : kindergartenSettings.payroll?.latePenaltyType === 'per_5_minutes'
+                        ? '(за 5 минут)'
+                        : kindergartenSettings.payroll?.latePenaltyType === 'per_10_minutes'
+                          ? '(за 10 минут)'
+                          : '(за минуту)'
+                    }`}
                   type='number'
                   fullWidth
-                  value={kindergartenSettings.payroll?.latePenaltyRate || 50}
+                  value={kindergartenSettings.payroll?.latePenaltyRate || 0}
                   onChange={(e) =>
                     setKindergartenSettings({
                       ...kindergartenSettings,
                       payroll: {
-                        ...kindergartenSettings.payroll,
+                        ...kindergartenSettings.payroll!,
                         latePenaltyRate: parseInt(e.target.value) || 0,
                       },
                     })

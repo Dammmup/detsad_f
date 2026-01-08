@@ -92,14 +92,8 @@ export interface User {
   initialPassword?: string;
   salary?: number;
   salaryType?: 'shift' | 'month' | 'day';
-  penaltyType?:
-  | 'fixed'
-  | 'percent'
-  | 'per_minute'
-  | 'per_5_minutes'
-  | 'per_10_minutes';
-  penaltyAmount?: number;
   shiftRate?: number;
+
 
   staffId?: string;
   staffName?: string;
@@ -215,6 +209,10 @@ export const STATUS_COLORS: Record<string, StatusColor> = {
   absent: 'error',
   early_departure: 'warning',
   present: 'success',
+  no_clock_in: 'error',
+  no_clock_out: 'error',
+  early_leave: 'warning',
+  late_arrival: 'warning',
 
   active_rent: 'warning',
   overdue_rent: 'error',
@@ -239,12 +237,16 @@ export const STATUS_TEXT: Record<string, string> = {
   completed: 'Завершена',
   in_progress: 'В процессе',
   pending_approval: 'Ожидает подтверждения',
-  checked_in: 'Пришел',
+  checked_in: 'На работе',
   checked_out: 'Ушел',
   late: 'Опоздание',
 
   absent: 'Отсутствует',
-
+  present: 'Присутствует',
+  no_clock_in: 'Не отметил приход',
+  no_clock_out: 'Не отметил уход',
+  early_leave: 'Ранний уход',
+  late_arrival: 'Поздний приход',
   active_rent: 'Активна',
   overdue_rent: 'Просрочена',
   paid_rent: 'Оплачена',
@@ -266,9 +268,16 @@ export enum ShiftStatus {
   scheduled = 'scheduled',
   completed = 'completed',
   absent = 'absent',
+  present = 'present',
   in_progress = 'in_progress',
   pending_approval = 'pending_approval',
   late = 'late',
+  no_clock_in = 'no_clock_in',
+  no_clock_out = 'no_clock_out',
+  checked_in = 'checked_in',
+  checked_out = 'checked_out',
+  early_leave = 'early_leave',
+  late_arrival = 'late_arrival',
 }
 
 export interface Shift {

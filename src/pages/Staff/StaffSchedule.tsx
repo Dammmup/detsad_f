@@ -70,7 +70,9 @@ import {
 import { getUsers } from '../../services/users';
 import { User } from '../../types/common';
 import { KindergartenSettings } from '../../services/settings';
+import { getKindergartenSettings } from '../../services/settings';
 import { getHolidays } from '../../services/common';
+import { staffAttendanceTrackingService, StaffAttendanceRecord } from '../../services/staffAttendanceTracking';
 
 
 
@@ -140,6 +142,7 @@ const StaffSchedule: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [holidays, setHolidays] = useState<string[]>([]);
   const [workingSaturdays, setWorkingSaturdays] = useState<string[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<StaffAttendanceRecord[]>([]);
 
   // Bulk Delete State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -251,16 +254,18 @@ const StaffSchedule: React.FC = () => {
       try {
         const monthStart = moment(currentDate).startOf('month');
         const monthEnd = moment(currentDate).endOf('month');
-        const [staffData, shiftsData] = await Promise.all([
+        const startDate = monthStart.format('YYYY-MM-DD');
+        const endDate = monthEnd.format('YYYY-MM-DD');
+
+        const [staffData, shiftsData, attendanceData] = await Promise.all([
           getUsers(),
-          getShifts(
-            monthStart.format('YYYY-MM-DD'),
-            monthEnd.format('YYYY-MM-DD'),
-          ),
+          getShifts(startDate, endDate),
+          staffAttendanceTrackingService.getAllRecords({ startDate, endDate })
         ]);
 
         setStaff(staffData);
         setShifts(shiftsData);
+        setAttendanceRecords(attendanceData.data || []);
 
         try {
           const hData = await getHolidays();
@@ -955,43 +960,79 @@ const StaffSchedule: React.FC = () => {
                                   },
                                 }}
                               >
-                                {dayShifts.map((shift) => (
-                                  <Box
-                                    key={shift.id}
-                                    sx={{
-                                      p: 1,
-                                      mb: 1,
-                                      borderRadius: 1,
-                                      bgcolor: 'background.paper',
-                                      borderLeft: `4px solid ${theme.palette.primary.main}`,
-                                      '&:hover': {
-                                        bgcolor: 'action.selected',
-                                      },
-                                    }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleEditShift(shift);
-                                    }}
-                                  >
+                                {(() => {
+                                  const dateStr = moment(day).format('YYYY-MM-DD');
+                                  const attendance = attendanceRecords.find(a =>
+                                    moment(a.date).format('YYYY-MM-DD') === dateStr &&
+                                    (typeof a.staffId === 'string' ? a.staffId === staffId : a.staffId._id === staffId)
+                                  );
 
-                                    <Box mt={0.5}>
-                                      <Chip
-                                        label={
-                                          STATUS_TEXT[
-                                          shift.status as keyof typeof STATUS_TEXT
-                                          ] || shift.status
-                                        }
-                                        size='small'
-                                        color={
-                                          STATUS_COLORS[
-                                          shift.status as keyof typeof STATUS_COLORS
-                                          ] || 'default'
-                                        }
-                                      />
-                                    </Box>
-                                  </Box>
-                                ))
-                                }
+                                  return (
+                                    <>
+                                      {dayShifts.map((shift) => (
+                                        <Box
+                                          key={shift.id}
+                                          sx={{
+                                            p: 0.5,
+                                            mb: 0.5,
+                                            borderRadius: 1,
+                                            bgcolor: 'background.paper',
+                                            borderLeft: `3px solid ${theme.palette.primary.main}`,
+                                            '&:hover': {
+                                              bgcolor: 'action.selected',
+                                            },
+                                          }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditShift(shift);
+                                          }}
+                                        >
+                                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                            <Chip
+                                              label={STATUS_TEXT[shift.status] || shift.status}
+                                              size='small'
+                                              color={STATUS_COLORS[shift.status] || 'default'}
+                                              sx={{ fontSize: '0.65rem', height: 20 }}
+                                            />
+                                          </Box>
+                                        </Box>
+                                      ))}
+
+                                      {/* Комбинированные статусы на основе реальной посещаемости */}
+                                      {attendance && (
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3, mt: 0.5 }}>
+                                          {(attendance.lateMinutes || 0) > 0 && (
+                                            <Chip
+                                              label={`Опоздание ${attendance.lateMinutes}м`}
+                                              size='small'
+                                              color="error"
+                                              variant="outlined"
+                                              sx={{ fontSize: '0.6rem', height: 18 }}
+                                            />
+                                          )}
+                                          {(attendance.earlyLeaveMinutes || 0) > 0 && (
+                                            <Chip
+                                              label={`Ранний уход ${attendance.earlyLeaveMinutes}м`}
+                                              size='small'
+                                              color="warning"
+                                              variant="outlined"
+                                              sx={{ fontSize: '0.6rem', height: 18 }}
+                                            />
+                                          )}
+                                          {attendance.actualStart && !attendance.actualEnd && (
+                                            <Chip
+                                              label="На работе"
+                                              size='small'
+                                              color="success"
+                                              variant="outlined"
+                                              sx={{ fontSize: '0.6rem', height: 18 }}
+                                            />
+                                          )}
+                                        </Box>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                               </TableCell>
                             );
                           })}

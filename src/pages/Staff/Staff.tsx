@@ -113,8 +113,6 @@ const defaultForm: StaffMember = {
   updatedAt: new Date().toISOString(),
   salaryType: 'day',
   salary: 0,
-  penaltyType: 'fixed',
-  penaltyAmount: 0,
 };
 
 const Staff = () => {
@@ -274,8 +272,6 @@ const Staff = () => {
         await usersApi.updatePayrollSettings(editId, {
           salary: form.salary,
           salaryType: form.salaryType,
-          penaltyType: form.penaltyType,
-          penaltyAmount: form.penaltyAmount,
         });
         handleCloseModal();
       } else {
