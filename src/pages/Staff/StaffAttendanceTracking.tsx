@@ -104,6 +104,15 @@ const StaffAttendanceTracking: React.FC = () => {
   const [currentStaffId, setCurrentStaffId] = useState('');
   const [isImporting, setIsImporting] = useState(false);
 
+  // Рабочие часы из настроек
+  const [workingHours, setWorkingHours] = useState({ start: '09:00', end: '18:00' });
+
+  // Массовое обновление
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkForm, setBulkForm] = useState({ actualStart: '', actualEnd: '', notes: '' });
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
 
 
 
@@ -148,6 +157,14 @@ const StaffAttendanceTracking: React.FC = () => {
       try {
         const settings = await getKindergartenSettings();
         const latePenaltyRate = settings.payroll?.latePenaltyRate || 50;
+
+        // Сохраняем рабочие часы из настроек
+        if (settings.workingHours) {
+          setWorkingHours({
+            start: settings.workingHours.start || '09:00',
+            end: settings.workingHours.end || '18:00'
+          });
+        }
 
         const startDate = moment(selectedDate).startOf('month').format('YYYY-MM-DD');
         const endDate = moment(selectedDate).endOf('month').format('YYYY-MM-DD');
@@ -910,39 +927,117 @@ const StaffAttendanceTracking: React.FC = () => {
         );
       }
 
-      setRecords((prevRecords) =>
-        prevRecords.map((record) =>
-          record.id === selectedRecord.id
-            ? {
-              ...updatedRecord.data,
-              id: updatedRecord.data._id || updatedRecord.data.id,
-              statuses: updatedRecord.data.status ? [updatedRecord.data.status] : [], // Адаптация при сохранении
-              actualStart: updatedRecord.data.actualStart
-                ? new Date(updatedRecord.data.actualStart).toLocaleTimeString(
-                  'ru-RU',
-                  { hour: '2-digit', minute: '2-digit' },
-                )
-                : undefined,
-              actualEnd: updatedRecord.data.actualEnd
-                ? new Date(updatedRecord.data.actualEnd).toLocaleTimeString(
-                  'ru-RU',
-                  { hour: '2-digit', minute: '2-digit' },
-                )
-                : undefined,
-              staffName:
-                updatedRecord.data.staffId?.fullName ||
-                getStaffName(updatedRecord.data.staffId?._id || updatedRecord.data.staffId || ''),
-              amount: updatedRecord.data.amount || 0,
-              penalties: updatedRecord.data.penalties || 0,
-            }
-            : record,
-        ),
-      );
-
+      // Перезагружаем страницу для получения актуальных lateMinutes и статусов
       setEditDialogOpen(false);
       setSelectedRecord(null);
+
+      alert('Запись успешно сохранена!');
+      window.location.reload();
+
     } catch (e) {
       console.error('Error saving record:', e);
+      alert('Ошибка сохранения записи');
+    }
+  };
+
+  // Массовое обновление функции
+  const handleSelectRecord = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(i => i !== id));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      // Выбираем все записи
+      const allIds = records
+        .filter(r => r.id)
+        .map(r => r.id);
+      setSelectedIds(allIds);
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleBulkUpdate = async () => {
+    if (selectedIds.length === 0) {
+      enqueueSnackbar('Выберите хотя бы одну запись', { variant: 'warning' });
+      return;
+    }
+
+    setIsBulkUpdating(true);
+    try {
+      // Разделяем на существующие записи и запланированные (нужно создать)
+      const existingIds = selectedIds.filter(id => !id.includes('_'));
+      const plannedIds = selectedIds.filter(id => id.includes('_'));
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Обрабатываем запланированные записи - создаем новые
+      for (const plannedId of plannedIds) {
+        try {
+          // Формат plannedId: staffId_date
+          const [staffId, dateStr] = plannedId.split('_');
+
+          // Формируем данные для создания
+          const createData: any = {
+            staffId,
+            date: dateStr,
+          };
+
+          if (bulkForm.actualStart) {
+            createData.actualStart = new Date(`${dateStr}T${bulkForm.actualStart}:00`);
+          }
+          if (bulkForm.actualEnd) {
+            createData.actualEnd = new Date(`${dateStr}T${bulkForm.actualEnd}:00`);
+          }
+          if (bulkForm.notes) {
+            createData.notes = bulkForm.notes;
+          }
+
+          await staffAttendanceTrackingService.createRecord(createData);
+          successCount++;
+        } catch (e) {
+          console.error('Error creating record for:', plannedId, e);
+          errorCount++;
+        }
+      }
+
+      // Обрабатываем существующие записи через bulk update
+      if (existingIds.length > 0) {
+        // Передаем только время, бэкенд сам возьмет дату из записи
+        const updateData: any = {
+          ids: existingIds,
+          // Передаем время как строку, бэкенд применит к дате каждой записи
+          timeStart: bulkForm.actualStart || undefined,
+          timeEnd: bulkForm.actualEnd || undefined,
+          notes: bulkForm.notes || undefined
+        };
+
+        const response = await staffAttendanceTrackingService.bulkUpdate(updateData);
+        successCount += response.data.success || 0;
+        errorCount += response.data.errors || 0;
+      }
+
+      enqueueSnackbar(
+        `Обработано: ${successCount} записей${errorCount > 0 ? `, ошибок: ${errorCount}` : ''}`,
+        { variant: errorCount > 0 ? 'warning' : 'success' }
+      );
+
+      setBulkDialogOpen(false);
+      setSelectedIds([]);
+      setBulkForm({ actualStart: '', actualEnd: '', notes: '' });
+
+      // Перезагружаем данные
+      window.location.reload();
+    } catch (e: any) {
+      console.error('Error bulk updating:', e);
+      enqueueSnackbar(e.response?.data?.error || 'Ошибка массового обновления', { variant: 'error' });
+    } finally {
+      setIsBulkUpdating(false);
     }
   };
 
@@ -1036,10 +1131,51 @@ const StaffAttendanceTracking: React.FC = () => {
         </Grid>
       </Grid>
 
+      {/* Кнопка массового обновления */}
+      {selectedIds.length > 0 && (
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Chip
+            label={`Выбрано: ${selectedIds.length}`}
+            color="primary"
+            variant="outlined"
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              // Инициализируем форму значениями из настроек
+              setBulkForm({
+                actualStart: workingHours.start,
+                actualEnd: workingHours.end,
+                notes: ''
+              });
+              setBulkDialogOpen(true);
+            }}
+            startIcon={<Check />}
+          >
+            Массовое обновление
+          </Button>
+          <Button
+            variant="outlined"
+            color="inherit"
+            onClick={() => setSelectedIds([])}
+          >
+            Снять выбор
+          </Button>
+        </Box>
+      )}
+
       <Paper sx={{ p: 2 }}>
         <Table>
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  indeterminate={selectedIds.length > 0 && selectedIds.length < records.filter(r => !r.id.includes('_')).length}
+                  checked={selectedIds.length > 0 && selectedIds.length === records.filter(r => !r.id.includes('_')).length}
+                  onChange={(e) => handleSelectAll(e.target.checked)}
+                />
+              </TableCell>
               <TableCell>Сотрудник</TableCell>
               <TableCell>Дата</TableCell>
               <TableCell>Смена</TableCell>
@@ -1052,7 +1188,13 @@ const StaffAttendanceTracking: React.FC = () => {
           </TableHead>
           <TableBody>
             {records.map((record) => (
-              <TableRow key={record.id}>
+              <TableRow key={record.id} selected={selectedIds.includes(record.id)}>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={selectedIds.includes(record.id)}
+                    onChange={(e) => handleSelectRecord(record.id, e.target.checked)}
+                  />
+                </TableCell>
                 <TableCell>
                   <Box display='flex' alignItems='center'>
                     <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
@@ -1508,6 +1650,60 @@ const StaffAttendanceTracking: React.FC = () => {
             startIcon={<Check />}
           >
             Подтвердить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Update Dialog */}
+      <Dialog
+        open={bulkDialogOpen}
+        onClose={() => setBulkDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Массовое обновление ({selectedIds.length} записей)</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Укажите новое время прихода и ухода для выбранных записей.
+            Оставьте поле пустым, чтобы не изменять его.
+            Опоздания и штрафы будут пересчитаны автоматически.
+          </Typography>
+          <TextField
+            label="Время прихода"
+            type="time"
+            fullWidth
+            sx={{ mb: 2 }}
+            value={bulkForm.actualStart}
+            onChange={(e) => setBulkForm(prev => ({ ...prev, actualStart: e.target.value }))}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            label="Время ухода"
+            type="time"
+            fullWidth
+            sx={{ mb: 2 }}
+            value={bulkForm.actualEnd}
+            onChange={(e) => setBulkForm(prev => ({ ...prev, actualEnd: e.target.value }))}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            label="Примечание"
+            multiline
+            rows={2}
+            fullWidth
+            value={bulkForm.notes}
+            onChange={(e) => setBulkForm(prev => ({ ...prev, notes: e.target.value }))}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkDialogOpen(false)}>Отмена</Button>
+          <Button
+            variant='contained'
+            onClick={handleBulkUpdate}
+            disabled={isBulkUpdating || (!bulkForm.actualStart && !bulkForm.actualEnd && !bulkForm.notes)}
+            startIcon={isBulkUpdating ? <Schedule /> : <Check />}
+          >
+            {isBulkUpdating ? 'Обновление...' : 'Обновить'}
           </Button>
         </DialogActions>
       </Dialog>

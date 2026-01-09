@@ -180,4 +180,8 @@ export const staffAttendanceTrackingService = {
     apiClient.get('/attendance/absenteeism-rate', {
       params: { startDate, endDate },
     }),
+
+  // Массовое обновление записей
+  bulkUpdate: (data: { ids: string[]; actualStart?: string; actualEnd?: string; notes?: string }) =>
+    apiClient.post('/attendance/bulk-update', data),
 };
