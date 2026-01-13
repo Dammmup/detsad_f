@@ -326,14 +326,14 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
 
   }
 
-  async checkIn(shiftId: ID): Promise<Shift> {
-    const result = await this.post(`${this.endpoint}/checkin/${shiftId}`, {});
+  async checkIn(shiftId: ID, deviceMetadata?: object): Promise<Shift> {
+    const result = await this.post(`${this.endpoint}/checkin/${shiftId}`, { deviceMetadata });
     this.clearCache();
     return result;
   }
 
-  async checkOut(shiftId: ID): Promise<Shift> {
-    const result = await this.post(`${this.endpoint}/checkout/${shiftId}`, {});
+  async checkOut(shiftId: ID, deviceMetadata?: object): Promise<Shift> {
+    const result = await this.post(`${this.endpoint}/checkout/${shiftId}`, { deviceMetadata });
     this.clearCache();
     return result;
   }
@@ -376,12 +376,12 @@ export const updateShiftStatus = (id: ID, status: Shift['status']) =>
 export const shiftsApi = new ShiftsApiClient();
 
 
-export const checkIn = async (shiftId: ID) => {
-  return shiftsApi.checkIn(shiftId);
+export const checkIn = async (shiftId: ID, deviceMetadata?: object) => {
+  return shiftsApi.checkIn(shiftId, deviceMetadata);
 };
 
-export const checkOut = async (shiftId: ID) => {
-  return shiftsApi.checkOut(shiftId);
+export const checkOut = async (shiftId: ID, deviceMetadata?: object) => {
+  return shiftsApi.checkOut(shiftId, deviceMetadata);
 };
 
 

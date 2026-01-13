@@ -59,6 +59,7 @@ const ChildPayments: React.FC = () => {
     },
     amount: 0,
     total: 0,
+    paidAmount: 0,
     status: 'active' as 'active' | 'overdue' | 'paid' | 'draft',
     accruals: 0,
     deductions: 0,
@@ -228,6 +229,7 @@ const ChildPayments: React.FC = () => {
         },
         amount: payment.amount || 0,
         total: payment.total || 0,
+        paidAmount: payment.paidAmount || 0,
         status: payment.status || 'active',
         accruals: payment.accruals || 0,
         deductions: payment.deductions || 0,
@@ -243,6 +245,7 @@ const ChildPayments: React.FC = () => {
         },
         amount: 0,
         total: 0,
+        paidAmount: 0,
         status: 'active' as const,
         accruals: 0,
         deductions: 0,
@@ -678,6 +681,22 @@ const ChildPayments: React.FC = () => {
                   p: isMobile ? 1 : 2,
                 }}
               >
+                Оплачено
+              </TableCell>
+              <TableCell
+                sx={{
+                  fontSize: isMobile ? '0.9rem' : '1rem',
+                  p: isMobile ? 1 : 2,
+                }}
+              >
+                Долг
+              </TableCell>
+              <TableCell
+                sx={{
+                  fontSize: isMobile ? '0.9rem' : '1rem',
+                  p: isMobile ? 1 : 2,
+                }}
+              >
                 Надбавки
               </TableCell>
               <TableCell
@@ -809,6 +828,16 @@ const ChildPayments: React.FC = () => {
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>
                     {payment.total} ₸
                   </TableCell>
+                  <TableCell sx={{ p: isMobile ? 1 : 2, color: 'success.main' }}>
+                    {payment.paidAmount || 0} ₸
+                  </TableCell>
+                  <TableCell sx={{
+                    p: isMobile ? 1 : 2,
+                    color: (payment.total - (payment.paidAmount || 0)) > 0 ? 'error.main' : 'success.main',
+                    fontWeight: 'bold'
+                  }}>
+                    {payment.total - (payment.paidAmount || 0)} ₸
+                  </TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>
                     {payment.accruals || 0} ₸
                   </TableCell>
@@ -934,6 +963,14 @@ const ChildPayments: React.FC = () => {
               value={newPayment.total}
               onChange={(e) =>
                 setNewPayment({ ...newPayment, total: Number(e.target.value) })
+              }
+            />
+            <TextField
+              label='Оплачено'
+              type='number'
+              value={newPayment.paidAmount}
+              onChange={(e) =>
+                setNewPayment({ ...newPayment, paidAmount: Number(e.target.value) })
               }
             />
             <TextField

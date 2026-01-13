@@ -64,6 +64,7 @@ export interface Child {
   checkups?: string;
   notes?: string;
   photo?: string;
+  paymentAmount?: number;
   createdAt?: string;
   updatedAt?: string;
 }

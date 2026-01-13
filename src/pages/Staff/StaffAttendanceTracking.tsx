@@ -31,6 +31,7 @@ import {
   Checkbox,
   ListItemText,
   Dialog,
+  Tooltip,
 } from '@mui/material';
 import {
   AccessTime,
@@ -41,6 +42,9 @@ import {
   Person,
   Search as SearchIcon,
   FileUpload as FileUploadIcon,
+  Smartphone,
+  Computer,
+  Tablet,
 } from '@mui/icons-material';
 import moment from 'moment';
 import 'moment/locale/ru';
@@ -61,6 +65,7 @@ import {
 import DateNavigator from '../../components/DateNavigator';
 import { importStaffAttendance } from '../../services/importService';
 import { useSnackbar } from 'notistack';
+import { collectDeviceMetadata } from '../../utils/deviceMetadata';
 
 moment.locale('ru');
 
@@ -77,6 +82,18 @@ interface TimeRecord {
   notes?: string;
   amount: number;
   penalties: number;
+  checkInDevice?: {
+    deviceModel?: string;
+    browser?: string;
+    os?: string;
+    ipAddress?: string;
+  };
+  checkOutDevice?: {
+    deviceModel?: string;
+    browser?: string;
+    os?: string;
+    ipAddress?: string;
+  };
 }
 
 
@@ -316,6 +333,8 @@ const StaffAttendanceTracking: React.FC = () => {
               notes: attendanceRecord.notes || '',
               amount: (currentStatuses.includes(ShiftStatus.absent) || currentStatuses.includes(ShiftStatus.scheduled)) ? 0 : dailyAccrual,
               penalties: attendanceRecord.penalties || 0,
+              checkInDevice: attendanceRecord.checkInDevice,
+              checkOutDevice: attendanceRecord.checkOutDevice,
             });
           } else {
             const shiftStatus = (shift.status || 'scheduled') as ShiftStatus;
@@ -482,6 +501,8 @@ const StaffAttendanceTracking: React.FC = () => {
               notes: record.notes || '',
               amount: (currentStatuses.includes(ShiftStatus.absent) || currentStatuses.includes(ShiftStatus.scheduled)) ? 0 : dailyAccrual,
               penalties: record.penalties || 0,
+              checkInDevice: record.checkInDevice,
+              checkOutDevice: record.checkOutDevice,
             });
           }
         });
@@ -613,12 +634,14 @@ const StaffAttendanceTracking: React.FC = () => {
 
 
         if (myShift.id) {
-          await shiftsApi.checkIn(myShift.id);
+          const deviceMetadata = collectDeviceMetadata();
+          await shiftsApi.checkIn(myShift.id, deviceMetadata);
         }
 
 
         if (myShift.id) {
-          await shiftsApi.checkIn(myShift.id);
+          const deviceMetadata = collectDeviceMetadata();
+          await shiftsApi.checkIn(myShift.id, deviceMetadata);
         }
         setCheckInDialogOpen(false);
 
@@ -697,7 +720,8 @@ const StaffAttendanceTracking: React.FC = () => {
       if (myShift) {
         if (myShift.id) {
           if (myShift.id) {
-            await shiftsApi.checkOut(myShift.id);
+            const deviceMetadata = collectDeviceMetadata();
+            await shiftsApi.checkOut(myShift.id, deviceMetadata);
           }
         }
         setCheckOutDialogOpen(false);
@@ -1211,8 +1235,32 @@ const StaffAttendanceTracking: React.FC = () => {
                     <Typography variant='body2'>Смена</Typography>
                     <Typography variant='caption' color='text.secondary'>
                       Приход: {record.actualStart || '-'}
+                      {record.checkInDevice?.deviceModel && (
+                        <Tooltip title={`${record.checkInDevice.deviceModel} • ${record.checkInDevice.browser || ''} • ${record.checkInDevice.os || ''} • IP: ${record.checkInDevice.ipAddress || 'н/д'}`}>
+                          <span style={{ marginLeft: 4, cursor: 'help' }}>
+                            {record.checkInDevice.deviceModel?.toLowerCase().includes('iphone') ||
+                              record.checkInDevice.deviceModel?.toLowerCase().includes('android') ||
+                              record.checkInDevice.deviceModel?.toLowerCase().includes('samsung') ||
+                              record.checkInDevice.deviceModel?.toLowerCase().includes('xiaomi') ||
+                              record.checkInDevice.deviceModel?.toLowerCase().includes('huawei') ||
+                              record.checkInDevice.deviceModel?.toLowerCase().includes('pixel') ? '📱' : '💻'}
+                          </span>
+                        </Tooltip>
+                      )}
                       <br />
                       Уход: {record.actualEnd || '-'}
+                      {record.checkOutDevice?.deviceModel && (
+                        <Tooltip title={`${record.checkOutDevice.deviceModel} • ${record.checkOutDevice.browser || ''} • ${record.checkOutDevice.os || ''} • IP: ${record.checkOutDevice.ipAddress || 'н/д'}`}>
+                          <span style={{ marginLeft: 4, cursor: 'help' }}>
+                            {record.checkOutDevice.deviceModel?.toLowerCase().includes('iphone') ||
+                              record.checkOutDevice.deviceModel?.toLowerCase().includes('android') ||
+                              record.checkOutDevice.deviceModel?.toLowerCase().includes('samsung') ||
+                              record.checkOutDevice.deviceModel?.toLowerCase().includes('xiaomi') ||
+                              record.checkOutDevice.deviceModel?.toLowerCase().includes('huawei') ||
+                              record.checkOutDevice.deviceModel?.toLowerCase().includes('pixel') ? '📱' : '💻'}
+                          </span>
+                        </Tooltip>
+                      )}
                     </Typography>
                   </Box>
                 </TableCell>

@@ -27,7 +27,7 @@ interface ChildrenModalProps {
   child?: Partial<User> | null;
 }
 
-const defaultForm: Omit<Partial<User>, 'role'> = {
+const defaultForm: Omit<Partial<User>, 'role'> & { paymentAmount?: number } = {
   fullName: '',
   birthday: '',
   parentPhone: '',
@@ -38,6 +38,7 @@ const defaultForm: Omit<Partial<User>, 'role'> = {
   active: true,
   phone: '',
   photo: '',
+  paymentAmount: 40000,
 };
 
 const ChildrenModal: React.FC<ChildrenModalProps> = ({
@@ -47,7 +48,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
   child,
 }) => {
   const [groups, setGroups] = useState<Group[]>([]);
-  const [form, setForm] = useState<Partial<User>>(defaultForm);
+  const [form, setForm] = useState<Partial<User> & { paymentAmount?: number }>(defaultForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,6 +71,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
           parentPhone: child.parentPhone || '',
           birthday: child.birthday || '',
           notes: child.notes || '',
+          paymentAmount: (child as any).paymentAmount || 40000,
         });
       } else {
         setForm(defaultForm);
@@ -116,7 +118,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
     try {
       if (child && child.id) {
 
-        const childData: Partial<User> = {
+        const childData: Partial<User> & { paymentAmount?: number } = {
           id: child.id,
           fullName: form.fullName || '',
           phone: form.phone || '',
@@ -128,8 +130,9 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
           parentName: form.parentName || '',
           notes: form.notes || '',
           active: form.active !== false,
+          paymentAmount: form.paymentAmount || 40000,
         };
-        await childrenApi.update(child.id, childData);
+        await childrenApi.update(child.id, childData as any);
       } else {
 
         const userData = {
@@ -143,8 +146,9 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
           parentName: form.parentName || '',
           notes: form.notes || '',
           active: form.active !== false,
+          paymentAmount: form.paymentAmount || 40000,
         };
-        await childrenApi.create(userData);
+        await childrenApi.create(userData as any);
       }
 
       onSaved();
@@ -313,6 +317,21 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
           fullWidth
           sx={{ mb: 2 }}
           variant='outlined'
+        />
+
+        <TextField
+          margin='dense'
+          name='paymentAmount'
+          label='Сумма оплаты (тенге)'
+          type='number'
+          value={form.paymentAmount || 40000}
+          onChange={(e) => setForm({ ...form, paymentAmount: Number(e.target.value) })}
+          fullWidth
+          sx={{ mb: 2 }}
+          variant='outlined'
+          InputProps={{
+            inputProps: { min: 0 }
+          }}
         />
 
         <TextField

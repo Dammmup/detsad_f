@@ -20,8 +20,10 @@ import {
   MenuItem,
   useMediaQuery,
   Avatar,
+  Snackbar,
+  Tooltip,
 } from '@mui/material';
-import { Add, Edit, Delete } from '@mui/icons-material';
+import { Add, Edit, Delete, Refresh } from '@mui/icons-material';
 import childrenApi, { Child } from '../../services/children';
 import { groupsApi } from '../../services/groups';
 import { Group } from '../../types/common';
@@ -47,6 +49,12 @@ const Children: React.FC = () => {
 
 
   const [filteredChildren, setFilteredChildren] = useState<Child[]>([]);
+  const [isGeneratingPayments, setIsGeneratingPayments] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>({
+    open: false,
+    message: '',
+    severity: 'info',
+  });
 
   const getGroupColor = (groupId: string) => {
     const colors = [
@@ -214,6 +222,26 @@ const Children: React.FC = () => {
     }
   }, [fetchChildren]);
 
+  const handleGeneratePayments = useCallback(async () => {
+    setIsGeneratingPayments(true);
+    try {
+      const result = await childrenApi.generatePayments(new Date());
+      setSnackbar({
+        open: true,
+        message: `${result.message}. Создано: ${result.stats.created}, пропущено: ${result.stats.skipped}`,
+        severity: result.stats.errors > 0 ? 'error' : 'success',
+      });
+    } catch (e: any) {
+      setSnackbar({
+        open: true,
+        message: e?.message || 'Ошибка генерации платежей',
+        severity: 'error',
+      });
+    } finally {
+      setIsGeneratingPayments(false);
+    }
+  }, []);
+
   const isMobile = useMediaQuery('(max-width:900px)');
 
   return (
@@ -252,19 +280,31 @@ const Children: React.FC = () => {
         </Box>
         <Box
           mb={isMobile ? 0 : 2}
-          display={isMobile ? 'flex' : 'block'}
+          display='flex'
           flexDirection={isMobile ? 'column' : 'row'}
-          gap={isMobile ? 1 : 0}
+          gap={1}
         >
           <ExportButton
             exportTypes={[{ value: 'children', label: 'Список детей' }]}
             onExport={handleExport}
           />
+          <Tooltip title="Сгенерировать недостающие платежи за текущий месяц">
+            <Button
+              variant='outlined'
+              color='secondary'
+              startIcon={isGeneratingPayments ? <CircularProgress size={20} /> : <Refresh />}
+              onClick={handleGeneratePayments}
+              disabled={isGeneratingPayments || loading}
+              sx={{ width: isMobile ? '100%' : 'auto' }}
+            >
+              {isGeneratingPayments ? 'Генерация...' : 'Сгенерировать платежи'}
+            </Button>
+          </Tooltip>
           <Button
             variant='contained'
             startIcon={<Add />}
             onClick={() => handleOpenModal()}
-            sx={{ width: isMobile ? '10%' : 'auto', mt: isMobile ? 1 : 0 }}
+            sx={{ width: isMobile ? '100%' : 'auto' }}
           >
             Добавить ребёнка
           </Button>
@@ -624,6 +664,13 @@ const Children: React.FC = () => {
         onClose={handleCloseModal}
         onSaved={fetchChildren}
         child={editingChild as any}
+      />
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        message={snackbar.message}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Box>
   );
