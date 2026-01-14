@@ -273,7 +273,7 @@ const StaffAttendanceTracking: React.FC = () => {
                   currentStatuses.push(ShiftStatus.no_clock_out);
                 } else {
                   // Если сегодня и время после 19:00 (1140 минут) - статус "не отметил уход"
-                  if (currentAlmatyMinutes >= 19 * 60) {
+                  if (currentAlmatyMinutes >= 23 * 60) {
                     currentStatuses.push(ShiftStatus.no_clock_out);
                   } else if (lateMin < 90) {
                     // "На работе" только если опоздание меньше 1.5 часов
@@ -440,7 +440,7 @@ const StaffAttendanceTracking: React.FC = () => {
                   currentStatuses.push(ShiftStatus.no_clock_out);
                 } else {
                   // Если сегодня и время после 19:00 (1140 минут) - статус "не отметил уход"
-                  if (currentAlmatyMinutes >= 19 * 60) {
+                  if (currentAlmatyMinutes >= 23 * 60) {
                     currentStatuses.push(ShiftStatus.no_clock_out);
                   } else if (lateMin < 90) {
                     // "На работе" только если опоздание меньше 1.5 часов
