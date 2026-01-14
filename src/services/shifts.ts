@@ -327,12 +327,16 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   }
 
   async checkIn(shiftId: ID, deviceMetadata?: object): Promise<Shift> {
+    console.log('📱 [shifts.ts] checkIn called with deviceMetadata:', deviceMetadata);
+    console.log('📱 [shifts.ts] Sending body:', JSON.stringify({ deviceMetadata }));
     const result = await this.post(`${this.endpoint}/checkin/${shiftId}`, { deviceMetadata });
     this.clearCache();
     return result;
   }
 
   async checkOut(shiftId: ID, deviceMetadata?: object): Promise<Shift> {
+    console.log('📱 [shifts.ts] checkOut called with deviceMetadata:', deviceMetadata);
+    console.log('📱 [shifts.ts] Sending body:', JSON.stringify({ deviceMetadata }));
     const result = await this.post(`${this.endpoint}/checkout/${shiftId}`, { deviceMetadata });
     this.clearCache();
     return result;

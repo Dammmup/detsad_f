@@ -630,17 +630,9 @@ const StaffAttendanceTracking: React.FC = () => {
         return s.staffId === currentStaffId;
       });
       if (myShift) {
-
-
-
         if (myShift.id) {
           const deviceMetadata = collectDeviceMetadata();
-          await shiftsApi.checkIn(myShift.id, deviceMetadata);
-        }
-
-
-        if (myShift.id) {
-          const deviceMetadata = collectDeviceMetadata();
+          console.log('📱 [StaffAttendanceTracking] Calling checkIn with deviceMetadata:', deviceMetadata);
           await shiftsApi.checkIn(myShift.id, deviceMetadata);
         }
         setCheckInDialogOpen(false);
