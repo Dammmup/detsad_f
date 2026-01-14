@@ -57,7 +57,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
 
 
 
-  const [workingHours, setWorkingHours] = useState({ start: '08:00', end: '19:00' });
+  const [workingHours, setWorkingHours] = useState({ start: '08:00', end: '23:00' });
 
   useEffect(() => {
     const fetchSettings = async () => {
