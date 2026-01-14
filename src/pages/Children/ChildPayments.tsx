@@ -28,7 +28,7 @@ import {
   Snackbar,
   Autocomplete,
 } from '@mui/material';
-import { Edit, Delete, Add, FileUpload } from '@mui/icons-material';
+import { Edit, Delete, Add, FileUpload, Refresh } from '@mui/icons-material';
 import moment from 'moment';
 import { useDate } from '../../components/context/DateContext';
 import { IChildPayment, Child, Group } from '../../types/common';
@@ -465,6 +465,18 @@ const ChildPayments: React.FC = () => {
             {isImporting ? 'Импорт...' : 'Импорт из Excel'}
           </Button>
         </Tooltip>
+        <Tooltip title="Сгенерировать/обновить записи платежей для всех активных детей">
+          <Button
+            variant='outlined'
+            color='secondary'
+            startIcon={isGenerating ? <CircularProgress size={20} /> : <Refresh />}
+            onClick={handleGeneratePayments}
+            disabled={isGenerating || loading}
+            sx={{ width: isMobile ? '100%' : 'auto', mt: isMobile ? 1 : 0 }}
+          >
+            {isGenerating ? 'Обновление...' : 'Обновить платежи'}
+          </Button>
+        </Tooltip>
       </Box>
 
       {/* Snackbar для сообщений импорта */}
@@ -665,15 +677,7 @@ const ChildPayments: React.FC = () => {
                   p: isMobile ? 1 : 2,
                 }}
               >
-                Сумма
-              </TableCell>
-              <TableCell
-                sx={{
-                  fontSize: isMobile ? '0.9rem' : '1rem',
-                  p: isMobile ? 1 : 2,
-                }}
-              >
-                Всего
+                Оплачено
               </TableCell>
               <TableCell
                 sx={{
@@ -821,12 +825,6 @@ const ChildPayments: React.FC = () => {
                     {payment.period.start && payment.period.end
                       ? `${moment(payment.period.start).format('DD.MM.YYYY')} - ${moment(payment.period.end).format('DD.MM.YYYY')}`
                       : 'Не указан'}
-                  </TableCell>
-                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-                    {payment.amount} ₸
-                  </TableCell>
-                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-                    {payment.total} ₸
                   </TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2, color: 'success.main' }}>
                     {payment.paidAmount || 0} ₸
