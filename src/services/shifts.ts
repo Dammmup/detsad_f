@@ -7,6 +7,8 @@ import {
   ShiftStatus,
 } from '../types/common';
 
+console.log('📱 [shifts.ts] Module loaded - version 2026-01-14 v2');
+
 class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   protected endpoint = '/staff-shifts';
   private readonly CACHE_KEY = 'shifts';
