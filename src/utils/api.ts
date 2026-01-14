@@ -47,6 +47,7 @@ export const createApiInstance = (
       }
 
       console.log('📤 API запрос:', config.method?.toUpperCase(), config.url);
+      console.log('📤 API body (v2):', JSON.stringify(config.data));
       return config;
     },
     (error) => {
