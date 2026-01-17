@@ -6,6 +6,7 @@ export type ID = string;
 
 export enum UserRole {
   admin = 'admin',
+  manager = 'manager',
   teacher = 'teacher',
   assistant = 'assistant',
   nurse = 'nurse',

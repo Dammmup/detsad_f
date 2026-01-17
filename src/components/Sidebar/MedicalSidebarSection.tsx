@@ -11,6 +11,7 @@ export const medicalSidebarSection = {
   label: 'Медицинский кабинет',
   icon: <LocalHospitalIcon />,
   link: '/app/med',
+  visibleFor: ['admin', 'nurse'],
   children: [
     {
       id: 'organoleptic',

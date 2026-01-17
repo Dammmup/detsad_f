@@ -31,6 +31,7 @@ import {
   Refresh as RefreshIcon,
   FileUpload as FileUploadIcon,
   AccountBalance as DebtIcon,
+  PeopleAlt as PeopleIcon,
 } from '@mui/icons-material';
 import {
   Dialog,
@@ -48,11 +49,13 @@ import {
   calculateDebt,
 } from '../../services/payroll';
 import { importPayrolls } from '../../services/importService';
+import { UserRole } from '../../types/common';
 import FinesDetailsDialog from './FinesDetailsDialog';
 import PayrollTotalDialog from './PayrollTotalDialog';
 
 interface Props {
   userId?: string;
+  personalOnly?: boolean;
 }
 
 interface CurrentUser {
@@ -88,7 +91,7 @@ interface PayrollRow {
   normDays?: number;
 }
 
-const ReportsSalary: React.FC<Props> = ({ userId }) => {
+const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<any>(null);
@@ -153,13 +156,11 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
 
 
         if (
-          currentUserData &&
-          currentUserData.role !== 'admin' &&
-          currentUserData.id
+          (personalOnly || (currentUserData && currentUserData.role !== UserRole.admin && currentUserData.role !== UserRole.manager)) &&
+          currentUserData?.id
         ) {
           params.userId = currentUserData.id;
         } else if (userId) {
-
           params.userId = userId;
         }
 
@@ -761,851 +762,407 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
 
   return (
     <>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%)',
-          p: 3,
-        }}
-      >
-        {/* Добавляем Snackbar для отображения сообщений */}
-        <Snackbar
-          open={snackbarOpen}
-          autoHideDuration={6000}
-          onClose={handleSnackbarClose}
-          message={snackbarMessage}
-          action={
-            <IconButton
-              size='small'
-              aria-label='close'
-              color='inherit'
-              onClick={handleSnackbarClose}
-            >
-              <CloseIcon fontSize='small' />
-            </IconButton>
-          }
-        />
-
-        <Box
-          sx={{
-            maxWidth: '1400px',
-            mx: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 3,
-          }}
-        >
-          {/* Заголовок страницы */}
-          <Box
-            sx={{
-              textAlign: 'center',
-              mb: 3,
-              px: 2,
-            }}
-          >
-            <Typography
-              variant='h3'
-              sx={{
-                fontWeight: 'bold',
-                color: 'primary.main',
-                mb: 1,
-                textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              }}
-            >
-              Расчетные листы
-            </Typography>
-            <Typography
-              variant='h6'
-              sx={{
-                color: 'text.secondary',
-                fontWeight: 'medium',
-              }}
-            >
-              Управление зарплатами сотрудников за {selectedMonthLabel}
-            </Typography>
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-              <TextField
-                label='Выберите месяц'
-                type='month'
-                size='small'
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Box>
-          </Box>
-
-          {/* Сводная информация */}
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              overflow: 'hidden',
-              background: 'white',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-              border: '1px solid rgba(255,255,255,0.2)',
-            }}
-          >
-            <Box
-              sx={{
-                p: 3,
-                background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
-                color: 'white',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <Typography variant='h5' component='h2' sx={{ fontWeight: 'bold' }}>
-                Сводная информация
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant='contained'
-                  color='secondary'
-                  startIcon={<SaveIcon />}
-                  onClick={handleExportToExcel}
-                  sx={{
-                    backgroundColor: 'rgba(255,255,255,0.2)',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
-                    color: 'white',
-                    fontWeight: 'medium',
-                  }}
-                >
-                  Экспорт
-                </Button>
-                {currentUser?.id && currentUser?.role === 'admin' && (
-                  <>
-                    <Tooltip title="Пересчитать все расчетные листы на основе текущих данных посещаемости">
-                      <Button
-                        variant='contained'
-                        startIcon={
-                          refreshing ? <CircularProgress size={20} color="inherit" /> : <RefreshIcon />
-                        }
-                        onClick={handleRefreshPayrolls}
-                        disabled={refreshing || generating}
-                        sx={{
-                          backgroundColor: 'rgba(255,255,255,0.2)',
-                          '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
-                          color: 'white',
-                          fontWeight: 'medium',
-                        }}
-                      >
-                        {refreshing ? 'Обновление...' : 'Обновить всё'}
-                      </Button>
-                    </Tooltip>
-                    <Button
-                      variant='contained'
-                      color='success'
-                      startIcon={
-                        generating ? <CircularProgress size={20} color="inherit" /> : <AddIcon />
-                      }
-                      onClick={handleOpenConfirmDialog}
-                      disabled={generating || refreshing}
-                      sx={{
-                        backgroundColor: 'rgba(255,255,255,0.2)',
-                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
-                        color: 'white',
-                        fontWeight: 'medium',
-                      }}
-                    >
-                      {generating ? 'Генерация...' : 'Сгенерировать'}
-                    </Button>
-                    <Tooltip title="Импортировать зарплаты из файла Excel (docs/Payrolls.xlsx)">
-                      <Button
-                        variant='contained'
-                        startIcon={
-                          importing ? <CircularProgress size={20} color="inherit" /> : <FileUploadIcon />
-                        }
-                        onClick={handleImportPayrolls}
-                        disabled={importing || refreshing || generating}
-                        sx={{
-                          backgroundColor: 'rgba(255,255,255,0.2)',
-                          '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
-                          color: 'white',
-                          fontWeight: 'medium',
-                        }}
-                      >
-                        {importing ? 'Импорт...' : 'Импорт из Excel'}
-                      </Button>
-                    </Tooltip>
-                    <Tooltip title="Рассчитать долг по авансам: если аванс больше начислений, разница переносится на следующий месяц">
-                      <Button
-                        variant='contained'
-                        startIcon={
-                          calculatingDebt ? <CircularProgress size={20} color="inherit" /> : <DebtIcon />
-                        }
-                        onClick={handleCalculateDebt}
-                        disabled={calculatingDebt || refreshing || generating || importing}
-                        sx={{
-                          backgroundColor: 'rgba(255,255,255,0.2)',
-                          '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
-                          color: 'white',
-                          fontWeight: 'medium',
-                        }}
-                      >
-                        {calculatingDebt ? 'Расчёт...' : 'Рассчитать долг'}
-                      </Button>
-                    </Tooltip>
-                  </>
-                )}
-                {currentUser?.id && currentUser?.role === 'admin' && (
-                  <Button
-                    variant='contained'
-                    color='info'
-                    onClick={handleOpenRateDialog}
-                    sx={{
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
-                      color: 'white',
-                      fontWeight: 'medium',
-                    }}
-                  >
-                    Ставка: {globalPenaltyRate} ₸
-                  </Button>
-                )}
-              </Box>
-            </Box>
-
-            <CardContent>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                  gap: 3,
-                }}
-              >
-                <Box
-                  sx={{
-                    p: 3,
-                    borderRadius: 2,
-                    background:
-                      'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 10%)',
-                    textAlign: 'center',
-                  }}
-                >
-                  <Typography
-                    variant='h4'
-                    sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}
-                  >
-                    {summary?.totalEmployees ?? 0}
-                  </Typography>
-                  <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                    Всего сотрудников
-                  </Typography>
-                </Box>
-
-                <Box
-                  sx={{
-                    p: 3,
-                    borderRadius: 2,
-                    background:
-                      'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
-                    textAlign: 'center',
-                  }}
-                >
-                  <Typography
-                    variant='h4'
-                    sx={{ fontWeight: 'bold', color: 'success.main', mb: 1 }}
-                  >
-                    {(summary?.totalAccruals ?? 0)?.toLocaleString()} тг
-                  </Typography>
-                  <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                    Начисления
-                  </Typography>
-                </Box>
-
-                <Box
-                  sx={{
-                    p: 3,
-                    borderRadius: 2,
-                    background:
-                      'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
-                    textAlign: 'center',
-                  }}
-                >
-                  <Typography
-                    variant='h4'
-                    sx={{ fontWeight: 'bold', color: 'error.main', mb: 1 }}
-                  >
-                    {(summary?.totalPenalties ?? 0)?.toLocaleString()} тг
-                  </Typography>
-                  <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                    Вычеты
-                  </Typography>
-                </Box>
-
-                <Box
-                  sx={{
-                    p: 3,
-                    borderRadius: 2,
-                    background:
-                      'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 10%)',
-                    textAlign: 'center',
-                  }}
-                >
-                  <Typography
-                    variant='h4'
-                    sx={{ fontWeight: 'bold', color: 'warning.main', mb: 1 }}
-                  >
-                    {(summary?.totalPayout ?? 0)?.toLocaleString()} тг
-                  </Typography>
-                  <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                    К выплате
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-
-          {/* Таблица расчетных листов */}
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              overflow: 'hidden',
-              background: 'white',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-              border: '1px solid rgba(255,255,255,0.2)',
-            }}
-          >
-            <Box
-              sx={{
-                p: 3,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <Typography variant='h5' component='h2' sx={{ fontWeight: 'bold' }}>
-                Расчетные листы сотрудников
-              </Typography>
-            </Box>
-
-            <CardContent sx={{ p: 0 }}>
-              <Box sx={{ overflowX: 'auto' }}>
-                <Table
-                  size='medium'
-                  sx={{
-                    width: '100%',
-                    '& .MuiTableCell-root': {
-                      borderBottom: '1px solid #e0e0e0',
-                      py: 2.5,
-                      px: 2,
-                    },
-                  }}
-                >
-                  <TableHead>
-                    <TableRow
-                      sx={{
-                        backgroundColor: '#f8fafc',
-                        '& th': {
-                          fontWeight: '600',
-                          color: '#475569',
-                          py: 2,
-                          px: 2,
-                          fontSize: '0.875rem',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          borderBottom: '2px solid #e2e8f0'
-                        },
-                      }}
-                    >
-                      <TableCell sx={{ minWidth: 250 }}>
-                        Сотрудник
-                      </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{ minWidth: 150 }}
-                      >
-                        Базовый Оклад / Тип
-                      </TableCell>
-
-                      <TableCell
-                        align='right'
-                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                      >
-                        Премия
-                      </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                      >
-                        Аванс
-                      </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                      >
-                        Вычеты
-                      </TableCell>
-
-                      <TableCell
-                        align='right'
-                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                      >
-                        Итого
-                      </TableCell>
-                      <TableCell
-                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                      >
-                        Статус
-                      </TableCell>
-                      <TableCell
-                        sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                      >
-                        Действия
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {rows.map((r, idx) => (
-                      <TableRow
-                        key={idx}
-                        sx={{
-                          '&:nth-of-type(odd)': {
-                            backgroundColor: 'grey.50',
-                          },
-                          '&:nth-of-type(even)': {
-                            backgroundColor: 'white',
-                          },
-                          '&:hover': {
-                            backgroundColor: 'action.hover',
-                            boxShadow: '0 4px 20px rgba(0, 0, 0.1)',
-                            transform: 'translateY(-2px)',
-                            transition: 'all 0.3s ease',
-                            zIndex: 1,
-                            position: 'relative',
-                          },
-                          height: '70px',
-                          borderRadius: '12px',
-                          mb: 1,
-                        }}
-                      >
-                        <TableCell
-                          sx={{
-                            fontWeight: 'medium',
-                            fontSize: '1rem',
-                            color: 'text.primary',
-                          }}
-                        >
-                          <Box
-                            sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                          >
-                            <Box
-                              sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: '50%',
-                                bgcolor: 'primary.light',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'primary.contrastText',
-                                fontWeight: 'bold',
-                              }}
-                            >
-                              {r.staffName.charAt(0).toUpperCase()}
-                            </Box>
-                            {r.staffName}
-                          </Box>
-                        </TableCell>
-                        <TableCell
-                          align='right'
-                          sx={{ fontSize: '1rem', fontWeight: 'medium' }}
-                        >
-                          {editingId === r.staffId ? (
-                            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-                              <TextField
-                                size='small'
-                                type='number'
-                                value={editData.baseSalary ?? ''}
-                                onChange={(e) => handleInputChange('baseSalary', Number(e.target.value))}
-                                inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
-                                sx={{ width: '80px' }}
-                                variant='standard'
-                              />
-                              <Select
-                                value={editData.baseSalaryType || 'month'}
-                                onChange={(e) => handleInputChange('baseSalaryType', e.target.value)}
-                                variant="standard"
-                                size="small"
-                                sx={{ fontSize: '0.75rem', minWidth: '40px' }}
-                              >
-                                <MenuItem value="month">Мес</MenuItem>
-                                <MenuItem value="shift">День</MenuItem>
-                              </Select>
-                            </Box>
-                          ) : (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                              <span>{r.baseSalary?.toLocaleString()} тг</span>
-                              <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', fontWeight: 'bold' }}>
-                                {r.baseSalaryType === 'shift' ? 'за смену' : 'в месяц'}
-                              </Typography>
-                            </Box>
-                          )}
-                        </TableCell>
-
-
-
-                        <TableCell
-                          align='right'
-                          sx={{ fontSize: '1rem', fontWeight: 'medium', color: 'primary.main' }}
-                        >
-                          <Tooltip
-                            title={
-                              r.bonusDetails ? (
-                                <Box sx={{ p: 1 }}>
-                                  {r.bonusDetails?.weekendWork ? <div>Выходные: {r.bonusDetails.weekendWork}</div> : null}
-                                  {r.bonusDetails?.performance ? <div>Премия: {r.bonusDetails.performance}</div> : null}
-                                  {r.bonusDetails?.holidayWork ? <div>Праздники: {r.bonusDetails.holidayWork}</div> : null}
-                                  {!r.bonusDetails?.weekendWork && !r.bonusDetails?.performance && !r.bonusDetails?.holidayWork && 'Детали не указаны'}
-                                </Box>
-                              ) : 'Детали премии не указаны'
-                            }
-                            arrow
-                            placement="top"
-                          >
-                            <span style={{
-                              cursor: r.bonusDetails ? 'help' : 'default',
-                              borderBottom: r.bonusDetails ? '1px dashed #1976d2' : 'none'
-                            }}>
-                              {editingId === r.staffId ? (
-                                <TextField
-                                  size='small'
-                                  type='number'
-                                  value={editData.bonuses ?? ''}
-                                  onChange={(e) => handleInputChange('bonuses', Number(e.target.value))}
-                                  inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
-                                  sx={{ width: '80px' }}
-                                  variant='standard'
-                                />
-                              ) : r.bonuses ? (
-                                r.bonuses?.toLocaleString()
-                              ) : (
-                                '0'
-                              )}
-                            </span>
-                          </Tooltip>
-                        </TableCell>
-
-                        <TableCell
-                          align='right'
-                          sx={{
-                            fontSize: '1rem',
-                            fontWeight: 'medium',
-                            color: 'success.main',
-                          }}
-                        >
-                          {editingId === r.staffId ? (
-                            <TextField
-                              size='small'
-                              type='number'
-                              value={editData.advance ?? ''}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === '' || value === '-') {
-                                  handleInputChange('advance', '');
-                                } else {
-                                  const numValue = Number(value);
-                                  if (numValue >= 0) {
-                                    handleInputChange('advance', numValue);
-                                  }
-                                }
-                              }}
-                              inputProps={{
-                                style: { fontSize: 14, padding: '4px 8px', textAlign: 'right' },
-                                min: 0,
-                                step: 'any',
-                              }}
-                              sx={{ width: '80px' }}
-                              variant='standard'
-                            />
-                          ) : r.advance ? (
-                            r.advance?.toLocaleString()
-                          ) : (
-                            '0'
-                          )}
-                        </TableCell>
-                        <TableCell
-                          align='right'
-                          sx={{
-                            fontSize: '0.95rem',
-                            fontWeight: '500',
-                            color: 'error.main',
-                          }}
-                        >
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
-                            <Tooltip
-                              title="Нажмите для детализации"
-                              placement="left"
-                              arrow
-                            >
-                              <span
-                                style={{
-                                  cursor: 'pointer',
-                                  borderBottom: '1px dashed #ef5350',
-                                  color: '#d32f2f',
-                                  fontWeight: 'bold'
-                                }}
-                                onClick={() => handleOpenFineDialog(r)}
-                              >
-                                {r.penalties ? r.penalties?.toLocaleString() : '0'}
-                              </span>
-                            </Tooltip>
-                            {currentUser?.role === 'admin' && (
-                              <IconButton
-                                size="small"
-                                onClick={() => handleOpenFineDialog(r)}
-                                sx={{
-                                  color: 'error.main',
-                                  bgcolor: 'error.lighter',
-                                  width: 28,
-                                  height: 28,
-                                  '&:hover': { bgcolor: 'error.light', color: 'white' }
-                                }}
-                              >
-                                <AddIcon fontSize="small" />
-                              </IconButton>
-                            )}
-                          </Box>
-                        </TableCell>
-                        <TableCell
-                          align='right'
-                          sx={{
-                            fontWeight: 'bold',
-                            fontSize: '1.1rem',
-                            color: r.total >= 0 ? 'success.main' : 'error.main',
-                          }}
-                        >
-                          {editingId === r.staffId
-                            ? (() => {
-                              const accruals =
-                                editData.accruals !== undefined
-                                  ? editData.accruals
-                                  : r.accruals || 0;
-                              const penalties =
-                                editData.penalties !== undefined
-                                  ? editData.penalties
-                                  : r.penalties || 0;
-                              const advance =
-                                editData.advance !== undefined
-                                  ? editData.advance
-                                  : r.advance || 0;
-
-                              const total = accruals - penalties - advance;
-                              return total?.toLocaleString() || '0';
-                            })()
-                            : (
-                              <Tooltip title="Нажмите для детализации" arrow placement="top">
-                                <span
-                                  onClick={() => handleOpenTotalDialog(r)}
-                                  style={{
-                                    cursor: 'pointer',
-                                    borderBottom: '1px dashed currentColor',
-                                    paddingBottom: '2px'
-                                  }}
-                                >
-                                  {r.total ? r.total?.toLocaleString() : '0'}
-                                </span>
-                              </Tooltip>
-                            )}
-                        </TableCell>
-                        <TableCell>
-                          {editingId === r.staffId ? (
-                            <FormControl size='small' style={{ minWidth: 120 }}>
-                              <Select
-                                value={editData.status ?? r.status}
-                                onChange={(e) =>
-                                  handleInputChange('status', e.target.value)
-                                }
-                                style={{ fontSize: 14 }}
-                                variant='outlined'
-                              >
-                                <MenuItem value='calculated'>К выплате</MenuItem>
-                                <MenuItem value='approved'>Подтвержден</MenuItem>
-                                <MenuItem value='paid'>Оплачен</MenuItem>
-                              </Select>
-                            </FormControl>
-                          ) : (
-                            <Chip
-                              label={
-                                r.status === 'calculated'
-                                  ? 'К выплате'
-                                  : r.status === 'approved'
-                                    ? 'Подтвержден'
-                                    : 'Оплачен'
-                              }
-                              size='medium'
-                              color={
-                                r.status === 'calculated'
-                                  ? 'info'
-                                  : r.status === 'approved'
-                                    ? 'primary'
-                                    : 'success'
-                              }
-                              variant='filled'
-                              sx={{ fontWeight: 'medium', px: 1.5, py: 0.5 }}
-                            />
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {editingId === r.staffId ? (
-                            <>
-                              <Tooltip title='Сохранить'>
-                                <IconButton
-                                  color='success'
-                                  size='small'
-                                  onClick={() => handleSaveClick(r.staffId)}
-                                  sx={{ mr: 1 }}
-                                >
-                                  <SaveIcon />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title='Отменить'>
-                                <IconButton
-                                  color='error'
-                                  size='small'
-                                  onClick={handleCancelClick}
-                                >
-                                  <CancelIcon />
-                                </IconButton>
-                              </Tooltip>
-                            </>
-                          ) : (
-                            <>
-                              <Tooltip title='Редактировать'>
-                                <IconButton
-                                  color='primary'
-                                  size='small'
-                                  onClick={() => handleEditClick(r)}
-                                  sx={{ mr: 1 }}
-                                >
-                                  <EditIcon />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title='Просмотр'>
-                                <IconButton color='default' size='small'>
-                                  <VisibilityIcon />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title='Удалить'>
-                                <IconButton
-                                  color='error'
-                                  size='small'
-                                  onClick={() => handleDeleteClick(r.staffId)}
-                                >
-                                  <CloseIcon />
-                                </IconButton>
-                              </Tooltip>
-                            </>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Box>
-            </CardContent>
-          </Card>
-        </Box>
-      </Box >
-
-      <FinesDetailsDialog
-        open={fineDialogOpen}
-        onClose={() => setFineDialogOpen(false)}
-        fines={currentFines}
-        onAddFine={handleAddFine}
-        onDeleteFine={handleDeleteFine}
-        staffName={currentFineStaffName}
-      />
-
-      <PayrollTotalDialog
-        open={totalDialogOpen}
-        onClose={() => setTotalDialogOpen(false)}
-        data={currentTotalRow}
-      />
-
-      {/* Confirmation Dialog for Generate Payroll */}
-      <Dialog
-        open={confirmDialogOpen}
-        onClose={() => setConfirmDialogOpen(false)}
-        aria-labelledby="confirm-dialog-title"
-        aria-describedby="confirm-dialog-description"
-      >
-        <DialogTitle id="confirm-dialog-title">
-          Подтверждение генерации
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="confirm-dialog-description">
-            Вы уверены, что хотите сгенерировать расчетные листы за{' '}
-            <strong>{selectedMonth}</strong>?
-            <br /><br />
-            Это действие пересчитает все расчетные листы на основе текущих данных посещаемости.
-            Существующие данные будут обновлены.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialogOpen(false)} color="inherit">
-            Отмена
-          </Button>
-          <Button onClick={handleConfirmGenerate} variant="contained" color="primary" autoFocus>
-            Сгенерировать
-          </Button>
-        </DialogActions>
-      </Dialog>
-      <Dialog open={rateDialogOpen} onClose={() => setRateDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Настройки штрафа за опоздание</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            Укажите ставку штрафа и тип расчета.
-            Это значение будет использоваться при следующем расчете зарплат.
-          </DialogContentText>
-          <FormControl fullWidth margin="dense" sx={{ mb: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
-              Тип расчета штрафа
-            </Typography>
-            <Select
-              value={newPenaltyType}
-              onChange={(e) => setNewPenaltyType(e.target.value)}
-              variant="outlined"
-            >
-              <MenuItem value="per_minute">За каждую минуту</MenuItem>
-              <MenuItem value="per_5_minutes">За каждые 5 минут</MenuItem>
-              <MenuItem value="per_10_minutes">За каждые 10 минут</MenuItem>
-              <MenuItem value="fixed">Фиксированный штраф</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            margin="dense"
-            label={newPenaltyType === 'fixed' ? 'Сумма штрафа (тг)' : `Ставка (тг/${newPenaltyType === 'per_minute' ? 'мин' : newPenaltyType === 'per_5_minutes' ? '5 мин' : '10 мин'})`}
-            type="number"
-            fullWidth
-            value={newRate}
-            onChange={(e) => setNewRate(Number(e.target.value))}
-          />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            {newPenaltyType === 'per_minute' && 'Пример: при опоздании на 15 мин штраф = 15 × ставка'}
-            {newPenaltyType === 'per_5_minutes' && 'Пример: при опоздании на 15 мин штраф = 3 × ставка (15÷5=3)'}
-            {newPenaltyType === 'per_10_minutes' && 'Пример: при опоздании на 15 мин штраф = 2 × ставка (15÷10≈2)'}
-            {newPenaltyType === 'fixed' && 'Фиксированный штраф за любое опоздание'}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRateDialogOpen(false)}>Отмена</Button>
-          <Button onClick={handleSaveRate} variant="contained">Сохранить</Button>
-        </DialogActions>
-      </Dialog>
-
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={6000}
         onClose={handleSnackbarClose}
         message={snackbarMessage}
+        action={
+          <IconButton
+            size='small'
+            aria-label='close'
+            color='inherit'
+            onClick={handleSnackbarClose}
+          >
+            <CloseIcon fontSize='small' />
+          </IconButton>
+        }
       />
+
+      {personalOnly ? (
+        (() => {
+          const mySalary = rows[0];
+          const receiptData = mySalary ? {
+            name: mySalary.staffName,
+            period: selectedMonthLabel,
+            accruals: mySalary.accruals,
+            bonuses: mySalary.bonuses,
+            penalties: mySalary.penalties,
+            advance: mySalary.advance,
+            total: mySalary.total,
+            status: mySalary.status,
+            id: mySalary.staffId?.slice(-8).toUpperCase() || 'N/A',
+            workedDays: mySalary.workedDays,
+            workedShifts: mySalary.workedShifts,
+            baseSalaryType: mySalary.baseSalaryType,
+            shiftRate: mySalary.shiftRate,
+            baseSalary: mySalary.baseSalary,
+            normDays: mySalary.normDays || 22,
+            fines: mySalary.fines || []
+          } : null;
+
+          if (!receiptData) {
+            return (
+              <Box sx={{ p: 4, textAlign: 'center', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#f5f7fa' }}>
+                <Typography variant="h6" color="textSecondary" sx={{ mb: 2 }}>Нет данных о зарплате за этот период</Typography>
+                <TextField
+                  label='Выбрать другой месяц'
+                  type='month'
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  size="small"
+                />
+              </Box>
+            );
+          }
+
+          return (
+            <Box sx={{
+              minHeight: '100vh',
+              background: 'linear-gradient(135deg, #1a1a1a 0%, #333 100%)',
+              p: { xs: 2, md: 4 },
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              overflowY: 'auto'
+            }}>
+              <Box sx={{ mb: 4, width: '100%', maxWidth: 400 }}>
+                <TextField
+                  label='ПЕРИОД / PERIOD'
+                  type='month'
+                  fullWidth
+                  size='small'
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.05)',
+                    borderRadius: 1,
+                    input: { color: 'white' },
+                    label: { color: 'rgba(255,255,255,0.5)' },
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                      '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
+                    }
+                  }}
+                />
+              </Box>
+
+              <Box sx={{
+                width: '100%',
+                maxWidth: 380,
+                background: '#fff',
+                boxShadow: '0 30px 60px rgba(0,0,0,0.5)',
+                position: 'relative',
+                pb: 2
+              }}>
+                <Box sx={{
+                  height: 12,
+                  width: '100%',
+                  background: '#fff',
+                  clipPath: 'polygon(0% 100%, 5% 0%, 10% 100%, 15% 0%, 20% 100%, 25% 0%, 30% 100%, 35% 0%, 40% 100%, 45% 0%, 50% 100%, 55% 0%, 60% 100%, 65% 0%, 70% 100%, 75% 0%, 80% 100%, 85% 0%, 90% 100%, 95% 0%, 100% 100%)',
+                }} />
+
+                <Box sx={{ p: 3, pt: 1, fontFamily: '"Courier New", Courier, monospace', color: '#000' }}>
+                  <Box sx={{ textAlign: 'center', mb: 3 }}>
+                    <Typography sx={{ fontWeight: 900, fontSize: '1.4rem', borderBottom: '2px solid #000', pb: 1, display: 'inline-block' }}>ALDAMIRAM</Typography>
+                    <Typography sx={{ display: 'block', mt: 1, fontWeight: 'bold', fontSize: '0.8rem' }}>РАСЧЕТНЫЙ ЛИСТОК / PAYROLL</Typography>
+                    <Typography sx={{ fontSize: '0.7rem', opacity: 0.8 }}>{new Date().toLocaleString()}</Typography>
+                  </Box>
+
+                  <Box sx={{ mb: 2, borderBottom: '1px dashed #000', pb: 1 }}>
+                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 'bold' }}>СОТРУДНИК: {receiptData.name}</Typography>
+                    <Typography sx={{ fontSize: '0.8rem' }}>ПЕРИОД: {receiptData.period}</Typography>
+                    <Typography sx={{ fontSize: '0.8rem' }}>
+                      ОТРАБОТАНО: {receiptData.baseSalaryType === 'shift' ? `${receiptData.workedShifts} см.` : `${receiptData.workedDays} дн.`}
+                    </Typography>
+                  </Box>
+
+                  <Typography sx={{ fontSize: '0.7rem', fontWeight: 900, mb: 1 }}>НАЧИСЛЕНИЯ (EARNINGS):</Typography>
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography sx={{ fontSize: '0.8rem' }}>ОКЛАД / BASE SALARY</Typography>
+                      <Typography sx={{ fontSize: '0.8rem' }}>{receiptData.baseSalary.toLocaleString()}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography sx={{ fontSize: '0.7rem', opacity: 0.7 }}>
+                        {receiptData.baseSalaryType === 'shift' ? 'СТАВКА ЗА СМЕНУ / SHIFT RATE' : 'СТАВКА ЗА ДЕНЬ / DAY RATE'}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.7rem', opacity: 0.7 }}>
+                        {(receiptData.shiftRate > 0
+                          ? receiptData.shiftRate
+                          : Math.round(receiptData.baseSalary / (receiptData.normDays || 1))
+                        ).toLocaleString()}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ mt: 0.5, borderTop: '1px dotted #eee', pt: 0.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>НАЧИСЛЕНО / EARNED</Typography>
+                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>{receiptData.accruals.toLocaleString()}</Typography>
+                      </Box>
+                      <Typography sx={{ fontSize: '0.65rem', opacity: 0.6, fontStyle: 'italic', textAlign: 'right' }}>
+                        ФОРМУЛА: {receiptData.baseSalaryType === 'shift'
+                          ? `${receiptData.shiftRate.toLocaleString()} × ${receiptData.workedShifts} см.`
+                          : `(${receiptData.baseSalary.toLocaleString()} / ${receiptData.normDays}) × ${receiptData.workedDays} дн.`
+                        }
+                      </Typography>
+                    </Box>
+                    {receiptData.bonuses > 0 && (
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ fontSize: '0.8rem' }}>ПРЕМИИ / BONUSES</Typography>
+                        <Typography sx={{ fontSize: '0.8rem' }}>+{receiptData.bonuses.toLocaleString()}</Typography>
+                      </Box>
+                    )}
+                  </Box>
+
+                  <Typography sx={{ fontSize: '0.7rem', fontWeight: 900, mb: 1 }}>УДЕРЖАНИЯ (DEDUCTIONS):</Typography>
+                  <Box sx={{ mb: 2 }}>
+                    {receiptData.advance > 0 && (
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ fontSize: '0.8rem' }}>АВАНС/ADVANCE</Typography>
+                        <Typography sx={{ fontSize: '0.8rem' }}>-{receiptData.advance.toLocaleString()}</Typography>
+                      </Box>
+                    )}
+                    {receiptData.penalties > 0 && (
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ fontSize: '0.8rem' }}>ШТРАФЫ/FINES</Typography>
+                        <Typography sx={{ fontSize: '0.8rem' }}>-{receiptData.penalties.toLocaleString()}</Typography>
+                      </Box>
+                    )}
+                    {receiptData.fines && receiptData.fines.length > 0 && (
+                      <Box sx={{ mt: 1, borderTop: '1px dotted #ccc', pt: 1 }}>
+                        <Typography sx={{ fontSize: '0.6rem', fontWeight: 'bold', mb: 0.5, opacity: 0.6 }}>ДЕТАЛИЗАЦИЯ ВЫЧЕТОВ / DEDUCTION DETAILS:</Typography>
+                        {receiptData.fines.map((f: any, idx: number) => (
+                          <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.2 }}>
+                            <Typography sx={{ fontSize: '0.6rem', opacity: 0.6 }}>
+                              {f.date ? `${new Date(f.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })} ` : ''}
+                              {f.reason || 'Вычет'}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.6rem', opacity: 0.6 }}>-{f.amount.toLocaleString()}</Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+
+                  <Box sx={{ borderTop: '2px solid #000', pt: 1, mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography sx={{ fontWeight: 900, fontSize: '1.1rem' }}>ИТОГО (TOTAL):</Typography>
+                    <Typography sx={{ fontWeight: 900, fontSize: '1.8rem' }}>{receiptData.total.toLocaleString()} ₸</Typography>
+                  </Box>
+
+                  <Box sx={{ position: 'relative', mt: 4, display: 'flex', justifyContent: 'center' }}>
+                    <Box sx={{
+                      border: '4px double',
+                      p: 1,
+                      transform: 'rotate(-15deg)',
+                      color: receiptData.status === 'paid' ? '#2e7d32' : receiptData.status === 'approved' ? '#1976d2' : '#e65100',
+                      borderColor: receiptData.status === 'paid' ? '#2e7d32' : receiptData.status === 'approved' ? '#1976d2' : '#e65100',
+                      fontWeight: 900,
+                      textTransform: 'uppercase',
+                      fontSize: '1.2rem',
+                      letterSpacing: 4,
+                      opacity: 0.8
+                    }}>
+                      {receiptData.status === 'paid' ? 'ОПЛАЧЕНО' : receiptData.status === 'approved' ? 'УТВЕРЖДЕНО' : 'РАССЧИТАНО'}
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ mt: 5, textAlign: 'center', opacity: 0.4 }}>
+                    <Box sx={{
+                      height: 30,
+                      width: '100%',
+                      background: 'repeating-linear-gradient(90deg, #000, #000 1px, transparent 1px, transparent 3px, #000 3px, #000 5px, transparent 5px, transparent 6px)',
+                      mb: 0.5
+                    }} />
+                    <Typography sx={{ fontSize: '0.5rem' }}>DOCID: {receiptData.id} | AUTH_SIG_VALID</Typography>
+                  </Box>
+                </Box>
+
+                <Box sx={{
+                  height: 12,
+                  width: '100%',
+                  background: '#fff',
+                  clipPath: 'polygon(0% 0%, 5% 100%, 10% 0%, 15% 100%, 20% 0%, 25% 100%, 30% 0%, 35% 100%, 40% 0%, 45% 100%, 50% 0%, 55% 100%, 60% 0%, 65% 100%, 70% 0%, 75% 100%, 80% 0%, 85% 100%, 90% 0%, 95% 100%, 100% 0%)',
+                  position: 'absolute',
+                  bottom: -10
+                }} />
+              </Box>
+
+              <Button
+                onClick={() => handleOpenTotalDialog(mySalary)}
+                sx={{ mt: 4, color: 'rgba(255,255,255,0.6)', textTransform: 'none', '&:hover': { color: '#fff' } }}
+              >
+                ПОКАЗАТЬ ДЕТАЛЬНЫЙ РАСЧЕТ / VIEW DETAILS
+              </Button>
+              <PayrollTotalDialog open={totalDialogOpen} onClose={() => setTotalDialogOpen(false)} data={currentTotalRow} />
+            </Box>
+          );
+        })()
+      ) : (
+        <Box sx={{ minHeight: '100vh', background: '#f5f7fa', p: 3, width: '100%' }}>
+          <Box sx={{ maxWidth: '1400px', mx: 'auto', display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Box sx={{ textAlign: 'center', mb: 3 }}>
+              <Typography variant='h3' sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>Расчетные листы</Typography>
+              <Typography variant='h6' sx={{ color: 'text.secondary', fontWeight: 'medium' }}>Управление зарплатами за {selectedMonthLabel}</Typography>
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                <TextField
+                  label='Выберите месяц'
+                  type='month'
+                  size='small'
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Box>
+            </Box>
+
+            {!personalOnly && (
+              <>
+                <Card elevation={0} sx={{ borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
+                  <Box sx={{ p: 3, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 3 }}>
+                    {[
+                      { label: 'Сотрудников', value: summary?.totalEmployees || 0, color: '#6366f1', icon: <PeopleIcon /> },
+                      { label: 'Начислено', value: (summary?.totalAccruals || 0).toLocaleString() + ' ₸', color: '#10b981', icon: <EditIcon /> },
+                      { label: 'Вычеты', value: (summary?.totalPenalties || 0).toLocaleString() + ' ₸', color: '#f43f5e', icon: <CancelIcon /> },
+                      { label: 'К выплате', value: (summary?.totalPayout || 0).toLocaleString() + ' ₸', color: '#8b5cf6', icon: <VisibilityIcon /> },
+                    ].map((stat, idx) => (
+                      <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ width: 48, height: 48, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: `${stat.color}15`, color: stat.color }}>{stat.icon}</Box>
+                        <Box>
+                          <Typography variant='caption' color='text.secondary'>{stat.label}</Typography>
+                          <Typography variant='h6' sx={{ fontWeight: 'bold' }}>{stat.value}</Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </Card>
+
+                {currentUser?.id && (currentUser?.role === 'admin' || currentUser?.role === 'manager') && (
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <Button variant='contained' startIcon={<EditIcon />} onClick={handleOpenConfirmDialog} disabled={generating}>Сгенерировать</Button>
+                    <Button variant='outlined' startIcon={<RefreshIcon />} onClick={handleRefreshPayrolls} disabled={refreshing}>Обновить всё</Button>
+                    <Button variant='outlined' color='secondary' startIcon={<FileUploadIcon />} onClick={handleImportPayrolls} disabled={importing}>Импорт</Button>
+                    <Button variant='outlined' color='info' startIcon={<DebtIcon />} onClick={handleCalculateDebt} disabled={calculatingDebt}>Расчитать долг</Button>
+                    <Button variant='outlined' onClick={handleOpenRateDialog}>Ставка штрафа</Button>
+                    <Button variant='contained' color='success' startIcon={<VisibilityIcon />} onClick={handleExportToExcel}>Экспорт</Button>
+                  </Box>
+                )}
+
+                <Card elevation={0} sx={{ borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
+                  <CardContent sx={{ p: 0 }}>
+                    <Box sx={{ overflowX: 'auto' }}>
+                      <Table>
+                        <TableHead sx={{ bgcolor: 'grey.50' }}>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Сотрудник</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Оклад/Смены</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Премия</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Аванс</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Вычеты</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Итого</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Статус</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Действия</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {rows.map((r) => (
+                            <TableRow key={r.staffId} hover>
+                              <TableCell sx={{ fontWeight: 'medium' }}>{r.staffName}</TableCell>
+                              <TableCell>
+                                {editingId === r.staffId ? (
+                                  <TextField type='number' size='small' value={editData.accruals ?? r.accruals} onChange={(e) => handleInputChange('accruals', Number(e.target.value))} />
+                                ) : (
+                                  <Box>
+                                    <Typography variant='body2' sx={{ fontWeight: 'bold' }}>{r.accruals.toLocaleString()} ₸</Typography>
+                                    <Typography variant='caption' color='text.secondary'>{r.baseSalaryType === 'shift' ? `${r.workedShifts} см` : 'Мес'}</Typography>
+                                  </Box>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {editingId === r.staffId ? (
+                                  <TextField type='number' size='small' value={editData.bonuses ?? r.bonuses} onChange={(e) => handleInputChange('bonuses', Number(e.target.value))} />
+                                ) : (
+                                  <Typography variant='body2' color='success.main'>+{r.bonuses.toLocaleString()}</Typography>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {editingId === r.staffId ? (
+                                  <TextField type='number' size='small' value={editData.advance ?? r.advance} onChange={(e) => handleInputChange('advance', Number(e.target.value))} />
+                                ) : (
+                                  <Typography variant='body2' sx={{ color: '#e65100' }}>-{r.advance.toLocaleString()}</Typography>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {editingId === r.staffId ? (
+                                  <TextField type='number' size='small' value={editData.penalties ?? r.penalties} onChange={(e) => handleInputChange('penalties', Number(e.target.value))} />
+                                ) : (
+                                  <Chip label={`-${r.penalties.toLocaleString()}`} onClick={() => handleOpenFineDialog(r)} color='error' variant='outlined' size='small' sx={{ cursor: 'pointer' }} />
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant='body1' sx={{ fontWeight: '900', color: 'primary.main' }}>{r.total.toLocaleString()} ₸</Typography>
+                              </TableCell>
+                              <TableCell>
+                                {editingId === r.staffId ? (
+                                  <Select size='small' value={editData.status ?? r.status} onChange={(e) => handleInputChange('status', e.target.value)}>
+                                    <MenuItem value='calculated'>Рассчитано</MenuItem>
+                                    <MenuItem value='approved'>Утвержден</MenuItem>
+                                    <MenuItem value='paid'>Оплачено</MenuItem>
+                                  </Select>
+                                ) : (
+                                  <Chip label={r.status === 'paid' ? 'Оплачено' : r.status === 'approved' ? 'Утвержден' : 'Рассчитано'} color={r.status === 'paid' ? 'success' : r.status === 'approved' ? 'info' : 'warning'} size='small' />
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {editingId === r.staffId ? (
+                                  <IconButton color='success' onClick={() => handleSaveClick(r.staffId)}><SaveIcon /></IconButton>
+                                ) : (
+                                  <>
+                                    <IconButton color='primary' onClick={() => handleEditClick(r)}><EditIcon /></IconButton>
+                                    <IconButton onClick={() => handleOpenTotalDialog(r)}><VisibilityIcon /></IconButton>
+                                    <IconButton color='error' onClick={() => handleDeleteClick(r.staffId)}><CloseIcon /></IconButton>
+                                  </>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            <FinesDetailsDialog open={fineDialogOpen} onClose={() => setFineDialogOpen(false)} fines={currentFines} onAddFine={handleAddFine} onDeleteFine={handleDeleteFine} staffName={currentFineStaffName} />
+            <PayrollTotalDialog open={totalDialogOpen} onClose={() => setTotalDialogOpen(false)} data={currentTotalRow} />
+
+            <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
+              <DialogTitle>Генерация листов</DialogTitle>
+              <DialogContent><DialogContentText>Сгенерировать листы за {selectedMonth}?</DialogContentText></DialogContent>
+              <DialogActions>
+                <Button onClick={() => setConfirmDialogOpen(false)}>Отмена</Button>
+                <Button onClick={handleConfirmGenerate} variant="contained" color="primary">ОК</Button>
+              </DialogActions>
+            </Dialog>
+
+            <Dialog open={rateDialogOpen} onClose={() => setRateDialogOpen(false)}>
+              <DialogTitle>Настройки штрафа</DialogTitle>
+              <DialogContent>
+                <TextField label='Ставка (₸)' type="number" fullWidth value={newRate} onChange={(e) => setNewRate(Number(e.target.value))} sx={{ mt: 1 }} />
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setRateDialogOpen(false)}>Отмена</Button>
+                <Button onClick={handleSaveRate} variant="contained">Сохранить</Button>
+              </DialogActions>
+            </Dialog>
+          </Box>
+        </Box>
+      )}
     </>
   );
 };
+
 export default ReportsSalary;
+

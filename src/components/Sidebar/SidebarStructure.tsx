@@ -28,17 +28,28 @@ const sidebarStructure: SidebarItem[] = [
     label: 'Главная',
     link: '/app',
     icon: <DashboardIcon />,
+    // Доступно всем
   },
   {
     id: 'profile',
     label: 'Профиль',
     link: '/app/profile',
     icon: <AccountCircleIcon />,
+    // Доступно всем
+  },
+  {
+    id: 'my-salary',
+    label: 'Моя зарплата',
+    link: '/app/my-salary',
+    icon: <AssessmentIcon />,
+    visibleFor: ['manager', 'teacher', 'assistant', 'nurse', 'psychologist', 'music_teacher', 'physical_teacher'],
+    // Доступно всем сотрудникам
   },
   {
     id: 'children',
     label: 'Дети',
     icon: <ChildCareIcon />,
+    visibleFor: ['admin', 'manager', 'teacher', 'assistant', 'nurse', 'psychologist', 'music_teacher', 'physical_teacher'],
     children: [
       {
         id: 'children-list',
@@ -64,6 +75,7 @@ const sidebarStructure: SidebarItem[] = [
     id: 'staff',
     label: 'Сотрудники',
     icon: <PeopleIcon />,
+    visibleFor: ['admin', 'manager'],
     children: [
       {
         id: 'staff-list',
@@ -90,12 +102,12 @@ const sidebarStructure: SidebarItem[] = [
         icon: <AssessmentIcon />,
       },
     ],
-    visibleFor: ['admin'],
   },
   {
     id: 'documents',
     label: 'Документы',
     icon: <InsertDriveFileIcon />,
+    visibleFor: ['admin', 'manager', 'psychologist'],
     children: [
       {
         id: 'documents-all',
@@ -109,6 +121,7 @@ const sidebarStructure: SidebarItem[] = [
     id: 'reports',
     label: 'Отчеты',
     icon: <AssessmentIcon />,
+    visibleFor: ['admin', 'manager'],
     children: [
       {
         id: 'reports-all',
@@ -129,7 +142,6 @@ const sidebarStructure: SidebarItem[] = [
         icon: <AssessmentIcon />,
       },
     ],
-    visibleFor: ['admin'],
   },
   {
     id: 'statistics',
@@ -142,6 +154,7 @@ const sidebarStructure: SidebarItem[] = [
     id: 'organization',
     label: 'Организация',
     icon: <SettingsIcon />,
+    visibleFor: ['admin', 'manager'],
     children: [
       {
         id: 'organization-cyclogram',
@@ -154,15 +167,16 @@ const sidebarStructure: SidebarItem[] = [
         label: 'Настройки',
         link: '/app/settings',
         icon: <SettingsIcon />,
-      },
-      {
-        id: 'food-products',
-        label: 'Учет продуктов',
-        link: '/app/food/products',
-        icon: <AssessmentIcon />,
+        visibleFor: ['admin'],
       },
     ],
-    visibleFor: ['admin'],
+  },
+  {
+    id: 'food-products',
+    label: 'Учёт продуктов',
+    link: '/app/food/products',
+    icon: <AssessmentIcon />,
+    visibleFor: ['admin', 'cook'],
   },
   medicalSidebarSection,
 ];

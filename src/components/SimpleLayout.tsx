@@ -320,6 +320,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
               element={<FoodStaffHealthPage />}
             />
             <Route path='profile' element={<ProfilePage />} />
+            <Route path='my-salary' element={<ReportsSalary personalOnly={true} />} />
 
             {/* Fallback */}
             <Route path='*' element={<Dashboard />} />

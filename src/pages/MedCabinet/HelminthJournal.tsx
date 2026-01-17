@@ -331,7 +331,7 @@ export default function HelminthJournal() {
                       {address}
                     </TableCell>
                     <TableCell>{r.month} {r.year}</TableCell>
-                    <TableCell variant="body2">
+                    <TableCell>
                       {r.examType === 'primary' ? 'При поступл.' : 'Ежегодное'}
                     </TableCell>
                     <TableCell>
