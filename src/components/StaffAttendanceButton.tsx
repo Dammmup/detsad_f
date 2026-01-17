@@ -3,6 +3,7 @@ import { Button, CircularProgress, Snackbar, Alert } from '@mui/material';
 import { useAuth } from './context/AuthContext';
 import { getStaffShifts, checkIn, checkOut } from '../services/shifts';
 import { settingsService } from '../services/settings';
+import { collectDeviceMetadata } from '../utils/deviceMetadata';
 
 interface StaffAttendanceButtonProps {
   onStatusChange?: () => void;
@@ -129,45 +130,6 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
       .catch(() => setGeolocation(null));
   }, []);
 
-  // Функция для сбора метаданных устройства
-  const collectDeviceMetadata = () => {
-    const ua = navigator.userAgent;
-
-    // Определяем тип устройства
-    let deviceType: 'mobile' | 'tablet' | 'desktop' = 'desktop';
-    if (/Mobi|Android/i.test(ua) && !/Tablet|iPad/i.test(ua)) {
-      deviceType = 'mobile';
-    } else if (/Tablet|iPad/i.test(ua)) {
-      deviceType = 'tablet';
-    }
-
-    // Определяем браузер
-    let browser = 'Unknown';
-    if (ua.includes('Firefox')) browser = 'Firefox';
-    else if (ua.includes('Edg')) browser = 'Edge';
-    else if (ua.includes('Chrome')) browser = 'Chrome';
-    else if (ua.includes('Safari')) browser = 'Safari';
-    else if (ua.includes('Opera') || ua.includes('OPR')) browser = 'Opera';
-
-    // Определяем ОС
-    let os = 'Unknown';
-    if (ua.includes('Windows')) os = 'Windows';
-    else if (ua.includes('Mac')) os = 'macOS';
-    else if (ua.includes('Linux')) os = 'Linux';
-    else if (ua.includes('Android')) os = 'Android';
-    else if (ua.includes('iOS') || ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
-
-    return {
-      userAgent: ua,
-      platform: navigator.platform,
-      language: navigator.language,
-      screenResolution: `${window.screen.width}x${window.screen.height}`,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      deviceType,
-      browser,
-      os,
-    };
-  };
 
   const handleCheckIn = async () => {
     if (!currentUser || !currentUser.id) return;

@@ -30,6 +30,7 @@ import {
   Add as AddIcon,
   Refresh as RefreshIcon,
   FileUpload as FileUploadIcon,
+  AccountBalance as DebtIcon,
 } from '@mui/icons-material';
 import {
   Dialog,
@@ -44,6 +45,7 @@ import {
   createPayroll,
   Payroll,
   generatePayrollSheets,
+  calculateDebt,
 } from '../../services/payroll';
 import { importPayrolls } from '../../services/importService';
 import FinesDetailsDialog from './FinesDetailsDialog';
@@ -113,6 +115,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [calculatingDebt, setCalculatingDebt] = useState(false);
 
   const [totalDialogOpen, setTotalDialogOpen] = useState(false);
   const [currentTotalRow, setCurrentTotalRow] = useState<PayrollRow | null>(null);
@@ -640,6 +643,49 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
     }
   };
 
+  const handleDeleteFine = async (fineIndex: string) => {
+    console.log('🗑️ [ReportsSalary] handleDeleteFine called with fineIndex:', fineIndex);
+    console.log('🗑️ [ReportsSalary] currentFinePayrollId:', currentFinePayrollId);
+
+    if (!currentFinePayrollId) {
+      console.error('❌ [ReportsSalary] currentFinePayrollId is null or undefined');
+      return;
+    }
+
+    try {
+      const row = rows.find(r => r._id === currentFinePayrollId || r.staffId === currentFinePayrollId);
+      console.log('🗑️ [ReportsSalary] Found row:', row);
+      const payrollId = row?._id;
+      console.log('🗑️ [ReportsSalary] payrollId:', payrollId);
+
+      if (!payrollId) {
+        console.error('❌ [ReportsSalary] payrollId not found');
+        setSnackbarMessage('Ошибка: не найден ID расчетного листа');
+        setSnackbarOpen(true);
+        return;
+      }
+
+      console.log('📤 [ReportsSalary] Calling removeFine API with payrollId:', payrollId, 'fineIndex:', fineIndex);
+      const { removeFine } = await import('../../services/payroll');
+      const updatedPayroll = await removeFine(payrollId, Number(fineIndex));
+      console.log('✅ [ReportsSalary] removeFine response:', updatedPayroll);
+
+      setSnackbarMessage('Вычет удален');
+      setSnackbarOpen(true);
+
+      // Обновляем список вычетов в диалоге
+      setCurrentFines(updatedPayroll.fines || []);
+
+      // Перезагружаем страницу для обновления всех данных
+      window.location.reload();
+
+    } catch (e: any) {
+      console.error('❌ [ReportsSalary] Error in handleDeleteFine:', e);
+      setSnackbarMessage('Ошибка удаления вычета: ' + (e.message || 'Unknown'));
+      setSnackbarOpen(true);
+    }
+  };
+
   const handleOpenRateDialog = () => {
     setNewRate(globalPenaltyRate);
     setNewPenaltyType(penaltyType);
@@ -667,6 +713,27 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
       }
     } catch (e: any) {
       setError(e.message || 'Ошибка обновления ставки');
+    }
+  };
+
+  // Расчёт долга по авансу за период
+  const handleCalculateDebt = async () => {
+    setCalculatingDebt(true);
+    try {
+      const result = await calculateDebt(selectedMonth);
+      setSnackbarMessage(
+        result.totalDebt > 0
+          ? `Долг рассчитан! Обработано ${result.processed} листов. Общий долг: ${result.totalDebt.toLocaleString()} тг`
+          : `Долгов не обнаружено. Обработано ${result.processed} листов.`
+      );
+      setSnackbarOpen(true);
+      // Перезагружаем данные для отображения изменений
+      window.location.reload();
+    } catch (e: any) {
+      setSnackbarMessage('Ошибка расчёта долга: ' + (e.message || 'Неизвестная ошибка'));
+      setSnackbarOpen(true);
+    } finally {
+      setCalculatingDebt(false);
     }
   };
 
@@ -860,6 +927,24 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
                         }}
                       >
                         {importing ? 'Импорт...' : 'Импорт из Excel'}
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="Рассчитать долг по авансам: если аванс больше начислений, разница переносится на следующий месяц">
+                      <Button
+                        variant='contained'
+                        startIcon={
+                          calculatingDebt ? <CircularProgress size={20} color="inherit" /> : <DebtIcon />
+                        }
+                        onClick={handleCalculateDebt}
+                        disabled={calculatingDebt || refreshing || generating || importing}
+                        sx={{
+                          backgroundColor: 'rgba(255,255,255,0.2)',
+                          '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                          color: 'white',
+                          fontWeight: 'medium',
+                        }}
+                      >
+                        {calculatingDebt ? 'Расчёт...' : 'Рассчитать долг'}
                       </Button>
                     </Tooltip>
                   </>
@@ -1433,6 +1518,7 @@ const ReportsSalary: React.FC<Props> = ({ userId }) => {
         onClose={() => setFineDialogOpen(false)}
         fines={currentFines}
         onAddFine={handleAddFine}
+        onDeleteFine={handleDeleteFine}
         staffName={currentFineStaffName}
       />
 

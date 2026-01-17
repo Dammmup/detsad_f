@@ -412,10 +412,11 @@ const ChildPayments: React.FC = () => {
       <Box
         display='flex'
         flexDirection={isMobile ? 'column' : 'row'}
+        flexWrap='wrap'
         alignItems={isMobile ? 'stretch' : 'center'}
         justifyContent='space-between'
         mb={2}
-        gap={isMobile ? 2 : 0}
+        gap={2}
       >
         <Box display='flex' alignItems='center' gap={2}>
           <Typography
@@ -639,7 +640,7 @@ const ChildPayments: React.FC = () => {
         }}
       >
         <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 650 }}>
-          <TableHead>
+          <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
             <TableRow>
               <TableCell
                 sx={{
@@ -679,14 +680,7 @@ const ChildPayments: React.FC = () => {
               >
                 Оплачено
               </TableCell>
-              <TableCell
-                sx={{
-                  fontSize: isMobile ? '0.9rem' : '1rem',
-                  p: isMobile ? 1 : 2,
-                }}
-              >
-                Оплачено
-              </TableCell>
+
               <TableCell
                 sx={{
                   fontSize: isMobile ? '0.9rem' : '1rem',
@@ -947,14 +941,7 @@ const ChildPayments: React.FC = () => {
               }
               InputLabelProps={{ shrink: true }}
             />
-            <TextField
-              label='Сумма'
-              type='number'
-              value={newPayment.amount}
-              onChange={(e) =>
-                setNewPayment({ ...newPayment, amount: Number(e.target.value) })
-              }
-            />
+
             <TextField
               label='Всего'
               type='number'

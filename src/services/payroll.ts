@@ -235,3 +235,25 @@ export const addFine = async (
     return handleApiError(error, `adding fine to payroll ${id}`);
   }
 };
+
+export const removeFine = async (payrollId: string, fineIndex: number) => {
+  try {
+    const response = await apiClient.delete(`/payroll/${payrollId}/fines/${fineIndex}`);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, `removing fine from payroll ${payrollId}`);
+  }
+};
+
+/**
+ * Расчёт долга по авансу для периода
+ * Переносит долг на следующий месяц
+ */
+export const calculateDebt = async (period: string) => {
+  try {
+    const response = await apiClient.post('/payroll/calculate-debt', { period });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, `calculating debt for period ${period}`);
+  }
+};

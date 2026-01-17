@@ -83,16 +83,27 @@ interface TimeRecord {
   amount: number;
   penalties: number;
   checkInDevice?: {
+    userAgent?: string;
     deviceModel?: string;
     browser?: string;
     os?: string;
     ipAddress?: string;
+    timezone?: string;
+    deviceType?: 'mobile' | 'tablet' | 'desktop';
+    screenResolution?: string;
+    platform?: string;
+    language?: string;
   };
   checkOutDevice?: {
     deviceModel?: string;
     browser?: string;
     os?: string;
     ipAddress?: string;
+    timezone?: string;
+    deviceType?: 'mobile' | 'tablet' | 'desktop';
+    screenResolution?: string;
+    platform?: string;
+    language?: string;
   };
 }
 
@@ -1225,35 +1236,93 @@ const StaffAttendanceTracking: React.FC = () => {
                 <TableCell>
                   <Box>
                     <Typography variant='body2'>Смена</Typography>
-                    <Typography variant='caption' color='text.secondary'>
-                      Приход: {record.actualStart || '-'}
-                      {record.checkInDevice?.deviceModel && (
-                        <Tooltip title={`${record.checkInDevice.deviceModel} • ${record.checkInDevice.browser || ''} • ${record.checkInDevice.os || ''} • IP: ${record.checkInDevice.ipAddress || 'н/д'}`}>
-                          <span style={{ marginLeft: 4, cursor: 'help' }}>
-                            {record.checkInDevice.deviceModel?.toLowerCase().includes('iphone') ||
-                              record.checkInDevice.deviceModel?.toLowerCase().includes('android') ||
-                              record.checkInDevice.deviceModel?.toLowerCase().includes('samsung') ||
-                              record.checkInDevice.deviceModel?.toLowerCase().includes('xiaomi') ||
-                              record.checkInDevice.deviceModel?.toLowerCase().includes('huawei') ||
-                              record.checkInDevice.deviceModel?.toLowerCase().includes('pixel') ? '📱' : '💻'}
-                          </span>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Typography variant='caption' color='text.secondary'>
+                        Приход: {record.actualStart || '-'}
+                      </Typography>
+                      {record.checkInDevice && (
+                        <Tooltip
+                          title={
+                            <Box sx={{ p: 0.5 }}>
+                              <Typography variant='caption' sx={{ fontWeight: 'bold', display: 'block' }}>
+                                📱 Устройство прихода
+                              </Typography>
+                              <Typography variant='caption' sx={{ display: 'block' }}>
+                                Модель: {record.checkInDevice.userAgent || 'н/д'}
+                              </Typography>
+                              <Typography variant='caption' sx={{ display: 'block' }}>
+                                IP: {record.checkInDevice.ipAddress || 'н/д'}
+                              </Typography>
+                              {record.checkInDevice.screenResolution && (
+                                <Typography variant='caption' sx={{ display: 'block' }}>
+                                  Экран: {record.checkInDevice.screenResolution}
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                          arrow
+                        >
+                          <Box component="span" sx={{ cursor: 'help', display: 'inline-flex', alignItems: 'center' }}>
+                            {record.checkInDevice.deviceType === 'mobile' ? (
+                              <Smartphone sx={{ fontSize: 16, color: 'primary.main' }} />
+                            ) : record.checkInDevice.deviceType === 'tablet' ? (
+                              <Tablet sx={{ fontSize: 16, color: 'info.main' }} />
+                            ) : (
+                              <Computer sx={{ fontSize: 16, color: 'secondary.main' }} />
+                            )}
+                          </Box>
                         </Tooltip>
                       )}
-                      <br />
-                      Уход: {record.actualEnd || '-'}
-                      {record.checkOutDevice?.deviceModel && (
-                        <Tooltip title={`${record.checkOutDevice.deviceModel} • ${record.checkOutDevice.browser || ''} • ${record.checkOutDevice.os || ''} • IP: ${record.checkOutDevice.ipAddress || 'н/д'}`}>
-                          <span style={{ marginLeft: 4, cursor: 'help' }}>
-                            {record.checkOutDevice.deviceModel?.toLowerCase().includes('iphone') ||
-                              record.checkOutDevice.deviceModel?.toLowerCase().includes('android') ||
-                              record.checkOutDevice.deviceModel?.toLowerCase().includes('samsung') ||
-                              record.checkOutDevice.deviceModel?.toLowerCase().includes('xiaomi') ||
-                              record.checkOutDevice.deviceModel?.toLowerCase().includes('huawei') ||
-                              record.checkOutDevice.deviceModel?.toLowerCase().includes('pixel') ? '📱' : '💻'}
-                          </span>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Typography variant='caption' color='text.secondary'>
+                        Уход: {record.actualEnd || '-'}
+                      </Typography>
+                      {record.checkOutDevice && (
+                        <Tooltip
+                          title={
+                            <Box sx={{ p: 0.5 }}>
+                              <Typography variant='caption' sx={{ fontWeight: 'bold', display: 'block' }}>
+                                📱 Устройство ухода
+                              </Typography>
+                              <Typography variant='caption' sx={{ display: 'block' }}>
+                                Модель: {record.checkOutDevice.deviceModel || 'н/д'}
+                              </Typography>
+                              <Typography variant='caption' sx={{ display: 'block' }}>
+                                Браузер: {record.checkOutDevice.browser || 'н/д'}
+                              </Typography>
+                              <Typography variant='caption' sx={{ display: 'block' }}>
+                                ОС: {record.checkOutDevice.os || 'н/д'}
+                              </Typography>
+                              <Typography variant='caption' sx={{ display: 'block' }}>
+                                IP: {record.checkOutDevice.ipAddress || 'н/д'}
+                              </Typography>
+                              {record.checkOutDevice.timezone && (
+                                <Typography variant='caption' sx={{ display: 'block' }}>
+                                  Часовой пояс: {record.checkOutDevice.timezone}
+                                </Typography>
+                              )}
+                              {record.checkOutDevice.screenResolution && (
+                                <Typography variant='caption' sx={{ display: 'block' }}>
+                                  Экран: {record.checkOutDevice.screenResolution}
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                          arrow
+                        >
+                          <Box component="span" sx={{ cursor: 'help', display: 'inline-flex', alignItems: 'center' }}>
+                            {record.checkOutDevice.deviceType === 'mobile' ? (
+                              <Smartphone sx={{ fontSize: 16, color: 'primary.main' }} />
+                            ) : record.checkOutDevice.deviceType === 'tablet' ? (
+                              <Tablet sx={{ fontSize: 16, color: 'info.main' }} />
+                            ) : (
+                              <Computer sx={{ fontSize: 16, color: 'secondary.main' }} />
+                            )}
+                          </Box>
                         </Tooltip>
                       )}
-                    </Typography>
+                    </Box>
                   </Box>
                 </TableCell>
                 <TableCell>
