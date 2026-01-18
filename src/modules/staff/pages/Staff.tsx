@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   getUsers,
+  createUser,
   updateUser,
   deleteUser,
-  userApi,
-  createUser,
-} from '../../modules/staff/services/users';
+  userApi as usersApi,
+} from '../services/users';
 import {
   Table,
   TableHead,
@@ -50,11 +50,12 @@ import {
   Badge,
   Person,
 } from '@mui/icons-material';
-import { User as StaffMember, UserRole } from '../../shared/types/common';
-import { getGroups } from '../../modules/children/services/groups';
-import { useAuth } from '../../app/context/AuthContext';
-import ExportButton from '../../shared/components/ExportButton';
-import { exportData } from '../../shared/utils/exportUtils';
+import { User as StaffMember } from '../../../shared/types/staff';
+import { UserRole } from '../../../shared/types/common';
+import { getGroups } from '../../children/services/groups';
+import { useAuth } from '../../../app/context/AuthContext';
+import ExportButton from '../../../shared/components/ExportButton';
+import { exportData } from '../../../shared/utils/exportUtils';
 
 
 const roleTranslations: Record<string, string> = {
@@ -86,6 +87,7 @@ const roleTranslations: Record<string, string> = {
   staff: 'Сотрудник',
   substitute: 'Подменный сотрудник',
   intern: 'Стажер',
+  tenant: 'Арендатор',
 };
 
 
@@ -106,7 +108,7 @@ const defaultForm: StaffMember = {
   id: '',
   phone: '',
   fullName: '',
-  role: 'tenant' as UserRole,
+  role: 'staff' as UserRole,
   active: true,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
@@ -114,7 +116,7 @@ const defaultForm: StaffMember = {
   salary: 0,
 };
 
-const Rent = () => {
+const Staff = () => {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,22 +128,32 @@ const Rent = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [showRentTab, setShowRentTab] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'active' | 'inactive'>('active');
   const { user: currentUser } = useAuth();
 
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
-  const availableRoles = [roleTranslations['tenant']].sort();
+
+  useEffect(() => {
+    const roles = showRentTab
+      ? [roleTranslations['tenant']].sort()
+      : Object.values(roleTranslations)
+        .filter((role) => role !== roleTranslations['tenant'])
+        .sort();
+    setAvailableRoles(roles);
+  }, [showRentTab]);
 
   const fetchStaff = useCallback(() => {
     setLoading(true);
     setError(null);
     const includePasswords = currentUser?.role === 'admin';
     getUsers(includePasswords)
-      .then((data: any[]) => {
-        const rentStaff = data.filter((user: any) => user.tenant === true);
-        setStaff(rentStaff);
-        setFilteredStaff(rentStaff);
+      .then((data) => {
+        setStaff(data);
+        setFilteredStaff(data);
       })
-      .catch((err: any) => setError(err?.message || 'Ошибка загрузки'))
+      .catch((err) => setError(err?.message || 'Ошибка загрузки'))
       .finally(() => setLoading(false));
   }, [currentUser?.role]);
 
@@ -163,31 +175,48 @@ const Rent = () => {
   useEffect(() => {
     if (!staff.length) return;
 
-    let filtered = staff.filter((member) => member.role === 'tenant');
-
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (member) =>
-          member.fullName?.toLowerCase().includes(search) ||
-          member.email?.toLowerCase().includes(search) ||
-          member.phone?.toLowerCase().includes(search) ||
-          translateRole(member.role || '')
-            .toLowerCase()
-            .includes(search),
-      );
-    }
+    let filtered = staff;
 
 
-    if (filterRole.length > 0) {
-      filtered = filtered.filter((member) => {
-        const russianRole = translateRole(member.role || '');
-        return filterRole.includes(russianRole);
-      });
+    if (showRentTab) {
+      filtered = staff.filter((member) => member.role === 'tenant');
+    } else {
+
+      filtered = staff.filter((member) => member.role !== 'tenant');
+
+
+      if (activeFilter === 'active') {
+        filtered = filtered.filter((member) => member.active !== false);
+      } else {
+        filtered = filtered.filter((member) => member.active === false);
+      }
+
+
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        filtered = filtered.filter(
+          (member) =>
+            member.fullName?.toLowerCase().includes(search) ||
+            member.email?.toLowerCase().includes(search) ||
+            member.phone?.toLowerCase().includes(search) ||
+            translateRole(member.role || '')
+              .toLowerCase()
+              .includes(search),
+        );
+      }
+
+
+
+      if (filterRole.length > 0 && !showRentTab) {
+        filtered = filtered.filter((member) => {
+          const russianRole = translateRole(member.role || '');
+          return filterRole.includes(russianRole) && member.tenant !== true;
+        });
+      }
     }
 
     setFilteredStaff(filtered);
-  }, [staff, searchTerm, filterRole, currentUser?.role]);
+  }, [staff, searchTerm, filterRole, showRentTab, activeFilter, currentUser?.role]);
 
   const handleOpenModal = (member?: StaffMember) => {
     setForm(member ? { ...member } : defaultForm);
@@ -202,17 +231,6 @@ const Rent = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-
-
-    if (formErrors[name]) {
-      setFormErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-  };
-
-
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
 
@@ -252,7 +270,7 @@ const Rent = () => {
     try {
       if (editId) {
         await updateUser(editId, form);
-        await userApi.updatePayrollSettings(editId, {
+        await usersApi.updatePayrollSettings(editId, {
           salary: form.salary,
           salaryType: form.salaryType,
         });
@@ -275,7 +293,7 @@ const Rent = () => {
       console.error('ID is undefined for deletion');
       return;
     }
-    if (!window.confirm('Удалить арендатора?')) return;
+    if (!window.confirm('Удалить сотрудника?')) return;
     setSaving(true);
     try {
       console.log('Attempting to delete user with ID:', member.id);
@@ -293,10 +311,14 @@ const Rent = () => {
     exportType: string,
     exportFormat: 'pdf' | 'excel' | 'csv',
   ) => {
-    await exportData('tenant', exportFormat, {
-      name: searchTerm,
-      role: filterRole,
-    });
+
+    const params = showRentTab
+      ? { name: searchTerm, type: 'tenant' }
+      : {
+        name: searchTerm,
+        role: filterRole.length > 0 ? filterRole : undefined,
+      };
+    await exportData('staff', exportFormat, params);
   };
 
   return (
@@ -312,11 +334,11 @@ const Rent = () => {
             variant='h5'
             style={{ color: '#1890ff', display: 'flex', alignItems: 'center' }}
           >
-            <Person style={{ marginRight: 8 }} /> Аренда
+            <Person style={{ marginRight: 8 }} /> Сотрудники
           </Typography>
           <Box mb={2}>
             <ExportButton
-              exportTypes={[{ value: 'tenant', label: 'Список арендаторов' }]}
+              exportTypes={[{ value: 'staff', label: 'Список сотрудников' }]}
               onExport={handleExport}
             />
           </Box>
@@ -324,16 +346,24 @@ const Rent = () => {
             variant='contained'
             color='primary'
             startIcon={<Add />}
-            onClick={() => handleOpenModal()}
+            onClick={() => {
+              if (showRentTab) {
+
+                setForm({ ...defaultForm, role: 'tenant' as UserRole });
+                setModalOpen(true);
+              } else {
+                handleOpenModal();
+              }
+            }}
           >
-            Добавить арендатора
+            {showRentTab ? 'Добавить арендатора' : 'Добавить сотрудника'}
           </Button>
         </Box>
 
         {/* Поиск и фильтры */}
-        <Box mb={3} display='flex' flexWrap='wrap' gap={2}>
+        <Box mb={3} display='flex' flexWrap='wrap' gap={2} alignItems='center'>
           <TextField
-            placeholder='Поиск арендаторов...'
+            placeholder='Поиск сотрудников...'
             variant='outlined'
             size='small'
             value={searchTerm}
@@ -372,6 +402,50 @@ const Rent = () => {
               ))}
             </Select>
           </FormControl>
+
+          {/* Кнопки фильтрации по активности и арендаторам */}
+          <Box display='flex' gap={1}>
+            <Button
+              variant={!showRentTab && activeFilter === 'active' ? 'contained' : 'outlined'}
+              color='success'
+              size='small'
+              onClick={() => {
+                setShowRentTab(false);
+                setActiveFilter('active');
+              }}
+            >
+              Активные
+            </Button>
+            <Button
+              variant={!showRentTab && activeFilter === 'inactive' ? 'contained' : 'outlined'}
+              color='error'
+              size='small'
+              onClick={() => {
+                setShowRentTab(false);
+                setActiveFilter('inactive');
+              }}
+            >
+              Неактивные
+            </Button>
+            <Button
+              variant={showRentTab ? 'contained' : 'outlined'}
+              size='small'
+              onClick={() => {
+                setShowRentTab(true);
+                setFilterRole([]);
+              }}
+              sx={{
+                backgroundColor: showRentTab ? '#FF9800' : 'transparent',
+                color: showRentTab ? 'white' : '#FF9800',
+                borderColor: '#FF9800',
+                '&:hover': {
+                  backgroundColor: showRentTab ? '#F57C00' : 'rgba(255, 152, 0, 0.1)',
+                }
+              }}
+            >
+              Арендаторы
+            </Button>
+          </Box>
         </Box>
 
         {loading && <CircularProgress />}
@@ -382,8 +456,8 @@ const Rent = () => {
             {filteredStaff.length === 0 ? (
               <Alert severity='info' style={{ marginTop: 16 }}>
                 {staff.length === 0
-                  ? 'Нет арендаторов. Добавьте первого арендатора!'
-                  : 'Нет арендаторов, соответствующих критериям поиска.'}
+                  ? 'Нет сотрудников. Добавьте первого сотрудника!'
+                  : 'Нет сотрудников, соответствующих критериям поиска.'}
               </Alert>
             ) : (
               <Table>
@@ -469,12 +543,12 @@ const Rent = () => {
             <Box display='flex' alignItems='center' flexDirection='row'>
               {editId ? (
                 <>
-                  <Edit style={{ marginRight: 8 }} /> Редактирование арендатора
+                  <Edit style={{ marginRight: 8 }} /> Редактирование сотрудника
                 </>
               ) : (
                 <>
                   <Add style={{ marginRight: 8 }} /> Добавление нового
-                  арендатора
+                  сотрудника
                 </>
               )}
             </Box>
@@ -516,11 +590,36 @@ const Rent = () => {
                     }}
                     label='Должность'
                   >
-                    {availableRoles.map((russianRole) => (
-                      <MenuItem key={russianRole} value={russianRole}>
-                        {russianRole}
-                      </MenuItem>
-                    ))}
+                    {(() => {
+
+
+                      if (form.role === 'tenant') {
+                        return (
+                          <MenuItem
+                            key={roleTranslations['tenant']}
+                            value={roleTranslations['tenant']}
+                          >
+                            {roleTranslations['tenant']}
+                          </MenuItem>
+                        );
+                      } else if (showRentTab) {
+
+                        return (
+                          <MenuItem
+                            key={roleTranslations['tenant']}
+                            value={roleTranslations['tenant']}
+                          >
+                            {roleTranslations['tenant']}
+                          </MenuItem>
+                        );
+                      } else {
+                        return availableRoles.map((russianRole) => (
+                          <MenuItem key={russianRole} value={russianRole}>
+                            {russianRole}
+                          </MenuItem>
+                        ));
+                      }
+                    })()}
                   </Select>
                   {formErrors.role && (
                     <FormHelperText>{formErrors.role}</FormHelperText>
@@ -565,7 +664,6 @@ const Rent = () => {
                   label='Активен'
                 />
               </Grid>
-              {/* Поле арендатора больше не нужно, так как это теперь роль */}
             </Grid>
           </DialogContent>
 
@@ -588,4 +686,4 @@ const Rent = () => {
   );
 };
 
-export default Rent;
+export default Staff;

@@ -4,17 +4,17 @@ import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
-import { App } from './components/App';
+import { App } from './app/App';
 import * as serviceWorker from './serviceWorker';
-import { LayoutProvider } from './components/context/LayoutContext';
+import { LayoutProvider } from './app/context/LayoutContext';
 
-import { TimeTrackingProvider } from './components/context/TimeTrackingContext';
+import { TimeTrackingProvider } from './app/context/TimeTrackingContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import './sentry';
-import theme from './theme';
-import { setupAxios } from './api/axiosSetup';
+import theme from './shared/theme';
+import { setupAxios } from './shared/api/axiosSetup';
 
 // Initialize Axios
 setupAxios();
