@@ -21,6 +21,7 @@ export enum UserRole {
   child = 'child',
   substitute = 'substitute',
   tenant = 'tenant',
+  speech_therapist = 'speech_therapist',
 }
 
 export interface Group {
@@ -349,11 +350,17 @@ export const ROLE_TRANSLATIONS: Record<string, string> = {
   cleaner: 'Уборщица',
   security: 'Охранник',
   maintenance: 'Завхоз',
-  laundry: 'Прачка',
-
-
   staff: 'Сотрудник',
   substitute: 'Подменный сотрудник',
   intern: 'Стажер',
   tenant: 'Арендатор',
 };
+
+export const EXTERNAL_ROLES: UserRole[] = [
+  UserRole.tenant,
+  UserRole.speech_therapist,
+];
+
+export const STAFF_ROLES: UserRole[] = Object.values(UserRole).filter(
+  (role) => !EXTERNAL_ROLES.includes(role) && role !== UserRole.admin && role !== UserRole.child && role !== UserRole.parent
+);

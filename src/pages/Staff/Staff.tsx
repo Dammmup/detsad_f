@@ -50,7 +50,7 @@ import {
   Badge,
   Person,
 } from '@mui/icons-material';
-import { User as StaffMember, UserRole } from '../../types/common';
+import { User as StaffMember, UserRole, STAFF_ROLES, EXTERNAL_ROLES } from '../../types/common';
 import { getGroups } from '../../services/groups';
 import { useAuth } from '../../components/context/AuthContext';
 import ExportButton from '../../components/ExportButton';
@@ -69,7 +69,7 @@ const roleTranslations: Record<string, string> = {
   psychologist: 'Психолог',
   speech_therapist: 'Логопед',
   music_teacher: 'Музыкальный руководитель',
-  physical_education: 'Инструктор по физкультуре',
+  physical_teacher: 'Инструктор по физкультуре',
 
 
   nurse: 'Медсестра',
@@ -127,21 +127,21 @@ const Staff = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
-  const [showRentTab, setShowRentTab] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<'active' | 'inactive'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'inactive' | 'external'>('active');
   const { user: currentUser } = useAuth();
 
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
 
   useEffect(() => {
-    const roles = showRentTab
-      ? [roleTranslations['tenant']].sort()
-      : Object.values(roleTranslations)
-        .filter((role) => role !== roleTranslations['tenant'])
-        .sort();
+    let roles: string[] = [];
+    if (activeTab === 'external') {
+      roles = EXTERNAL_ROLES.map(role => roleTranslations[role]).sort();
+    } else {
+      roles = STAFF_ROLES.map(role => roleTranslations[role]).sort();
+    }
     setAvailableRoles(roles);
-  }, [showRentTab]);
+  }, [activeTab]);
 
   const fetchStaff = useCallback(() => {
     setLoading(true);
@@ -176,46 +176,39 @@ const Staff = () => {
 
     let filtered = staff;
 
+    const externalRoles = EXTERNAL_ROLES;
 
-    if (showRentTab) {
-      filtered = staff.filter((member) => member.role === 'tenant');
+    if (activeTab === 'external') {
+      filtered = staff.filter((member) => externalRoles.includes(member.role as any));
+    } else if (activeTab === 'inactive') {
+      filtered = staff.filter((member) => member.active === false && !externalRoles.includes(member.role as any));
     } else {
+      // active
+      filtered = staff.filter((member) => member.active !== false && !externalRoles.includes(member.role as any));
+    }
 
-      filtered = staff.filter((member) => member.role !== 'tenant');
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (member) =>
+          member.fullName?.toLowerCase().includes(search) ||
+          member.email?.toLowerCase().includes(search) ||
+          member.phone?.toLowerCase().includes(search) ||
+          translateRole(member.role || '')
+            .toLowerCase()
+            .includes(search),
+      );
+    }
 
-
-      if (activeFilter === 'active') {
-        filtered = filtered.filter((member) => member.active !== false);
-      } else {
-        filtered = filtered.filter((member) => member.active === false);
-      }
-
-
-      if (searchTerm) {
-        const search = searchTerm.toLowerCase();
-        filtered = filtered.filter(
-          (member) =>
-            member.fullName?.toLowerCase().includes(search) ||
-            member.email?.toLowerCase().includes(search) ||
-            member.phone?.toLowerCase().includes(search) ||
-            translateRole(member.role || '')
-              .toLowerCase()
-              .includes(search),
-        );
-      }
-
-
-
-      if (filterRole.length > 0 && !showRentTab) {
-        filtered = filtered.filter((member) => {
-          const russianRole = translateRole(member.role || '');
-          return filterRole.includes(russianRole) && member.tenant !== true;
-        });
-      }
+    if (filterRole.length > 0) {
+      filtered = filtered.filter((member) => {
+        const russianRole = translateRole(member.role || '');
+        return filterRole.includes(russianRole);
+      });
     }
 
     setFilteredStaff(filtered);
-  }, [staff, searchTerm, filterRole, showRentTab, activeFilter, currentUser?.role]);
+  }, [staff, searchTerm, filterRole, activeTab]);
 
   const handleOpenModal = (member?: StaffMember) => {
     setForm(member ? { ...member } : defaultForm);
@@ -311,11 +304,12 @@ const Staff = () => {
     exportFormat: 'excel',
   ) => {
 
-    const params = showRentTab
-      ? { name: searchTerm, type: 'tenant' }
+    const params = activeTab === 'external'
+      ? { name: searchTerm, type: 'external' }
       : {
         name: searchTerm,
         role: filterRole.length > 0 ? filterRole : undefined,
+        active: activeTab === 'active'
       };
     await exportData('staff', exportFormat, params);
   };
@@ -346,16 +340,15 @@ const Staff = () => {
             color='primary'
             startIcon={<Add />}
             onClick={() => {
-              if (showRentTab) {
-
-                setForm({ ...defaultForm, role: 'tenant' as UserRole });
+              if (activeTab === 'external') {
+                setForm({ ...defaultForm, role: 'speech_therapist' as UserRole });
                 setModalOpen(true);
               } else {
                 handleOpenModal();
               }
             }}
           >
-            {showRentTab ? 'Добавить арендатора' : 'Добавить сотрудника'}
+            {activeTab === 'external' ? 'Добавить специалиста' : 'Добавить сотрудника'}
           </Button>
         </Box>
 
@@ -405,44 +398,44 @@ const Staff = () => {
           {/* Кнопки фильтрации по активности и арендаторам */}
           <Box display='flex' gap={1}>
             <Button
-              variant={!showRentTab && activeFilter === 'active' ? 'contained' : 'outlined'}
+              variant={activeTab === 'active' ? 'contained' : 'outlined'}
               color='success'
               size='small'
               onClick={() => {
-                setShowRentTab(false);
-                setActiveFilter('active');
+                setActiveTab('active');
+                setFilterRole([]);
               }}
             >
-              Активные
+              Штат (Активные)
             </Button>
             <Button
-              variant={!showRentTab && activeFilter === 'inactive' ? 'contained' : 'outlined'}
+              variant={activeTab === 'inactive' ? 'contained' : 'outlined'}
               color='error'
               size='small'
               onClick={() => {
-                setShowRentTab(false);
-                setActiveFilter('inactive');
+                setActiveTab('inactive');
+                setFilterRole([]);
               }}
             >
-              Неактивные
+              Архив
             </Button>
             <Button
-              variant={showRentTab ? 'contained' : 'outlined'}
+              variant={activeTab === 'external' ? 'contained' : 'outlined'}
               size='small'
               onClick={() => {
-                setShowRentTab(true);
+                setActiveTab('external');
                 setFilterRole([]);
               }}
               sx={{
-                backgroundColor: showRentTab ? '#FF9800' : 'transparent',
-                color: showRentTab ? 'white' : '#FF9800',
+                backgroundColor: activeTab === 'external' ? '#FF9800' : 'transparent',
+                color: activeTab === 'external' ? 'white' : '#FF9800',
                 borderColor: '#FF9800',
                 '&:hover': {
-                  backgroundColor: showRentTab ? '#F57C00' : 'rgba(255, 152, 0, 0.1)',
+                  backgroundColor: activeTab === 'external' ? '#F57C00' : 'rgba(255, 152, 0, 0.1)',
                 }
               }}
             >
-              Арендаторы
+              Внешние специалисты / Услуги
             </Button>
           </Box>
         </Box>
@@ -590,27 +583,14 @@ const Staff = () => {
                     label='Должность'
                   >
                     {(() => {
+                      const isExternal = EXTERNAL_ROLES.includes(form.role as any);
 
-
-                      if (form.role === 'tenant') {
-                        return (
-                          <MenuItem
-                            key={roleTranslations['tenant']}
-                            value={roleTranslations['tenant']}
-                          >
-                            {roleTranslations['tenant']}
+                      if (activeTab === 'external' || isExternal) {
+                        return EXTERNAL_ROLES.map((role) => (
+                          <MenuItem key={role} value={roleTranslations[role]}>
+                            {roleTranslations[role]}
                           </MenuItem>
-                        );
-                      } else if (showRentTab) {
-
-                        return (
-                          <MenuItem
-                            key={roleTranslations['tenant']}
-                            value={roleTranslations['tenant']}
-                          >
-                            {roleTranslations['tenant']}
-                          </MenuItem>
-                        );
+                        ));
                       } else {
                         return availableRoles.map((russianRole) => (
                           <MenuItem key={russianRole} value={russianRole}>

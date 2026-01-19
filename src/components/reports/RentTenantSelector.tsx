@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { getUsers } from '../../services/users';
+import { EXTERNAL_ROLES } from '../../types/common';
 
 interface User {
   _id?: string;
@@ -38,7 +39,7 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
       try {
         const users = await getUsers();
 
-        const tenants = users.filter((user) => user.role !== 'admin');
+        const tenants = users.filter((user) => EXTERNAL_ROLES.includes(user.role as any));
         setAllTenants(tenants);
 
 
