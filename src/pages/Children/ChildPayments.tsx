@@ -369,7 +369,7 @@ const ChildPayments: React.FC = () => {
 
   const handleExport = (
     exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     exportChildPayments(filteredPayments, children, groups);
   };

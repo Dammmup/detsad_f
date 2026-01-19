@@ -162,9 +162,9 @@ class UsersApiClient extends BaseCrudApiClient<User> {
 
   async export(
     filters?: UserFilters,
-    format: 'csv' | 'excel' = 'excel',
+    format: 'excel' = 'excel',
   ): Promise<Blob> {
-    const params = { ...filters, format };
+    const params = { ...filters, format: 'excel' };
 
     return this.get('/users/export', {
       params,

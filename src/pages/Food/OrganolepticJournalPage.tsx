@@ -52,18 +52,18 @@ export default function OrganolepticJournalPage() {
   const [group, setGroup] = useState('all');
   const [responsibleSignature, setResponsibleSignature] = useState('');
   const fetchRecords = React.useCallback(async () => {
-     setLoading(true);
-     try {
-       const data = await getOrganolepticRecords({ date, group });
-       setRecords(data);
-     } finally {
-       setLoading(false);
-     }
-   }, [date, group]);
+    setLoading(true);
+    try {
+      const data = await getOrganolepticRecords({ date, group });
+      setRecords(data);
+    } finally {
+      setLoading(false);
+    }
+  }, [date, group]);
 
-   useEffect(() => {
-     fetchRecords();
-   }, [date, group, fetchRecords]);
+  useEffect(() => {
+    fetchRecords();
+  }, [date, group, fetchRecords]);
 
   const handleGenerateByMenu = async () => {
     setLoading(true);
@@ -119,7 +119,7 @@ export default function OrganolepticJournalPage() {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     await exportData('organoleptic-journal', exportFormat, {
       date,

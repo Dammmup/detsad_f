@@ -71,7 +71,7 @@ const FoodNormsControlPage: React.FC = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     await exportData('food-norms-control', exportFormat, {
       rows: filteredRows,

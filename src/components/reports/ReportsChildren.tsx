@@ -276,34 +276,54 @@ const ReportsChildren: React.FC<Props> = ({ userId }) => {
     setSnackbarOpen(false);
   };
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
+    try {
+      const { utils, writeFile } = await import('xlsx');
 
-    let csvContent = 'data:text/csv;charset=utf-8,';
+      // Подготавливаем данные для экспорта
+      const exportData = rows.map(row => ({
+        'ФИО ребенка': row.fullName,
+        'Группа': row.groupName,
+        'ФИО родителя': row.parentName,
+        'Телефон родителя': row.parentPhone,
+        'Посещаемость (%)': `${row.attendanceRate}%`,
+        'Статус оплаты': row.paymentStatus,
+        'Статус здоровья': row.healthStatus,
+        'Возраст': `${row.age} лет`,
+        'Статус': row.status,
+      }));
 
+      // Создаем worksheet
+      const worksheet = utils.json_to_sheet(exportData);
 
-    csvContent +=
-      'ФИО ребенка;Группа;ФИО родителя;Телефон родителя;Посещаемость (%);Статус оплаты;Статус здоровья;Возраст;Статус\n';
+      // Устанавливаем ширину колонок для лучшего отображения
+      const columnWidths = [
+        { wch: 25 }, // ФИО ребенка
+        { wch: 15 }, // Группа
+        { wch: 25 }, // ФИО родителя
+        { wch: 15 }, // Телефон родителя
+        { wch: 15 }, // Посещаемость
+        { wch: 15 }, // Статус оплаты
+        { wch: 15 }, // Статус здоровья
+        { wch: 10 }, // Возраст
+        { wch: 12 }, // Статус
+      ];
+      worksheet['!cols'] = columnWidths;
 
+      // Создаем workbook и добавляем worksheet
+      const workbook = utils.book_new();
+      utils.book_append_sheet(workbook, worksheet, 'Отчет по детям');
 
-    rows.forEach((row) => {
-      csvContent += `${row.fullName};${row.groupName};${row.parentName};${row.parentPhone};${row.attendanceRate}%;${row.paymentStatus};${row.healthStatus};${row.age};${row.status}\n`;
-    });
+      // Генерируем имя файла с датой
+      const fileName = `отчет_по_детям_${new Date().toLocaleString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\./g, '-')}.xlsx`;
 
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `отчет_по_детям_${new Date().toLocaleString('ru-RU', { month: 'long', year: 'numeric' })}.csv`,
-    );
-    document.body.appendChild(link);
-
-
-    link.click();
-
-
-    document.body.removeChild(link);
+      // Сохраняем файл
+      writeFile(workbook, fileName);
+    } catch (error) {
+      console.error('Ошибка при экспорте в Excel:', error);
+      setSnackbarMessage('Ошибка при экспорте файла');
+      setSnackbarOpen(true);
+    }
   };
 
 

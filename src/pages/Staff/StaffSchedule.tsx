@@ -213,7 +213,7 @@ const StaffSchedule: React.FC = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     const monthStart = moment(currentDate).startOf('month');
     const monthEnd = moment(currentDate).endOf('month');

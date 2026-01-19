@@ -112,7 +112,7 @@ const WeeklyAttendance: React.FC = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     if (!selectedGroup) {
       enqueueSnackbar('Выберите группу для экспорта', { variant: 'error' });

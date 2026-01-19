@@ -306,38 +306,55 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
     setSnackbarOpen(false);
   };
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
+    try {
+      // Динамически импортируем библиотеку xlsx
+      const { utils, writeFile } = await import('xlsx');
 
-    let csvContent = 'data:text/csv;charset=utf-8,';
+      // Подготавливаем данные для экспорта
+      const exportData = rows.map(row => {
+        const total = Math.max(
+          0,
+          (row.amount || row.accruals || 0) - row.paidAmount,
+        );
+        return {
+          'Арендатор': row.tenantName,
+          'Сумма аренды': row.amount || row.accruals || 0,
+          'Оплачено/Предоплачено': row.paidAmount,
+          'Остаток к оплате': total,
+          'Статус': row.status,
+          'Дата оплаты': row.paymentDate ? new Date(row.paymentDate).toLocaleDateString('ru-RU') : 'Не оплачено',
+        };
+      });
 
+      // Создаем worksheet
+      const worksheet = utils.json_to_sheet(exportData);
 
-    csvContent +=
-      'Арендатор;Сумма аренды;Оплачено/Предоплачено;Остаток к оплате;Статус;Дата оплаты\n';
+      // Устанавливаем ширину колонок для лучшего отображения
+      const colWidths = [
+        { wch: 25 }, // Арендатор
+        { wch: 15 }, // Сумма аренды
+        { wch: 20 }, // Оплачено/Предоплачено
+        { wch: 18 }, // Остаток к оплате
+        { wch: 12 }, // Статус
+        { wch: 15 }, // Дата оплаты
+      ];
+      worksheet['!cols'] = colWidths;
 
+      // Создаем workbook и добавляем worksheet
+      const workbook = utils.book_new();
+      utils.book_append_sheet(workbook, worksheet, 'Арендные платежи');
 
-    rows.forEach((row) => {
-      const total = Math.max(
-        0,
-        (row.amount || row.accruals || 0) - row.paidAmount,
-      );
-      csvContent += `${row.tenantName};${row.amount || row.accruals || 0};${row.paidAmount};${total};${row.status};${row.paymentDate || ''}\n`;
-    });
+      // Генерируем имя файла с датой
+      const fileName = `арендные_платежи_${new Date().toLocaleString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\./g, '-')}.xlsx`;
 
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `арендные_платежи_${new Date().toLocaleString('ru-RU', { month: 'long', year: 'numeric' })}.csv`,
-    );
-    document.body.appendChild(link);
-
-
-    link.click();
-
-
-    document.body.removeChild(link);
+      // Сохраняем файл
+      writeFile(workbook, fileName);
+    } catch (error) {
+      console.error('Ошибка при экспорте в Excel:', error);
+      setSnackbarMessage('Ошибка при экспорте файла');
+      setSnackbarOpen(true);
+    }
   };
 
   const handleGenerateRentSheets = async () => {
@@ -621,7 +638,7 @@ const ReportsRent: React.FC<Props> = ({ userId }) => {
                   fontWeight: 'medium',
                 }}
               >
-                Экспорт
+                Экспорт XLSX
               </Button>
               {currentUser?.role === 'admin' && (
                 <Button

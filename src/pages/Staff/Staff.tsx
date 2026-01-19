@@ -308,7 +308,7 @@ const Staff = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
 
     const params = showRentTab

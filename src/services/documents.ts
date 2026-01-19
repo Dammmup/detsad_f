@@ -172,7 +172,7 @@ export const downloadDocument = async (id: string) => {
 
 
 export const exportDocuments = async (
-  format: 'pdf' | 'excel' | 'csv',
+  format: | 'excel',
   params?: GetDocumentsParams,
 ) => {
   try {

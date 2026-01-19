@@ -81,7 +81,7 @@ const Children: React.FC = () => {
 
   const handleExport = async (
     _exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     setLoading(true);
     try {

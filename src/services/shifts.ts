@@ -184,9 +184,9 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
 
   async export(
     filters?: ShiftFilters,
-    format: 'csv' | 'excel' | 'pdf' = 'excel',
+    format: 'excel' = 'excel',
   ): Promise<Blob> {
-    const params = { ...filters, format };
+    const params = { ...filters, format: 'excel' };
 
     return this.get(`${this.endpoint}/export`, {
       params,

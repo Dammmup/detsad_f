@@ -177,21 +177,17 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
         const data = (payrollsData?.data || payrollsData || []) as any[];
 
 
+        // Фильтруем работавших сотрудников
+        const workedEmployees = data.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
+
         const summaryData = {
-          totalEmployees: data.length,
-          totalAccruals: data.reduce(
-            (sum, p) => sum + (p.accruals || (p.baseSalaryType === 'shift' ? ((p.workedShifts || 0) * (p.shiftRate || p.baseSalary || 0)) : (p.baseSalary || 0))),
+          totalEmployees: workedEmployees.length,
+          totalAccruals: workedEmployees.reduce(
+            (sum, p) => sum + (p.accruals || 0) + (p.bonuses || 0),
             0,
           ),
-          totalPenalties: data.reduce((sum, p) => sum + (p.penalties || 0), 0),
-          totalPayout: data.reduce((sum, p) => {
-            const accruals = p.accruals || (p.baseSalaryType === 'shift' ? ((p.workedShifts || 0) * (p.shiftRate || p.baseSalary || 0)) : (p.baseSalary || 0));
-            const bonuses = p.bonuses || 0;
-            const penalties = p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0);
-            const advance = p.advance || 0;
-            const total = accruals + bonuses - penalties - advance;
-            return sum + (total >= 0 ? total : 0);
-          }, 0),
+          totalPenalties: workedEmployees.reduce((sum, p) => sum + (p.penalties || 0), 0),
+          totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total || 0), 0),
         };
 
         setSummary(summaryData);
@@ -259,12 +255,9 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
 
   const handleSaveClick = async (rowId: string) => {
     try {
-
-
       const originalRow = rows.find((r) => r.staffId === rowId);
       if (originalRow) {
         let payrollId = originalRow._id;
-
 
         const accruals =
           editData.accruals !== undefined
@@ -289,12 +282,9 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
               ? originalRow.status
               : 'calculated';
 
-
         const apiStatus = status === 'calculated' ? 'draft' : status;
 
-
         const total = accruals + bonuses - penalties - advance;
-
 
         const updatedData = {
           ...editData,
@@ -303,7 +293,6 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
         };
 
         if (!payrollId) {
-
           console.log('Creating new payroll for virtual record');
           const newPayroll = await createPayroll({
             staffId: { _id: originalRow.staffId } as any,
@@ -314,15 +303,13 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
           });
           payrollId = newPayroll._id;
         } else {
-
           console.log('Updating payroll with ID:', payrollId);
           await updatePayroll(payrollId, updatedData as Partial<Payroll>);
         }
 
-
         setRows((prev) =>
           prev.map((r) =>
-            r.staffId === rowId ? ({ ...r, ...updatedData, _id: payrollId, staffId: rowId } as PayrollRow) : r,
+            r.staffId === rowId ? ({ ...r, ...updatedData, _id: payrollId, staffId: rowId, total } as PayrollRow) : r,
           ),
         );
         setEditingId(null);
@@ -387,34 +374,58 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
     setSnackbarOpen(false);
   };
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
+    try {
+      const { utils, writeFile } = await import('xlsx');
 
-    let csvContent = 'data:text/csv;charset=utf-8,';
+      // Подготавливаем данные для экспорта
+      const exportData = rows.map(row => ({
+        'Сотрудник': row.staffName,
+        'Начисления': row.accruals,
+        'Премия': row.bonuses,
+        'Аванс': row.advance,
+        'Вычеты': row.penalties,
+        'Ставка за опоздание': `${globalPenaltyRate} тг/мин`,
+        'Итого': row.total,
+        'Статус': row.status,
+        'Оклад': row.baseSalary,
+        'Тип оклада': row.baseSalaryType,
+        'Отработано дней/смен': row.baseSalaryType === 'shift' ? row.workedShifts : row.workedDays,
+      }));
 
+      // Создаем worksheet
+      const worksheet = utils.json_to_sheet(exportData);
 
-    csvContent +=
-      'Сотрудник;Начисления;Премия;Аванс;Вычеты;Ставка за опоздание (общая: ' + globalPenaltyRate + ' тг/мин);Итого;Статус\n';
+      // Устанавливаем ширину колонок для лучшего отображения
+      const colWidths = [
+        { wch: 25 }, // Сотрудник
+        { wch: 15 }, // Начисления
+        { wch: 10 }, // Премия
+        { wch: 10 }, // Аванс
+        { wch: 10 }, // Вычеты
+        { wch: 20 }, // Ставка за опоздание
+        { wch: 15 }, // Итого
+        { wch: 12 }, // Статус
+        { wch: 12 }, // Оклад
+        { wch: 12 }, // Тип оклада
+        { wch: 15 }, // Отработано
+      ];
+      worksheet['!cols'] = colWidths;
 
+      // Создаем workbook и добавляем worksheet
+      const workbook = utils.book_new();
+      utils.book_append_sheet(workbook, worksheet, 'Расчетные листы');
 
-    rows.forEach((row) => {
-      csvContent += `${row.staffName};${row.accruals};${row.bonuses};${row.advance};${row.penalties};${globalPenaltyRate};${row.total};${row.status}\n`;
-    });
+      // Генерируем имя файла с датой
+      const fileName = `расчетный_лист_${new Date().toLocaleString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\./g, '-')}.xlsx`;
 
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `расчетный_лист_${new Date().toLocaleString('ru-RU', { month: 'long', year: 'numeric' })}.csv`,
-    );
-    document.body.appendChild(link);
-
-
-    link.click();
-
-
-    document.body.removeChild(link);
+      // Сохраняем файл
+      writeFile(workbook, fileName);
+    } catch (error) {
+      console.error('Ошибка при экспорте в Excel:', error);
+      setSnackbarMessage('Ошибка при экспорте файла');
+      setSnackbarOpen(true);
+    }
   };
 
   // Open confirmation dialog for generate
@@ -465,21 +476,17 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
     const payrollsData = await getPayrolls(params);
     const data = (payrollsData?.data || payrollsData || []) as any[];
 
+    // Фильтруем работавших сотрудников
+    const workedEmployees = data.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
+
     const summaryData = {
-      totalEmployees: data.length,
-      totalAccruals: data.reduce(
-        (sum, p) => sum + (p.accruals || p.baseSalary || 0),
+      totalEmployees: workedEmployees.length,
+      totalAccruals: workedEmployees.reduce(
+        (sum, p) => sum + (p.accruals || 0) + (p.bonuses || 0),
         0,
       ),
-      totalPenalties: data.reduce((sum, p) => sum + (p.penalties || 0), 0),
-      totalPayout: data.reduce((sum, p) => {
-        const accruals = p.accruals || p.baseSalary || 0;
-        const penalties = p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0);
-        const advance = p.advance || 0;
-        const bonuses = p.bonuses || 0;
-        const total = accruals + bonuses - penalties - advance;
-        return sum + (total >= 0 ? total : 0);
-      }, 0),
+      totalPenalties: workedEmployees.reduce((sum, p) => sum + (p.penalties || 0), 0),
+      totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total || 0), 0),
     };
 
     setSummary(summaryData);
@@ -989,12 +996,14 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
                 }} />
               </Box>
 
-              <Button
-                onClick={() => handleOpenTotalDialog(mySalary)}
-                sx={{ mt: 4, color: 'rgba(255,255,255,0.6)', textTransform: 'none', '&:hover': { color: '#fff' } }}
-              >
-                ПОКАЗАТЬ ДЕТАЛЬНЫЙ РАСЧЕТ / VIEW DETAILS
-              </Button>
+              <Tooltip title="Показать детальный расчет зарплаты">
+                <Button
+                  onClick={() => handleOpenTotalDialog(mySalary)}
+                  sx={{ mt: 4, color: 'rgba(255,255,255,0.6)', textTransform: 'none', '&:hover': { color: '#fff' } }}
+                >
+                  ПОКАЗАТЬ ДЕТАЛЬНЫЙ РАСЧЕТ / VIEW DETAILS
+                </Button>
+              </Tooltip>
               <PayrollTotalDialog open={totalDialogOpen} onClose={() => setTotalDialogOpen(false)} data={currentTotalRow} />
             </Box>
           );
@@ -1023,9 +1032,9 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
                   <Box sx={{ p: 3, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 3 }}>
                     {[
                       { label: 'Сотрудников', value: summary?.totalEmployees || 0, color: '#6366f1', icon: <PeopleIcon /> },
-                      { label: 'Начислено', value: (summary?.totalAccruals || 0).toLocaleString() + ' ₸', color: '#10b981', icon: <EditIcon /> },
-                      { label: 'Вычеты', value: (summary?.totalPenalties || 0).toLocaleString() + ' ₸', color: '#f43f5e', icon: <CancelIcon /> },
-                      { label: 'К выплате', value: (summary?.totalPayout || 0).toLocaleString() + ' ₸', color: '#8b5cf6', icon: <VisibilityIcon /> },
+                      { label: 'Начислено', value: (summary?.totalAccruals || 0).toLocaleString('ru-RU') + ' ₸', color: '#10b981', icon: <EditIcon /> },
+                      { label: 'Вычеты', value: (summary?.totalPenalties || 0).toLocaleString('ru-RU') + ' ₸', color: '#f43f5e', icon: <CancelIcon /> },
+                      { label: 'К выплате', value: (summary?.totalPayout || 0).toLocaleString('ru-RU') + ' ₸', color: '#8b5cf6', icon: <VisibilityIcon /> },
                     ].map((stat, idx) => (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Box sx={{ width: 48, height: 48, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: `${stat.color}15`, color: stat.color }}>{stat.icon}</Box>
@@ -1040,12 +1049,24 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
 
                 {currentUser?.id && (currentUser?.role === 'admin' || currentUser?.role === 'manager') && (
                   <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <Button variant='contained' startIcon={<EditIcon />} onClick={handleOpenConfirmDialog} disabled={generating}>Сгенерировать</Button>
-                    <Button variant='outlined' startIcon={<RefreshIcon />} onClick={handleRefreshPayrolls} disabled={refreshing}>Обновить всё</Button>
-                    <Button variant='outlined' color='secondary' startIcon={<FileUploadIcon />} onClick={handleImportPayrolls} disabled={importing}>Импорт</Button>
-                    <Button variant='outlined' color='info' startIcon={<DebtIcon />} onClick={handleCalculateDebt} disabled={calculatingDebt}>Расчитать долг</Button>
-                    <Button variant='outlined' onClick={handleOpenRateDialog}>Ставка штрафа</Button>
-                    <Button variant='contained' color='success' startIcon={<VisibilityIcon />} onClick={handleExportToExcel}>Экспорт</Button>
+                    <Tooltip title="Сгенерировать расчетные листы за выбранный период">
+                      <Button variant='contained' startIcon={<EditIcon />} onClick={handleOpenConfirmDialog} disabled={generating}>Сгенерировать</Button>
+                    </Tooltip>
+                    <Tooltip title="Обновить все расчетные листы на основе текущих данных">
+                      <Button variant='outlined' startIcon={<RefreshIcon />} onClick={handleRefreshPayrolls} disabled={refreshing}>Обновить всё</Button>
+                    </Tooltip>
+                    <Tooltip title="Импортировать данные из Excel файла">
+                      <Button variant='outlined' color='secondary' startIcon={<FileUploadIcon />} onClick={handleImportPayrolls} disabled={importing}>Импорт</Button>
+                    </Tooltip>
+                    <Tooltip title="Рассчитать долг по авансам">
+                      <Button variant='outlined' color='info' startIcon={<DebtIcon />} onClick={handleCalculateDebt} disabled={calculatingDebt}>Расчитать долг</Button>
+                    </Tooltip>
+                    <Tooltip title={`Настроить ставку штрафа за опоздания (${globalPenaltyRate} тг)`}>
+                      <Button variant='outlined' onClick={handleOpenRateDialog}>Ставка: {globalPenaltyRate} ₸</Button>
+                    </Tooltip>
+                    <Tooltip title="Экспортировать данные в формате XLSX">
+                      <Button variant='contained' color='success' startIcon={<VisibilityIcon />} onClick={handleExportToExcel}>Экспорт XLSX</Button>
+                    </Tooltip>
                   </Box>
                 )}
 
@@ -1071,11 +1092,33 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
                               <TableCell sx={{ fontWeight: 'medium' }}>{r.staffName}</TableCell>
                               <TableCell>
                                 {editingId === r.staffId ? (
-                                  <TextField type='number' size='small' value={editData.accruals ?? r.accruals} onChange={(e) => handleInputChange('accruals', Number(e.target.value))} />
+                                  <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                                    <TextField
+                                      size='small'
+                                      type='number'
+                                      value={editData.baseSalary ?? ''}
+                                      onChange={(e) => handleInputChange('baseSalary', Number(e.target.value))}
+                                      inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
+                                      sx={{ width: '80px' }}
+                                      variant='standard'
+                                    />
+                                    <Select
+                                      value={editData.baseSalaryType || 'month'}
+                                      onChange={(e) => handleInputChange('baseSalaryType', e.target.value)}
+                                      variant="standard"
+                                      size="small"
+                                      sx={{ fontSize: '0.75rem', minWidth: '40px' }}
+                                    >
+                                      <MenuItem value="month">Мес</MenuItem>
+                                      <MenuItem value="shift">День</MenuItem>
+                                    </Select>
+                                  </Box>
                                 ) : (
-                                  <Box>
-                                    <Typography variant='body2' sx={{ fontWeight: 'bold' }}>{r.accruals.toLocaleString()} ₸</Typography>
-                                    <Typography variant='caption' color='text.secondary'>{r.baseSalaryType === 'shift' ? `${r.workedShifts} см` : 'Мес'}</Typography>
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                    <span>{r.baseSalary?.toLocaleString()} тг</span>
+                                    <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', fontWeight: 'bold' }}>
+                                      {r.baseSalaryType === 'shift' ? 'за смену' : 'в месяц'}
+                                    </Typography>
                                   </Box>
                                 )}
                               </TableCell>
@@ -1083,25 +1126,69 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
                                 {editingId === r.staffId ? (
                                   <TextField type='number' size='small' value={editData.bonuses ?? r.bonuses} onChange={(e) => handleInputChange('bonuses', Number(e.target.value))} />
                                 ) : (
-                                  <Typography variant='body2' color='success.main'>+{r.bonuses.toLocaleString()}</Typography>
+                                  <Typography variant='body2' color='success.main'>+{r.bonuses?.toLocaleString() || '0'}</Typography>
                                 )}
                               </TableCell>
                               <TableCell>
                                 {editingId === r.staffId ? (
                                   <TextField type='number' size='small' value={editData.advance ?? r.advance} onChange={(e) => handleInputChange('advance', Number(e.target.value))} />
                                 ) : (
-                                  <Typography variant='body2' sx={{ color: '#e65100' }}>-{r.advance.toLocaleString()}</Typography>
+                                  <Typography variant='body2' sx={{ color: '#e65100' }}>-{r.advance?.toLocaleString() || '0'}</Typography>
                                 )}
                               </TableCell>
                               <TableCell>
                                 {editingId === r.staffId ? (
                                   <TextField type='number' size='small' value={editData.penalties ?? r.penalties} onChange={(e) => handleInputChange('penalties', Number(e.target.value))} />
                                 ) : (
-                                  <Chip label={`-${r.penalties.toLocaleString()}`} onClick={() => handleOpenFineDialog(r)} color='error' variant='outlined' size='small' sx={{ cursor: 'pointer' }} />
+                                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+                                    <Tooltip
+                                      title="Нажмите для детализации"
+                                      placement="left"
+                                      arrow
+                                    >
+                                      <span
+                                        style={{
+                                          cursor: 'pointer',
+                                          borderBottom: '1px dashed #ef5350',
+                                          color: '#d32f2f',
+                                          fontWeight: 'bold'
+                                        }}
+                                        onClick={() => handleOpenFineDialog(r)}
+                                      >
+                                        {r.penalties ? r.penalties?.toLocaleString() : '0'}
+                                      </span>
+                                    </Tooltip>
+                                    {currentUser?.role === 'admin' && (
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => handleOpenFineDialog(r)}
+                                        sx={{
+                                          color: 'error.main',
+                                          bgcolor: 'error.lighter',
+                                          width: 28,
+                                          height: 28,
+                                          '&:hover': { bgcolor: 'error.light', color: 'white' }
+                                        }}
+                                      >
+                                        <AddIcon fontSize="small" />
+                                      </IconButton>
+                                    )}
+                                  </Box>
                                 )}
                               </TableCell>
                               <TableCell>
-                                <Typography variant='body1' sx={{ fontWeight: '900', color: 'primary.main' }}>{r.total.toLocaleString()} ₸</Typography>
+                                <Tooltip title="Нажмите для детализации" arrow placement="top">
+                                  <span
+                                    onClick={() => handleOpenTotalDialog(r)}
+                                    style={{
+                                      cursor: 'pointer',
+                                      borderBottom: '1px dashed currentColor',
+                                      paddingBottom: '2px'
+                                    }}
+                                  >
+                                    <Typography variant='body1' sx={{ fontWeight: '900', color: 'primary.main' }}>{r.total?.toLocaleString() || '0'} ₸</Typography>
+                                  </span>
+                                </Tooltip>
                               </TableCell>
                               <TableCell>
                                 {editingId === r.staffId ? (
@@ -1119,9 +1206,30 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
                                   <IconButton color='success' onClick={() => handleSaveClick(r.staffId)}><SaveIcon /></IconButton>
                                 ) : (
                                   <>
-                                    <IconButton color='primary' onClick={() => handleEditClick(r)}><EditIcon /></IconButton>
-                                    <IconButton onClick={() => handleOpenTotalDialog(r)}><VisibilityIcon /></IconButton>
-                                    <IconButton color='error' onClick={() => handleDeleteClick(r.staffId)}><CloseIcon /></IconButton>
+                                    <Tooltip title='Редактировать'>
+                                      <IconButton
+                                        color='primary'
+                                        size='small'
+                                        onClick={() => handleEditClick(r)}
+                                        sx={{ mr: 1 }}
+                                      >
+                                        <EditIcon />
+                                      </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title='Просмотр'>
+                                      <IconButton color='default' size='small'>
+                                        <VisibilityIcon />
+                                      </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title='Удалить'>
+                                      <IconButton
+                                        color='error'
+                                        size='small'
+                                        onClick={() => handleDeleteClick(r.staffId)}
+                                      >
+                                        <CloseIcon />
+                                      </IconButton>
+                                    </Tooltip>
                                   </>
                                 )}
                               </TableCell>
@@ -1147,10 +1255,42 @@ const ReportsSalary: React.FC<Props> = ({ userId, personalOnly }) => {
               </DialogActions>
             </Dialog>
 
-            <Dialog open={rateDialogOpen} onClose={() => setRateDialogOpen(false)}>
-              <DialogTitle>Настройки штрафа</DialogTitle>
+            <Dialog open={rateDialogOpen} onClose={() => setRateDialogOpen(false)} maxWidth="sm" fullWidth>
+              <DialogTitle>Настройки штрафа за опоздание</DialogTitle>
               <DialogContent>
-                <TextField label='Ставка (₸)' type="number" fullWidth value={newRate} onChange={(e) => setNewRate(Number(e.target.value))} sx={{ mt: 1 }} />
+                <DialogContentText sx={{ mb: 2 }}>
+                  Укажите ставку штрафа и тип расчета.
+                  Это значение будет использоваться при следующем расчете зарплат.
+                </DialogContentText>
+                <FormControl fullWidth margin="dense" sx={{ mb: 2 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Тип расчета штрафа
+                  </Typography>
+                  <Select
+                    value={newPenaltyType}
+                    onChange={(e) => setNewPenaltyType(e.target.value)}
+                    variant="outlined"
+                  >
+                    <MenuItem value="per_minute">За каждую минуту</MenuItem>
+                    <MenuItem value="per_5_minutes">За каждые 5 минут</MenuItem>
+                    <MenuItem value="per_10_minutes">За каждые 10 минут</MenuItem>
+                    <MenuItem value="fixed">Фиксированный штраф</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  margin="dense"
+                  label={newPenaltyType === 'fixed' ? 'Сумма штрафа (тг)' : `Ставка (тг/${newPenaltyType === 'per_minute' ? 'мин' : newPenaltyType === 'per_5_minutes' ? '5 мин' : '10 мин'})`}
+                  type="number"
+                  fullWidth
+                  value={newRate}
+                  onChange={(e) => setNewRate(Number(e.target.value))}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  {newPenaltyType === 'per_minute' && 'Пример: при опоздании на 15 мин штраф = 15 × ставка'}
+                  {newPenaltyType === 'per_5_minutes' && 'Пример: при опоздании на 15 мин штраф = 3 × ставка (15÷5=3)'}
+                  {newPenaltyType === 'per_10_minutes' && 'Пример: при опоздании на 15 мин штраф = 2 × ставка (15÷10≈2)'}
+                  {newPenaltyType === 'fixed' && 'Фиксированный штраф за любое опоздание'}
+                </Typography>
               </DialogContent>
               <DialogActions>
                 <Button onClick={() => setRateDialogOpen(false)}>Отмена</Button>

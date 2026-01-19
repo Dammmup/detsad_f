@@ -151,7 +151,7 @@ export interface UpdateTemplateData {
 
 
 export interface ExportDocumentsParams {
-  format: 'pdf' | 'excel' | 'csv';
+  format: 'excel';
   type?: DocumentType;
   category?: DocumentCategory;
   status?: DocumentStatus;
@@ -164,7 +164,7 @@ export interface ExportDocumentsParams {
 
 
 export interface ExportTemplatesParams {
-  format: 'pdf' | 'excel' | 'csv';
+  format: 'excel';
   type?: TemplateType;
   category?: TemplateCategory;
   isActive?: boolean;
@@ -177,7 +177,7 @@ export interface SendReportByEmailParams {
   recipients: string[];
   subject?: string;
   message?: string;
-  format: 'pdf' | 'excel' | 'csv';
+  format: 'excel';
   reportParams?: any;
 }
 
@@ -186,7 +186,7 @@ export interface ScheduleReportParams {
   reportType: 'salary' | 'children' | 'attendance' | 'schedule';
   frequency: 'daily' | 'weekly' | 'monthly';
   recipients: string[];
-  format: 'pdf' | 'excel' | 'csv';
+  format: 'excel';
   reportParams?: any;
   startDate?: string;
 }
