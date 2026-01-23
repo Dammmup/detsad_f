@@ -34,14 +34,15 @@ export const PushService = {
 
             console.log('User is subscribed:', subscription);
 
-            const userId = localStorage.getItem('userId');
-            if (!userId) {
-                console.error('UserId not found in localStorage');
+            const userDataStr = localStorage.getItem('user');
+            const token = localStorage.getItem('auth_token');
+            if (!userDataStr || !token) {
+                console.error('User data or token not found in localStorage');
                 return;
             }
 
-            const token = localStorage.getItem('token');
-            await axios.post(`${process.env.REACT_APP_API_URL || ''}/api/users/push/subscribe`, {
+            const apiUrl = import.meta.env.VITE_API_URL || '';
+            await axios.post(`${apiUrl}/api/users/push/subscribe`, {
                 subscription
             }, {
                 headers: {
@@ -62,8 +63,10 @@ export const PushService = {
 
             if (subscription) {
                 await subscription.unsubscribe();
-                const token = localStorage.getItem('token');
-                await axios.post(`${process.env.REACT_APP_API_URL || ''}/api/users/push/unsubscribe`, {
+                const token = localStorage.getItem('auth_token');
+
+                const apiUrl = import.meta.env.VITE_API_URL || '';
+                await axios.post(`${apiUrl}/api/users/push/unsubscribe`, {
                     endpoint: subscription.endpoint
                 }, {
                     headers: {

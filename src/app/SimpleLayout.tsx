@@ -60,6 +60,7 @@ import Qwen3Chat from '../modules/ai/components/Qwen3Chat';
 import ProfilePage from '../modules/staff/pages/ProfilePage';
 import ProductAccountingPage from '../modules/food/pages/ProductAccountingPage';
 import Statistics from '../modules/dashboard/pages/Statistics';
+import PushNotificationPrompt from '../shared/components/PushNotificationPrompt';
 
 interface SimpleLayoutProps {
   children?: React.ReactNode;
@@ -332,6 +333,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
         </Container>
       </Box>
       <Qwen3Chat />
+      <PushNotificationPrompt />
     </Box>
   );
 };
