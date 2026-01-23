@@ -61,6 +61,7 @@ import {
 } from '../../../shared/utils/excelExport';
 import AttendanceBulkModal from '../components/AttendanceBulkModal';
 import ExportButton from '../../../shared/components/ExportButton';
+import DateNavigator from '../../../shared/components/DateNavigator';
 import { importChildAttendance } from '../../../shared/services/importService';
 
 
@@ -112,7 +113,7 @@ const WeeklyAttendance: React.FC = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     if (!selectedGroup) {
       enqueueSnackbar('Выберите группу для экспорта', { variant: 'error' });
@@ -171,7 +172,14 @@ const WeeklyAttendance: React.FC = () => {
           currentUser.role === 'teacher' ||
           currentUser.role === 'assistant'
         ) {
-          const myGroup = groupsData.find((g: any) => g.teacher === currentUser.id);
+          const myGroup = groupsData.find(
+            (g) =>
+              g.teacher === currentUser.id ||
+              g.teacher === currentUser._id ||
+              g.teacherId === currentUser.id ||
+              g.teacherId === currentUser._id ||
+              (typeof g.teacher === 'object' && ((g.teacher as any)._id === currentUser._id || (g.teacher as any).id === currentUser.id))
+          );
           if (myGroup && (myGroup.id || myGroup._id)) {
             setSelectedGroup(myGroup.id || myGroup._id || '');
           }
@@ -198,13 +206,13 @@ const WeeklyAttendance: React.FC = () => {
 
       setLoading(true);
       try {
-        const monthStart = moment(currentDate).startOf('month');
-        const monthEnd = moment(currentDate).endOf('month');
+        const weekStart = moment(currentDate).startOf('isoWeek');
+        const weekEnd = moment(currentDate).endOf('isoWeek');
 
         const records = await getChildAttendance({
           groupId: selectedGroup,
-          startDate: monthStart.format('YYYY-MM-DD'),
-          endDate: monthEnd.format('YYYY-MM-DD'),
+          startDate: weekStart.format('YYYY-MM-DD'),
+          endDate: weekEnd.format('YYYY-MM-DD'),
         });
 
 
@@ -239,22 +247,6 @@ const WeeklyAttendance: React.FC = () => {
   }, [currentDate, selectedGroup, enqueueSnackbar]);
 
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
-    );
-  };
-
-  const goToNextMonth = () => {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
-    );
-  };
-
-  const goToToday = () => {
-    setCurrentDate(new Date());
-  };
-
   const handleGroupChange = (e: SelectChangeEvent<string>) => {
     setSelectedGroup(e.target.value);
   };
@@ -275,12 +267,12 @@ const WeeklyAttendance: React.FC = () => {
     : [];
 
 
-  const monthStart = moment(currentDate).startOf('month');
-  const monthEnd = moment(currentDate).endOf('month');
-  const monthDays: Date[] = [];
-  const day = monthStart.clone();
-  while (day.isSameOrBefore(monthEnd)) {
-    monthDays.push(day.toDate());
+  const weekStart = moment(currentDate).startOf('isoWeek');
+  const weekEnd = moment(currentDate).endOf('isoWeek');
+  const weekDays: Date[] = [];
+  const day = weekStart.clone();
+  while (day.isSameOrBefore(weekEnd)) {
+    weekDays.push(day.toDate());
     day.add(1, 'day');
   }
 
@@ -354,12 +346,12 @@ const WeeklyAttendance: React.FC = () => {
         // Перезагружаем данные
         if (selectedGroup) {
           setLoading(true);
-          const monthStart = moment(currentDate).startOf('month');
-          const monthEnd = moment(currentDate).endOf('month');
+          const weekStart = moment(currentDate).startOf('isoWeek');
+          const weekEnd = moment(currentDate).endOf('isoWeek');
           const records = await getChildAttendance({
             groupId: selectedGroup,
-            startDate: monthStart.format('YYYY-MM-DD'),
-            endDate: monthEnd.format('YYYY-MM-DD'),
+            startDate: weekStart.format('YYYY-MM-DD'),
+            endDate: weekEnd.format('YYYY-MM-DD'),
           });
           const attendanceMap: AttendanceData = {};
           records.forEach((record: ChildAttendanceRecord) => {
@@ -454,36 +446,8 @@ const WeeklyAttendance: React.FC = () => {
           />
           <Divider />
           <CardContent>
-            {/* Month Navigation */}
-            <Box
-              display='flex'
-              justifyContent='space-between'
-              alignItems='center'
-              mb={3}
-            >
-              <IconButton onClick={goToPreviousMonth}>
-                <ArrowBackIosIcon />
-              </IconButton>
-
-              <Box textAlign='center'>
-                <Typography variant='h6'>
-                  {moment(currentDate).format('MMMM YYYY')}
-                </Typography>
-                <Button
-                  variant='outlined'
-                  size='small'
-                  onClick={goToToday}
-                  startIcon={<TodayIcon />}
-                  sx={{ mt: 1 }}
-                >
-                  Сегодня
-                </Button>
-              </Box>
-
-              <IconButton onClick={goToNextMonth}>
-                <ArrowForwardIosIcon />
-              </IconButton>
-            </Box>
+            {/* Week Navigation */}
+            <DateNavigator viewType="week" />
 
             <Box mb={3}>
               <FormControl fullWidth>
@@ -508,11 +472,14 @@ const WeeklyAttendance: React.FC = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell>Ребенок</TableCell>
-                      {monthDays.map((day) => (
+                      {weekDays.map((day) => (
                         <TableCell key={day.toString()} align='center'>
-                          <Box>
-                            <Box>{moment(day).format('dd')}</Box>
-                            <Box>{moment(day).format('D')}</Box>
+                          <Box sx={{
+                            backgroundColor: moment(day).isSame(moment(), 'day') ? 'primary.light' : 'inherit',
+                            p: 0.5, borderRadius: 1
+                          }}>
+                            <Box sx={{ fontWeight: 'bold' }}>{moment(day).format('dd')}</Box>
+                            <Box>{moment(day).format('D.MM')}</Box>
                           </Box>
                         </TableCell>
                       ))}
@@ -541,7 +508,7 @@ const WeeklyAttendance: React.FC = () => {
                             </Box>
                           </Box>
                         </TableCell>
-                        {monthDays.map((day) => {
+                        {weekDays.map((day) => {
                           const attendance = getAttendanceForDay(
                             child.id!,
                             day,
@@ -727,15 +694,15 @@ const WeeklyAttendance: React.FC = () => {
         groupId={selectedGroup}
         onSuccess={() => {
 
-          const monthStart = moment(currentDate).startOf('month');
-          const monthEnd = moment(currentDate).endOf('month');
+          const weekStart = moment(currentDate).startOf('isoWeek');
+          const weekEnd = moment(currentDate).endOf('isoWeek');
 
           getChildAttendance({
             groupId: selectedGroup,
-            startDate: monthStart.format('YYYY-MM-DD'),
-            endDate: monthEnd.format('YYYY-MM-DD'),
+            startDate: weekStart.format('YYYY-MM-DD'),
+            endDate: weekEnd.format('YYYY-MM-DD'),
           })
-            .then((records: any) => {
+            .then((records) => {
 
               const attendanceMap: AttendanceData = {};
               records.forEach((record: ChildAttendanceRecord) => {
@@ -757,7 +724,7 @@ const WeeklyAttendance: React.FC = () => {
                 variant: 'success',
               });
             })
-            .catch((err: any) => {
+            .catch((err) => {
               console.error('Error refreshing attendance data:', err);
               enqueueSnackbar('Ошибка при обновлении данных', {
                 variant: 'error',

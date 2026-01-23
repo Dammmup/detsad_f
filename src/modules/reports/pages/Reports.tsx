@@ -32,9 +32,9 @@ import {
 } from '@mui/icons-material';
 import moment from 'moment';
 import { useDate } from '../../../app/context/DateContext';
-import PayrollList from '../components/PayrollList';
-import RentReport from '../components/RentReport';
-import ChildrenReport from '../components/ChildrenReport';
+import ReportsSalary from '../components/PayrollList';
+import ReportsRent from '../components/RentReport';
+import ReportsChildren from '../components/ChildrenReport';
 import { useAuth } from '../../../app/context/AuthContext';
 import childrenApi from '../../children/services/children';
 import { getChildAttendance } from '../../children/services/childAttendance';
@@ -50,7 +50,7 @@ import {
   generatePayrollSheets,
 } from '../../staff/services/payroll';
 import DateNavigator from '../../../shared/components/DateNavigator';
-import { getUsers } from '../../staff/services/users';
+import { getUsers } from '../../staff/services/userService';
 
 const Reports: React.FC = () => {
   const { currentDate } = useDate();
@@ -183,6 +183,14 @@ const Reports: React.FC = () => {
     }
   };
 
+  const isAdminOrManager = authUser?.role === 'admin' || authUser?.role === 'manager';
+
+  useEffect(() => {
+    if (!isAdminOrManager && tabValue === 0) {
+      setTabValue(1);
+    }
+  }, [isAdminOrManager, tabValue]);
+
   return (
     <Paper sx={{ p: 3, m: 2 }}>
       <DateNavigator />
@@ -223,19 +231,21 @@ const Reports: React.FC = () => {
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-          <Button
-            variant='contained'
-            color='inherit'
-            startIcon={<AttachMoney />}
-            onClick={() => handleAdvancedExport('salary')}
-            disabled={loading}
-            sx={{
-              bgcolor: 'rgba(255,255,255,0.2)',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
-            }}
-          >
-            Зарплаты
-          </Button>
+          {isAdminOrManager && (
+            <Button
+              variant='contained'
+              color='inherit'
+              startIcon={<AttachMoney />}
+              onClick={() => handleAdvancedExport('salary')}
+              disabled={loading}
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.2)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+              }}
+            >
+              Зарплаты
+            </Button>
+          )}
 
           <Button
             variant='contained'
@@ -265,19 +275,21 @@ const Reports: React.FC = () => {
             Посещаемость детей
           </Button>
 
-          <Button
-            variant='contained'
-            color='inherit'
-            startIcon={<BarChart />}
-            onClick={() => handleAdvancedExport('schedule')}
-            disabled={loading}
-            sx={{
-              bgcolor: 'rgba(255,255,255,0.2)',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
-            }}
-          >
-            Расписание сотрудников
-          </Button>
+          {isAdminOrManager && (
+            <Button
+              variant='contained'
+              color='inherit'
+              startIcon={<BarChart />}
+              onClick={() => handleAdvancedExport('schedule')}
+              disabled={loading}
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.2)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+              }}
+            >
+              Расписание сотрудников
+            </Button>
+          )}
         </Box>
 
         {loading && (
@@ -290,14 +302,14 @@ const Reports: React.FC = () => {
 
       {/* Вкладки с детальными отчетами */}
       <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 2 }}>
-        <Tab label='Зарплаты' />
+        {isAdminOrManager && <Tab label='Зарплаты' />}
         <Tab label='Дети' />
         {authUser?.role === 'admin' && <Tab label='Аренда' />}
       </Tabs>
 
-      {tabValue === 0 && <PayrollList />}
-      {tabValue === 1 && <ChildrenReport />}
-      {tabValue === 2 && authUser?.role === 'admin' && <RentReport />}
+      {tabValue === 0 && isAdminOrManager && <ReportsSalary />}
+      {tabValue === 1 && <ReportsChildren />}
+      {tabValue === 2 && authUser?.role === 'admin' && <ReportsRent />}
     </Paper>
   );
 };

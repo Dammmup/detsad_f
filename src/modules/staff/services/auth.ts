@@ -1,6 +1,5 @@
 import { BaseApiClient } from '../../../shared/utils/api';
-import { LoginCredentials, AuthResponse } from '../../../shared/types/common';
-import { User } from '../../../shared/types/staff';
+import { LoginCredentials, AuthResponse, User } from '../../../shared/types/common';
 
 class AuthApiClient extends BaseApiClient {
 

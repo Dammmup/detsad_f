@@ -51,21 +51,21 @@ import 'moment/locale/ru';
 import { useDate } from '../../../app/context/DateContext';
 import { getUsers } from '../services/users';
 import shiftsApi from '../services/shifts';
-import { staffAttendanceApi as staffAttendanceTrackingService } from '../services/staffAttendance';
+import { staffAttendanceTrackingService } from '../services/staffAttendanceTracking';
 import {
   ShiftStatus,
-} from '../../../shared/types/staff';
-import {
-  STATUS_TEXT,
   STATUS_COLORS,
   ROLE_TRANSLATIONS,
 } from '../../../shared/types/common';
-import { getKindergartenSettings } from '../../settings/services/settings';
+import {
+  getKindergartenSettings,
+  KindergartenSettings,
+} from '../../settings/services/settings';
 import DateNavigator from '../../../shared/components/DateNavigator';
 import { importStaffAttendance } from '../../../shared/services/importService';
 import { useSnackbar } from 'notistack';
 import { collectDeviceMetadata } from '../../../shared/utils/deviceMetadata';
-
+import { STATUS_TEXT } from '../../../shared/types/common';
 moment.locale('ru');
 
 interface TimeRecord {
@@ -202,8 +202,8 @@ const StaffAttendanceTracking: React.FC = () => {
         if (selectedStaff !== 'all') filters.staffId = selectedStaff;
 
         const response =
-          await staffAttendanceTrackingService.getAll(filters);
-        const attendanceRecords = response;
+          await staffAttendanceTrackingService.getAllRecords(filters);
+        const attendanceRecords = response.data;
 
         const shifts = await shiftsApi.getAll(filters);
 
@@ -320,9 +320,9 @@ const StaffAttendanceTracking: React.FC = () => {
 
             allRecords.push({
               id: attendanceRecord._id || attendanceRecord.id || '',
-              staffId: typeof attendanceRecord.staffId === 'object' ? attendanceRecord.staffId._id : attendanceRecord.staffId,
+              staffId: staffId,
               staffName:
-                (typeof attendanceRecord.staffId === 'object' ? attendanceRecord.staffId.fullName : undefined) ||
+                attendanceRecord.staffId.fullName ||
                 getStaffName(staffId),
               date: attendanceRecord.date,
               actualStart: attendanceRecord.actualStart
@@ -342,13 +342,7 @@ const StaffAttendanceTracking: React.FC = () => {
               lateMinutes: lateMin,
               notes: attendanceRecord.notes || '',
               amount: (currentStatuses.includes(ShiftStatus.absent) || currentStatuses.includes(ShiftStatus.scheduled)) ? 0 : dailyAccrual,
-              penalties: (typeof attendanceRecord.penalties === 'object' && attendanceRecord.penalties !== null)
-                ? (
-                  ((attendanceRecord.penalties as any).late?.amount || 0) +
-                  ((attendanceRecord.penalties as any).earlyLeave?.amount || 0) +
-                  ((attendanceRecord.penalties as any).unauthorized?.amount || 0)
-                )
-                : Number(attendanceRecord.penalties || 0),
+              penalties: attendanceRecord.penalties || 0,
               checkInDevice: attendanceRecord.checkInDevice,
               checkOutDevice: attendanceRecord.checkOutDevice,
             });
@@ -376,11 +370,11 @@ const StaffAttendanceTracking: React.FC = () => {
               }
             } else {
               displayStatus = ({
-                completed: ShiftStatus.completed,
+                completed: ShiftStatus.checked_out,
                 late: ShiftStatus.absent,
                 absent: ShiftStatus.absent,
-                in_progress: ShiftStatus.in_progress,
-                pending_approval: ShiftStatus.pending_approval
+                in_progress: ShiftStatus.checked_in,
+                pending_approval: ShiftStatus.absent
               } as any)[shiftStatus] || shiftStatus;
             }
 
@@ -636,11 +630,14 @@ const StaffAttendanceTracking: React.FC = () => {
       const shifts = await shiftsApi.getAll(filters);
       const myShift = shifts.find((s) => {
 
-        const sid: any = s.staffId;
-        if (sid && sid._id) {
-          return sid._id === currentStaffId;
+        if (
+          typeof s.staffId === 'object' &&
+          s.staffId !== null &&
+          '_id' in s.staffId
+        ) {
+          return (s.staffId as any)._id === currentStaffId;
         }
-        return sid === currentStaffId;
+        return s.staffId === currentStaffId;
       });
       if (myShift) {
         if (myShift.id) {
@@ -662,15 +659,15 @@ const StaffAttendanceTracking: React.FC = () => {
           if (selectedStaff !== 'all') filters.staffId = selectedStaff;
 
           const response =
-            await staffAttendanceTrackingService.getAll(filters);
-          const updatedAttendanceRecords = response;
+            await staffAttendanceTrackingService.getAllRecords(filters);
+          const updatedAttendanceRecords = response.data;
           const transformedRecords = updatedAttendanceRecords.map(
             (record: any) => ({
               id: record._id || record.id || '',
-              staffId: typeof record.staffId === 'object' ? record.staffId._id : record.staffId,
+              staffId: record.staffId._id || record.staffId,
               staffName:
-                (typeof record.staffId === 'object' ? record.staffId.fullName : undefined) ||
-                getStaffName(typeof record.staffId === 'object' ? record.staffId._id : record.staffId),
+                record.staffId.fullName ||
+                getStaffName(record.staffId._id || record.staffId || ''),
               date: record.date,
               actualStart: record.actualStart
                 ? new Date(record.actualStart).toLocaleTimeString('ru-RU', {
@@ -689,7 +686,6 @@ const StaffAttendanceTracking: React.FC = () => {
               lateMinutes: record.lateMinutes || 0,
               notes: record.notes || '',
               amount: record.amount || 0,
-              penalties: record.penalties || 0,
             }),
           );
           setRecords(transformedRecords);
@@ -714,11 +710,14 @@ const StaffAttendanceTracking: React.FC = () => {
       const shifts = await shiftsApi.getAll(filters);
       const myShift = shifts.find((s) => {
 
-        const sid: any = s.staffId;
-        if (sid && sid._id) {
-          return sid._id === currentStaffId;
+        if (
+          typeof s.staffId === 'object' &&
+          s.staffId !== null &&
+          '_id' in s.staffId
+        ) {
+          return (s.staffId as any)._id === currentStaffId;
         }
-        return sid === currentStaffId;
+        return s.staffId === currentStaffId;
       });
       if (myShift) {
         if (myShift.id) {
@@ -739,8 +738,8 @@ const StaffAttendanceTracking: React.FC = () => {
           if (selectedStaff !== 'all') filters.staffId = selectedStaff;
 
           const response =
-            await staffAttendanceTrackingService.getAll(filters);
-          const updatedAttendanceRecords = response;
+            await staffAttendanceTrackingService.getAllRecords(filters);
+          const updatedAttendanceRecords = response.data;
           const transformedRecords = updatedAttendanceRecords.map(
             (record: any) => {
               const status =
@@ -793,7 +792,7 @@ const StaffAttendanceTracking: React.FC = () => {
   const handleMarkSubmit = async () => {
     try {
 
-      await staffAttendanceTrackingService.create({
+      await staffAttendanceTrackingService.createRecord({
         staffId: markForm.staffId,
         date: markForm.date,
         actualStart: markForm.actualStart,
@@ -814,8 +813,8 @@ const StaffAttendanceTracking: React.FC = () => {
 
 
       const response =
-        await staffAttendanceTrackingService.getAll(filters);
-      const attendanceRecords = response;
+        await staffAttendanceTrackingService.getAllRecords(filters);
+      const attendanceRecords = response.data;
 
 
       const transformedRecords = attendanceRecords.map((record: any) => {
@@ -839,7 +838,7 @@ const StaffAttendanceTracking: React.FC = () => {
               minute: '2-digit',
             })
             : undefined,
-          statuses: record.status ? [record.status as ShiftStatus] : [],
+          status: record.status as ShiftStatus,
           workDuration: record.workDuration,
           lateMinutes: record.lateMinutes || 0,
           notes: record.notes || '',
@@ -905,7 +904,7 @@ const StaffAttendanceTracking: React.FC = () => {
       // В этом случае нужно создать новую запись, а не обновлять существующую.
       const isNewRecord = selectedRecord.id.includes('_');
 
-      let updatedRecord: any;
+      let updatedRecord: { data: any };
 
       // Извлекаем только дату в формате YYYY-MM-DD (без времени и часового пояса)
       const dateOnly = moment(selectedRecord.date).format('YYYY-MM-DD');
@@ -920,7 +919,7 @@ const StaffAttendanceTracking: React.FC = () => {
       });
 
       if (isNewRecord) {
-        updatedRecord = await staffAttendanceTrackingService.create({
+        updatedRecord = await staffAttendanceTrackingService.createRecord({
           staffId: selectedRecord.staffId,
           date: dateOnly,
           actualStart: selectedRecord.actualStart
@@ -948,7 +947,7 @@ const StaffAttendanceTracking: React.FC = () => {
 
         console.log('[SAVE-DEBUG] updateData:', updateData);
 
-        updatedRecord = await staffAttendanceTrackingService.update(
+        updatedRecord = await staffAttendanceTrackingService.updateRecord(
           selectedRecord.id,
           updateData,
         );
@@ -1025,7 +1024,7 @@ const StaffAttendanceTracking: React.FC = () => {
             createData.notes = bulkForm.notes;
           }
 
-          await staffAttendanceTrackingService.create(createData);
+          await staffAttendanceTrackingService.createRecord(createData);
           successCount++;
         } catch (e) {
           console.error('Error creating record for:', plannedId, e);
@@ -1045,8 +1044,8 @@ const StaffAttendanceTracking: React.FC = () => {
         };
 
         const response = await staffAttendanceTrackingService.bulkUpdate(updateData);
-        successCount += response.success || 0;
-        errorCount += response.errors || 0;
+        successCount += response.data.success || 0;
+        errorCount += response.data.errors || 0;
       }
 
       enqueueSnackbar(
@@ -1071,7 +1070,7 @@ const StaffAttendanceTracking: React.FC = () => {
   const handleDeleteRecord = async (id: string) => {
     try {
 
-      await staffAttendanceTrackingService.deleteItem(id);
+      await staffAttendanceTrackingService.deleteRecord(id);
 
 
       const startDate = moment(currentDate).startOf('month');
@@ -1084,17 +1083,17 @@ const StaffAttendanceTracking: React.FC = () => {
 
 
       const response =
-        await staffAttendanceTrackingService.getAll(filters);
-      const attendanceRecords = response;
+        await staffAttendanceTrackingService.getAllRecords(filters);
+      const attendanceRecords = response.data;
 
 
       const transformedRecords = attendanceRecords.map((record: any) => {
         return {
           id: record._id || record.id || '',
-          staffId: typeof record.staffId === 'object' ? record.staffId._id : record.staffId,
+          staffId: record.staffId._id || record.staffId,
           staffName:
-            (typeof record.staffId === 'object' ? record.staffId.fullName : undefined) ||
-            getStaffName(typeof record.staffId === 'object' ? record.staffId._id : record.staffId),
+            record.staffId.fullName ||
+            getStaffName(record.staffId._id || record.staffId || ''),
           date: record.date,
           actualStart: record.actualStart
             ? new Date(record.actualStart).toLocaleTimeString('ru-RU', {
@@ -1248,10 +1247,13 @@ const StaffAttendanceTracking: React.FC = () => {
                                 📱 Устройство прихода
                               </Typography>
                               <Typography variant='caption' sx={{ display: 'block' }}>
-                                Модель: {record.checkInDevice.userAgent || 'н/д'}
+                                Модель: {record.checkInDevice.deviceModel || 'н/д'}
                               </Typography>
                               <Typography variant='caption' sx={{ display: 'block' }}>
                                 IP: {record.checkInDevice.ipAddress || 'н/д'}
+                              </Typography>
+                              <Typography variant='caption' sx={{ display: 'block' }}>
+                                Браузер: {record.checkInDevice.browser || 'н/д'}
                               </Typography>
                               {record.checkInDevice.screenResolution && (
                                 <Typography variant='caption' sx={{ display: 'block' }}>
@@ -1662,10 +1664,6 @@ const StaffAttendanceTracking: React.FC = () => {
                       {label}
                     </MenuItem>
                   ))}
-                  <MenuItem value='late'>Опоздание</MenuItem>
-                  <MenuItem value='pending_approval'>
-                    Ожидает подтверждения
-                  </MenuItem>
                 </TextField>
               </Grid>
               <Grid item xs={6}>

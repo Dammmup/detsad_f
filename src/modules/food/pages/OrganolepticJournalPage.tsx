@@ -21,18 +21,17 @@ import {
   InputLabel,
   CircularProgress,
 } from '@mui/material';
+import { OrganolepticRecord } from '../../../shared/types/organoleptic';
 import {
   getOrganolepticRecords,
   createOrganolepticRecord,
   updateOrganolepticRecord,
   deleteOrganolepticRecord,
-  generateOrganolepticByMenu,
   clearOrganolepticRecords,
-  OrganolepticRecord,
+  generateOrganolepticByMenu,
 } from '../services/organolepticJournal';
 import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
-import { getTodayMenu } from '../services/dailyMenu';
 
 const GROUPS = [
   'all',
@@ -48,7 +47,7 @@ export default function OrganolepticJournalPage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editRecord, setEditRecord] =
-    useState<Partial<OrganolepticRecord> | null>(null);
+    useState<any | null>(null);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [group, setGroup] = useState('all');
   const [responsibleSignature, setResponsibleSignature] = useState('');
@@ -120,7 +119,7 @@ export default function OrganolepticJournalPage() {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     await exportData('organoleptic-journal', exportFormat, {
       date,
@@ -218,11 +217,11 @@ export default function OrganolepticJournalPage() {
             )}
             {records.map((r) => (
               <TableRow key={r._id}>
-                <TableCell>{(r.dish || (r as any).dishName)}</TableCell>
+                <TableCell>{r.dish}</TableCell>
                 <TableCell>{r.group}</TableCell>
-                <TableCell>{r.appearance}/5</TableCell>
-                <TableCell>{r.taste}/5</TableCell>
-                <TableCell>{r.smell}/5</TableCell>
+                <TableCell>{r.appearance}</TableCell>
+                <TableCell>{r.taste}</TableCell>
+                <TableCell>{r.smell}</TableCell>
                 <TableCell>{r.decision}</TableCell>
                 <TableCell>
                   <Button
@@ -256,7 +255,7 @@ export default function OrganolepticJournalPage() {
             label='Блюдо'
             value={editRecord?.dish || ''}
             onChange={(e) =>
-              setEditRecord((i) => ({ ...i, dish: e.target.value }))
+              setEditRecord((i: any) => ({ ...i, dish: e.target.value }))
             }
             fullWidth
             margin='dense'
@@ -265,37 +264,34 @@ export default function OrganolepticJournalPage() {
             label='Группа'
             value={editRecord?.group || ''}
             onChange={(e) =>
-              setEditRecord((i) => ({ ...i, group: e.target.value }))
+              setEditRecord((i: any) => ({ ...i, group: e.target.value }))
             }
             fullWidth
             margin='dense'
           />
           <TextField
             label='Внешний вид'
-            type='number'
             value={editRecord?.appearance || ''}
             onChange={(e) =>
-              setEditRecord((i) => (i ? { ...i, appearance: Number(e.target.value) } : null))
+              setEditRecord((i: any) => ({ ...i, appearance: e.target.value }))
             }
             fullWidth
             margin='dense'
           />
           <TextField
             label='Вкус'
-            type='number'
             value={editRecord?.taste || ''}
             onChange={(e) =>
-              setEditRecord((i) => (i ? { ...i, taste: Number(e.target.value) } : null))
+              setEditRecord((i: any) => ({ ...i, taste: e.target.value }))
             }
             fullWidth
             margin='dense'
           />
           <TextField
             label='Запах'
-            type='number'
             value={editRecord?.smell || ''}
             onChange={(e) =>
-              setEditRecord((i) => (i ? { ...i, smell: Number(e.target.value) } : null))
+              setEditRecord((i: any) => ({ ...i, smell: e.target.value }))
             }
             fullWidth
             margin='dense'
@@ -304,7 +300,7 @@ export default function OrganolepticJournalPage() {
             label='Решение'
             value={editRecord?.decision || ''}
             onChange={(e) =>
-              setEditRecord((i) => ({ ...i, decision: e.target.value }))
+              setEditRecord((i: any) => ({ ...i, decision: e.target.value }))
             }
             fullWidth
             margin='dense'

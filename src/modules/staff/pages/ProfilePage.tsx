@@ -16,8 +16,8 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { authApi, getCurrentUser } from '../services/auth';
-import { userApi as usersApi, updateUser } from '../services/users';
-import { User } from '../../../shared/types/staff';
+import { usersApi, updateUser } from '../services/users';
+import { User } from '../../../shared/types/common';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   maxWidth: 600,
@@ -28,7 +28,7 @@ const StyledCard = styled(Card)(({ theme }) => ({
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);

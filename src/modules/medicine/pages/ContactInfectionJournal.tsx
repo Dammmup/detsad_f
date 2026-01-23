@@ -17,17 +17,15 @@ import {
   MenuItem,
   CircularProgress,
 } from '@mui/material';
-import { getUsers } from '../../staff/services/users';
+import { getUsers } from '../../staff/services/userService';
 import childrenApi from '../../children/services/children';
-import { User, ID } from '../../../shared/types/common';
+import { User } from '../../../shared/types/common';
+import { ContactInfectionRecord } from '../../../shared/types/contactInfection';
 import {
-  getContactRecords,
-  createContactRecord,
-  deleteContactRecord,
-  ContactInfectionRecord,
+  getContactInfectionRecords,
+  createContactInfectionRecord,
+  deleteContactInfectionRecord,
 } from '../services/contactInfectionJournal';
-import ExportButton from '../../../shared/components/ExportButton';
-import { exportData } from '../../../shared/utils/exportUtils';
 
 export default function ContactInfectionJournal() {
   const [records, setRecords] = useState<ContactInfectionRecord[]>([]);
@@ -46,7 +44,7 @@ export default function ContactInfectionJournal() {
       childrenApi.getAll().then((children) => {
         setUsers(children as any);
       }),
-      getContactRecords().then(setRecords),
+      getContactInfectionRecords().then(setRecords),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -64,7 +62,7 @@ export default function ContactInfectionJournal() {
     if (!newRecord.childId || !newRecord.fio || !newRecord.date) return;
     setLoading(true);
     try {
-      const created = await createContactRecord({
+      const created = await createContactInfectionRecord({
         ...newRecord,
         notes: newRecord.notes || '',
       });
@@ -79,7 +77,7 @@ export default function ContactInfectionJournal() {
   const handleDelete = async (id: string) => {
     setLoading(true);
     try {
-      await deleteContactRecord(id);
+      await deleteContactInfectionRecord(id);
       setRecords((prev) => prev.filter((r) => r.id !== id));
     } finally {
       setLoading(false);
@@ -100,10 +98,6 @@ export default function ContactInfectionJournal() {
             : child.groupId || '',
       }));
     }
-  };
-
-  const handleExport = () => {
-    exportData('contact-infection-journal', 'excel');
   };
 
   const handleClearFilters = () => {

@@ -5,7 +5,7 @@ import React, {
   useCallback,
   ReactNode,
 } from 'react';
-import * as groupsApi from '../../services/index';
+import * as groupsApi from '../../modules/children/services/groups';
 import { Group } from '../../shared/types/common';
 
 interface GroupsContextType {
@@ -47,7 +47,7 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
     const now = Date.now();
     if (!force && groupsCache && now - cacheTimestamp < CACHE_DURATION) {
       setGroups(groupsCache as Group[]);
-      return groupsCache as Group[];
+      return groupsCache;
     }
 
     try {
@@ -55,12 +55,12 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
       const data = await groupsApi.getGroups();
 
 
-      groupsCache = data as any;
+      groupsCache = data;
       cacheTimestamp = now;
 
       setGroups(data as Group[]);
       setError(null);
-      return data as Group[];
+      return data;
     } catch (err: any) {
       console.error('Failed to fetch groups:', err);
       if (err.response?.status === 401) {

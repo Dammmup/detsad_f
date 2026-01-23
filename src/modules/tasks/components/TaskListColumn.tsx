@@ -20,7 +20,7 @@ import {
   Alert,
 } from '@mui/material';
 import { Add, Delete } from '@mui/icons-material';
-import { User } from '../../../shared/types/staff';
+import { User } from '../../../shared/types/common';
 import { useAuth } from '../../../app/context/AuthContext';
 import {
   getTaskList,
@@ -30,7 +30,7 @@ import {
   markTaskAsCompleted,
 } from '../services/taskList';
 import { TaskList } from '../../../shared/types/taskList';
-import { getUsers } from '../../staff/services/users';
+import { getUsers } from '../../staff/services/userService';
 
 interface TaskListColumnProps {
   onTaskChange?: () => void;
@@ -51,7 +51,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
     useState<string>('');
   const [showAddTaskDialog, setShowAddTaskDialog] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
 
 
   useEffect(() => {

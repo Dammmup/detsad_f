@@ -10,4 +10,6 @@ export const getDetergentRecords = (params?: any) => detergentLogApi.getAll(para
 export const createDetergentRecord = (data: Partial<DetergentLogRecord>) => detergentLogApi.create(data);
 export const deleteDetergentRecord = (id: string) => detergentLogApi.deleteItem(id);
 export type { DetergentLogRecord };
+// Alias for backward compatibility
+export type DetergentLog = DetergentLogRecord;
 export default detergentLogApi;

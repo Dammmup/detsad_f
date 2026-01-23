@@ -27,8 +27,10 @@ import {
   Cancel as CancelIcon,
   Close as CloseIcon,
   Visibility as VisibilityIcon,
+  People as PeopleIcon,
+  Delete as DeleteIcon,
+  AccountBalanceWallet as DebtIcon,
 } from '@mui/icons-material';
-import { generateRentSheets } from '../services/reports';
 import RentTenantSelector from './RentTenantSelector';
 
 interface Props {
@@ -57,7 +59,6 @@ interface RentRow {
   accruals?: number;
 }
 
-
 const isOverduePayment = (paymentDate: string | undefined): boolean => {
   if (!paymentDate) {
     return false;
@@ -65,7 +66,6 @@ const isOverduePayment = (paymentDate: string | undefined): boolean => {
 
   const paymentDateObj = new Date(paymentDate);
   const currentDate = new Date();
-
 
   const paymentDateOnly = new Date(
     paymentDateObj.getFullYear(),
@@ -93,30 +93,27 @@ const RentReport: React.FC<Props> = ({ userId }) => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [generating, setGenerating] = useState(false);
   const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   useEffect(() => {
     let mounted = true;
-
-
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
     const load = async () => {
       setLoading(true);
       setError(null);
       try {
-
         const { getCurrentUser } = await import('../../staff/services/auth');
-
         const { getRents } = await import('../services/reports');
-
 
         let currentUserData = null;
         try {
           const userData = getCurrentUser();
           if (userData) {
             currentUserData = {
-              id: userData.id,
+              id: userData.id || userData._id,
               role: userData.role || 'staff',
             };
             setCurrentUser(currentUserData);
@@ -125,25 +122,20 @@ const RentReport: React.FC<Props> = ({ userId }) => {
           console.error('Ошибка получения данных пользователя:', userError);
         }
 
-
         const params: any = {
-          month: currentMonth,
+          month: selectedMonth,
         };
-
 
         if (currentUserData && currentUserData.role !== 'admin') {
           params.userId = currentUserData.id;
         } else if (userId) {
-
           params.userId = userId;
         }
-
 
         const rentsData = await getRents(params);
 
         if (!mounted) return;
         const data = (rentsData?.data || rentsData || []) as any[];
-
 
         const summaryData: Summary = {
           totalTenants: data.length,
@@ -152,7 +144,6 @@ const RentReport: React.FC<Props> = ({ userId }) => {
             return sum + amount;
           }, 0),
           totalReceivable: data.reduce((sum, p) => {
-
             const amount = p.amount || p.accruals || 0;
             const paid = p.paidAmount || 0;
             return sum + Math.max(0, amount - paid);
@@ -162,8 +153,7 @@ const RentReport: React.FC<Props> = ({ userId }) => {
         setSummary(summaryData);
         setRows(
           data.map((p: any) => ({
-            tenantName:
-              p.tenantId?.fullName || p.tenantId?.name || 'Неизвестно',
+            tenantName: p.tenantId?.fullName || p.tenantId?.name || 'Неизвестно',
             amount: p.amount || p.accruals || 0,
             paidAmount: Math.max(
               0,
@@ -188,7 +178,7 @@ const RentReport: React.FC<Props> = ({ userId }) => {
     return () => {
       mounted = false;
     };
-  }, [userId]);
+  }, [userId, selectedMonth]);
 
   const handleEditClick = (row: RentRow) => {
     setEditingId(row.tenantId);
@@ -202,42 +192,28 @@ const RentReport: React.FC<Props> = ({ userId }) => {
 
   const handleSaveClick = async (rowId: string) => {
     try {
-
       const originalRow = rows.find((r) => r.tenantId === rowId);
       if (originalRow) {
-
-        const rentId = originalRow._id || rowId;
-
+        const rentId = originalRow._id;
+        if (!rentId) {
+          setSnackbarMessage('Ошибка: не найден ID арендной записи');
+          setSnackbarOpen(true);
+          return;
+        }
 
         const updatedData = {
           ...editData,
-
-          paidAmount: Math.max(
-            0,
-            editData.paidAmount !== undefined
-              ? editData.paidAmount
-              : originalRow.paidAmount,
-          ),
-
+          amount: editData.amount !== undefined ? editData.amount : originalRow.amount,
+          paidAmount: editData.paidAmount !== undefined ? editData.paidAmount : originalRow.paidAmount,
           total: Math.max(
             0,
-            (editData.amount !== undefined
-              ? editData.amount
-              : originalRow.amount) -
-            (editData.paidAmount !== undefined
-              ? editData.paidAmount
-              : originalRow.paidAmount),
+            (editData.amount !== undefined ? editData.amount : originalRow.amount) -
+            (editData.paidAmount !== undefined ? editData.paidAmount : originalRow.paidAmount),
           ),
+          paymentDate: editData.paymentDate || originalRow.paymentDate
         };
 
-
-        console.log('Updating rent with ID:', rentId);
-        console.log('Edit data:', updatedData);
-
-
         const { updateRent } = await import('../services/reports');
-
-
         await updateRent(rentId, updatedData);
 
         const updatedRows = rows.map((r) =>
@@ -245,17 +221,12 @@ const RentReport: React.FC<Props> = ({ userId }) => {
             ? ({
               ...r,
               ...updatedData,
-
-              paidAmount:
-                updatedData.paidAmount !== undefined
-                  ? updatedData.paidAmount
-                  : r.paidAmount,
+              paidAmount: updatedData.paidAmount !== undefined ? updatedData.paidAmount : r.paidAmount,
             } as RentRow)
             : r,
         );
 
         setRows(updatedRows);
-
 
         setSummary((prev) => {
           if (!prev) return null;
@@ -295,6 +266,37 @@ const RentReport: React.FC<Props> = ({ userId }) => {
     setEditData({});
   };
 
+  const handleDeleteClick = async (row: RentRow) => {
+    const rentId = row._id;
+    if (!rentId) return;
+
+    if (window.confirm(`Вы уверены, что хотите удалить арендный платеж для ${row.tenantName}?`)) {
+      try {
+        const { deleteRent } = await import('../services/reports');
+        await deleteRent(rentId);
+
+        const updatedRows = rows.filter((r) => r._id !== rentId);
+        setRows(updatedRows);
+
+        setSummary((prev) => {
+          if (!prev) return null;
+          return {
+            totalTenants: updatedRows.length,
+            totalAmount: updatedRows.reduce((sum, p) => sum + (p.amount || p.accruals || 0), 0),
+            totalReceivable: updatedRows.reduce((sum, p) => sum + Math.max(0, (p.amount || p.accruals || 0) - p.paidAmount), 0),
+          };
+        });
+
+        setSnackbarMessage('Арендный платеж удален');
+        setSnackbarOpen(true);
+      } catch (error) {
+        console.error('Error deleting rent:', error);
+        setSnackbarMessage('Ошибка при удалении аренды');
+        setSnackbarOpen(true);
+      }
+    }
+  };
+
   const handleInputChange = (field: string, value: any) => {
     setEditData((prev) => ({
       ...prev,
@@ -306,167 +308,77 @@ const RentReport: React.FC<Props> = ({ userId }) => {
     setSnackbarOpen(false);
   };
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
+    try {
+      const { utils, writeFile } = await import('xlsx');
 
-    let csvContent = 'data:text/csv;charset=utf-8,';
+      const exportData = rows.map(row => {
+        const total = Math.max(0, (row.amount || row.accruals || 0) - row.paidAmount);
+        return {
+          'Арендатор': row.tenantName,
+          'Сумма аренды': row.amount || row.accruals || 0,
+          'Оплачено/Предоплачено': row.paidAmount,
+          'Остаток к оплате': total,
+          'Статус': row.status,
+          'Дата оплаты': row.paymentDate ? new Date(row.paymentDate).toLocaleDateString('ru-RU') : 'Не оплачено',
+        };
+      });
 
+      const worksheet = utils.json_to_sheet(exportData);
 
-    csvContent +=
-      'Арендатор;Сумма аренды;Оплачено/Предоплачено;Остаток к оплате;Статус;Дата оплаты\n';
+      const colWidths = [
+        { wch: 25 },
+        { wch: 15 },
+        { wch: 20 },
+        { wch: 18 },
+        { wch: 12 },
+        { wch: 15 },
+      ];
+      worksheet['!cols'] = colWidths;
 
+      const workbook = utils.book_new();
+      utils.book_append_sheet(workbook, worksheet, 'Арендные платежи');
 
-    rows.forEach((row) => {
-      const total = Math.max(
-        0,
-        (row.amount || row.accruals || 0) - row.paidAmount,
-      );
-      csvContent += `${row.tenantName};${row.amount || row.accruals || 0};${row.paidAmount};${total};${row.status};${row.paymentDate || ''}\n`;
-    });
-
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `арендные_платежи_${new Date().toLocaleString('ru-RU', { month: 'long', year: 'numeric' })}.csv`,
-    );
-    document.body.appendChild(link);
-
-
-    link.click();
-
-
-    document.body.removeChild(link);
+      const fileName = `арендные_платежи_${new Date().toLocaleString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\./g, '-')}.xlsx`;
+      writeFile(workbook, fileName);
+    } catch (error) {
+      console.error('Ошибка при экспорте в Excel:', error);
+      setSnackbarMessage('Ошибка при экспорте файла');
+      setSnackbarOpen(true);
+    }
   };
 
   const handleGenerateRentSheets = async () => {
     if (!currentUser || currentUser.role !== 'admin') {
-      setSnackbarMessage(
-        'Только администратор может генерировать арендные листы',
-      );
+      setSnackbarMessage('Только администратор может генерировать арендные листы');
       setSnackbarOpen(true);
       return;
     }
 
-    const monthToGenerate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-
-
-    const generationParams: any = {
-      period: monthToGenerate,
-    };
-
-
-    if (selectedTenantIds.length > 0) {
-      generationParams.tenantIds = selectedTenantIds;
-    }
-
-    if (
-      window.confirm(
-        `Вы уверены, что хотите сгенерировать арендные листы за ${monthToGenerate}? Это действие создаст новые листы для ${selectedTenantIds.length > 0 ? 'выбранных арендаторов' : 'всех арендаторов'}.`,
-      )
-    ) {
-      try {
-        setGenerating(true);
-
-        await generateRentSheets(generationParams);
-        setSnackbarMessage(
-          `Арендные листы успешно сгенерированы за ${monthToGenerate}`,
-        );
-        setSnackbarOpen(true);
-
-
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-        const { getCurrentUser } = await import('../../staff/services/auth');
-
-        const { getRents } = await import('../services/reports');
-
-        let currentUserData = null;
-        try {
-          const userData = getCurrentUser();
-          if (userData) {
-            currentUserData = {
-              id: userData.id,
-              role: userData.role || 'staff',
-            };
-            setCurrentUser(currentUserData);
-          }
-        } catch (userError) {
-          console.error('Ошибка получения данных пользователя:', userError);
-        }
-
-        const params: any = {
-          month: currentMonth,
-        };
-
-        if (currentUserData && currentUserData.role !== 'admin') {
-          params.userId = currentUserData.id;
-        } else if (userId) {
-
-          params.userId = userId;
-        }
-
-
-        const rentsData = await getRents(params);
-
-        const data = (rentsData?.data || rentsData || []) as any[];
-
-
-        const summaryData: Summary = {
-          totalTenants: data.length,
-          totalAmount: data.reduce((sum, p) => {
-            const amount = p.amount || p.accruals || 0;
-            return sum + amount;
-          }, 0),
-          totalReceivable: data.reduce((sum, p) => {
-
-            const amount = p.amount || p.accruals || 0;
-            const paid = p.paidAmount || 0;
-            return sum + Math.max(0, amount - paid);
-          }, 0),
-        };
-
-        setSummary(summaryData);
-        setRows(
-          data.map((p: any) => ({
-            tenantName:
-              p.tenantId?.fullName || p.tenantId?.name || 'Неизвестно',
-            amount: p.amount || p.accruals || 0,
-            paidAmount: Math.max(
-              0,
-              p.paidAmount ||
-              (p.accruals && p.total ? p.accruals - p.total : 0) ||
-              0,
-            ),
-            accruals: p.accruals || p.amount || 0,
-            status: p.status && p.status !== 'draft' ? p.status : 'active',
-            tenantId: p.tenantId?._id || p.tenantId?.id || p.tenantId || '',
-            _id: p._id || undefined,
-            paymentDate: p.paymentDate || undefined,
-          })),
-        );
-      } catch (error: any) {
-        console.error('Error generating rent sheets:', error);
-        setSnackbarMessage(
-          error?.message || 'Ошибка генерации арендных листов',
-        );
-        setSnackbarOpen(true);
-      } finally {
-        setGenerating(false);
-      }
+    try {
+      setGenerating(true);
+      const { generateRentSheets } = await import('../services/reports');
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      await generateRentSheets({
+        period: currentMonth,
+        tenantIds: selectedTenantIds.length > 0 ? selectedTenantIds : undefined
+      });
+      setSnackbarMessage('Арендные листы успешно сгенерированы');
+      setSnackbarOpen(true);
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error generating rent sheets:', error);
+      setSnackbarMessage(error?.message || 'Ошибка генерации арендных листов');
+      setSnackbarOpen(true);
+    } finally {
+      setGenerating(false);
     }
   };
 
   if (loading) {
     return (
-      <Box
-        display='flex'
-        justifyContent='center'
-        alignItems='center'
-        height={200}
-      >
+      <Box display='flex' justifyContent='center' alignItems='center' height={200}>
         <CircularProgress />
       </Box>
     );
@@ -477,604 +389,219 @@ const RentReport: React.FC<Props> = ({ userId }) => {
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%)',
-        p: 3,
-      }}
-    >
-      {/* Добавляем Snackbar для отображения сообщений */}
+    <>
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={6000}
         onClose={handleSnackbarClose}
         message={snackbarMessage}
         action={
-          <IconButton
-            size='small'
-            aria-label='close'
-            color='inherit'
-            onClick={handleSnackbarClose}
-          >
+          <IconButton size='small' aria-label='close' color='inherit' onClick={handleSnackbarClose}>
             <CloseIcon fontSize='small' />
           </IconButton>
         }
       />
 
-      <Box
-        sx={{
-          maxWidth: '1400px',
-          mx: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 3,
-        }}
-      >
-        {/* Заголовок страницы */}
-        <Box
-          sx={{
-            textAlign: 'center',
-            mb: 3,
-            px: 2,
-          }}
-        >
-          <Typography
-            variant='h3'
-            sx={{
-              fontWeight: 'bold',
-              color: 'primary.main',
-              mb: 1,
-              textShadow: '0 2px 4px rgba(0,0,0.1)',
-            }}
-          >
-            Арендные платежи
-          </Typography>
-          <Typography
-            variant='h6'
-            sx={{
-              color: 'text.secondary',
-              fontWeight: 'medium',
-            }}
-          >
-            Управление арендными платежами за{' '}
-            {new Date().toLocaleString('ru-RU', {
-              month: 'long',
-              year: 'numeric',
-            })}
-          </Typography>
-        </Box>
-
-        {/* Компонент выбора арендаторов */}
-        <RentTenantSelector
-          selectedTenantIds={selectedTenantIds}
-          onTenantSelect={setSelectedTenantIds}
-        />
-
-        {/* Отображение выбранных арендаторов */}
-        {selectedTenantIds.length > 0 && (
-          <Box
-            sx={{
-              mb: 2,
-              p: 2,
-              background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
-              borderRadius: 2,
-            }}
-          >
-            <Typography
-              variant='h6'
-              sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}
-            >
-              Выбрано арендаторов: {selectedTenantIds.length}
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {rows
-                .filter((row) => selectedTenantIds.includes(row.tenantId))
-                .map((row, index) => (
-                  <Chip
-                    key={index}
-                    label={row.tenantName}
-                    size='small'
-                    color='primary'
-                    variant='outlined'
-                    sx={{ m: 0.5 }}
-                  />
-                ))}
-            </Box>
-          </Box>
-        )}
-
-        {/* Сводная информация */}
-        <Card
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            overflow: 'hidden',
-            background: 'white',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-            border: '1px solid rgba(255,255,0.2)',
-          }}
-        >
-          <Box
-            sx={{
-              p: 3,
-              background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
-              color: 'white',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <Typography variant='h5' component='h2' sx={{ fontWeight: 'bold' }}>
-              Сводная информация
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant='contained'
-                color='secondary'
-                startIcon={<SaveIcon />}
-                onClick={handleExportToExcel}
-                sx={{
-                  backgroundColor: 'rgba(255,255,0.2)',
-                  '&:hover': { backgroundColor: 'rgba(255,255,0.3)' },
-                  color: 'white',
-                  fontWeight: 'medium',
-                }}
-              >
-                Экспорт
-              </Button>
-              {currentUser?.role === 'admin' && (
-                <Button
-                  variant='contained'
-                  color='success'
-                  startIcon={
-                    generating ? <CircularProgress size={20} /> : <SaveIcon />
-                  }
-                  onClick={handleGenerateRentSheets}
-                  disabled={generating}
-                  sx={{
-                    backgroundColor: 'rgba(255,255,0.2)',
-                    '&:hover': { backgroundColor: 'rgba(255,255,0.3)' },
-                    color: 'white',
-                    fontWeight: 'medium',
-                  }}
-                >
-                  {generating ? 'Генерация...' : 'Сгенерировать'}
-                </Button>
-              )}
-            </Box>
-          </Box>
-
-          <CardContent>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                gap: 3,
-              }}
-            >
-              <Box
-                sx={{
-                  p: 3,
-                  borderRadius: 2,
-                  background:
-                    'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
-                  textAlign: 'center',
-                }}
-              >
-                <Typography
-                  variant='h4'
-                  sx={{ fontWeight: 'bold', color: 'success.main', mb: 1 }}
-                >
-                  {(summary?.totalAmount ?? 0)?.toLocaleString()} тг
-                </Typography>
-                <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                  Общая сумма аренды
-                </Typography>
-              </Box>
-
-              <Box
-                sx={{
-                  p: 3,
-                  borderRadius: 2,
-                  background:
-                    'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
-                  textAlign: 'center',
-                }}
-              >
-                <Typography
-                  variant='h4'
-                  sx={{ fontWeight: 'bold', color: 'warning.main', mb: 1 }}
-                >
-                  {rows
-                    .reduce((sum, r) => {
-                      const diff = (r.amount || r.accruals || 0) - r.paidAmount;
-                      return sum + Math.max(0, diff);
-                    }, 0)
-                    .toLocaleString()}{' '}
-                  тг
-                </Typography>
-                <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                  К получению
-                </Typography>
-              </Box>
-
-              <Box
-                sx={{
-                  p: 3,
-                  borderRadius: 2,
-                  background:
-                    'linear-gradient(135deg, #ffebee 0%, #ffcdd2 10%)',
-                  textAlign: 'center',
-                }}
-              >
-                <Typography
-                  variant='h4'
-                  sx={{ fontWeight: 'bold', color: 'error.main', mb: 1 }}
-                >
-                  {rows
-                    .filter((r) => isOverduePayment(r.paymentDate))
-                    .reduce((sum, r) => {
-                      const diff = (r.amount || r.accruals || 0) - r.paidAmount;
-                      return sum + Math.max(0, diff);
-                    }, 0)
-                    .toLocaleString()}{' '}
-                  тг
-                </Typography>
-                <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-                  Просрочено
-                </Typography>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-
-        {/* Таблица арендных платежей */}
-        <Card
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            overflow: 'hidden',
-            background: 'white',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-            border: '1px solid rgba(255,255,0.2)',
-          }}
-        >
-          <Box
-            sx={{
-              p: 3,
-              background: 'linear-gradient(135deg, #67eea 0%, #764ba2 100%)',
-              color: 'white',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <Typography variant='h5' component='h2' sx={{ fontWeight: 'bold' }}>
+      <Box sx={{ minHeight: '100vh', background: '#f5f7fa', p: 3, width: '100%' }}>
+        <Box sx={{ maxWidth: '1400px', mx: 'auto', display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Typography variant='h3' sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>
               Арендные платежи
             </Typography>
+            <Typography variant='h6' sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
+              Управление арендой за {(() => {
+                const [y, m] = selectedMonth.split('-');
+                return new Date(Number(y), Number(m) - 1).toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
+              })()}
+            </Typography>
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+              <TextField
+                label='Выберите месяц'
+                type='month'
+                size='small'
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Box>
           </Box>
 
-          <CardContent sx={{ p: 0 }}>
-            <Box sx={{ overflowX: 'auto' }}>
-              <Table
-                size='medium'
-                sx={{
-                  minWidth: 1200,
-                  '& .MuiTableCell-root': {
-                    borderBottom: '1px solid #e0e0e0',
-                    py: 2.5,
-                    px: 2,
-                  },
-                }}
-              >
-                <TableHead>
-                  <TableRow
-                    sx={{
-                      backgroundColor: 'grey.100',
-                      '& th': {
-                        fontWeight: 'bold',
-                        color: 'text.primary',
-                        py: 2,
-                        fontSize: '0.9rem',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                      },
-                    }}
-                  >
-                    <TableCell
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Арендатор
-                    </TableCell>
-                    <TableCell
-                      align='right'
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Сумма аренды
-                    </TableCell>
-                    <TableCell
-                      align='right'
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Оплачено/Предоплачено
-                    </TableCell>
-                    <TableCell
-                      align='right'
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Остаток к оплате
-                    </TableCell>
-                    <TableCell
-                      align='right'
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Дата оплаты
-                    </TableCell>
-                    <TableCell
-                      align='right'
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Статус
-                    </TableCell>
-                    <TableCell
-                      sx={{ color: 'primary.main', fontWeight: 'bold' }}
-                    >
-                      Действия
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rows.map((r, idx) => (
-                    <TableRow
-                      key={idx}
-                      sx={{
-                        '&:nth-of-type(odd)': {
-                          backgroundColor: 'grey.50',
-                        },
-                        '&:nth-of-type(even)': {
-                          backgroundColor: 'white',
-                        },
-                        '&:hover': {
-                          backgroundColor: 'action.hover',
-                          boxShadow: '0 4px 20px rgba(0, 0.1)',
-                          transform: 'translateY(-2px)',
-                          transition: 'all 0.3s ease',
-                          zIndex: 1,
-                          position: 'relative',
-                        },
-                        height: '70px',
-                        borderRadius: '12px',
-                        mb: 1,
-                      }}
-                    >
-                      <TableCell
-                        sx={{
-                          fontWeight: 'medium',
-                          fontSize: '1rem',
-                          color: 'text.primary',
-                        }}
-                      >
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                        >
-                          <Box
+          <Card elevation={0} sx={{ borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
+            <Box sx={{ p: 3, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 3 }}>
+              {[
+                { label: 'Арендаторов', value: summary?.totalTenants || 0, color: '#6366f1', icon: <PeopleIcon /> },
+                { label: 'Сумма аренды', value: (summary?.totalAmount || 0).toLocaleString('ru-RU') + ' ₸', color: '#10b981', icon: <EditIcon /> },
+                { label: 'Оплачено', value: (rows.reduce((sum, r) => sum + (r.paidAmount || 0), 0)).toLocaleString('ru-RU') + ' ₸', color: '#2196f3', icon: <DebtIcon /> },
+                { label: 'Просрочено', value: (rows.filter(r => isOverduePayment(r.paymentDate) && (r.amount - r.paidAmount > 0)).reduce((sum, r) => sum + Math.max(0, (r.amount || r.accruals || 0) - r.paidAmount), 0)).toLocaleString('ru-RU') + ' ₸', color: '#f43f5e', icon: <CancelIcon /> },
+                { label: 'Остаток', value: (summary?.totalReceivable || 0).toLocaleString('ru-RU') + ' ₸', color: '#8b5cf6', icon: <VisibilityIcon /> },
+              ].map((stat, idx) => (
+                <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ width: 48, height: 48, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: `${stat.color}15`, color: stat.color }}>{stat.icon}</Box>
+                  <Box>
+                    <Typography variant='caption' color='text.secondary'>{stat.label}</Typography>
+                    <Typography variant='h6' sx={{ fontWeight: 'bold' }}>{stat.value}</Typography>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Card>
+
+          {currentUser?.role === 'admin' && (
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+              <Button variant='contained' startIcon={generating ? <CircularProgress size={20} /> : <EditIcon />} onClick={handleGenerateRentSheets} disabled={generating}>
+                {generating ? 'Генерация...' : 'Сгенерировать'}
+              </Button>
+              <Button variant='outlined' color='info' startIcon={<VisibilityIcon />} onClick={handleExportToExcel}>Экспорт</Button>
+            </Box>
+          )}
+
+          <Box sx={{ mb: 2 }}>
+            <RentTenantSelector
+              selectedTenantIds={selectedTenantIds}
+              onTenantSelect={setSelectedTenantIds}
+            />
+          </Box>
+
+          <Card elevation={0} sx={{ borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', mb: 4 }}>
+            <CardContent sx={{ p: 0 }}>
+              <Box sx={{ overflowX: 'auto' }}>
+                <Table>
+                  <TableHead sx={{ bgcolor: 'grey.50' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Арендатор</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Сумма аренды</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Оплачено</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Остаток</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Дата оплаты</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Статус</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Действия</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rows.map((r, idx) => (
+                      <TableRow key={idx} hover>
+                        <TableCell sx={{ fontWeight: 'medium' }}>{r.tenantName}</TableCell>
+                        <TableCell>
+                          {editingId === r.tenantId ? (
+                            <TextField
+                              size='small'
+                              type='number'
+                              value={editData.amount ?? r.amount}
+                              onChange={(e) => handleInputChange('amount', Number(e.target.value))}
+                              inputProps={{ style: { fontSize: 14, textAlign: 'right' } }}
+                              variant='standard'
+                              sx={{ width: 100 }}
+                            />
+                          ) : (
+                            <Typography variant='body2' sx={{ fontWeight: 'medium' }}>
+                              {r.amount.toLocaleString('ru-RU')} тг
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingId === r.tenantId ? (
+                            <TextField
+                              size='small'
+                              type='number'
+                              value={editData.paidAmount ?? r.paidAmount}
+                              onChange={(e) => handleInputChange('paidAmount', Number(e.target.value))}
+                              inputProps={{ style: { fontSize: 14, textAlign: 'right' } }}
+                              variant='standard'
+                              sx={{ width: 100 }}
+                            />
+                          ) : (
+                            <Typography variant='body2' color='success.main' sx={{ fontWeight: 'medium' }}>
+                              +{r.paidAmount.toLocaleString('ru-RU')}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Typography
+                            variant='body1'
                             sx={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: '50%',
-                              bgcolor: 'primary.light',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'primary.contrastText',
-                              fontWeight: 'bold',
+                              fontWeight: '900',
+                              color: 'primary.main',
+                              borderBottom: '1px dashed currentColor',
+                              display: 'inline-block'
                             }}
                           >
-                            {r.tenantName.charAt(0).toUpperCase()}
-                          </Box>
-                          {r.tenantName}
-                        </Box>
-                      </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{
-                          fontSize: '1rem',
-                          fontWeight: 'medium',
-                          color: 'success.main',
-                        }}
-                      >
-                        {editingId === r.tenantId ? (
-                          <TextField
-                            size='small'
-                            type='number'
-                            value={editData.amount ?? ''}
-                            onChange={(e) =>
-                              handleInputChange(
-                                'amount',
-                                e.target.value ? Number(e.target.value) : '',
-                              )
-                            }
-                            inputProps={{ style: { fontSize: 12 } }}
-                            InputProps={{ style: { padding: '2px 4px' } }}
-                            style={{ width: '80px' }}
-                            variant='outlined'
-                          />
-                        ) : r.amount ? (
-                          r.amount?.toLocaleString()
-                        ) : (
-                          '0'
-                        )}
-                      </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{
-                          fontSize: '1rem',
-                          fontWeight: 'medium',
-                          color: 'success.main',
-                        }}
-                      >
-                        {editingId === r.tenantId ? (
-                          <TextField
-                            size='small'
-                            type='number'
-                            value={editData.paidAmount ?? ''}
-                            onChange={(e) =>
-                              handleInputChange(
-                                'paidAmount',
-                                e.target.value ? Number(e.target.value) : '',
-                              )
-                            }
-                            inputProps={{ style: { fontSize: 12 } }}
-                            InputProps={{ style: { padding: '2px 4px' } }}
-                            style={{ width: '80px' }}
-                            variant='outlined'
-                          />
-                        ) : r.paidAmount ? (
-                          r.paidAmount?.toLocaleString()
-                        ) : (
-                          '0'
-                        )}
-                      </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{
-                          fontWeight: 'bold',
-                          fontSize: '1.1rem',
-                          color:
-                            (r.amount || r.accruals || 0) - r.paidAmount >= 0
-                              ? 'success.main'
-                              : 'error.main',
-                        }}
-                      >
-                        {Math.max(
-                          0,
-                          (r.amount || r.accruals || 0) - r.paidAmount,
-                        ).toLocaleString()}
-                      </TableCell>
-                      <TableCell
-                        align='right'
-                        sx={{ fontSize: '1rem', color: 'text.secondary' }}
-                      >
-                        {editingId === r.tenantId ? (
-                          <TextField
-                            size='small'
-                            type='date'
-                            value={editData.paymentDate || r.paymentDate || ''}
-                            onChange={(e) =>
-                              handleInputChange('paymentDate', e.target.value)
-                            }
-                            InputLabelProps={{ shrink: true }}
-                            inputProps={{ style: { fontSize: 12 } }}
-                            InputProps={{ style: { padding: '2px 4px' } }}
-                            style={{ width: '120px' }}
-                            variant='outlined'
-                          />
-                        ) : r.paymentDate ? (
-                          new Date(r.paymentDate).toLocaleDateString('ru-RU')
-                        ) : (
-                          'Не оплачено'
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingId === r.tenantId ? (
-                          <FormControl size='small' style={{ minWidth: 100 }}>
+                            {(r.amount - r.paidAmount).toLocaleString('ru-RU')} ₸
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          {editingId === r.tenantId ? (
+                            <TextField
+                              size='small'
+                              type='date'
+                              value={editData.paymentDate || r.paymentDate || ''}
+                              onChange={(e) => handleInputChange('paymentDate', e.target.value)}
+                              variant='standard'
+                            />
+                          ) : (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                              <Chip
+                                label={r.paymentDate ? new Date(r.paymentDate).toLocaleDateString('ru-RU') : '—'}
+                                size='small'
+                                variant='outlined'
+                                color={isOverduePayment(r.paymentDate) && (r.amount - r.paidAmount > 0) ? 'error' : 'default'}
+                              />
+                            </Box>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingId === r.tenantId ? (
                             <Select
+                              size='small'
                               value={editData.status ?? r.status}
-                              onChange={(e) =>
-                                handleInputChange('status', e.target.value)
-                              }
-                              style={{ fontSize: 12 }}
-                              variant='outlined'
+                              onChange={(e) => handleInputChange('status', e.target.value)}
+                              variant='standard'
                             >
                               <MenuItem value='active'>Активен</MenuItem>
-                              <MenuItem value='paid'>Оплачен</MenuItem>
+                              <MenuItem value='paid_rent'>Оплачено</MenuItem>
+                              <MenuItem value='overdue'>Просрочено</MenuItem>
                             </Select>
-                          </FormControl>
-                        ) : (
-                          <Chip
-                            label={
-                              isOverduePayment(r.paymentDate)
-                                ? 'Просрочен'
-                                : r.status === 'active'
-                                  ? 'Активен'
-                                  : 'Оплачен'
-                            }
-                            size='medium'
-                            color={
-                              isOverduePayment(r.paymentDate)
-                                ? 'warning'
-                                : r.status === 'active'
-                                  ? 'info'
-                                  : 'success'
-                            }
-                            variant='filled'
-                            sx={{
-                              fontWeight: 'medium',
-                              px: 1.5,
-                              py: 0.5,
-
-                              backgroundColor: isOverduePayment(r.paymentDate)
-                                ? 'error.light'
-                                : r.status === 'paid'
-                                  ? 'success.light'
-                                  : 'default',
-                            }}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingId === r.tenantId ? (
-                          <>
-                            <Tooltip title='Сохранить'>
-                              <IconButton
-                                color='success'
-                                size='small'
-                                onClick={() => handleSaveClick(r.tenantId)}
-                                sx={{ mr: 1 }}
-                              >
+                          ) : (
+                            <Chip
+                              label={r.status === 'paid_rent' ? 'Оплачено' : r.status === 'overdue' ? 'Просрочено' : 'Активен'}
+                              color={r.status === 'paid_rent' ? 'success' : r.status === 'overdue' ? 'error' : 'warning'}
+                              size='small'
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingId === r.tenantId ? (
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <IconButton color='success' onClick={() => handleSaveClick(r.tenantId)}>
                                 <SaveIcon />
                               </IconButton>
-                            </Tooltip>
-                            <Tooltip title='Отменить'>
-                              <IconButton
-                                color='error'
-                                size='small'
-                                onClick={handleCancelClick}
-                              >
+                              <IconButton onClick={handleCancelClick}>
                                 <CancelIcon />
                               </IconButton>
-                            </Tooltip>
-                          </>
-                        ) : (
-                          <>
-                            <Tooltip title='Редактировать'>
-                              <IconButton
-                                color='primary'
-                                size='small'
-                                onClick={() => handleEditClick(r)}
-                                sx={{ mr: 1 }}
-                              >
+                            </Box>
+                          ) : (
+                            <Box sx={{ display: 'flex' }}>
+                              <IconButton color='primary' onClick={() => handleEditClick(r)}>
                                 <EditIcon />
                               </IconButton>
-                            </Tooltip>
-                            <Tooltip title='Просмотр'>
-                              <IconButton color='default' size='small'>
-                                <VisibilityIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Box>
-          </CardContent>
-        </Card>
+                              <IconButton><VisibilityIcon /></IconButton>
+                              {currentUser?.role === 'admin' && (
+                                <IconButton color='error' onClick={() => handleDeleteClick(r)}>
+                                  <CloseIcon />
+                                </IconButton>
+                              )}
+                            </Box>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
       </Box>
-    </Box>
+    </>
   );
 };
 

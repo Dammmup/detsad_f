@@ -3,7 +3,7 @@ import {
   getUsers,
   updateUser,
   deleteUser,
-  userApi,
+  usersApi,
   createUser,
 } from '../../modules/staff/services/users';
 import {
@@ -115,8 +115,8 @@ const defaultForm: StaffMember = {
 };
 
 const Rent = () => {
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([]);
+  const [staff, setStaff] = useState<any[]>([]);
+  const [filteredStaff, setFilteredStaff] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -136,12 +136,12 @@ const Rent = () => {
     setError(null);
     const includePasswords = currentUser?.role === 'admin';
     getUsers(includePasswords)
-      .then((data: any[]) => {
+      .then((data) => {
         const rentStaff = data.filter((user: any) => user.tenant === true);
         setStaff(rentStaff);
         setFilteredStaff(rentStaff);
       })
-      .catch((err: any) => setError(err?.message || 'Ошибка загрузки'))
+      .catch((err) => setError(err?.message || 'Ошибка загрузки'))
       .finally(() => setLoading(false));
   }, [currentUser?.role]);
 
@@ -252,7 +252,7 @@ const Rent = () => {
     try {
       if (editId) {
         await updateUser(editId, form);
-        await userApi.updatePayrollSettings(editId, {
+        await usersApi.updatePayrollSettings(editId, {
           salary: form.salary,
           salaryType: form.salaryType,
         });
@@ -291,7 +291,7 @@ const Rent = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     await exportData('tenant', exportFormat, {
       name: searchTerm,

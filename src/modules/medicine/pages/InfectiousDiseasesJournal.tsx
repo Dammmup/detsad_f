@@ -17,24 +17,22 @@ import {
   MenuItem,
   CircularProgress,
 } from '@mui/material';
-import { getUsers } from '../../staff/services/users';
+import { getUsers } from '../../staff/services/userService';
 import childrenApi from '../../children/services/children';
-import { User, ID } from '../../../shared/types/common';
+import { User } from '../../../shared/types/common';
+import { InfectiousDiseaseRecord } from '../../../shared/types/infectiousDisease';
 import {
   getInfectiousDiseaseRecords,
   createInfectiousDiseaseRecord,
   deleteInfectiousDiseaseRecord,
-  InfectiousDiseaseRecord as InfectiousDiseasesRecord,
 } from '../services/infectiousDiseasesJournal';
-import ExportButton from '../../../shared/components/ExportButton';
-import { exportData } from '../../../shared/utils/exportUtils';
 
 export default function InfectiousDiseasesJournal() {
-  const [records, setRecords] = useState<InfectiousDiseasesRecord[]>([]);
+  const [records, setRecords] = useState<InfectiousDiseaseRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [newRecord, setNewRecord] = useState<Partial<InfectiousDiseasesRecord>>(
+  const [newRecord, setNewRecord] = useState<Partial<InfectiousDiseaseRecord>>(
     {},
   );
   const [search, setSearch] = useState('');
@@ -91,14 +89,10 @@ export default function InfectiousDiseasesJournal() {
     setLoading(true);
     try {
       await deleteInfectiousDiseaseRecord(id);
-      setRecords((prev: InfectiousDiseasesRecord[]) => prev.filter((r: InfectiousDiseasesRecord) => (r.id || (r as any)._id) !== id));
+      setRecords((prev) => prev.filter((r) => r.id !== id));
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleExport = () => {
-    exportData('infectious-diseases-journal', 'excel');
   };
 
   const handleChildSelect = (id: string) => {

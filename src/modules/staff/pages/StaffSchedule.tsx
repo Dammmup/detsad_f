@@ -47,7 +47,9 @@ import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { Search as SearchIcon } from '@mui/icons-material';
 import ExportButton from '../../../shared/components/ExportButton';
-import { exportStaffAttendance } from '../../../shared/utils/excelExport';
+import {
+  exportStaffAttendance,
+} from '../../../shared/utils/excelExport';
 import { useDate } from '../../../app/context/DateContext';
 import DateNavigator from '../../../shared/components/DateNavigator';
 
@@ -56,8 +58,6 @@ import {
   Shift,
   ShiftStatus,
   ShiftFormData,
-} from '../../../shared/types/staff';
-import {
   STATUS_TEXT,
   STATUS_COLORS,
 } from '../../../shared/types/common';
@@ -66,14 +66,13 @@ import {
   createShift,
   updateShift,
   deleteShift,
-  shiftsApi,
 } from '../services/shifts';
 import { getUsers } from '../services/users';
-import { User } from '../../../shared/types/staff';
+import { User } from '../../../shared/types/common';
+import { KindergartenSettings } from '../../settings/services/settings';
 import { getKindergartenSettings } from '../../settings/services/settings';
 import { getHolidays } from '../../../shared/services/common';
-import { staffAttendanceApi as staffAttendanceTrackingService } from '../services/staffAttendance';
-import { StaffAttendanceRecord } from '../../../shared/types/staff';
+import { staffAttendanceTrackingService, StaffAttendanceRecord } from '../services/staffAttendanceTracking';
 
 
 
@@ -136,105 +135,93 @@ const StaffSchedule: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
 
-  const [staff, setStaff] = useState<User[]>([]);
-  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [staff, setStaff] = useState<any[]>([]);
+  const [shifts, setShifts] = useState<any[]>([]);
 
 
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [holidays, setHolidays] = useState<string[]>([]);
   const [workingSaturdays, setWorkingSaturdays] = useState<string[]>([]);
-  const [attendanceRecords, setAttendanceRecords] = useState<StaffAttendanceRecord[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
 
-  // Bulk Delete State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<'selected' | 'all'>('selected');
-  const [deleteStartDate, setDeleteStartDate] = useState<moment.Moment | null>(moment());
-  const [deleteEndDate, setDeleteEndDate] = useState<moment.Moment | null>(moment());
+  const [deleteStartDate, setDeleteStartDate] = useState<moment.Moment | null>(null);
+  const [deleteEndDate, setDeleteEndDate] = useState<moment.Moment | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<'selected' | 'all'>('all');
 
+  // Bulk Delete Functions
   const handleBulkDelete = async () => {
     if (!deleteStartDate || !deleteEndDate) {
-      enqueueSnackbar('Выберите период', { variant: 'warning' });
+      enqueueSnackbar('Выберите диапазон дат', { variant: 'error' });
       return;
     }
 
-    setLoading(true);
+    const startDateStr = deleteStartDate.format('YYYY-MM-DD');
+    const endDateStr = deleteEndDate.format('YYYY-MM-DD');
+
     try {
-      // Prepare date range
-      const start = deleteStartDate.format('YYYY-MM-DD');
-      const end = deleteEndDate.format('YYYY-MM-DD');
+      setLoading(true);
+      const targetStaffIds = deleteTarget === 'selected' ? selectedStaff : [];
 
-      // Filter shifts
-      const shiftsToDelete = shifts.filter(shift => {
-        const shiftDate = shift.date.split('T')[0];
-        const inRange = shiftDate >= start && shiftDate <= end;
-
-        if (!inRange) return false;
-
-        if (deleteTarget === 'selected') {
-          const sId = typeof shift.staffId === 'string' ? shift.staffId : (shift.staffId as any)._id;
-          return selectedStaff.includes(sId);
-        }
-
-        return true; // 'all'
+      // Предполагаем наличие API для массового удаления, либо удаляем по одному
+      // В данном проекте обычно используется deleteShift по ID
+      // Но для массового удаления лучше иметь отдельный метод в сервисе
+      const shiftsToDelete = shifts.filter(s => {
+        const sDate = moment(s.date).format('YYYY-MM-DD');
+        const sId = typeof s.staffId === 'string' ? s.staffId : (s.staffId as any)?._id;
+        const inDateRange = sDate >= startDateStr && sDate <= endDateStr;
+        const isTarget = deleteTarget === 'all' || targetStaffIds.includes(sId);
+        return inDateRange && isTarget;
       });
 
-      const idsToDelete = shiftsToDelete.map(s => s.id || s._id).filter((id): id is string => !!id);
-
-      if (idsToDelete.length === 0) {
+      if (shiftsToDelete.length === 0) {
         enqueueSnackbar('Смены для удаления не найдены', { variant: 'info' });
-        setLoading(false);
         return;
       }
 
-      if (!window.confirm(`Будет удалено ${idsToDelete.length} смен. Продолжить?`)) {
-        setLoading(false);
-        return;
-      }
+      await Promise.all(shiftsToDelete.map(s => deleteShift(s.id || s._id || '')));
 
-      // Dynamic import to avoid circular dependencies if any, good practice from previous code
-      const { shiftsApi } = await import('../services/shifts');
-      await shiftsApi.bulkDelete(idsToDelete);
+      enqueueSnackbar(`Удалено смен: ${shiftsToDelete.length}`, { variant: 'success' });
 
-      enqueueSnackbar(`Удалено ${idsToDelete.length} смен`, { variant: 'success' });
-
-      // Refresh
-      const monthStart = moment(currentDate).startOf('month');
-      const monthEnd = moment(currentDate).endOf('month');
-      const newData = await getShifts(monthStart.format('YYYY-MM-DD'), monthEnd.format('YYYY-MM-DD'));
-      setShifts(newData);
+      // Refresh data
+      const weekStart = moment(currentDate).startOf('isoWeek');
+      const weekEnd = moment(currentDate).endOf('isoWeek');
+      const updatedShifts = await getShifts(weekStart.format('YYYY-MM-DD'), weekEnd.format('YYYY-MM-DD'));
+      setShifts(updatedShifts);
 
       setDeleteDialogOpen(false);
-    } catch (e) {
-      console.error(e);
-      enqueueSnackbar('Ошибка при удалении', { variant: 'error' });
+    } catch (err) {
+      console.error('Error in bulk delete:', err);
+      enqueueSnackbar('Ошибка при удалении смен', { variant: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleExport = async (
-    exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
-  ) => {
+  const handleExportFullMonth = async () => {
     const monthStart = moment(currentDate).startOf('month');
     const monthEnd = moment(currentDate).endOf('month');
     const period = `${monthStart.format('DD.MM.YYYY')} - ${monthEnd.format('DD.MM.YYYY')}`;
 
-
-    const shiftsForMonth = await getShifts(
-      monthStart.format('YYYY-MM-DD'),
-      monthEnd.format('YYYY-MM-DD'),
-    );
-
     try {
+      setLoading(true);
+      const shiftsForMonth = await getShifts(
+        monthStart.format('YYYY-MM-DD'),
+        monthEnd.format('YYYY-MM-DD'),
+      );
       await exportStaffAttendance(shiftsForMonth, period);
-      enqueueSnackbar('Отчет экспортирован', { variant: 'success' });
+      enqueueSnackbar('Отчет за месяц экспортирован', { variant: 'success' });
     } catch (e: any) {
       console.error('Error exporting staff schedule:', e);
       enqueueSnackbar('Ошибка при экспорте', { variant: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleExport = async (exportType: string, exportFormat: 'excel') => {
+    handleExportFullMonth();
+  };
 
   const [formData, setFormData] = useState<ShiftFormData>({
     userId: '',
@@ -246,27 +233,26 @@ const StaffSchedule: React.FC = () => {
     alternativeStaffId: '',
   });
 
-
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        const monthStart = moment(currentDate).startOf('month');
-        const monthEnd = moment(currentDate).endOf('month');
-        const startDate = monthStart.format('YYYY-MM-DD');
-        const endDate = monthEnd.format('YYYY-MM-DD');
+        const weekStart = moment(currentDate).startOf('isoWeek');
+        const weekEnd = moment(currentDate).endOf('isoWeek');
+        const startDate = weekStart.format('YYYY-MM-DD');
+        const endDate = weekEnd.format('YYYY-MM-DD');
 
         const [staffData, shiftsData, attendanceData] = await Promise.all([
           getUsers(),
           getShifts(startDate, endDate),
-          staffAttendanceTrackingService.getAll({ startDate, endDate })
+          staffAttendanceTrackingService.getAllRecords({ startDate, endDate })
         ]);
 
         setStaff(staffData);
         setShifts(shiftsData);
-        setAttendanceRecords(attendanceData || []);
+        setAttendanceRecords(attendanceData.data || []);
 
         try {
           const hData = await getHolidays();
@@ -276,7 +262,6 @@ const StaffSchedule: React.FC = () => {
           }
         } catch (hErr) {
           console.error("Error fetching holidays:", hErr);
-          // Don't block UI if holidays fail
         }
       } catch (err: any) {
         console.error('Error loading data:', err);
@@ -290,30 +275,21 @@ const StaffSchedule: React.FC = () => {
     fetchData();
   }, [currentDate, enqueueSnackbar]);
 
-
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
     const { value } = event.target;
     setFilterRole(typeof value === 'string' ? value.split(',') : value);
   };
-
 
   const isWeekend = (date: Date): boolean => {
     const dayOfWeek = date.getDay();
     return dayOfWeek === 0 || dayOfWeek === 6;
   };
 
-
   const assignFiveTwoSchedule = async () => {
-    console.log('assignFiveTwoSchedule called');
     try {
       setLoading(true);
-      console.log('Loading set to true');
-
-
       const monthStart = moment(currentDate).startOf('month');
       const monthEnd = moment(currentDate).endOf('month');
-      console.log('Current date:', currentDate, 'End of month:', monthEnd);
-
 
       const dates = [];
       let current = monthStart.clone();
@@ -321,190 +297,84 @@ const StaffSchedule: React.FC = () => {
         dates.push(current.toDate());
         current.add(1, 'day');
       }
-      console.log('Dates array created, length:', dates.length);
-
 
       const workDays = dates.filter((date) => {
         const dateStr = moment(date).format('YYYY-MM-DD');
         const dayOfWeek = date.getDay();
-
-        // Если это рабочий перенесенный день (обычно суббота), то это рабочий день
-        if (workingSaturdays.includes(dateStr)) {
-          return true;
-        }
-
-        // Если это праздничный день, то это НЕ рабочий день
-        if (holidays.includes(dateStr)) {
-          return false;
-        }
-
-        // По умолчанию Пн-Пт - рабочие дни
+        if (workingSaturdays.includes(dateStr)) return true;
+        if (holidays.includes(dateStr)) return false;
         return dayOfWeek !== 0 && dayOfWeek !== 6;
       });
-      console.log('Work days filtered, length:', workDays.length);
-
-
-      const scheduleBlocks = workDays;
-      console.log('Schedule blocks created, length:', scheduleBlocks.length);
-
-
-      const finalSchedule = scheduleBlocks.filter((date) => moment(date).isSameOrBefore(monthEnd));
-      console.log('Final schedule filtered, length:', finalSchedule.length);
-
-      console.log('Selected staff:', selectedStaff);
-
 
       for (const staffId of selectedStaff) {
-        console.log('Creating shifts for staff:', staffId);
-
-
         const existingShifts = await getShifts(
           monthStart.format('YYYY-MM-DD'),
           monthEnd.format('YYYY-MM-DD'),
         );
         const existingShiftDates = new Set(
           existingShifts
-            .filter((shift) => shift.staffId === staffId)
+            .filter((shift) => (shift.staffId as any)?._id === staffId || shift.staffId === staffId)
             .map((shift) => shift.date),
         );
 
-
-        const createdShiftDates = new Set<string>();
-
-        for (const date of finalSchedule) {
+        for (const date of workDays) {
           const dateStr = moment(date).format('YYYY-MM-DD');
-
-
-          if (
-            existingShiftDates.has(dateStr) ||
-            createdShiftDates.has(dateStr)
-          ) {
-            console.log('Skipping existing shift for', staffId, 'on', dateStr);
-            continue;
-          }
+          if (existingShiftDates.has(dateStr)) continue;
 
           try {
-
-
-            console.log('Creating full shift for', staffId, 'on', date);
             await createShift({
               userId: staffId,
               staffId: staffId,
-              staffName:
-                staff.find((s) => (s.id || s._id) === staffId)?.fullName || '',
+              staffName: staff.find((s) => (s.id || s._id) === staffId)?.fullName || '',
               date: dateStr,
               notes: 'Рабочий день по графику 5/2',
               status: ShiftStatus.scheduled,
             });
-
-
-            createdShiftDates.add(dateStr);
           } catch (error: any) {
-
-            const errorMessage =
-              error.response?.data?.error ||
-              error.message ||
-              error.response?.data;
-            if (
-              errorMessage &&
-              typeof errorMessage === 'string' &&
-              errorMessage.includes('У сотрудника уже есть смена в этот день')
-            ) {
-              console.log(
-                'Skipping duplicate shift for',
-                staffId,
-                'on',
-                dateStr,
-              );
-
-              existingShiftDates.add(dateStr);
-              continue;
-            } else {
-              console.error(
-                'Error creating shift for',
-                staffId,
-                'on',
-                dateStr,
-                ':',
-                error,
-              );
-
-              continue;
-            }
+            console.error('Error creating shift:', error);
           }
         }
       }
 
       enqueueSnackbar('График 5/2 успешно назначен', { variant: 'success' });
-
-
-      const monthStartUpdated = moment(currentDate).startOf('month');
-      const monthEndUpdated = moment(currentDate).endOf('month');
-      const shiftsData = await getShifts(
-        monthStartUpdated.format('YYYY-MM-DD'),
-        monthEndUpdated.format('YYYY-MM-DD'),
-      );
+      const weekStart = moment(currentDate).startOf('isoWeek');
+      const weekEnd = moment(currentDate).endOf('isoWeek');
+      const shiftsData = await getShifts(weekStart.format('YYYY-MM-DD'), weekEnd.format('YYYY-MM-DD'));
       setShifts(shiftsData);
-
-
       setSelectedStaff([]);
     } catch (err: any) {
       console.error('Error assigning 5/2 schedule:', err);
-      enqueueSnackbar('Ошибка при назначении графика 5/2', {
-        variant: 'error',
-      });
+      enqueueSnackbar('Ошибка при назначении графика 5/2', { variant: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-
-
-
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
-
 
   const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleDateChange = (date: Date | null) => {
     if (date) {
-      setFormData((prev) => ({
-        ...prev,
-        date: moment(date).format('YYYY-MM-DD'),
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        date: '',
-      }));
+      setFormData((prev) => ({ ...prev, date: moment(date).format('YYYY-MM-DD') }));
     }
   };
 
   const handleStaffSelect = (e: SelectChangeEvent<string>) => {
     const staffId = e.target.value;
-    const selectedStaff = staff.find((s) => (s.id || s._id) === staffId);
+    const selectedS = staff.find((s) => (s.id || s._id) === staffId);
     setFormData((prev) => ({
       ...prev,
       staffId,
-      staffName: selectedStaff?.fullName || '',
+      staffName: selectedS?.fullName || '',
     }));
   };
-
 
   const validateForm = (): boolean => {
     if (!formData.staffId) {
@@ -518,64 +388,36 @@ const StaffSchedule: React.FC = () => {
     return true;
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateForm()) return;
-
     setLoading(true);
 
     try {
-      const shiftData: Shift = {
-        _id: editingShift?._id || '',
-        id: editingShift?.id || '',
-        userId: formData.staffId || '',
-        staffId: formData.staffId || '',
-        staffName: formData.staffName || '',
+      const shiftData: Partial<Shift> = {
+        userId: formData.staffId,
+        staffId: formData.staffId,
+        staffName: formData.staffName,
         date: formData.date,
-        notes: formData.notes || '',
-        status: formData.status || ShiftStatus.scheduled,
-        createdAt: editingShift?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        notes: formData.notes,
+        status: formData.status,
       };
 
       if (editingShift) {
-
-        if (editingShift.id) {
-
-          const updatedShift = await updateShift(editingShift.id, {
-            ...shiftData,
-            alternativeStaffId: formData.alternativeStaffId,
-          });
-          setShifts((prev) =>
-            prev.map((s) => (s.id === editingShift.id ? updatedShift : s)),
-          );
+        const id = editingShift.id || editingShift._id;
+        if (id) {
+          await updateShift(id, { ...shiftData, alternativeStaffId: formData.alternativeStaffId });
           enqueueSnackbar('Смена успешно обновлена', { variant: 'success' });
-        } else {
-          enqueueSnackbar('Ошибка: ID смены не определен', {
-            variant: 'error',
-          });
         }
       } else {
-
-        const newShift = await createShift({
-          ...shiftData as any,
-          alternativeStaffId: formData.alternativeStaffId as any,
-        });
-        setShifts((prev) => [...prev, newShift]);
+        await createShift({ ...shiftData as any, alternativeStaffId: formData.alternativeStaffId });
         enqueueSnackbar('Смена успешно создана', { variant: 'success' });
       }
 
-
-      const monthStart = moment(currentDate).startOf('month');
-      const monthEnd = moment(currentDate).endOf('month');
-      const shiftsData = await getShifts(
-        monthStart.format('YYYY-MM-DD'),
-        monthEnd.format('YYYY-MM-DD'),
-      );
+      const weekStart = moment(currentDate).startOf('isoWeek');
+      const weekEnd = moment(currentDate).endOf('isoWeek');
+      const shiftsData = await getShifts(weekStart.format('YYYY-MM-DD'), weekEnd.format('YYYY-MM-DD'));
       setShifts(shiftsData);
-
       handleCloseModal();
     } catch (err) {
       console.error('Error saving shift:', err);
@@ -586,11 +428,12 @@ const StaffSchedule: React.FC = () => {
   };
 
   const handleEditShift = (shift: Shift) => {
+    const sId = typeof shift.staffId === 'string' ? shift.staffId : (shift.staffId as any)?._id;
     setFormData({
-      userId: (shift.staffId as any)?._id || shift.staffId || '',
-      staffId: (shift.staffId as any)?._id || shift.staffId || '',
+      userId: sId || '',
+      staffId: sId || '',
       staffName: shift.staffName || '',
-      date: shift.date,
+      date: moment(shift.date).format('YYYY-MM-DD'),
       status: shift.status,
       notes: shift.notes || '',
       alternativeStaffId: shift.alternativeStaffId || '',
@@ -607,58 +450,37 @@ const StaffSchedule: React.FC = () => {
       staffId: '',
       staffName: '',
       date: moment().format('YYYY-MM-DD'),
-      status: 'scheduled' as ShiftStatus,
+      status: ShiftStatus.scheduled,
       notes: '',
       alternativeStaffId: '',
     });
   };
 
-
-  const monthStart = moment(currentDate).startOf('month');
-  const monthEnd = moment(currentDate).endOf('month');
-  const monthDays: Date[] = [];
-  const day = monthStart.clone();
-  while (day.isSameOrBefore(monthEnd)) {
-    monthDays.push(day.toDate());
+  const weekStart = moment(currentDate).startOf('isoWeek');
+  const weekEnd = moment(currentDate).endOf('isoWeek');
+  const weekDays: Date[] = [];
+  const day = weekStart.clone();
+  while (day.isSameOrBefore(weekEnd)) {
+    weekDays.push(day.toDate());
     day.add(1, 'day');
   }
 
-
   const getShiftsForDay = (staffId: string, date: Date) => {
+    const compareDate = moment(date).format('YYYY-MM-DD');
     return shifts.filter((shift) => {
-
-      if (!shift.staffId) return false;
-
-      if (typeof shift.staffId === 'string') {
-
-        const shiftDate = shift.date.split('T')[0];
-        const compareDate = moment(date).format('YYYY-MM-DD');
-        return shift.staffId === staffId && shiftDate === compareDate;
-      } else {
-
-        const shiftDate = shift.date.split('T')[0];
-        const compareDate = moment(date).format('YYYY-MM-DD');
-        return (
-          (shift.staffId as any)._id === staffId && shiftDate === compareDate
-        );
-      }
+      const sId = typeof shift.staffId === 'string' ? shift.staffId : (shift.staffId as any)?._id;
+      const sDate = moment(shift.date).format('YYYY-MM-DD');
+      return sId === staffId && sDate === compareDate;
     });
   };
 
-
-  if (loading && shifts.length === 0) {
+  if (loading && shifts.length === 0 && staff.length === 0) {
     return (
-      <Box
-        display='flex'
-        justifyContent='center'
-        alignItems='center'
-        minHeight='200px'
-      >
+      <Box display='flex' justifyContent='center' alignItems='center' minHeight='200px'>
         <CircularProgress />
       </Box>
     );
   }
-
 
   if (error) {
     return (
@@ -668,23 +490,24 @@ const StaffSchedule: React.FC = () => {
     );
   }
 
+  const filteredStaff = staff.filter((s) => {
+    const matchesSearch = !searchTerm || s.fullName.toLowerCase().includes(searchTerm.toLowerCase());
+    const roleLabel = ROLE_LABELS[s.role as string] || s.role;
+    const matchesRole = filterRole.length === 0 || filterRole.includes(roleLabel);
+    return matchesSearch && matchesRole && s.active;
+  });
+
   return (
     <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale="ru">
       <Box p={3}>
         <Card>
           <CardHeader
             title={
-              <Box
-                display='flex'
-                justifyContent='space-between'
-                alignItems='center'
-              >
+              <Box display='flex' justifyContent='space-between' alignItems='center'>
                 <Typography variant='h5'>График смен</Typography>
                 <Box>
                   <ExportButton
-                    exportTypes={[
-                      { value: 'staff-schedule', label: 'График смен' },
-                    ]}
+                    exportTypes={[{ value: 'staff-schedule', label: 'График смен' }]}
                     onExport={handleExport}
                   />
                   <Button
@@ -701,21 +524,10 @@ const StaffSchedule: React.FC = () => {
                     color='secondary'
                     sx={{ ml: 2 }}
                     onClick={() => {
-                      console.log('5/2 button clicked');
-                      console.log(
-                        'Selected staff length:',
-                        selectedStaff.length,
-                      );
-                      console.log('Selected staff:', selectedStaff);
-
                       if (selectedStaff.length === 0) {
-                        console.log('No staff selected');
-                        enqueueSnackbar('Пожалуйста, выберите сотрудников', {
-                          variant: 'warning',
-                        });
+                        enqueueSnackbar('Пожалуйста, выберите сотрудников', { variant: 'warning' });
                         return;
                       }
-                      console.log('Calling assignFiveTwoSchedule');
                       assignFiveTwoSchedule();
                     }}
                   >
@@ -727,10 +539,8 @@ const StaffSchedule: React.FC = () => {
                     sx={{ ml: 2 }}
                     startIcon={<DeleteIcon />}
                     onClick={() => {
-                      // Initialize dates to current selection context or current month view if needed
-                      // For simplicity, default to current day or current month start/end
-                      setDeleteStartDate(moment(currentDate));
-                      setDeleteEndDate(moment(currentDate));
+                      setDeleteStartDate(moment(currentDate).startOf('isoWeek'));
+                      setDeleteEndDate(moment(currentDate).endOf('isoWeek'));
                       setDeleteTarget(selectedStaff.length > 0 ? 'selected' : 'all');
                       setDeleteDialogOpen(true);
                     }}
@@ -743,17 +553,9 @@ const StaffSchedule: React.FC = () => {
           />
           <Divider />
           <CardContent>
-            {/* Month Navigation */}
-            <DateNavigator />
+            <DateNavigator viewType="week" />
 
-            {/* Фильтры */}
-            <Box
-              display='flex'
-              flexWrap='wrap'
-              gap={2}
-              alignItems='center'
-              mb={3}
-            >
+            <Box display='flex' flexWrap='wrap' gap={2} alignItems='center' mb={3}>
               <TextField
                 placeholder='Поиск по имени...'
                 variant='outlined'
@@ -771,9 +573,7 @@ const StaffSchedule: React.FC = () => {
               />
 
               <FormControl size='small' sx={{ minWidth: '200px' }}>
-                <InputLabel id='role-filter-label'>
-                  Фильтр по должности
-                </InputLabel>
+                <InputLabel id='role-filter-label'>Фильтр по должности</InputLabel>
                 <Select
                   labelId='role-filter-label'
                   multiple
@@ -788,38 +588,33 @@ const StaffSchedule: React.FC = () => {
                     </Box>
                   )}
                 >
-                  {Object.values(ROLE_LABELS)
-                    .sort()
-                    .map((role) => (
-                      <MenuItem key={role} value={role}>
-                        <Checkbox checked={filterRole.indexOf(role) > -1} />
-                        <ListItemText primary={role} />
-                      </MenuItem>
-                    ))}
+                  {Object.values(ROLE_LABELS).sort().map((role) => (
+                    <MenuItem key={role} value={role}>
+                      <Checkbox checked={filterRole.indexOf(role) > -1} />
+                      <ListItemText primary={role} />
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Box>
 
-            {/* Schedule Table */}
             <TableContainer component={Paper}>
               <Table>
                 <TableHead>
                   <TableRow>
                     <TableCell>Сотрудник</TableCell>
-                    {monthDays.map((day) => {
+                    {weekDays.map((day) => {
+                      const dateStr = moment(day).format('YYYY-MM-DD');
+                      const holiday = holidays.includes(dateStr);
+                      const workingSat = workingSaturdays.includes(dateStr);
+                      const weekend = isWeekend(day) && !workingSat;
                       return (
                         <TableCell
                           key={day.toString()}
                           align='center'
                           sx={{
-                            backgroundColor:
-                              holidays.includes(moment(day).format('YYYY-MM-DD')) ? '#ffcdd2' : // Red 100
-                                workingSaturdays.includes(moment(day).format('YYYY-MM-DD')) ? 'inherit' : // Working Saturday behaves like a weekday
-                                  isWeekend(day)
-                                    ? 'grey.100'
-                                    : 'inherit',
-                            color: holidays.includes(moment(day).format('YYYY-MM-DD')) ? '#c62828' : 'inherit', // Red 800
-                            border: holidays.includes(moment(day).format('YYYY-MM-DD')) ? '1px solid #e57373' : undefined,
+                            backgroundColor: holiday ? '#ffcdd2' : (weekend ? 'grey.100' : 'inherit'),
+                            color: holiday ? '#c62828' : 'inherit',
                           }}
                         >
                           <Box>
@@ -832,214 +627,100 @@ const StaffSchedule: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {staff
-                    .filter((staffMember) => {
-
-                      const matchesSearch =
-                        !searchTerm ||
-                        staffMember.fullName
-                          .toLowerCase()
-                          .includes(searchTerm.toLowerCase());
-
-
-                      const roleLabel =
-                        ROLE_LABELS[staffMember.role as string] ||
-                        staffMember.role;
-                      const matchesRole =
-                        filterRole.length === 0 ||
-                        filterRole.includes(roleLabel);
-
-
-                      return matchesSearch && matchesRole && staffMember.active;
-                    })
-                    .map((staffMember) => {
-                      const staffId = staffMember.id || staffMember._id;
-                      if (!staffId) return null;
-                      const isSelected = selectedStaff.includes(staffId);
-                      return (
-                        <TableRow
-                          key={staffMember.id}
-                          sx={{
-                            backgroundColor: isSelected
-                              ? 'action.selected'
-                              : 'inherit',
-                            '&:hover': {
-                              backgroundColor: 'action.hover',
-                            },
-                          }}
-                        >
-                          <TableCell
+                  {filteredStaff.map((staffMember) => {
+                    const staffId = staffMember.id || staffMember._id;
+                    if (!staffId) return null;
+                    const isSelected = selectedStaff.includes(staffId);
+                    return (
+                      <TableRow key={staffId} sx={{ backgroundColor: isSelected ? 'action.selected' : 'inherit' }}>
+                        <TableCell>
+                          <Box
+                            display='flex'
+                            alignItems='center'
+                            sx={{ cursor: 'pointer' }}
                             onClick={() => {
-                              console.log(
-                                'Staff cell clicked, staffId:',
-                                staffId,
+                              setSelectedStaff(prev =>
+                                prev.includes(staffId) ? prev.filter(id => id !== staffId) : [...prev, staffId]
                               );
-                              if (selectedStaff.includes(staffId)) {
-                                console.log('Removing staff from selection');
-                                const newSelectedStaff = selectedStaff.filter(
-                                  (id) => id !== staffId,
-                                );
-                                setSelectedStaff(newSelectedStaff);
-                                console.log(
-                                  'Selected staff after removal:',
-                                  newSelectedStaff,
-                                );
-                              } else {
-                                console.log('Adding staff to selection');
-                                const newSelectedStaff = [
-                                  ...selectedStaff,
-                                  staffId,
-                                ];
-                                setSelectedStaff(newSelectedStaff);
-                                console.log(
-                                  'Selected staff after addition:',
-                                  newSelectedStaff,
-                                );
-                              }
-                            }}
-                            sx={{
-                              cursor: 'pointer',
-                              userSelect: 'none',
                             }}
                           >
-                            <Box display='flex' alignItems='center'>
-                              <Box
-                                sx={{
-                                  width: 12,
-                                  height: 12,
-                                  borderRadius: '50%',
-                                  bgcolor:
-                                    ROLE_COLORS[staffMember.role as string] ||
-                                    '#9e9e9e',
-                                  mr: 1,
-                                }}
-                              />
-                              <Box>
-                                {staffMember.fullName}
-                                <Box
-                                  sx={{
-                                    fontSize: '0.8em',
-                                    color: 'text.secondary',
-                                  }}
-                                >
-                                  {ROLE_LABELS[staffMember.role as string] ||
-                                    staffMember.role}
-                                </Box>
-                              </Box>
+                            <Checkbox size='small' checked={isSelected} />
+                            <Box>
+                              <Typography variant='body2' fontWeight='bold'>{staffMember.fullName}</Typography>
+                              <Typography variant='caption' sx={{ color: ROLE_COLORS[staffMember.role as string] || '#9e9e9e' }}>
+                                {ROLE_LABELS[staffMember.role as string] || staffMember.role}
+                              </Typography>
                             </Box>
-                          </TableCell>
-                          {monthDays.map((day) => {
-                            const dayShifts = getShiftsForDay(staffId, day);
-                            return (
-                              <TableCell
-                                key={day.toString()}
-                                onClick={() => {
-                                  setFormData({
-                                    ...formData,
-                                    staffId: staffId,
-                                    staffName: staffMember.fullName,
-                                    date: moment(day).format('YYYY-MM-DD'),
-                                  });
-                                  setModalOpen(true);
-                                }}
-                                sx={{
-                                  minHeight: '100px',
-                                  border: '1px solid',
-                                  borderColor: 'divider',
-                                  backgroundColor:
-                                    holidays.includes(moment(day).format('YYYY-MM-DD')) ? '#ffcdd2' :
-                                      isWeekend(day)
-                                        ? 'grey.100'
-                                        : 'inherit',
-                                  '&:hover': {
-                                    backgroundColor:
-                                      holidays.includes(moment(day).format('YYYY-MM-DD')) ? '#e57373' :
-                                        isWeekend(day)
-                                          ? 'grey.200'
-                                          : 'action.hover',
-                                    cursor: 'pointer',
-                                  },
-                                }}
-                              >
-                                {(() => {
-                                  const dateStr = moment(day).format('YYYY-MM-DD');
-                                  const attendance = attendanceRecords.find(a =>
-                                    moment(a.date).format('YYYY-MM-DD') === dateStr &&
-                                    (typeof a.staffId === 'string' ? a.staffId === staffId : a.staffId._id === staffId)
-                                  );
+                          </Box>
+                        </TableCell>
+                        {weekDays.map((date) => {
+                          const dayShifts = getShiftsForDay(staffId, date);
+                          const dateStr = moment(date).format('YYYY-MM-DD');
+                          const recordsForDay = attendanceRecords.filter(r => {
+                            const rId = r.staffId?._id || r.staffId;
+                            return rId === staffId && moment(r.date).format('YYYY-MM-DD') === dateStr;
+                          });
+                          const isHoliday = holidays.includes(dateStr);
+                          const isWorkingSat = workingSaturdays.includes(dateStr);
+                          const weekend = isWeekend(date) && !isWorkingSat;
 
-                                  return (
-                                    <>
-                                      {dayShifts.map((shift) => (
-                                        <Box
-                                          key={shift.id}
-                                          sx={{
-                                            p: 0.5,
-                                            mb: 0.5,
-                                            borderRadius: 1,
-                                            bgcolor: 'background.paper',
-                                            borderLeft: `3px solid ${theme.palette.primary.main}`,
-                                            '&:hover': {
-                                              bgcolor: 'action.selected',
-                                            },
-                                          }}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleEditShift(shift);
-                                          }}
-                                        >
-                                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                            <Chip
-                                              label={STATUS_TEXT[shift.status] || shift.status}
-                                              size='small'
-                                              color={STATUS_COLORS[shift.status] || 'default'}
-                                              sx={{ fontSize: '0.65rem', height: 20 }}
-                                            />
-                                          </Box>
-                                        </Box>
-                                      ))}
-
-                                      {/* Комбинированные статусы на основе реальной посещаемости */}
-                                      {attendance && (
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3, mt: 0.5 }}>
-                                          {(attendance.lateMinutes || 0) > 0 && (
-                                            <Chip
-                                              label={`Опоздание ${attendance.lateMinutes}м`}
-                                              size='small'
-                                              color="error"
-                                              variant="outlined"
-                                              sx={{ fontSize: '0.6rem', height: 18 }}
-                                            />
-                                          )}
-                                          {(attendance.earlyLeaveMinutes || 0) > 0 && (
-                                            <Chip
-                                              label={`Ранний уход ${attendance.earlyLeaveMinutes}м`}
-                                              size='small'
-                                              color="warning"
-                                              variant="outlined"
-                                              sx={{ fontSize: '0.6rem', height: 18 }}
-                                            />
-                                          )}
-                                          {attendance.actualStart && !attendance.actualEnd && (
-                                            <Chip
-                                              label="На работе"
-                                              size='small'
-                                              color="success"
-                                              variant="outlined"
-                                              sx={{ fontSize: '0.6rem', height: 18 }}
-                                            />
-                                          )}
-                                        </Box>
-                                      )}
-                                    </>
-                                  );
-                                })()}
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
-                      );
-                    })}
+                          return (
+                            <TableCell
+                              key={date.toString()}
+                              align='center'
+                              sx={{
+                                p: 1,
+                                backgroundColor: isHoliday ? '#ffebee' : (weekend ? '#f5f5f5' : 'inherit'),
+                                border: '1px solid #e0e0e0',
+                                width: '120px',
+                                minHeight: '80px',
+                                cursor: 'pointer',
+                                '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' }
+                              }}
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  staffId,
+                                  staffName: staffMember.fullName,
+                                  date: dateStr,
+                                });
+                                setModalOpen(true);
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                {dayShifts.map((shift) => (
+                                  <Chip
+                                    key={shift.id || shift._id}
+                                    label={STATUS_TEXT[shift.status] || shift.status}
+                                    size='small'
+                                    color={STATUS_COLORS[shift.status] || 'default'}
+                                    sx={{ fontSize: '0.65rem' }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditShift(shift);
+                                    }}
+                                  />
+                                ))}
+                                {recordsForDay.map((record) => (
+                                  <Box key={record._id} sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3 }}>
+                                    {(record.lateMinutes ?? 0) > 0 && (
+                                      <Chip label={`Оп: ${record.lateMinutes}м`} size='small' color='error' variant='outlined' sx={{ fontSize: '0.6rem' }} />
+                                    )}
+                                    {(record.earlyLeaveMinutes ?? 0) > 0 && (
+                                      <Chip label={`Ух: ${record.earlyLeaveMinutes}м`} size='small' color='warning' variant='outlined' sx={{ fontSize: '0.6rem' }} />
+                                    )}
+                                    {record.actualStart && !record.actualEnd && (
+                                      <Chip label="На работе" size='small' color='success' variant='outlined' sx={{ fontSize: '0.6rem' }} />
+                                    )}
+                                  </Box>
+                                ))}
+                              </Box>
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -1047,186 +728,70 @@ const StaffSchedule: React.FC = () => {
         </Card>
 
         {/* Shift Form Modal */}
-        <Dialog
-          open={modalOpen}
-          onClose={handleCloseModal}
-          maxWidth='sm'
-          fullWidth
-        >
+        <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth='sm' fullWidth>
           <form onSubmit={handleSubmit}>
-            <DialogTitle>
-              {editingShift ? 'Редактировать смену' : 'Добавить новую смену'}
-            </DialogTitle>
+            <DialogTitle>{editingShift ? 'Редактировать смену' : 'Добавить новую смену'}</DialogTitle>
             <DialogContent>
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid item xs={12}>
                   <FormControl fullWidth required>
                     <InputLabel>Сотрудник</InputLabel>
-                    <Select
-                      name='staffId'
-                      value={formData.staffId}
-                      onChange={handleStaffSelect}
-                      label='Сотрудник'
-                      required
-                    >
-                      {staff.map((staffMember) => (
-                        <MenuItem key={staffMember.id} value={staffMember.id}>
-                          <Box display='flex' alignItems='center'>
-                            <Box
-                              sx={{
-                                width: 10,
-                                height: 10,
-                                borderRadius: '50%',
-                                bgcolor:
-                                  ROLE_COLORS[staffMember.role as string] ||
-                                  '#9e9e9e',
-                                mr: 1,
-                              }}
-                            />
-                            <Box>
-                              {staffMember.fullName}
-                              <Box
-                                sx={{
-                                  fontSize: '0.8em',
-                                  color: 'text.secondary',
-                                }}
-                              >
-                                {ROLE_LABELS[staffMember.role as string] ||
-                                  staffMember.role}
-                              </Box>
-                            </Box>
-                          </Box>
+                    <Select value={formData.staffId} onChange={handleStaffSelect} label='Сотрудник' required>
+                      {staff.map((s) => (
+                        <MenuItem key={s.id || s._id} value={s.id || s._id}>
+                          {s.fullName} ({ROLE_LABELS[s.role as string] || s.role})
                         </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
                 </Grid>
-
                 <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <LocalizationProvider
-                      dateAdapter={AdapterMoment}
-                      adapterLocale="ru"
-                    >
-                      <DatePicker
-                        label='Дата смены'
-                        value={formData.date ? new Date(formData.date) : null}
-                        onChange={handleDateChange}
-                        renderInput={(params) => (
-                          <TextField {...params} fullWidth required />
-                        )}
-                      />
-                    </LocalizationProvider>
-                  </FormControl>
+                  <DatePicker
+                    label='Дата смены'
+                    value={moment(formData.date)}
+                    onChange={(date) => handleDateChange(date ? date.toDate() : null)}
+                    renderInput={(params) => <TextField {...params} fullWidth required />}
+                  />
                 </Grid>
-
-
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth required>
                     <InputLabel>Статус</InputLabel>
-                    <Select
-                      name='status'
-                      value={formData.status}
-                      onChange={handleSelectChange}
-                      label='Статус'
-                      required
-                    >
+                    <Select name='status' value={formData.status} onChange={handleSelectChange} label='Статус' required>
                       <MenuItem value='scheduled'>Запланирована</MenuItem>
                       <MenuItem value='completed'>Завершена</MenuItem>
                       <MenuItem value='in_progress'>В процессе</MenuItem>
                       <MenuItem value='late'>Опоздание</MenuItem>
-                      <MenuItem value='pending_approval'>
-                        Ожидает подтверждения
-                      </MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
-
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12}>
+                  <TextField label='Примечания' name='notes' value={formData.notes} onChange={handleInputChange} fullWidth multiline rows={2} />
+                </Grid>
+                <Grid item xs={12}>
                   <FormControl fullWidth>
                     <InputLabel>Альтернативный сотрудник</InputLabel>
-                    <Select
-                      name='alternativeStaffId'
-                      value={formData.alternativeStaffId || ''}
-                      onChange={handleSelectChange}
-                      label='Альтернативный сотрудник'
-                    >
-                      <MenuItem value=''>
-                        Нет альтернативного сотрудника
-                      </MenuItem>
-                      {staff
-                        .filter(
-                          (s) => s.role !== 'parent' && s.role !== 'child',
-                        )
-                        .map((staffMember) => (
-                          <MenuItem
-                            key={staffMember.id}
-                            value={staffMember.id || staffMember._id}
-                          >
-                            <Box display='flex' alignItems='center'>
-                              <Box
-                                sx={{
-                                  width: 10,
-                                  height: 10,
-                                  borderRadius: '50%',
-                                  bgcolor:
-                                    ROLE_COLORS[staffMember.role as string] ||
-                                    '#9e9e9e',
-                                  mr: 1,
-                                }}
-                              />
-                              <Box>
-                                {staffMember.fullName}
-                                <Box
-                                  sx={{
-                                    fontSize: '0.8em',
-                                    color: 'text.secondary',
-                                  }}
-                                >
-                                  {ROLE_LABELS[staffMember.role as string] ||
-                                    staffMember.role}
-                                </Box>
-                              </Box>
-                            </Box>
-                          </MenuItem>
-                        ))}
+                    <Select name='alternativeStaffId' value={formData.alternativeStaffId || ''} onChange={handleSelectChange} label='Альтернативный сотрудник'>
+                      <MenuItem value=''>Нет альтернативного сотрудника</MenuItem>
+                      {staff.filter(s => s.role !== 'parent' && s.role !== 'child').map((s) => (
+                        <MenuItem key={s.id || s._id} value={s.id || s._id}>{s.fullName}</MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label='Примечания'
-                    name='notes'
-                    value={formData.notes}
-                    onChange={handleInputChange}
-                    fullWidth
-                    multiline
-                    rows={3}
-                  />
                 </Grid>
               </Grid>
             </DialogContent>
             <DialogActions sx={{ p: 2 }}>
-              {editingShift && editingShift.id && (
+              {editingShift && (
                 <Button
                   onClick={async () => {
-                    if (window.confirm('Вы уверены, что хотите удалить эту смену?')) {
-                      try {
-                        await deleteShift(editingShift.id!);
-                        enqueueSnackbar('Смена удалена', { variant: 'success' });
-                        const monthStart = moment(currentDate).startOf('month');
-                        const monthEnd = moment(currentDate).endOf('month');
-                        const shiftsData = await getShifts(
-                          monthStart.format('YYYY-MM-DD'),
-                          monthEnd.format('YYYY-MM-DD'),
-                        );
-                        setShifts(shiftsData);
-                        handleCloseModal();
-                      } catch (e) {
-                        console.error(e);
-                        enqueueSnackbar('Ошибка при удалении', { variant: 'error' });
-                      }
+                    const id = editingShift.id || editingShift._id;
+                    if (id && window.confirm('Удалить смену?')) {
+                      await deleteShift(id);
+                      enqueueSnackbar('Смена удалена', { variant: 'success' });
+                      handleCloseModal();
+                      const weekStart = moment(currentDate).startOf('isoWeek');
+                      const weekEnd = moment(currentDate).endOf('isoWeek');
+                      setShifts(await getShifts(weekStart.format('YYYY-MM-DD'), weekEnd.format('YYYY-MM-DD')));
                     }
                   }}
                   color="error"
@@ -1234,84 +799,34 @@ const StaffSchedule: React.FC = () => {
                   Удалить
                 </Button>
               )}
-              {editingShift && editingShift.status !== 'scheduled' && (
-                // Only show for existing shifts perhaps? Or just always if staff is known.
-                // Actually, editingShift always exists in this context.
-                <Button
-                  onClick={() => {
-                    if (editingShift.staffId) {
-                      const sId = typeof editingShift.staffId === 'string' ? editingShift.staffId : (editingShift.staffId as any)._id;
-                      setSelectedStaff([sId]);
-                      setDeleteTarget('selected');
-                      setDeleteStartDate(moment(currentDate));
-                      setDeleteEndDate(moment(currentDate)); // or end of month? default is fine
-                      setDeleteDialogOpen(true);
-                      setModalOpen(false);
-                    }
-                  }}
-                  color="warning"
-                >
-                  Удалить за период
-                </Button>
-              )}
-              <Button onClick={handleCloseModal} color='primary'>
-                Отмена
-              </Button>
-              <Button
-                type='submit'
-                variant='contained'
-                color='primary'
-                disabled={loading}
-                startIcon={loading ? <CircularProgress size={20} /> : null}
-              >
-                {editingShift ? 'Сохранить изменения' : 'Добавить смену'}
+              <Button onClick={handleCloseModal}>Отмена</Button>
+              <Button type='submit' variant='contained' color='primary' disabled={loading}>
+                {editingShift ? 'Сохранить' : 'Добавить'}
               </Button>
             </DialogActions>
           </form>
         </Dialog>
-        <Dialog
-          open={deleteDialogOpen}
-          onClose={() => setDeleteDialogOpen(false)}
-        >
+
+        {/* Delete Dialog */}
+        <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
           <DialogTitle>Удаление смен</DialogTitle>
           <DialogContent>
             <Box pt={1} display="flex" flexDirection="column" gap={2}>
               <FormControl>
-                <RadioGroup
-                  value={deleteTarget}
-                  onChange={(e) => setDeleteTarget(e.target.value as 'selected' | 'all')}
-                >
-                  <FormControlLabel
-                    value="selected"
-                    control={<Radio />}
-                    label={`Только выбранные сотрудники (${selectedStaff.length})`}
-                    disabled={selectedStaff.length === 0}
-                  />
+                <RadioGroup value={deleteTarget} onChange={(e) => setDeleteTarget(e.target.value as any)}>
+                  <FormControlLabel value="selected" control={<Radio />} label="Выбранные сотрудники" disabled={selectedStaff.length === 0} />
                   <FormControlLabel value="all" control={<Radio />} label="Все сотрудники" />
                 </RadioGroup>
               </FormControl>
-
-              <Box display="flex" gap={2} mt={2}>
-                <DatePicker
-                  label="С даты"
-                  value={deleteStartDate}
-                  onChange={(newValue: moment.Moment | null) => setDeleteStartDate(newValue)}
-                  renderInput={(params: any) => <TextField {...params} size='small' />}
-                />
-                <DatePicker
-                  label="По дату"
-                  value={deleteEndDate}
-                  onChange={(newValue: moment.Moment | null) => setDeleteEndDate(newValue)}
-                  renderInput={(params: any) => <TextField {...params} size='small' />}
-                />
+              <Box display="flex" gap={2}>
+                <DatePicker label="С" value={deleteStartDate} onChange={setDeleteStartDate} renderInput={(p) => <TextField {...p} size='small' />} />
+                <DatePicker label="По" value={deleteEndDate} onChange={setDeleteEndDate} renderInput={(p) => <TextField {...p} size='small' />} />
               </Box>
             </Box>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
-            <Button onClick={handleBulkDelete} color="error" variant="contained">
-              Удалить
-            </Button>
+            <Button onClick={handleBulkDelete} color="error" variant="contained">Удалить</Button>
           </DialogActions>
         </Dialog>
       </Box>

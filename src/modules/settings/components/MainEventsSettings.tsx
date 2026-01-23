@@ -55,7 +55,7 @@ interface ExportEntity {
   exportDayOfMonth: number;
   emailRecipients: string[];
   scheduleFrequency: 'daily' | 'weekly' | 'monthly' | 'none';
-  format: 'pdf' | 'excel' | 'csv';
+  format: 'excel';
 }
 
 const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
@@ -78,9 +78,9 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           collection: 'childAttendance',
           description: 'Записи о посещении детей',
           exportDayOfMonth: 30,
-          emailRecipients: [],
+          emailRecipients: [] as string[],
           scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel' as 'pdf' | 'excel' | 'csv',
+          format: 'excel',
         },
         {
           id: 'childPayment',
@@ -88,9 +88,9 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           collection: 'childPayment',
           description: 'Оплаты за посещение детей',
           exportDayOfMonth: 30,
-          emailRecipients: [],
+          emailRecipients: [] as string[],
           scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel' as 'pdf' | 'excel' | 'csv',
+          format: 'excel',
         },
         {
           id: 'staffShifts',
@@ -98,9 +98,9 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           collection: 'staffShifts',
           description: 'Смены сотрудников',
           exportDayOfMonth: 30,
-          emailRecipients: [],
+          emailRecipients: [] as string[],
           scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel' as 'pdf' | 'excel' | 'csv',
+          format: 'excel',
         },
         {
           id: 'payroll',
@@ -108,9 +108,9 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           collection: 'payroll',
           description: 'Зарплатные ведомости',
           exportDayOfMonth: 30,
-          emailRecipients: [],
+          emailRecipients: [] as string[],
           scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel' as 'pdf' | 'excel' | 'csv',
+          format: 'excel',
         },
         {
           id: 'rent',
@@ -118,9 +118,9 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           collection: 'rent',
           description: 'Арендные платежи',
           exportDayOfMonth: 30,
-          emailRecipients: [],
+          emailRecipients: [] as string[],
           scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel' as 'pdf' | 'excel' | 'csv',
+          format: 'excel',
         },
         {
           id: 'schedule',
@@ -128,28 +128,30 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           collection: 'schedule',
           description: 'Отчет по расписанию',
           exportDayOfMonth: 30,
-          emailRecipients: [],
+          emailRecipients: [] as string[],
           scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel' as 'pdf' | 'excel' | 'csv',
+          format: 'excel',
         },
       ];
 
 
-      const entitiesWithCounts = await Promise.all(
+      const collectionsWithCounts = await Promise.all(
         collections.map(async (entity) => {
           const count = await getEntityCount(entity.collection);
           const nextExportDate = getNextExportDate(entity.exportDayOfMonth);
           const daysUntilExport = getDaysUntilExport(nextExportDate);
-          return {
+          const result: ExportEntity = {
             ...entity,
             count,
             nextExportDate,
             daysUntilExport,
+            format: 'excel',
           };
+          return result;
         }),
       );
 
-      setExportEntities(entitiesWithCounts);
+      setExportEntities(collectionsWithCounts);
     } catch (err) {
       setError(
         'Ошибка загрузки информации о сущностях: ' + (err as Error).message,
@@ -202,19 +204,19 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
     const year = today.getFullYear();
     const month = today.getMonth();
 
-
+    // Get the last day of the current month
     const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    // Use the minimum of the provided day and the last day of the month to avoid invalid dates
+    const adjustedDay = Math.min(dayOfMonth, lastDayOfMonth);
 
+    let exportDate = new Date(year, month, adjustedDay);
 
-    let exportDate = new Date(year, month, lastDayOfMonth);
-
-
+    // If the calculated date is before or equal to today, move to next month
     if (exportDate <= today) {
-
       const nextMonthLastDay = new Date(year, month + 2, 0).getDate();
-      exportDate = new Date(year, month + 1, nextMonthLastDay);
+      const nextMonthAdjustedDay = Math.min(dayOfMonth, nextMonthLastDay);
+      exportDate = new Date(year, month + 1, nextMonthAdjustedDay);
     }
-
     return exportDate;
   };
 
@@ -351,7 +353,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           const { exportToExcel: exportRentToExcel } = await import(
             '../../../shared/utils/excelExport'
           );
-          exportRentToExcel(rentConfig);
+          exportRentToExcel(rentData);
           break;
 
         case 'schedule':
@@ -624,13 +626,11 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
                             handleUpdateExportSetting(
                               entity.id,
                               'format',
-                              e.target.value as 'pdf' | 'excel' | 'csv',
+                              e.target.value as 'excel',
                             )
                           }
                         >
-                          <MenuItem value='pdf'>PDF</MenuItem>
                           <MenuItem value='excel'>Excel</MenuItem>
-                          <MenuItem value='csv'>CSV</MenuItem>
                         </Select>
                       </FormControl>
                       <FormControl size='small' sx={{ minWidth: 120, mb: 1 }}>

@@ -18,9 +18,9 @@ import {
   MenuItem,
   CircularProgress,
 } from '@mui/material';
-import { getUsers } from '../../staff/services/users';
+import { getUsers } from '../../staff/services/userService';
 import childrenApi from '../../children/services/children';
-import { User, ID } from '../../../shared/types/common';
+import { User } from '../../../shared/types/common';
 import { MantouxRecord } from '../../../shared/types/mantoux';
 import {
   getMantouxRecords,

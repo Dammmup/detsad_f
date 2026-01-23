@@ -51,15 +51,13 @@ import {
 import {
     getActivityTemplates,
     getActivityTypes,
-    createDailySchedule,
-    updateDailyScheduleBlocks,
-    getDailySchedules,
-} from '../services/cyclogram';
-import {
     ActivityTemplate,
     ScheduleBlock,
+    createDailySchedule,
+    updateDailyScheduleBlocks,
     DailySchedule,
-} from '../../../shared/types/staff';
+    getDailySchedules,
+} from '../services/cyclogram';
 import { getGroups } from '../../children/services/groups';
 import { Group } from '../../../shared/types/common';
 
@@ -144,7 +142,7 @@ const DayConstructor: React.FC = () => {
             setActivityTypes(typesData);
             setGroups(groupsData);
             if (groupsData.length > 0) {
-                setSelectedGroup(groupsData[0].id || groupsData[0]._id || '');
+                setSelectedGroup(groupsData[0].id || '');
             }
         } catch (err: any) {
             setError(err.message || 'Ошибка загрузки данных');
@@ -232,9 +230,7 @@ const DayConstructor: React.FC = () => {
         setSaving(true);
         try {
             if (currentSchedule) {
-                if (currentSchedule && currentSchedule._id) {
-                    await updateDailyScheduleBlocks(currentSchedule._id, scheduleBlocks);
-                }
+                await updateDailyScheduleBlocks(currentSchedule._id as string, scheduleBlocks);
             } else {
                 await createDailySchedule({
                     groupId: selectedGroup,

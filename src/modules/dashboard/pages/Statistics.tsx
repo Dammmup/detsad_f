@@ -39,10 +39,10 @@ import {
 } from '@mui/icons-material';
 import moment from 'moment';
 import { useDate } from '../../../app/context/DateContext';
-import { getUsers } from '../../staff/services/users';
+import { getUsers } from '../../staff/services/userService';
 import childrenApi from '../../children/services/children';
 import { getGroups } from '../../children/services/groups';
-import { staffAttendanceTrackingService } from '../../staff/services/staffAttendanceTracking';
+import staffAttendanceApi from '../../staff/services/staffAttendance';
 import { getChildAttendance } from '../../children/services/childAttendance';
 import { getPayrollsByUsers } from '../../staff/services/payroll';
 import DateNavigator from '../../../shared/components/DateNavigator';
@@ -126,17 +126,17 @@ const Statistics: React.FC = () => {
                 getUsers(),
                 childrenApi.getAll(),
                 getGroups(),
-                staffAttendanceTrackingService.getAllRecords({ startDate: startOfMonth, endDate: endOfMonth }).catch(() => ({ data: [] })),
+                staffAttendanceApi.getAll({ startDate: startOfMonth, endDate: endOfMonth }).catch(() => ({ data: [] })),
                 getChildAttendance({ startDate: startOfMonth, endDate: endOfMonth }).catch(() => []),
                 getPayrollsByUsers({ period }).catch(() => []),
             ]);
             const staffAttendance = Array.isArray(staffAttendanceRes) ? staffAttendanceRes : (staffAttendanceRes?.data || []);
 
             // Статистика сотрудников
-            const activeUsers = users.filter(u => u.active !== false);
+            const activeUsers = users.filter((u: any) => (u as any).active !== false);
             const byRole: { [role: string]: number } = {};
-            activeUsers.forEach(u => {
-                const role = u.role || 'other';
+            activeUsers.forEach((u: any) => {
+                const role = (u as any).role || 'other';
                 byRole[role] = (byRole[role] || 0) + 1;
             });
 
@@ -265,19 +265,10 @@ const Statistics: React.FC = () => {
             });
 
             // Финансовая статистика
-            let totalSalaryFund = 0;
-            let avgSalary = 0;
-            let totalBonuses = 0;
-            let totalPenalties = 0;
-
-            if (Array.isArray(payrolls) && payrolls.length > 0) {
-                for (const payroll of payrolls as any[]) {
-                    totalSalaryFund += payroll.totalAmount || 0;
-                    totalBonuses += payroll.bonusAmount || 0;
-                    totalPenalties += payroll.penaltyAmount || 0;
-                }
-                avgSalary = Math.round(totalSalaryFund / payrolls.length);
-            }
+            const totalSalaryFund = (payrolls as any[]).reduce((sum: number, p: any) => sum + (p.totalAmount || 0), 0);
+            const avgSalary = payrolls.length > 0 ? Math.round(totalSalaryFund / payrolls.length) : 0;
+            const totalBonuses = (payrolls as any[]).reduce((sum: number, p: any) => sum + (p.bonusAmount || 0), 0);
+            const totalPenalties = (payrolls as any[]).reduce((sum: number, p: any) => sum + (p.penaltyAmount || 0), 0);
 
             setFinanceStats({
                 totalSalaryFund,
@@ -292,8 +283,8 @@ const Statistics: React.FC = () => {
             });
 
             // Статистика посещаемости
-            const totalChildDays = Object.values(childAttendanceMap).reduce((sum: number, s: { present: number; total: number }) => sum + s.total, 0);
-            const totalChildPresent = Object.values(childAttendanceMap).reduce((sum: number, s: { present: number; total: number }) => sum + s.present, 0);
+            const totalChildDays = Object.values(childAttendanceMap).reduce((sum: any, s: any) => sum + s.total, 0);
+            const totalChildPresent = Object.values(childAttendanceMap).reduce((sum: any, s: any) => sum + s.present, 0);
             const avgChildAttendance = totalChildDays > 0 ? Math.round((totalChildPresent / totalChildDays) * 100) : 0;
 
             const groupRanking = groups.map((g: any) => {

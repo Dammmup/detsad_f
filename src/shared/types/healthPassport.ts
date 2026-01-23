@@ -12,7 +12,7 @@ export interface DoctorExaminationEntry {
   notes?: string;
 }
 
-export interface HealthPassportRecord {
+export interface HealthPassport {
   id: string;
   _id?: string;
   childId: string;
@@ -37,3 +37,6 @@ export interface HealthPassportRecord {
   main_diagnosis?: string;
   vaccinations?: string;
 }
+
+// Alias for backward compatibility
+export type HealthPassportRecord = HealthPassport;

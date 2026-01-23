@@ -1,4 +1,3 @@
-import { apiClient } from '../../../shared/utils/api';
 
 interface ChatMessage {
   id: number;

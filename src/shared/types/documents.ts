@@ -7,6 +7,7 @@ export type TemplateCategory = DocumentCategory;
 
 export interface Document {
     id: string;
+    _id?: string;
     title: string;
     type: DocumentType;
     category: DocumentCategory;
@@ -14,7 +15,7 @@ export interface Document {
     fileName: string;
     fileSize: number;
     filePath: string;
-    uploader: string;
+    uploader: string | { _id: string; id?: string; fullName: string };
     uploadDate: string | Date;
     expiryDate?: string | Date;
     description?: string;

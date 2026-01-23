@@ -21,7 +21,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Qwen3ApiService, Qwen3Response } from '../services/qwen3-api';
 
-import { getCurrentUser } from '../../../modules/staff/services/auth';
+import { getCurrentUser } from '../../staff/services/auth';
 
 interface Message {
   id: number;

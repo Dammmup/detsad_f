@@ -19,4 +19,15 @@ export const createUser = (data: Partial<User>) => userApi.create(data as any);
 export const updateUser = (id: string, data: Partial<User>) => userApi.update(id, data as any);
 export const deleteUser = (id: string) => userApi.deleteItem(id);
 
+export const usersApi = {
+  ...userApi,
+  getAll: getUsers,
+  getById: (id: string) => userApi.getById(id),
+  create: createUser,
+  update: updateUser,
+  delete: deleteUser,
+  updatePayrollSettings: (id: string, data: { salary?: number; salaryType?: string }) => userApi.updatePayrollSettings(id, data),
+  generateTelegramLinkCode: (id: string) => userApi.generateTelegramLinkCode(id),
+};
+
 export default userApi;

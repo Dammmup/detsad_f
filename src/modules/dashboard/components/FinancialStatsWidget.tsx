@@ -58,10 +58,18 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
           0,
         );
 
-        const response = await apiClient.get('/payroll/totals', {
+        // Форматируем даты в локальном часовом поясе YYYY-MM-DD
+        const formatDate = (date: Date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+
+        const response = await apiClient.get('/payroll/summary', {
           params: {
-            startDate: startDate.toISOString().split('T')[0],
-            endDate: endDate.toISOString().split('T')[0],
+            startDate: formatDate(startDate),
+            endDate: formatDate(endDate),
             userId: currentUser.id,
           },
         });

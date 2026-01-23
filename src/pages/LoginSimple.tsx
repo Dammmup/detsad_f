@@ -13,7 +13,7 @@ import {
 import { Phone, Lock } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../app/context/AuthContext';
-import { User } from '../shared/types/staff';
+import { User } from '../shared/types/common';
 import { authApi } from '../modules/staff/services/auth';
 
 const Login: React.FC = () => {

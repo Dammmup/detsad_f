@@ -225,7 +225,7 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     return ageGroups;
   }
 
-  async export(format: 'csv' | 'excel' = 'excel'): Promise<Blob> {
+  async export(format: 'excel' = 'excel'): Promise<Blob> {
     return this.get(`${this.endpoint}/export`, {
       params: { format },
       responseType: 'blob',

@@ -9,7 +9,7 @@ import {
 
 interface ExportButtonProps {
   exportTypes: { value: string; label: string }[];
-  onExport: (exportType: string, exportFormat: 'pdf' | 'excel' | 'csv') => void;
+  onExport: (exportType: string, exportFormat: 'excel') => void;
 }
 
 const ExportButton: React.FC<ExportButtonProps> = ({

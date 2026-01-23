@@ -1,5 +1,6 @@
+﻿
 
-
+import Children from '../../modules/children/services/children';
 
 export type ID = string;
 
@@ -20,6 +21,7 @@ export enum UserRole {
   child = 'child',
   substitute = 'substitute',
   tenant = 'tenant',
+  speech_therapist = 'speech_therapist',
 }
 
 export interface Group {
@@ -233,37 +235,13 @@ export const STATUS_COLORS: Record<string, StatusColor> = {
 
 
 export const STATUS_TEXT: Record<string, string> = {
-
   scheduled: 'Запланирована',
   completed: 'Завершена',
-  in_progress: 'В процессе',
-  pending_approval: 'Ожидает подтверждения',
   checked_in: 'На работе',
   checked_out: 'Ушел',
   late: 'Опоздание',
-
-  absent: 'Отсутствует',
-  present: 'Присутствует',
-  no_clock_in: 'Не отметил приход',
-  no_clock_out: 'Не отметил уход',
-  early_leave: 'Ранний уход',
-  late_arrival: 'Поздний приход',
-  active_rent: 'Активна',
-  overdue_rent: 'Просрочена',
-  paid_rent: 'Оплачена',
-  draft_rent: 'Черновик',
-  active_payment: 'Активна',
-  overdue_payment: 'Просрочена',
-  paid_payment: 'Оплачена',
-  draft_payment: 'Черновик',
-  paid: 'Оплачено',
-  active: 'Активно',
-
-
-  absent_shift: 'Отсутствует',
-  pending_approval_shift: 'Ожидает подтверждения',
-  late_shift: 'Опоздание',
 };
+
 
 export enum ShiftStatus {
   scheduled = 'scheduled',
@@ -326,33 +304,33 @@ export interface UserFilters {
 
 
 export const ROLE_TRANSLATIONS: Record<string, string> = {
-
   admin: 'Администратор',
   manager: 'Менеджер',
   director: 'Директор',
-
-
   teacher: 'Воспитатель',
   assistant: 'Помощник воспитателя',
   psychologist: 'Психолог',
   speech_therapist: 'Логопед',
   music_teacher: 'Музыкальный руководитель',
-  physical_education: 'Инструктор по физкультуре',
-
-
+  physical_teacher: 'Инструктор по физкультуре',
   nurse: 'Медсестра',
   doctor: 'Врач',
-
-
   cook: 'Повар',
   cleaner: 'Уборщица',
   security: 'Охранник',
   maintenance: 'Завхоз',
-  laundry: 'Прачка',
-
-
   staff: 'Сотрудник',
   substitute: 'Подменный сотрудник',
   intern: 'Стажер',
   tenant: 'Арендатор',
 };
+
+
+export const EXTERNAL_ROLES: UserRole[] = [
+  UserRole.tenant,
+  UserRole.speech_therapist,
+];
+
+export const STAFF_ROLES: UserRole[] = Object.values(UserRole).filter(
+  (role) => !EXTERNAL_ROLES.includes(role) && role !== UserRole.admin && role !== UserRole.child && role !== UserRole.parent
+);

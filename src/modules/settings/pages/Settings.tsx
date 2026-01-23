@@ -479,12 +479,12 @@ const Settings: React.FC = () => {
               <Grid item xs={12} md={6}>
                 <TextField
                   label={`Сумма штрафа ${kindergartenSettings.payroll?.latePenaltyType === 'fixed'
-                    ? '(фиксированная)'
-                    : kindergartenSettings.payroll?.latePenaltyType === 'per_5_minutes'
-                      ? '(за 5 минут)'
-                      : kindergartenSettings.payroll?.latePenaltyType === 'per_10_minutes'
-                        ? '(за 10 минут)'
-                        : '(за минуту)'
+                      ? '(фиксированная)'
+                      : kindergartenSettings.payroll?.latePenaltyType === 'per_5_minutes'
+                        ? '(за 5 минут)'
+                        : kindergartenSettings.payroll?.latePenaltyType === 'per_10_minutes'
+                          ? '(за 10 минут)'
+                          : '(за минуту)'
                     }`}
                   type='number'
                   fullWidth
@@ -917,13 +917,13 @@ const Settings: React.FC = () => {
                           ?.longitude || 71.4704,
                     }}
                     radius={geolocationSettings.radius || 100}
-                    onRadiusChange={(radius: number) =>
+                    onRadiusChange={(radius) =>
                       setGeolocationSettings({
                         ...geolocationSettings,
                         radius: radius,
                       })
                     }
-                    onCenterChange={(center: { lat: number; lng: number }) =>
+                    onCenterChange={(center) =>
                       setGeolocationSettings({
                         ...geolocationSettings,
                         ...(geolocationSettings as GeolocationSettings),

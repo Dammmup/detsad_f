@@ -17,9 +17,8 @@ import {
   IconButton,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import DownloadIcon from '@mui/icons-material/Download';
+import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
-import { getTodayMenu } from '../services/dailyMenu';
 
 const MONTHS = [
   'Январь',
@@ -72,7 +71,7 @@ const FoodNormsControlPage: React.FC = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     await exportData('food-norms-control', exportFormat, {
       rows: filteredRows,
@@ -160,14 +159,15 @@ const FoodNormsControlPage: React.FC = () => {
           <Button variant='contained' size='small' onClick={handleAutoFill}>
             Генерировать по меню
           </Button>
-          <Button
-            variant='contained'
-            color='primary'
-            startIcon={<DownloadIcon />}
-            onClick={() => handleExport('food-norms-control', 'excel')}
-          >
-            Экспорт
-          </Button>
+          <ExportButton
+            exportTypes={[
+              {
+                value: 'food-norms-control',
+                label: 'Ведомость контроля норм питания',
+              },
+            ]}
+            onExport={handleExport}
+          />
         </Stack>
         <Table size='small' sx={{ minWidth: 800, overflowX: 'auto' }}>
           <TableHead>

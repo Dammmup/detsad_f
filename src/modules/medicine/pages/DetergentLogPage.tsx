@@ -16,17 +16,11 @@ import {
   DialogActions,
   TextField,
 } from '@mui/material';
-import {
-  getDetergentRecords,
-  createDetergentRecord,
-  deleteDetergentRecord,
-  DetergentLogRecord,
-  detergentLogApi,
-} from '../services/detergentLog';
+import { detergentLogApi, DetergentLog } from '../services/detergentLog';
 
 import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
-const defaultForm: DetergentLogRecord = {
+const defaultForm: DetergentLog = {
   date: '',
   detergent: '',
   quantity: 0,
@@ -36,16 +30,16 @@ const defaultForm: DetergentLogRecord = {
 
 
 const DetergentLogPage: React.FC = () => {
-  const [rows, setRows] = useState<DetergentLogRecord[]>([]);
+  const [rows, setRows] = useState<DetergentLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<Partial<DetergentLogRecord>>(defaultForm);
+  const [form, setForm] = useState<Partial<DetergentLog>>(defaultForm);
   const [editId, setEditId] = useState<string | undefined>();
 
   const fetchRows = async () => {
     setLoading(true);
     try {
-      const data = await getDetergentRecords();
+      const data = await detergentLogApi.getAll();
       setRows(data);
     } finally {
       setLoading(false);
@@ -56,7 +50,7 @@ const DetergentLogPage: React.FC = () => {
     fetchRows();
   }, []);
 
-  const handleOpen = (row?: DetergentLogRecord) => {
+  const handleOpen = (row?: DetergentLog) => {
     if (row) {
       setForm(row);
       setEditId(row._id);
@@ -83,7 +77,7 @@ const DetergentLogPage: React.FC = () => {
       if (editId) {
         await detergentLogApi.update(editId, form);
       } else {
-        await createDetergentRecord(form);
+        await detergentLogApi.create(form);
       }
       await fetchRows();
       handleClose();
@@ -96,7 +90,7 @@ const DetergentLogPage: React.FC = () => {
     if (!id) return;
     setLoading(true);
     try {
-      await deleteDetergentRecord(id);
+      await detergentLogApi.deleteItem(id);
       await fetchRows();
     } finally {
       setLoading(false);
@@ -105,7 +99,7 @@ const DetergentLogPage: React.FC = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     await exportData('detergent-log', exportFormat, { rows });
   };

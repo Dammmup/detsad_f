@@ -20,9 +20,9 @@ import {
   FormControlLabel,
   CircularProgress,
 } from '@mui/material';
-import { getUsers } from '../../staff/services/users';
+import { getUsers } from '../../staff/services/userService';
 import childrenApi from '../../children/services/children';
-import { User, ID } from '../../../shared/types/common';
+import { User } from '../../../shared/types/common';
 import {
   getSomaticRecords,
   createSomaticRecord,
@@ -40,6 +40,7 @@ import {
 import { saveAs } from 'file-saver';
 
 import { SomaticRecord } from '../../../shared/types/somatic';
+import { AnyAaaaRecord } from 'dns';
 
 export default function SomaticJournal() {
   const [records, setRecords] = useState<SomaticRecord[]>([]);

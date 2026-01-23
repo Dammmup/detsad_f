@@ -10,18 +10,10 @@ import {
   Divider,
   CircularProgress,
 } from '@mui/material';
+import { User } from '../../../shared/types/common';
 import { Document, Packer, Paragraph, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
-import { Child } from '../../../shared/types/common';
 import childrenApi from '../../children/services/children';
-import {
-  getHealthPassportRecords,
-  createHealthPassportRecord,
-  deleteHealthPassportRecord,
-  HealthPassportRecord,
-} from '../services/healthPassport';
-import ExportButton from '../../../shared/components/ExportButton';
-import { exportData } from '../../../shared/utils/exportUtils';
 
 
 interface ChildPassportForm {
@@ -45,7 +37,7 @@ interface ChildPassportForm {
 
 export default function ChildHealthPassportPage() {
   const [selectedId, setSelectedId] = React.useState('');
-  const [children, setChildren] = React.useState<Child[]>([]);
+  const [children, setChildren] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [form, setForm] = React.useState<ChildPassportForm>({
     fio: '',
@@ -159,7 +151,6 @@ export default function ChildHealthPassportPage() {
         },
       ],
     });
-
     Packer.toBlob(doc).then((blob) => {
       saveAs(blob, `Паспорт_здоровья_${form.fio || 'ребенок'}.docx`);
     });

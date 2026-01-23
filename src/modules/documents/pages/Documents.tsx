@@ -169,7 +169,7 @@ export const Documents = () => {
     if (filterName && filterCategory === 'staff') {
       const name = filterName.toLowerCase();
       filtered = filtered.filter((doc) => {
-        const uploaderName = typeof doc.uploader === 'object' && doc.uploader ? (doc.uploader as any).fullName?.toLowerCase() || '' : doc.uploader || '';
+        const uploaderName = (doc.uploader as any)?.fullName?.toLowerCase() || '';
         return uploaderName.includes(name);
       });
     }
@@ -177,7 +177,7 @@ export const Documents = () => {
 
     if (filterRole.length > 0 && filterCategory === 'staff') {
       filtered = filtered.filter((doc) => {
-        const uploaderId = typeof doc.uploader === 'object' && doc.uploader ? (doc.uploader as any).id : undefined;
+        const uploaderId = (doc.uploader as any)?.id;
         if (!uploaderId) return false;
 
         return true;
@@ -276,12 +276,12 @@ export const Documents = () => {
         await deleteDocument(id);
         setDocuments(
           documents.filter((doc) =>
-            doc.id === id ? false : true,
+            (doc.id || doc._id) === id ? false : true,
           ),
         );
         setFilteredDocuments(
           filteredDocuments.filter((doc) =>
-            doc.id === id ? false : true,
+            (doc.id || doc._id) === id ? false : true,
           ),
         );
       } catch (error) {
@@ -508,7 +508,7 @@ export const Documents = () => {
               {filteredDocuments
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((document) => (
-                  <TableRow key={document.id}>
+                  <TableRow key={document.id || document._id}>
                     <TableCell>
                       <Box display='flex' alignItems='center'>
                         {getFileIcon(document.fileName)}
@@ -550,7 +550,7 @@ export const Documents = () => {
                         ? moment(document.uploadDate).format('DD.MM.YYYY')
                         : '-'}
                     </TableCell>
-                    <TableCell>{typeof document.uploader === 'object' && document.uploader ? (document.uploader as any).fullName || '-' : document.uploader || '-'}</TableCell>
+                    <TableCell>{(document.uploader as any)?.fullName || '-'}</TableCell>
                     <TableCell>
                       <Chip
                         label={
@@ -571,7 +571,7 @@ export const Documents = () => {
                               'Download button clicked, document:',
                               document,
                             );
-                            const docId = document.id;
+                            const docId = document.id || document._id;
                             if (docId) {
                               handleDownloadDocument(docId);
                             } else {
@@ -597,8 +597,9 @@ export const Documents = () => {
                         <IconButton
                           size='small'
                           onClick={() => {
-                            if (document.id) {
-                              handleDeleteDocument(document.id);
+                            const docId = document.id || document._id;
+                            if (docId) {
+                              handleDeleteDocument(docId);
                             } else {
                               console.error(
                                 'Document ID is missing for delete',

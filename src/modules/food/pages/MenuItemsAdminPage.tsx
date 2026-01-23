@@ -28,8 +28,6 @@ import {
   updateMenuItem,
   deleteMenuItem,
 } from '../services/menuItems';
-import { getDishes, Dish, deleteDish, updateDish } from '../services/dishes';
-import { getProducts, Product } from '../services/products';
 import { MenuItem as MenuItemType } from '../types/menuItem';
 
 const MEALS = ['Завтрак', 'Обед', 'Полдник', 'Ужин'];

@@ -21,7 +21,8 @@ export const exportStaffAttendanceByPeriod = async (
       });
     }
 
-    const filteredData = (dataToExport || []).filter((record) => {
+
+    const filteredData = dataToExport.filter((record) => {
       return record.date >= startDate && record.date <= endDate;
     });
 

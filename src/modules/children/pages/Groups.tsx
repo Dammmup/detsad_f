@@ -40,7 +40,7 @@ import ExportButton from '../../../shared/components/ExportButton';
 
 
 
-export interface Group {
+interface Group {
   id: string;
   _id?: string;
   name: string;
@@ -101,10 +101,11 @@ const Groups = () => {
   }>({});
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
+  const isAdminOrManager = currentUser?.role === 'admin' || currentUser?.role === 'manager';
 
   const handleExport = async (
     _exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     setLoading(true);
     try {
@@ -130,7 +131,7 @@ const Groups = () => {
   const fetchTeachers = async () => {
     try {
 
-      const { getUsers } = await import('../../../modules/staff/services/users');
+      const { getUsers } = await import('../../staff/services/userService');
       const users = await getUsers();
       const filtered = users.filter((u: any) =>
         ['teacher', 'assistant'].includes(u.role as any),
@@ -386,14 +387,16 @@ const Groups = () => {
           exportTypes={[{ value: 'groups', label: 'Список групп' }]}
           onExport={handleExport}
         />
-        <Button
-          variant='contained'
-          color='primary'
-          startIcon={<Add />}
-          onClick={() => handleOpenModal()}
-        >
-          Добавить группу
-        </Button>
+        {isAdminOrManager && (
+          <Button
+            variant='contained'
+            color='primary'
+            startIcon={<Add />}
+            onClick={() => handleOpenModal()}
+          >
+            Добавить группу
+          </Button>
+        )}
       </Box>
 
       {/* Улучшенная обработка загрузки: показываем данные даже при загрузке, если они уже есть */}
@@ -459,12 +462,16 @@ const Groups = () => {
                             <Visibility color="primary" />
                           )}
                         </IconButton>
-                        <IconButton onClick={() => handleOpenModal(group)}>
-                          <Edit />
-                        </IconButton>
-                        <IconButton onClick={() => handleDelete(group.id!)}>
-                          <Delete color='error' />
-                        </IconButton>
+                        {isAdminOrManager && (
+                          <>
+                            <IconButton onClick={() => handleOpenModal(group)}>
+                              <Edit />
+                            </IconButton>
+                            <IconButton onClick={() => handleDelete(group.id!)}>
+                              <Delete color='error' />
+                            </IconButton>
+                          </>
+                        )}
                       </TableCell>
                     </TableRow>
                     {/* Разворачивающаяся строка с детьми */}

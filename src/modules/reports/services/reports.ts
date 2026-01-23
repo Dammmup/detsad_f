@@ -17,7 +17,7 @@ export interface Report {
     status?: string;
   };
   data?: any;
-  format?: 'pdf' | 'excel' | 'csv';
+  format?: 'excel';
   status?: 'generating' | 'completed' | 'failed' | 'scheduled';
   filePath?: string;
   fileSize?: number;
@@ -243,7 +243,7 @@ export const getScheduleStatistics = async (
 
 export const exportReport = async (
   reportId: string,
-  format: 'pdf' | 'excel' | 'csv',
+  format: 'excel',
 ) => {
   try {
     const response = await apiClient.get(`/reports/${reportId}/export`, {
@@ -255,11 +255,9 @@ export const exportReport = async (
 
     const blob = new Blob([response.data], {
       type:
-        format === 'pdf'
-          ? 'application/pdf'
-          : format === 'excel'
-            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            : 'text/csv',
+        format === 'excel'
+          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          : 'application/octet-stream',
     });
 
     return blob;
@@ -274,7 +272,7 @@ export const exportSalaryReport = async (params: {
   startDate: string;
   endDate: string;
   userId?: string;
-  format: 'pdf' | 'excel' | 'csv';
+  format: 'excel';
   includeDeductions?: boolean;
   includeBonus?: boolean;
 }) => {
@@ -289,11 +287,9 @@ export const exportSalaryReport = async (params: {
     });
     const blob = new Blob([response.data], {
       type:
-        params.format === 'pdf'
-          ? 'application/pdf'
-          : params.format === 'excel'
-            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            : 'text/csv',
+        params.format === 'excel'
+          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          : 'application/octet-stream',
     });
     return blob;
   } catch (error: any) {
@@ -331,7 +327,7 @@ export const getSalarySummary = async (month: string) => {
 export const exportChildrenReport = async (params: {
   groupId?: string;
   ageGroup?: string;
-  format: 'pdf' | 'excel' | 'csv';
+  format: 'excel';
   includeParentInfo?: boolean;
   includeHealthInfo?: boolean;
 }) => {
@@ -343,11 +339,9 @@ export const exportChildrenReport = async (params: {
 
     const blob = new Blob([response.data], {
       type:
-        params.format === 'pdf'
-          ? 'application/pdf'
-          : params.format === 'excel'
-            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            : 'text/csv',
+        params.format === 'excel'
+          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          : 'application/octet-stream',
     });
 
     return blob;
@@ -361,7 +355,7 @@ export const exportAttendanceReport = async (params: {
   endDate: string;
   userId?: string;
   groupId?: string;
-  format: 'pdf' | 'excel' | 'csv';
+  format: 'excel';
   includeStatistics?: boolean;
   includeCharts?: boolean;
 }) => {
@@ -376,12 +370,7 @@ export const exportAttendanceReport = async (params: {
     );
 
     const blob = new Blob([response.data], {
-      type:
-        params.format === 'pdf'
-          ? 'application/pdf'
-          : params.format === 'excel'
-            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            : 'text/csv',
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
 
     return blob;
@@ -395,7 +384,7 @@ export const sendReportByEmail = async (params: {
   recipients: string[];
   subject?: string;
   message?: string;
-  format: 'pdf' | 'excel' | 'csv';
+  format: 'excel';
   reportParams?: any;
 }) => {
   try {
@@ -412,7 +401,7 @@ export const scheduleReport = async (params: {
   reportType: 'salary' | 'children' | 'attendance' | 'schedule';
   frequency: 'daily' | 'weekly' | 'monthly';
   recipients: string[];
-  format: 'pdf' | 'excel' | 'csv';
+  format: 'excel';
   reportParams?: any;
   startDate?: string;
 }) => {
@@ -428,7 +417,7 @@ export const scheduleReport = async (params: {
 
 export const downloadReport = async (
   reportId: string,
-  format: 'pdf' | 'excel' | 'csv',
+  format: 'excel',
 ) => {
   try {
     const response = await apiClient.get(`/reports/${reportId}/download`, {
@@ -465,7 +454,7 @@ export const generateCustomReport = async (params: {
   endDate: string;
   userId?: string;
   groupId?: string;
-  format?: 'pdf' | 'excel' | 'csv';
+  format?: 'excel';
 }) => {
   try {
     const response = await apiClient.post('/reports/generate', params, {

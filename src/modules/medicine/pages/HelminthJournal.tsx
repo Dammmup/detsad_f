@@ -23,17 +23,14 @@ import {
   Avatar,
 } from '@mui/material';
 import { Person } from '@mui/icons-material';
-import { getUsers } from '../../staff/services/users'; // Added getUsers import
 import childrenApi from '../../children/services/children';
-import { Child, User, ID } from '../../../shared/types/common';
+import { Child } from '../../../shared/types/common';
 import {
   getHelminthRecords,
   createHelminthRecord,
   deleteHelminthRecord,
-  HelminthRecord,
 } from '../services/helminthJournal';
-import ExportButton from '../../../shared/components/ExportButton';
-import { exportData } from '../../../shared/utils/exportUtils';
+import { HelminthRecord } from '../../../shared/types/helminth';
 import {
   Document,
   Packer,
@@ -150,7 +147,8 @@ export default function HelminthJournal() {
       };
 
       const created = await createHelminthRecord(requestData as any);
-      setRecords((prev: HelminthRecord[]) => [created, ...prev]);
+      // Refresh to get populated data or just add to list
+      setRecords((prev) => [created, ...prev]);
       setModalOpen(false);
       setNewRecord({
         month: MONTHS[new Date().getMonth()],
@@ -171,7 +169,7 @@ export default function HelminthJournal() {
     setLoading(true);
     try {
       await deleteHelminthRecord(id);
-      setRecords((prev: HelminthRecord[]) => prev.filter((r: HelminthRecord) => (r.id || r._id) !== id));
+      setRecords((prev) => prev.filter((r) => (r.id || r._id) !== id));
     } catch (error: any) {
       alert('Ошибка при удалении: ' + error.message);
     } finally {

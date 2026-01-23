@@ -17,17 +17,15 @@ import {
   MenuItem,
   CircularProgress,
 } from '@mui/material';
-import { getUsers } from '../../staff/services/users';
+import { getUsers } from '../../staff/services/userService';
 import childrenApi from '../../children/services/children';
-import { Child, User, ID } from '../../../shared/types/common';
+import { User } from '../../../shared/types/common';
+import { TubPositiveRecord } from '../../../shared/types/tubPositive';
 import {
   getTubPositiveRecords,
   createTubPositiveRecord,
   deleteTubPositiveRecord,
-  TubPositiveRecord,
 } from '../services/tubPositiveJournal';
-import ExportButton from '../../../shared/components/ExportButton';
-import { exportData } from '../../../shared/utils/exportUtils';
 
 export default function TubPositiveJournal() {
   const [records, setRecords] = useState<TubPositiveRecord[]>([]);
@@ -88,7 +86,7 @@ export default function TubPositiveJournal() {
     setLoading(true);
     try {
       await deleteTubPositiveRecord(id);
-      setRecords((prev: TubPositiveRecord[]) => prev.filter((r: TubPositiveRecord) => (r.id || (r as any)._id) !== id));
+      setRecords((prev) => prev.filter((r) => r.id !== id));
     } finally {
       setLoading(false);
     }
@@ -108,10 +106,6 @@ export default function TubPositiveJournal() {
             : child.groupId || '',
       }));
     }
-  };
-
-  const handleExport = () => {
-    exportData('tub-positive-journal', 'excel');
   };
 
   const handleClearFilters = () => {

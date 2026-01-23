@@ -81,7 +81,7 @@ const Children: React.FC = () => {
 
   const handleExport = async (
     _exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     setLoading(true);
     try {
@@ -124,14 +124,22 @@ const Children: React.FC = () => {
     try {
       const childrenList = await childrenApi.getAll();
 
-      if (currentUser && (currentUser.role === 'teacher' || currentUser.role === 'substitute')) {
+      if (currentUser && ['teacher', 'substitute', 'assistant'].includes(currentUser.role)) {
 
 
         const allGroups = await groupsApi.getAll();
-        const userGroups = allGroups.filter((group: Group) => group.teacher === currentUser.id || group.teacherId === currentUser.id);
-        const userGroupIds = userGroups.map((group: Group) => group._id).filter((id: string | undefined) => id !== undefined) as string[];
+        const userGroups = allGroups.filter(
+          (group) =>
+            group.teacher === currentUser.id ||
+            group.teacherId === currentUser.id ||
+            group.teacher === currentUser._id ||
+            group.teacherId === currentUser._id ||
+            (group as any).assistantId === currentUser.id ||
+            (group as any).assistantId === currentUser._id
+        );
+        const userGroupIds = userGroups.map(group => group._id || group.id).filter(id => id !== undefined) as string[];
 
-        const filteredChildren = childrenList.filter((child: Child) => {
+        const filteredChildren = childrenList.filter(child => {
           const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
           return childGroupId && userGroupIds.includes(childGroupId);
         });

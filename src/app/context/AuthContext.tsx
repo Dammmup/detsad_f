@@ -7,7 +7,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { getCurrentUser, isAuthenticated, logout } from '../../modules/staff/services/auth';
-import { User } from '../../shared/types/staff';
+import { User } from '../../shared/types/common';
 import { useNavigate } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
 

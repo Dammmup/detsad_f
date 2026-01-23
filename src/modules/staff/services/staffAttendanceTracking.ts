@@ -1,4 +1,4 @@
-import { apiClient } from '../../../shared/utils/api';
+import apiClient from '../../../shared/utils/api';
 
 export interface StaffAttendanceRecord {
   _id: string;

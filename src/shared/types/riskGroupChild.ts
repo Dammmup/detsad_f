@@ -1,4 +1,4 @@
-export interface RiskGroupChildRecord {
+export interface RiskGroupChild {
   id: string;
   _id?: string;
   childId: string;
@@ -21,3 +21,6 @@ export interface RiskGroupChildRecord {
   address?: string;
   reason?: string;
 }
+
+// Alias for backward compatibility
+export type RiskGroupChildRecord = RiskGroupChild;

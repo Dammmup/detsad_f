@@ -20,7 +20,7 @@ import {
   productCertificateApi,
   ProductCertificate,
 } from '../services/productCertificate';
-import DownloadIcon from '@mui/icons-material/Download';
+import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
 
 const defaultForm: ProductCertificate = {
@@ -103,7 +103,7 @@ const ProductCertificatePage: React.FC = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'pdf' | 'excel' | 'csv',
+    exportFormat: 'excel',
   ) => {
     await exportData('product-certificate', exportFormat, { rows });
   };
@@ -122,14 +122,12 @@ const ProductCertificatePage: React.FC = () => {
           >
             Добавить запись
           </Button>
-          <Button
-            variant='contained'
-            color='primary'
-            startIcon={<DownloadIcon />}
-            onClick={() => handleExport('product-certificate', 'excel')}
-          >
-            Экспорт
-          </Button>
+          <ExportButton
+            exportTypes={[
+              { value: 'product-certificate', label: 'Сертификаты продуктов' },
+            ]}
+            onExport={handleExport}
+          />
         </Stack>
         <Paper sx={{ p: 2, mb: 2 }}>
           <TableHead>

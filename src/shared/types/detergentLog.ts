@@ -1,6 +1,6 @@
 // Полный тип согласно IDetergentLog бэкенда
 // Backend-поля опциональны для обратной совместимости с UI
-export interface DetergentLogRecord {
+export interface DetergentLog {
     id?: string;
     _id?: string;
     // Backend fields (optional for backward compatibility)
@@ -29,3 +29,6 @@ export interface DetergentLogRecord {
     detergent?: string;
     responsible?: string;
 }
+
+// Alias for backward compatibility
+export type DetergentLogRecord = DetergentLog;

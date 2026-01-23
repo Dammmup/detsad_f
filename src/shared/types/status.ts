@@ -37,29 +37,6 @@ export const STATUS_COLORS: Record<string, StatusColor> = {
   present_shift: 'success',
 };
 
-export const STATUS_TEXT: Record<string, string> = {
-
-  scheduled: 'Запланирована',
-  completed: 'Завершена',
-
-  absent: 'Отсутствует',
-
-  active_rent: 'Активна',
-  overdue_rent: 'Просрочена',
-  paid_rent: 'Оплачена',
-  draft_rent: 'Черновик',
-  active_payment: 'Активна',
-  overdue_payment: 'Просрочена',
-  paid_payment: 'Оплачена',
-  draft_payment: 'Черновик',
-  paid: 'Оплачено',
-  active: 'Активно',
-
-
-  absent_shift: 'Отсутствует',
-  pending_approval_shift: 'Ожидает подтверждения',
-  late_shift: 'Опоздание',
-};
 
 export enum ShiftStatus {
   scheduled = 'scheduled',

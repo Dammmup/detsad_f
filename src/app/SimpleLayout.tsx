@@ -1,6 +1,6 @@
 import MenuItemsAdminPage from '../modules/food/pages/MenuItemsAdminPage';
 import React from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -33,7 +33,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import StaffSchedule from '../modules/staff/pages/StaffSchedule';
 
 import WeeklyAttendance from '../modules/children/pages/WeeklyAttendance';
-import PayrollList from '../modules/reports/components/PayrollList';
+import ReportsSalary from '../modules/reports/components/PayrollList';
 import { logout, getCurrentUser } from '../services';
 import Reports from '../modules/reports/pages/Reports';
 import StaffAttendanceTracking from '../modules/staff/pages/StaffAttendanceTracking';
@@ -54,7 +54,7 @@ import ProductCertificatePage from '../modules/food/pages/ProductCertificatePage
 import DetergentLogPage from '../modules/medicine/pages/DetergentLogPage';
 import FoodStockLogPage from '../modules/food/pages/FoodStockLogPage';
 import FoodStaffHealthPage from '../modules/food/pages/FoodStaffHealthPage';
-import RentReport from '../modules/reports/components/RentReport';
+import ReportsRent from '../modules/reports/components/RentReport';
 import ChildPayments from '../modules/children/pages/ChildPayments';
 import Qwen3Chat from '../modules/ai/components/Qwen3Chat';
 import ProfilePage from '../modules/staff/pages/ProfilePage';
@@ -99,6 +99,10 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
     handleMenuClose();
   };
 
+  const currentUser = getCurrentUser();
+  const userRole = currentUser?.role || 'staff';
+  const isAdminOrManager = userRole === 'admin' || userRole === 'manager';
+
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
@@ -139,7 +143,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
                 component='div'
                 sx={{ fontWeight: 400, letterSpacing: 0.5, opacity: 0.9, fontSize: { xs: '0.7rem', sm: '0.8rem' } }}
               >
-                {getCurrentUser()?.fullName || ''}
+                {currentUser?.fullName || ''}
               </Typography>
             </Box>
           </Box>
@@ -251,29 +255,29 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path='children/attendance' element={<WeeklyAttendance />} />
             <Route path='children/payments' element={<ChildPayments />} />
             {/* Сотрудники */}
-            <Route path='staff' element={<Staff />} />
+            <Route path='staff' element={isAdminOrManager ? <Staff /> : <Navigate to="/app/dashboard" />} />
             <Route path='staff/schedule' element={<StaffSchedule />} />
             <Route
               path='staff/attendance'
               element={<StaffAttendanceTracking />}
             />
-            <Route path='staff/reports' element={<Reports />} />
+            <Route path='staff/reports' element={isAdminOrManager ? <Reports /> : <Navigate to="/app/dashboard" />} />
             {/* Документы */}
             <Route path='documents' element={<Documents />} />
             {/* Отчеты */}
-            <Route path='reports' element={<Reports />} />
-            <Route path='reports/payroll' element={<PayrollList />} />
-            <Route path='reports/rent' element={<RentReport />} />
+            <Route path='reports' element={isAdminOrManager ? <Reports /> : <Navigate to="/app/dashboard" />} />
+            <Route path='reports/payroll' element={isAdminOrManager ? <ReportsSalary /> : <Navigate to="/app/dashboard" />} />
+            <Route path='reports/rent' element={isAdminOrManager ? <ReportsRent /> : <Navigate to="/app/dashboard" />} />
 
             {/* Статистика */}
-            <Route path='statistics' element={<Statistics />} />
+            <Route path='statistics' element={userRole === 'admin' ? <Statistics /> : <Navigate to="/app/dashboard" />} />
 
             {/* Организация/Настройки */}
             <Route path='groups' element={<Groups />} />
             <Route path='cyclogram' element={<Cyclogram />} />
-            <Route path='settings' element={<Settings />} />
-            <Route path='food/products' element={<ProductAccountingPage />} />
-            <Route path='med/menu-admin' element={<MenuItemsAdminPage />} />
+            <Route path='settings' element={userRole === 'admin' ? <Settings /> : <Navigate to="/app/dashboard" />} />
+            <Route path='food/products' element={isAdminOrManager || userRole === 'cook' ? <ProductAccountingPage /> : <Navigate to="/app/dashboard" />} />
+            <Route path='med/menu-admin' element={isAdminOrManager ? <MenuItemsAdminPage /> : <Navigate to="/app/dashboard" />} />
 
             {/* Медицинский кабинет и журналы */}
             <Route path='med' element={<MedCabinetPage />} />
@@ -320,7 +324,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
               element={<FoodStaffHealthPage />}
             />
             <Route path='profile' element={<ProfilePage />} />
-            <Route path='my-salary' element={<PayrollList personalOnly={true} />} />
+            <Route path='my-salary' element={<ReportsSalary personalOnly={true} />} />
 
             {/* Fallback */}
             <Route path='*' element={<Dashboard />} />

@@ -17,23 +17,21 @@ import {
   MenuItem,
   CircularProgress,
 } from '@mui/material';
-import childrenApi, { Child } from '../../children/services/children';
-import { ID } from '../../../shared/types/common';
+import childrenApi from '../../children/services/children';
+import { User } from '../../../shared/types/common';
+import { RiskGroupChild } from '../../../shared/types/riskGroupChild';
 import {
-  getRiskGroupRecords,
-  createRiskGroupRecord,
-  deleteRiskGroupRecord,
-  RiskGroupChildRecord,
+  getRiskGroupChildren,
+  createRiskGroupChild,
+  deleteRiskGroupChild,
 } from '../services/riskGroupChildren';
-import ExportButton from '../../../shared/components/ExportButton';
-import { exportData } from '../../../shared/utils/exportUtils';
 
 export default function RiskGroupChildren() {
-  const [records, setRecords] = useState<RiskGroupChildRecord[]>([]);
-  const [users, setUsers] = useState<Child[]>([]);
+  const [records, setRecords] = useState<RiskGroupChild[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [newRecord, setNewRecord] = useState<Partial<RiskGroupChildRecord>>({});
+  const [newRecord, setNewRecord] = useState<Partial<RiskGroupChild>>({});
   const [search, setSearch] = useState('');
   const [group, setGroup] = useState('');
   const [reason, setReason] = useState('');
@@ -41,8 +39,10 @@ export default function RiskGroupChildren() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      childrenApi.getAll().then(setUsers),
-      getRiskGroupRecords().then(setRecords),
+      childrenApi.getAll().then((children: any) => {
+        setUsers(children);
+      }),
+      getRiskGroupChildren().then(setRecords),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -70,7 +70,7 @@ export default function RiskGroupChildren() {
       return;
     setLoading(true);
     try {
-      const created = await createRiskGroupRecord({
+      const created = await createRiskGroupChild({
         ...newRecord,
         notes: newRecord.notes || '',
       });
@@ -85,8 +85,8 @@ export default function RiskGroupChildren() {
   const handleDelete = async (id: string) => {
     setLoading(true);
     try {
-      await deleteRiskGroupRecord(id);
-      setRecords((prev: RiskGroupChildRecord[]) => prev.filter((r: RiskGroupChildRecord) => (r.id ?? r._id) !== id));
+      await deleteRiskGroupChild(id);
+      setRecords((prev) => prev.filter((r) => r.id !== id));
     } finally {
       setLoading(false);
     }
@@ -107,10 +107,6 @@ export default function RiskGroupChildren() {
         address: child.notes || '',
       }));
     }
-  };
-
-  const handleExport = () => {
-    exportData('risk-group-children', 'excel');
   };
 
   const handleClearFilters = () => {

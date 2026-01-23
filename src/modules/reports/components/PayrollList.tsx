@@ -179,27 +179,30 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         if (!mounted) return;
         const data = (payrollsData || []) as any[];
 
+        // Исключаем арендаторов и логопедов - они платят нам, а не мы им
+        const excludedRoles = ['tenant', 'speech_therapist'];
+        const filteredData = data.filter(p => {
+          const role = p.staffId?.role || '';
+          return !excludedRoles.includes(role);
+        });
+
+        const workedEmployees = filteredData.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
 
         const summaryData = {
-          totalEmployees: data.length,
-          totalAccruals: data.reduce(
-            (sum, p) => sum + (p.accruals || (p.baseSalaryType === 'shift' ? ((p.workedShifts || 0) * (p.shiftRate || p.baseSalary || 0)) : (p.baseSalary || 0))),
+          totalEmployees: workedEmployees.length,
+          totalAccruals: workedEmployees.reduce(
+            (sum, p) => sum + (p.accruals || 0) + (p.bonuses || 0),
             0,
           ),
-          totalPenalties: data.reduce((sum, p) => sum + (p.penalties || 0), 0),
-          totalPayout: data.reduce((sum, p) => {
-            const accruals = p.accruals || (p.baseSalaryType === 'shift' ? ((p.workedShifts || 0) * (p.shiftRate || p.baseSalary || 0)) : (p.baseSalary || 0));
-            const bonuses = p.bonuses || 0;
-            const penalties = p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0);
-            const advance = p.advance || 0;
-            const total = accruals + bonuses - penalties - advance;
-            return sum + (total >= 0 ? total : 0);
-          }, 0),
+          totalAdvance: workedEmployees.reduce((sum, p) => sum + (p.advance || 0), 0),
+          totalPenalties: workedEmployees.reduce((sum, p) => sum + (p.penalties || 0) + (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0), 0),
+          totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total || 0), 0),
         };
+
 
         setSummary(summaryData);
         setRows(
-          data.map((p: any) => ({
+          filteredData.map((p: any) => ({
             staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
             accruals: p.accruals || (p.baseSalaryType === 'shift' ? ((p.workedShifts || 0) * (p.shiftRate || p.baseSalary || 0)) : 0),
             bonuses: p.bonuses || 0,
@@ -390,36 +393,59 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     setSnackbarOpen(false);
   };
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
+    try {
+      const { utils, writeFile } = await import('xlsx');
 
-    let csvContent = 'data:text/csv;charset=utf-8,';
+      // Подготавливаем данные для экспорта
+      const exportData = rows.map(row => ({
+        'Сотрудник': row.staffName,
+        'Начисления': row.accruals,
+        'Премия': row.bonuses,
+        'Аванс': row.advance,
+        'Вычеты': row.penalties,
+        'Ставка за опоздание': `${globalPenaltyRate} тг/мин`,
+        'Итого': row.total,
+        'Статус': row.status,
+        'Оклад': row.baseSalary,
+        'Тип оклада': row.baseSalaryType,
+        'Отработано дней/смен': row.baseSalaryType === 'shift' ? row.workedShifts : row.workedDays,
+      }));
+      // Создаем worksheet
+      const worksheet = utils.json_to_sheet(exportData);
 
+      // Устанавливаем ширину колонок для лучшего отображения
+      const colWidths = [
+        { wch: 25 }, // Сотрудник
+        { wch: 15 }, // Начисления
+        { wch: 10 }, // Премия
+        { wch: 10 }, // Аванс
+        { wch: 10 }, // Вычеты
+        { wch: 20 }, // Ставка за опоздание
+        { wch: 15 }, // Итого
+        { wch: 12 }, // Статус
+        { wch: 12 }, // Оклад
+        { wch: 12 }, // Тип оклада
+        { wch: 15 }, // Отработано
+      ];
+      worksheet['!cols'] = colWidths;
 
-    csvContent +=
-      'Сотрудник;Начисления;Премия;Аванс;Вычеты;Ставка за опоздание (общая: ' + globalPenaltyRate + ' тг/мин);Итого;Статус\n';
+      // Создаем workbook и добавляем worksheet
+      const workbook = utils.book_new();
+      utils.book_append_sheet(workbook, worksheet, 'Расчетные листы');
 
+      // Генерируем имя файла с датой
+      const fileName = `расчетный_лист_${new Date().toLocaleString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\./g, '-')}.xlsx`;
 
-    rows.forEach((row) => {
-      csvContent += `${row.staffName};${row.accruals};${row.bonuses};${row.advance};${row.penalties};${globalPenaltyRate};${row.total};${row.status}\n`;
-    });
+      // Сохраняем файл
+      writeFile(workbook, fileName);
+    } catch (error) {
+      console.error('Ошибка при экспорте в Excel:', error);
+      setSnackbarMessage('Ошибка при экспорте файла');
+      setSnackbarOpen(true);
+    }
 
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `расчетный_лист_${new Date().toLocaleString('ru-RU', { month: 'long', year: 'numeric' })}.csv`,
-    );
-    document.body.appendChild(link);
-
-
-    link.click();
-
-
-    document.body.removeChild(link);
-  };
-
+  }
   // Open confirmation dialog for generate
   const handleOpenConfirmDialog = () => {
     if (!currentUser || !currentUser.id || currentUser.role !== 'admin') {
@@ -468,26 +494,29 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     const payrollsData = await getPayrolls(params);
     const data = (payrollsData || []) as any[];
 
+    // Исключаем арендаторов и логопедов - они платят нам, а не мы им
+    const excludedRoles = ['tenant', 'speech_therapist'];
+    const filteredData = data.filter(p => {
+      const role = p.staffId?.role || '';
+      return !excludedRoles.includes(role);
+    });
+
+    const workedEmployees = filteredData.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
+
     const summaryData = {
-      totalEmployees: data.length,
-      totalAccruals: data.reduce(
-        (sum, p) => sum + (p.accruals || p.baseSalary || 0),
+      totalEmployees: workedEmployees.length,
+      totalAccruals: workedEmployees.reduce(
+        (sum, p) => sum + (p.accruals || 0) + (p.bonuses || 0),
         0,
       ),
-      totalPenalties: data.reduce((sum, p) => sum + (p.penalties || 0), 0),
-      totalPayout: data.reduce((sum, p) => {
-        const accruals = p.accruals || p.baseSalary || 0;
-        const penalties = p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0);
-        const advance = p.advance || 0;
-        const bonuses = p.bonuses || 0;
-        const total = accruals + bonuses - penalties - advance;
-        return sum + (total >= 0 ? total : 0);
-      }, 0),
+      totalAdvance: workedEmployees.reduce((sum, p) => sum + (p.advance || 0), 0),
+      totalPenalties: workedEmployees.reduce((sum, p) => sum + (p.penalties || 0) + (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0), 0),
+      totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total || 0), 0),
     };
 
     setSummary(summaryData);
     setRows(
-      data.map((p: any) => ({
+      filteredData.map((p: any) => ({
         staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
         accruals: p.accruals || p.baseSalary || 0,
         penalties:
@@ -1027,6 +1056,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                     {[
                       { label: 'Сотрудников', value: summary?.totalEmployees || 0, color: '#6366f1', icon: <PeopleIcon /> },
                       { label: 'Начислено', value: (summary?.totalAccruals || 0).toLocaleString() + ' ₸', color: '#10b981', icon: <EditIcon /> },
+                      { label: 'Авансы', value: (summary?.totalAdvance || 0).toLocaleString() + ' ₸', color: '#2196f3', icon: <DebtIcon /> },
                       { label: 'Вычеты', value: (summary?.totalPenalties || 0).toLocaleString() + ' ₸', color: '#f43f5e', icon: <CancelIcon /> },
                       { label: 'К выплате', value: (summary?.totalPayout || 0).toLocaleString() + ' ₸', color: '#8b5cf6', icon: <VisibilityIcon /> },
                     ].map((stat, idx) => (
@@ -1074,11 +1104,33 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                               <TableCell sx={{ fontWeight: 'medium' }}>{r.staffName}</TableCell>
                               <TableCell>
                                 {editingId === r.staffId ? (
-                                  <TextField type='number' size='small' value={editData.accruals ?? r.accruals} onChange={(e) => handleInputChange('accruals', Number(e.target.value))} />
+                                  <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                                    <TextField
+                                      size='small'
+                                      type='number'
+                                      value={editData.baseSalary ?? r.baseSalary ?? ''}
+                                      onChange={(e) => handleInputChange('baseSalary', Number(e.target.value))}
+                                      inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
+                                      sx={{ width: '80px' }}
+                                      variant='standard'
+                                    />
+                                    <Select
+                                      value={editData.baseSalaryType || r.baseSalaryType || 'month'}
+                                      onChange={(e) => handleInputChange('baseSalaryType', e.target.value)}
+                                      variant="standard"
+                                      size="small"
+                                      sx={{ fontSize: '0.75rem', minWidth: '40px' }}
+                                    >
+                                      <MenuItem value="month">Мес</MenuItem>
+                                      <MenuItem value="shift">Смена</MenuItem>
+                                    </Select>
+                                  </Box>
                                 ) : (
-                                  <Box>
-                                    <Typography variant='body2' sx={{ fontWeight: 'bold' }}>{r.accruals.toLocaleString()} ₸</Typography>
-                                    <Typography variant='caption' color='text.secondary'>{r.baseSalaryType === 'shift' ? `${r.workedShifts} см` : 'Мес'}</Typography>
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                    <span>{r.baseSalary?.toLocaleString()} тг</span>
+                                    <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', fontWeight: 'bold' }}>
+                                      {r.baseSalaryType === 'shift' ? 'за смену' : 'в месяц'}
+                                    </Typography>
                                   </Box>
                                 )}
                               </TableCell>
@@ -1104,7 +1156,18 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                                 )}
                               </TableCell>
                               <TableCell>
-                                <Typography variant='body1' sx={{ fontWeight: '900', color: 'primary.main' }}>{r.total.toLocaleString()} ₸</Typography>
+                                <Tooltip title="Нажмите для детализации" arrow placement="top">
+                                  <span
+                                    onClick={() => handleOpenTotalDialog(r)}
+                                    style={{
+                                      cursor: 'pointer',
+                                      borderBottom: '1px dashed currentColor',
+                                      paddingBottom: '2px'
+                                    }}
+                                  >
+                                    <Typography variant='body1' sx={{ fontWeight: '900', color: 'primary.main' }}>{r.total?.toLocaleString() || '0'} ₸</Typography>
+                                  </span>
+                                </Tooltip>
                               </TableCell>
                               <TableCell>
                                 {editingId === r.staffId ? (
@@ -1150,10 +1213,42 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
               </DialogActions>
             </Dialog>
 
-            <Dialog open={rateDialogOpen} onClose={() => setRateDialogOpen(false)}>
-              <DialogTitle>Настройки штрафа</DialogTitle>
+            <Dialog open={rateDialogOpen} onClose={() => setRateDialogOpen(false)} maxWidth="sm" fullWidth>
+              <DialogTitle>Настройки штрафа за опоздание</DialogTitle>
               <DialogContent>
-                <TextField label='Ставка (₸)' type="number" fullWidth value={newRate} onChange={(e) => setNewRate(Number(e.target.value))} sx={{ mt: 1 }} />
+                <DialogContentText sx={{ mb: 2 }}>
+                  Укажите ставку штрафа и тип расчета.
+                  Это значение будет использоваться при следующем расчете зарплат.
+                </DialogContentText>
+                <FormControl fullWidth margin="dense" sx={{ mb: 2 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Тип расчета штрафа
+                  </Typography>
+                  <Select
+                    value={newPenaltyType}
+                    onChange={(e) => setNewPenaltyType(e.target.value)}
+                    variant="outlined"
+                  >
+                    <MenuItem value="per_minute">За каждую минуту</MenuItem>
+                    <MenuItem value="per_5_minutes">За каждые 5 минут</MenuItem>
+                    <MenuItem value="per_10_minutes">За каждые 10 минут</MenuItem>
+                    <MenuItem value="fixed">Фиксированный штраф</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  margin="dense"
+                  label={newPenaltyType === 'fixed' ? 'Сумма штрафа (тг)' : `Ставка (тг/${newPenaltyType === 'per_minute' ? 'мин' : newPenaltyType === 'per_5_minutes' ? '5 мин' : '10 мин'})`}
+                  type="number"
+                  fullWidth
+                  value={newRate}
+                  onChange={(e) => setNewRate(Number(e.target.value))}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  {newPenaltyType === 'per_minute' && 'Пример: при опоздании на 15 мин штраф = 15 × ставка'}
+                  {newPenaltyType === 'per_5_minutes' && 'Пример: при опоздании на 15 мин штраф = 3 × ставка (15÷5=3)'}
+                  {newPenaltyType === 'per_10_minutes' && 'Пример: при опоздании на 15 мин штраф = 2 × ставка (15÷10≈2)'}
+                  {newPenaltyType === 'fixed' && 'Фиксированный штраф за любое опоздание'}
+                </Typography>
               </DialogContent>
               <DialogActions>
                 <Button onClick={() => setRateDialogOpen(false)}>Отмена</Button>
@@ -1162,7 +1257,8 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             </Dialog>
           </Box>
         </Box>
-      )}
+      )
+      }
     </>
   );
 };
