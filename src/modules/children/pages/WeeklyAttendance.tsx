@@ -58,19 +58,11 @@ import { useDate } from '../../../app/context/DateContext';
 import {
   exportChildrenAttendance,
 
-<<<<<<< HEAD:src/pages/Children/WeeklyAttendance.tsx
-} from '../../utils/excelExport';
-import AttendanceBulkModal from '../../components/AttendanceBulkModal';
-import ExportButton from '../../components/ExportButton';
-import DateNavigator from '../../components/DateNavigator';
-import { importChildAttendance } from '../../services/importService';
-=======
 } from '../../../shared/utils/excelExport';
 import AttendanceBulkModal from '../components/AttendanceBulkModal';
 import ExportButton from '../../../shared/components/ExportButton';
 import DateNavigator from '../../../shared/components/DateNavigator';
 import { importChildAttendance } from '../../../shared/services/importService';
->>>>>>> right_directory:src/modules/children/pages/WeeklyAttendance.tsx
 
 
 const ATTENDANCE_STATUSES = {
