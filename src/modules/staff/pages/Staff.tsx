@@ -5,7 +5,7 @@ import {
   deleteUser,
   usersApi,
   createUser,
-} from '../../modules/staff/services/users';
+} from '../services/users';
 import {
   Table,
   TableHead,
@@ -50,11 +50,19 @@ import {
   Badge,
   Person,
 } from '@mui/icons-material';
-import { User as StaffMember, UserRole } from '../../shared/types/common';
-import { getGroups } from '../../modules/children/services/groups';
-import { useAuth } from '../../app/context/AuthContext';
-import ExportButton from '../../shared/components/ExportButton';
-import { exportData } from '../../shared/utils/exportUtils';
+<<<<<<< HEAD:src/pages/Staff/Staff.tsx
+import { User as StaffMember, UserRole, STAFF_ROLES, EXTERNAL_ROLES } from '../../types/common';
+import { getGroups } from '../../services/groups';
+import { useAuth } from '../../components/context/AuthContext';
+import ExportButton from '../../components/ExportButton';
+import { exportData } from '../../utils/exportUtils';
+=======
+import { User as StaffMember, UserRole, STAFF_ROLES, EXTERNAL_ROLES } from '../../../shared/types/common';
+import { getGroups } from '../../children/services/groups';
+import { useAuth } from '../../../app/context/AuthContext';
+import ExportButton from '../../../shared/components/ExportButton';
+import { exportData } from '../../../shared/utils/exportUtils';
+>>>>>>> right_directory:src/modules/staff/pages/Staff.tsx
 
 
 const roleTranslations: Record<string, string> = {
@@ -69,7 +77,7 @@ const roleTranslations: Record<string, string> = {
   psychologist: 'Психолог',
   speech_therapist: 'Логопед',
   music_teacher: 'Музыкальный руководитель',
-  physical_education: 'Инструктор по физкультуре',
+  physical_teacher: 'Инструктор по физкультуре',
 
 
   nurse: 'Медсестра',
@@ -86,6 +94,7 @@ const roleTranslations: Record<string, string> = {
   staff: 'Сотрудник',
   substitute: 'Подменный сотрудник',
   intern: 'Стажер',
+  tenant: 'Арендатор',
 };
 
 
@@ -106,7 +115,7 @@ const defaultForm: StaffMember = {
   id: '',
   phone: '',
   fullName: '',
-  role: 'tenant' as UserRole,
+  role: 'staff' as UserRole,
   active: true,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
@@ -114,7 +123,7 @@ const defaultForm: StaffMember = {
   salary: 0,
 };
 
-const Rent = () => {
+const Staff = () => {
   const [staff, setStaff] = useState<any[]>([]);
   const [filteredStaff, setFilteredStaff] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,10 +135,21 @@ const Rent = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [activeTab, setActiveTab] = useState<'active' | 'inactive' | 'external'>('active');
   const { user: currentUser } = useAuth();
 
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
-  const availableRoles = [roleTranslations['tenant']].sort();
+
+  useEffect(() => {
+    let roles: string[] = [];
+    if (activeTab === 'external') {
+      roles = EXTERNAL_ROLES.map(role => roleTranslations[role]).sort();
+    } else {
+      roles = STAFF_ROLES.map(role => roleTranslations[role]).sort();
+    }
+    setAvailableRoles(roles);
+  }, [activeTab]);
 
   const fetchStaff = useCallback(() => {
     setLoading(true);
@@ -137,9 +157,8 @@ const Rent = () => {
     const includePasswords = currentUser?.role === 'admin';
     getUsers(includePasswords)
       .then((data) => {
-        const rentStaff = data.filter((user: any) => user.tenant === true);
-        setStaff(rentStaff);
-        setFilteredStaff(rentStaff);
+        setStaff(data);
+        setFilteredStaff(data);
       })
       .catch((err) => setError(err?.message || 'Ошибка загрузки'))
       .finally(() => setLoading(false));
@@ -163,7 +182,18 @@ const Rent = () => {
   useEffect(() => {
     if (!staff.length) return;
 
-    let filtered = staff.filter((member) => member.role === 'tenant');
+    let filtered = staff;
+
+    const externalRoles = EXTERNAL_ROLES;
+
+    if (activeTab === 'external') {
+      filtered = staff.filter((member) => externalRoles.includes(member.role as any));
+    } else if (activeTab === 'inactive') {
+      filtered = staff.filter((member) => member.active === false && !externalRoles.includes(member.role as any));
+    } else {
+      // active
+      filtered = staff.filter((member) => member.active !== false && !externalRoles.includes(member.role as any));
+    }
 
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
@@ -178,7 +208,6 @@ const Rent = () => {
       );
     }
 
-
     if (filterRole.length > 0) {
       filtered = filtered.filter((member) => {
         const russianRole = translateRole(member.role || '');
@@ -187,7 +216,7 @@ const Rent = () => {
     }
 
     setFilteredStaff(filtered);
-  }, [staff, searchTerm, filterRole, currentUser?.role]);
+  }, [staff, searchTerm, filterRole, activeTab]);
 
   const handleOpenModal = (member?: StaffMember) => {
     setForm(member ? { ...member } : defaultForm);
@@ -202,17 +231,6 @@ const Rent = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-
-
-    if (formErrors[name]) {
-      setFormErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-  };
-
-
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
 
@@ -275,7 +293,7 @@ const Rent = () => {
       console.error('ID is undefined for deletion');
       return;
     }
-    if (!window.confirm('Удалить арендатора?')) return;
+    if (!window.confirm('Удалить сотрудника?')) return;
     setSaving(true);
     try {
       console.log('Attempting to delete user with ID:', member.id);
@@ -293,10 +311,15 @@ const Rent = () => {
     exportType: string,
     exportFormat: 'excel',
   ) => {
-    await exportData('tenant', exportFormat, {
-      name: searchTerm,
-      role: filterRole,
-    });
+
+    const params = activeTab === 'external'
+      ? { name: searchTerm, type: 'external' }
+      : {
+        name: searchTerm,
+        role: filterRole.length > 0 ? filterRole : undefined,
+        active: activeTab === 'active'
+      };
+    await exportData('staff', exportFormat, params);
   };
 
   return (
@@ -312,11 +335,11 @@ const Rent = () => {
             variant='h5'
             style={{ color: '#1890ff', display: 'flex', alignItems: 'center' }}
           >
-            <Person style={{ marginRight: 8 }} /> Аренда
+            <Person style={{ marginRight: 8 }} /> Сотрудники
           </Typography>
           <Box mb={2}>
             <ExportButton
-              exportTypes={[{ value: 'tenant', label: 'Список арендаторов' }]}
+              exportTypes={[{ value: 'staff', label: 'Список сотрудников' }]}
               onExport={handleExport}
             />
           </Box>
@@ -324,16 +347,23 @@ const Rent = () => {
             variant='contained'
             color='primary'
             startIcon={<Add />}
-            onClick={() => handleOpenModal()}
+            onClick={() => {
+              if (activeTab === 'external') {
+                setForm({ ...defaultForm, role: 'speech_therapist' as UserRole });
+                setModalOpen(true);
+              } else {
+                handleOpenModal();
+              }
+            }}
           >
-            Добавить арендатора
+            {activeTab === 'external' ? 'Добавить специалиста' : 'Добавить сотрудника'}
           </Button>
         </Box>
 
         {/* Поиск и фильтры */}
-        <Box mb={3} display='flex' flexWrap='wrap' gap={2}>
+        <Box mb={3} display='flex' flexWrap='wrap' gap={2} alignItems='center'>
           <TextField
-            placeholder='Поиск арендаторов...'
+            placeholder='Поиск сотрудников...'
             variant='outlined'
             size='small'
             value={searchTerm}
@@ -372,6 +402,50 @@ const Rent = () => {
               ))}
             </Select>
           </FormControl>
+
+          {/* Кнопки фильтрации по активности и арендаторам */}
+          <Box display='flex' gap={1}>
+            <Button
+              variant={activeTab === 'active' ? 'contained' : 'outlined'}
+              color='success'
+              size='small'
+              onClick={() => {
+                setActiveTab('active');
+                setFilterRole([]);
+              }}
+            >
+              Штат (Активные)
+            </Button>
+            <Button
+              variant={activeTab === 'inactive' ? 'contained' : 'outlined'}
+              color='error'
+              size='small'
+              onClick={() => {
+                setActiveTab('inactive');
+                setFilterRole([]);
+              }}
+            >
+              Архив
+            </Button>
+            <Button
+              variant={activeTab === 'external' ? 'contained' : 'outlined'}
+              size='small'
+              onClick={() => {
+                setActiveTab('external');
+                setFilterRole([]);
+              }}
+              sx={{
+                backgroundColor: activeTab === 'external' ? '#FF9800' : 'transparent',
+                color: activeTab === 'external' ? 'white' : '#FF9800',
+                borderColor: '#FF9800',
+                '&:hover': {
+                  backgroundColor: activeTab === 'external' ? '#F57C00' : 'rgba(255, 152, 0, 0.1)',
+                }
+              }}
+            >
+              Внешние специалисты / Услуги
+            </Button>
+          </Box>
         </Box>
 
         {loading && <CircularProgress />}
@@ -382,8 +456,8 @@ const Rent = () => {
             {filteredStaff.length === 0 ? (
               <Alert severity='info' style={{ marginTop: 16 }}>
                 {staff.length === 0
-                  ? 'Нет арендаторов. Добавьте первого арендатора!'
-                  : 'Нет арендаторов, соответствующих критериям поиска.'}
+                  ? 'Нет сотрудников. Добавьте первого сотрудника!'
+                  : 'Нет сотрудников, соответствующих критериям поиска.'}
               </Alert>
             ) : (
               <Table>
@@ -469,12 +543,12 @@ const Rent = () => {
             <Box display='flex' alignItems='center' flexDirection='row'>
               {editId ? (
                 <>
-                  <Edit style={{ marginRight: 8 }} /> Редактирование арендатора
+                  <Edit style={{ marginRight: 8 }} /> Редактирование сотрудника
                 </>
               ) : (
                 <>
                   <Add style={{ marginRight: 8 }} /> Добавление нового
-                  арендатора
+                  сотрудника
                 </>
               )}
             </Box>
@@ -516,11 +590,23 @@ const Rent = () => {
                     }}
                     label='Должность'
                   >
-                    {availableRoles.map((russianRole) => (
-                      <MenuItem key={russianRole} value={russianRole}>
-                        {russianRole}
-                      </MenuItem>
-                    ))}
+                    {(() => {
+                      const isExternal = EXTERNAL_ROLES.includes(form.role as any);
+
+                      if (activeTab === 'external' || isExternal) {
+                        return EXTERNAL_ROLES.map((role) => (
+                          <MenuItem key={role} value={roleTranslations[role]}>
+                            {roleTranslations[role]}
+                          </MenuItem>
+                        ));
+                      } else {
+                        return availableRoles.map((russianRole) => (
+                          <MenuItem key={russianRole} value={russianRole}>
+                            {russianRole}
+                          </MenuItem>
+                        ));
+                      }
+                    })()}
                   </Select>
                   {formErrors.role && (
                     <FormHelperText>{formErrors.role}</FormHelperText>
@@ -565,7 +651,6 @@ const Rent = () => {
                   label='Активен'
                 />
               </Grid>
-              {/* Поле арендатора больше не нужно, так как это теперь роль */}
             </Grid>
           </DialogContent>
 
@@ -588,4 +673,4 @@ const Rent = () => {
   );
 };
 
-export default Rent;
+export default Staff;
