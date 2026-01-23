@@ -61,6 +61,7 @@ import {
   User,
 } from '../services/settings';
 import MainEventsSettings from '../components/MainEventsSettings';
+import PushService from '../../../shared/services/pushService';
 
 const Settings: React.FC = () => {
 
@@ -93,6 +94,12 @@ const Settings: React.FC = () => {
   const [userFormErrors, setUserFormErrors] = useState<{
     [key: string]: string;
   }>({});
+
+  const [pushPermission, setPushPermission] = useState<string>('default');
+
+  useEffect(() => {
+    PushService.checkPermission().then(setPushPermission);
+  }, []);
 
 
   useEffect(() => {
@@ -479,12 +486,12 @@ const Settings: React.FC = () => {
               <Grid item xs={12} md={6}>
                 <TextField
                   label={`Сумма штрафа ${kindergartenSettings.payroll?.latePenaltyType === 'fixed'
-                      ? '(фиксированная)'
-                      : kindergartenSettings.payroll?.latePenaltyType === 'per_5_minutes'
-                        ? '(за 5 минут)'
-                        : kindergartenSettings.payroll?.latePenaltyType === 'per_10_minutes'
-                          ? '(за 10 минут)'
-                          : '(за минуту)'
+                    ? '(фиксированная)'
+                    : kindergartenSettings.payroll?.latePenaltyType === 'per_5_minutes'
+                      ? '(за 5 минут)'
+                      : kindergartenSettings.payroll?.latePenaltyType === 'per_10_minutes'
+                        ? '(за 10 минут)'
+                        : '(за минуту)'
                     }`}
                   type='number'
                   fullWidth
@@ -611,6 +618,46 @@ const Settings: React.FC = () => {
                   }
                   label='Push уведомления'
                 />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Статус браузерных уведомлений: {
+                      pushPermission === 'granted' ? 'Разрешено ✅' :
+                        pushPermission === 'denied' ? 'Заблокировано ❌' : 'Не настроено ⚠️'
+                    }
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    onClick={async () => {
+                      const granted = await PushService.requestPermission();
+                      if (granted) {
+                        setPushPermission('granted');
+                        alert('Уведомления успешно включены');
+                      } else {
+                        setPushPermission(await PushService.checkPermission());
+                        alert('Не удалось включить уведомления. Проверьте настройки браузера.');
+                      }
+                    }}
+                    disabled={pushPermission === 'granted'}
+                  >
+                    {pushPermission === 'granted' ? 'Уведомления включены' : 'Включить уведомления в этом браузере'}
+                  </Button>
+                  {pushPermission === 'granted' && (
+                    <Button
+                      sx={{ ml: 2 }}
+                      variant="text"
+                      color="error"
+                      onClick={async () => {
+                        await PushService.unsubscribeUser();
+                        setPushPermission('default');
+                      }}
+                    >
+                      Отключить на этом устройстве
+                    </Button>
+                  )}
+                </Box>
               </Grid>
 
               <Grid item xs={12}>
