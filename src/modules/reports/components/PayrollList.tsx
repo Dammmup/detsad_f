@@ -186,7 +186,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
           return !excludedRoles.includes(role);
         });
 
-        const workedEmployees = filteredData.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
 
         // Фильтруем работавших сотрудников
         const workedEmployees = data.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
@@ -197,12 +196,8 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             (sum, p) => sum + (p.accruals || 0) + (p.bonuses || 0),
             0,
           ),
-<<<<<<< HEAD:src/components/reports/ReportsSalary.tsx
-          totalPenalties: workedEmployees.reduce((sum, p) => sum + (p.penalties || 0), 0),
-=======
           totalAdvance: workedEmployees.reduce((sum, p) => sum + (p.advance || 0), 0),
           totalPenalties: workedEmployees.reduce((sum, p) => sum + (p.penalties || 0) + (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0), 0),
->>>>>>> right_directory:src/modules/reports/components/PayrollList.tsx
           totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total || 0), 0),
         };
 
@@ -409,8 +404,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         'Тип оклада': row.baseSalaryType,
         'Отработано дней/смен': row.baseSalaryType === 'shift' ? row.workedShifts : row.workedDays,
       }));
-<<<<<<< HEAD:src/components/reports/ReportsSalary.tsx
-
       // Создаем worksheet
       const worksheet = utils.json_to_sheet(exportData);
 
@@ -437,34 +430,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
       // Генерируем имя файла с датой
       const fileName = `расчетный_лист_${new Date().toLocaleString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\./g, '-')}.xlsx`;
 
-=======
-      // Создаем worksheet
-      const worksheet = utils.json_to_sheet(exportData);
-
-      // Устанавливаем ширину колонок для лучшего отображения
-      const colWidths = [
-        { wch: 25 }, // Сотрудник
-        { wch: 15 }, // Начисления
-        { wch: 10 }, // Премия
-        { wch: 10 }, // Аванс
-        { wch: 10 }, // Вычеты
-        { wch: 20 }, // Ставка за опоздание
-        { wch: 15 }, // Итого
-        { wch: 12 }, // Статус
-        { wch: 12 }, // Оклад
-        { wch: 12 }, // Тип оклада
-        { wch: 15 }, // Отработано
-      ];
-      worksheet['!cols'] = colWidths;
-
-      // Создаем workbook и добавляем worksheet
-      const workbook = utils.book_new();
-      utils.book_append_sheet(workbook, worksheet, 'Расчетные листы');
-
-      // Генерируем имя файла с датой
-      const fileName = `расчетный_лист_${new Date().toLocaleString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\./g, '-')}.xlsx`;
-
->>>>>>> right_directory:src/modules/reports/components/PayrollList.tsx
       // Сохраняем файл
       writeFile(workbook, fileName);
     } catch (error) {
@@ -472,10 +437,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
       setSnackbarMessage('Ошибка при экспорте файла');
       setSnackbarOpen(true);
     }
-<<<<<<< HEAD:src/components/reports/ReportsSalary.tsx
-  };
-=======
->>>>>>> right_directory:src/modules/reports/components/PayrollList.tsx
 
   }
   // Open confirmation dialog for generate
@@ -533,7 +494,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
       return !excludedRoles.includes(role);
     });
 
-    const workedEmployees = filteredData.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
 
     // Фильтруем работавших сотрудников
     const workedEmployees = data.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
@@ -544,12 +504,8 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         (sum, p) => sum + (p.accruals || 0) + (p.bonuses || 0),
         0,
       ),
-<<<<<<< HEAD:src/components/reports/ReportsSalary.tsx
-      totalPenalties: workedEmployees.reduce((sum, p) => sum + (p.penalties || 0), 0),
-=======
       totalAdvance: workedEmployees.reduce((sum, p) => sum + (p.advance || 0), 0),
       totalPenalties: workedEmployees.reduce((sum, p) => sum + (p.penalties || 0) + (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0), 0),
->>>>>>> right_directory:src/modules/reports/components/PayrollList.tsx
       totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total || 0), 0),
     };
 
@@ -1096,16 +1052,10 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                   <Box sx={{ p: 3, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 3 }}>
                     {[
                       { label: 'Сотрудников', value: summary?.totalEmployees || 0, color: '#6366f1', icon: <PeopleIcon /> },
-<<<<<<< HEAD:src/components/reports/ReportsSalary.tsx
-                      { label: 'Начислено', value: (summary?.totalAccruals || 0).toLocaleString('ru-RU') + ' ₸', color: '#10b981', icon: <EditIcon /> },
-                      { label: 'Вычеты', value: (summary?.totalPenalties || 0).toLocaleString('ru-RU') + ' ₸', color: '#f43f5e', icon: <CancelIcon /> },
-                      { label: 'К выплате', value: (summary?.totalPayout || 0).toLocaleString('ru-RU') + ' ₸', color: '#8b5cf6', icon: <VisibilityIcon /> },
-=======
                       { label: 'Начислено', value: (summary?.totalAccruals || 0).toLocaleString() + ' ₸', color: '#10b981', icon: <EditIcon /> },
                       { label: 'Авансы', value: (summary?.totalAdvance || 0).toLocaleString() + ' ₸', color: '#2196f3', icon: <DebtIcon /> },
                       { label: 'Вычеты', value: (summary?.totalPenalties || 0).toLocaleString() + ' ₸', color: '#f43f5e', icon: <CancelIcon /> },
                       { label: 'К выплате', value: (summary?.totalPayout || 0).toLocaleString() + ' ₸', color: '#8b5cf6', icon: <VisibilityIcon /> },
->>>>>>> right_directory:src/modules/reports/components/PayrollList.tsx
                     ].map((stat, idx) => (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Box sx={{ width: 48, height: 48, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: `${stat.color}15`, color: stat.color }}>{stat.icon}</Box>
@@ -1167,33 +1117,21 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                                     <TextField
                                       size='small'
                                       type='number'
-<<<<<<< HEAD:src/components/reports/ReportsSalary.tsx
-                                      value={editData.baseSalary ?? ''}
-=======
                                       value={editData.baseSalary ?? r.baseSalary ?? ''}
->>>>>>> right_directory:src/modules/reports/components/PayrollList.tsx
                                       onChange={(e) => handleInputChange('baseSalary', Number(e.target.value))}
                                       inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
                                       sx={{ width: '80px' }}
                                       variant='standard'
                                     />
                                     <Select
-<<<<<<< HEAD:src/components/reports/ReportsSalary.tsx
-                                      value={editData.baseSalaryType || 'month'}
-=======
                                       value={editData.baseSalaryType || r.baseSalaryType || 'month'}
->>>>>>> right_directory:src/modules/reports/components/PayrollList.tsx
                                       onChange={(e) => handleInputChange('baseSalaryType', e.target.value)}
                                       variant="standard"
                                       size="small"
                                       sx={{ fontSize: '0.75rem', minWidth: '40px' }}
                                     >
                                       <MenuItem value="month">Мес</MenuItem>
-<<<<<<< HEAD:src/components/reports/ReportsSalary.tsx
-                                      <MenuItem value="shift">День</MenuItem>
-=======
                                       <MenuItem value="shift">Смена</MenuItem>
->>>>>>> right_directory:src/modules/reports/components/PayrollList.tsx
                                     </Select>
                                   </Box>
                                 ) : (

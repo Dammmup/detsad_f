@@ -8,12 +8,8 @@ import {
   IconButton,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-<<<<<<< HEAD:src/components/reports/RentTenantSelector.tsx
-import { getUsers } from '../../services/users';
-import { EXTERNAL_ROLES } from '../../types/common';
-=======
 import { getUsers } from '../../staff/services/users';
->>>>>>> right_directory:src/modules/reports/components/RentTenantSelector.tsx
+import { EXTERNAL_ROLES } from '../../../shared/types/common';
 
 interface User {
   _id?: string;

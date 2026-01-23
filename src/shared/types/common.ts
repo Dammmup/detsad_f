@@ -325,10 +325,6 @@ export const ROLE_TRANSLATIONS: Record<string, string> = {
   tenant: 'Арендатор',
 };
 
-<<<<<<< HEAD:src/types/common.ts
-=======
-
->>>>>>> right_directory:src/shared/types/common.ts
 export const EXTERNAL_ROLES: UserRole[] = [
   UserRole.tenant,
   UserRole.speech_therapist,

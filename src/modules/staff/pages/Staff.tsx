@@ -50,19 +50,11 @@ import {
   Badge,
   Person,
 } from '@mui/icons-material';
-<<<<<<< HEAD:src/pages/Staff/Staff.tsx
-import { User as StaffMember, UserRole, STAFF_ROLES, EXTERNAL_ROLES } from '../../types/common';
-import { getGroups } from '../../services/groups';
-import { useAuth } from '../../components/context/AuthContext';
-import ExportButton from '../../components/ExportButton';
-import { exportData } from '../../utils/exportUtils';
-=======
 import { User as StaffMember, UserRole, STAFF_ROLES, EXTERNAL_ROLES } from '../../../shared/types/common';
 import { getGroups } from '../../children/services/groups';
 import { useAuth } from '../../../app/context/AuthContext';
 import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
->>>>>>> right_directory:src/modules/staff/pages/Staff.tsx
 
 
 const roleTranslations: Record<string, string> = {
