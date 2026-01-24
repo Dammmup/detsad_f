@@ -199,7 +199,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
           ),
           totalAdvance: workedEmployees.reduce((sum, p) => sum + (p.advance || 0), 0),
           totalPenalties: workedEmployees.reduce((sum, p) => sum + (p.penalties || 0) + (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0), 0),
-          totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total || 0), 0),
+          totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total - (p.penalties || 0) - (p.latePenalties || 0) - (p.absencePenalties || 0) - (p.userFines || 0) + (p.bonuses || 0) || 0), 0),
         };
 
 
