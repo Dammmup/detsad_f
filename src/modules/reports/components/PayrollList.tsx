@@ -92,6 +92,7 @@ interface PayrollRow {
   workedDays: number;
   shiftRate: number;
   normDays?: number;
+  deductions?: number;
 }
 
 const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
@@ -214,11 +215,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             absencePenalties: p.absencePenalties || 0,
             latePenaltyRate: globalLatePenaltyRate,
             advance: p.advance || 0,
-            total:
-              (p.accruals || (p.baseSalaryType === 'shift' ? ((p.workedShifts || 0) * (p.shiftRate || p.baseSalary || 0)) : 0)) +
-              (p.bonuses || 0) -
-              ((p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0)) -
-              (p.advance || 0),
+            total: p.total || 0,  // Используем уже вычисленное значение из backend
             status: p.status && p.status !== 'draft' ? p.status : 'calculated',
             staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
             _id: p._id || undefined,
@@ -296,7 +293,8 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
 
         const apiStatus = status === 'calculated' ? 'draft' : status;
 
-        const total = Math.max(0, accruals + bonuses - penalties - advance);
+        const deductions = originalRow.deductions || 0; // Используем вычеты из оригинальной строки
+        const total = Math.max(0, accruals + bonuses - penalties - advance - deductions);
 
         const updatedData = {
           ...editData,
@@ -521,11 +519,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         latePenaltyRate: p.latePenaltyRate || 13,
         advance: p.advance || 0,
         bonuses: p.bonuses || 0,
-        total:
-          (p.accruals || p.baseSalary || 0) +
-          (p.bonuses || 0) -
-          (p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0)) -
-          (p.advance || 0),
+        total: p.total || 0,  // Используем уже вычисленное значение из backend
         status: p.status && p.status !== 'draft' ? p.status : 'calculated',
         staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
         _id: p._id || undefined,
