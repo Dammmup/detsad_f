@@ -46,8 +46,7 @@ export const createApiInstance = (
         config.headers.Authorization = `Bearer ${token}`;
       }
 
-      console.log('📤 API запрос:', config.method?.toUpperCase(), config.url);
-      console.log('📤 API body (v2):', JSON.stringify(config.data));
+
       return config;
     },
     (error) => {
@@ -59,7 +58,6 @@ export const createApiInstance = (
 
   api.interceptors.response.use(
     (response) => {
-      console.log('✅ API ответ:', response.status, response.config.url);
       return response;
     },
     async (error) => {

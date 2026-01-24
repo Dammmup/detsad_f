@@ -1,27 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { Snackbar, Button, Alert } from '@mui/material';
+import { Snackbar, Button, Alert, useTheme, useMediaQuery } from '@mui/material';
 import PushService from '../services/pushService';
 
 const PushNotificationPrompt: React.FC = () => {
     const [open, setOpen] = useState(false);
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     useEffect(() => {
         let timer: ReturnType<typeof setTimeout>;
 
         const checkPermission = async () => {
             const permission = await PushService.checkPermission();
+            console.log('Push notification permission status:', permission);
+
+            if (permission === 'granted') {
+                console.log('✅ Push notifications already granted. Prompt will not be shown.');
+            }
 
             // Если разрешение еще не спрашивали (статус 'default')
             if (permission === 'default') {
                 // Проверяем, не скрыл ли пользователь уведомление навсегда
                 const isDismissed = localStorage.getItem('push_prompt_dismissed');
+                console.log('Push prompt dismissed previously:', isDismissed);
 
                 if (!isDismissed) {
+                    console.log('Setting timer for push prompt (3s)');
                     // Показываем через 3 секунды после входа
                     timer = setTimeout(() => {
+                        console.log('Opening push prompt');
                         setOpen(true);
                     }, 3000);
                 }
+            } else if (permission === 'denied') {
+                console.log('❌ Push notifications denied by user in browser settings.');
             }
         };
 
@@ -55,8 +67,14 @@ const PushNotificationPrompt: React.FC = () => {
     return (
         <Snackbar
             open={open}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            sx={{ bottom: { xs: 80, sm: 24 } }}
+            anchorOrigin={{
+                vertical: isMobile ? 'top' : 'bottom',
+                horizontal: 'center'
+            }}
+            sx={{
+                top: { xs: 70, sm: 'auto' }, // 70px от верха для адаптива (под хедером)
+                bottom: { xs: 'auto', sm: 24 }
+            }}
         >
             <Alert
                 severity="info"

@@ -45,6 +45,8 @@ import {
   Smartphone,
   Computer,
   Tablet,
+  Send as TelegramIcon,
+  PhoneAndroid,
 } from '@mui/icons-material';
 import moment from 'moment';
 import 'moment/locale/ru';
@@ -92,6 +94,12 @@ interface TimeRecord {
     screenResolution?: string;
     platform?: string;
     language?: string;
+    source?: string;
+    telegramChatId?: string;
+    latitude?: number;
+    longitude?: number;
+    accuracy?: number;
+    live?: boolean;
   };
   checkOutDevice?: {
     deviceModel?: string;
@@ -103,6 +111,12 @@ interface TimeRecord {
     screenResolution?: string;
     platform?: string;
     language?: string;
+    source?: string;
+    telegramChatId?: string;
+    latitude?: number;
+    longitude?: number;
+    accuracy?: number;
+    live?: boolean;
   };
 }
 
@@ -1260,12 +1274,43 @@ const StaffAttendanceTracking: React.FC = () => {
                                   Экран: {record.checkInDevice.screenResolution}
                                 </Typography>
                               )}
+                              {record.checkInDevice.source === 'app' && (
+                                <Typography variant='caption' sx={{ display: 'block', mt: 0.5, fontWeight: 'bold', color: 'success.main' }}>
+                                  📱 Мобильное приложение
+                                </Typography>
+                              )}
+                              {record.checkInDevice.source?.includes('telegram') && (
+                                <>
+                                  <Typography variant='caption' sx={{ display: 'block', mt: 0.5, fontWeight: 'bold', color: 'primary.light' }}>
+                                    ✈️ Telegram {record.checkInDevice.live ? '(Live)' : ''}
+                                  </Typography>
+                                  {record.checkInDevice.telegramChatId && (
+                                    <Typography variant='caption' sx={{ display: 'block' }}>
+                                      Chat ID: {record.checkInDevice.telegramChatId}
+                                    </Typography>
+                                  )}
+                                  {record.checkInDevice.latitude && (
+                                    <Typography variant='caption' sx={{ display: 'block' }}>
+                                      Локация: {record.checkInDevice.latitude.toFixed(6)}, {record.checkInDevice.longitude?.toFixed(6)}
+                                    </Typography>
+                                  )}
+                                  {record.checkInDevice.accuracy && (
+                                    <Typography variant='caption' sx={{ display: 'block' }}>
+                                      Точность: {record.checkInDevice.accuracy}м
+                                    </Typography>
+                                  )}
+                                </>
+                              )}
                             </Box>
                           }
                           arrow
                         >
                           <Box component="span" sx={{ cursor: 'help', display: 'inline-flex', alignItems: 'center' }}>
-                            {record.checkInDevice.deviceType === 'mobile' ? (
+                            {record.checkInDevice.source?.includes('telegram') ? (
+                              <TelegramIcon sx={{ fontSize: 16, color: 'info.main' }} />
+                            ) : record.checkInDevice.source === 'app' ? (
+                              <PhoneAndroid sx={{ fontSize: 16, color: 'success.main' }} />
+                            ) : record.checkInDevice.deviceType === 'mobile' ? (
                               <Smartphone sx={{ fontSize: 16, color: 'primary.main' }} />
                             ) : record.checkInDevice.deviceType === 'tablet' ? (
                               <Tablet sx={{ fontSize: 16, color: 'info.main' }} />
@@ -1309,12 +1354,43 @@ const StaffAttendanceTracking: React.FC = () => {
                                   Экран: {record.checkOutDevice.screenResolution}
                                 </Typography>
                               )}
+                              {record.checkOutDevice.source === 'app' && (
+                                <Typography variant='caption' sx={{ display: 'block', mt: 0.5, fontWeight: 'bold', color: 'success.main' }}>
+                                  📱 Мобильное приложение
+                                </Typography>
+                              )}
+                              {record.checkOutDevice.source?.includes('telegram') && (
+                                <>
+                                  <Typography variant='caption' sx={{ display: 'block', mt: 0.5, fontWeight: 'bold', color: 'primary.light' }}>
+                                    ✈️ Telegram {record.checkOutDevice.live ? '(Live)' : ''}
+                                  </Typography>
+                                  {record.checkOutDevice.telegramChatId && (
+                                    <Typography variant='caption' sx={{ display: 'block' }}>
+                                      Chat ID: {record.checkOutDevice.telegramChatId}
+                                    </Typography>
+                                  )}
+                                  {record.checkOutDevice.latitude && (
+                                    <Typography variant='caption' sx={{ display: 'block' }}>
+                                      Локация: {record.checkOutDevice.latitude.toFixed(6)}, {record.checkOutDevice.longitude?.toFixed(6)}
+                                    </Typography>
+                                  )}
+                                  {record.checkOutDevice.accuracy && (
+                                    <Typography variant='caption' sx={{ display: 'block' }}>
+                                      Точность: {record.checkOutDevice.accuracy}м
+                                    </Typography>
+                                  )}
+                                </>
+                              )}
                             </Box>
                           }
                           arrow
                         >
                           <Box component="span" sx={{ cursor: 'help', display: 'inline-flex', alignItems: 'center' }}>
-                            {record.checkOutDevice.deviceType === 'mobile' ? (
+                            {record.checkOutDevice.source?.includes('telegram') ? (
+                              <TelegramIcon sx={{ fontSize: 16, color: 'info.main' }} />
+                            ) : record.checkOutDevice.source === 'app' ? (
+                              <PhoneAndroid sx={{ fontSize: 16, color: 'success.main' }} />
+                            ) : record.checkOutDevice.deviceType === 'mobile' ? (
                               <Smartphone sx={{ fontSize: 16, color: 'primary.main' }} />
                             ) : record.checkOutDevice.deviceType === 'tablet' ? (
                               <Tablet sx={{ fontSize: 16, color: 'info.main' }} />

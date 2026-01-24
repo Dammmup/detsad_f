@@ -41,8 +41,8 @@ export const PushService = {
                 return;
             }
 
-            const apiUrl = import.meta.env.VITE_API_URL || '';
-            await axios.post(`${apiUrl}/api/users/push/subscribe`, {
+            const apiUrl = import.meta.env.REACT_APP_API_URL || '';
+            await axios.post(`${apiUrl}/users/push/subscribe`, {
                 subscription
             }, {
                 headers: {
@@ -65,8 +65,8 @@ export const PushService = {
                 await subscription.unsubscribe();
                 const token = localStorage.getItem('auth_token');
 
-                const apiUrl = import.meta.env.VITE_API_URL || '';
-                await axios.post(`${apiUrl}/api/users/push/unsubscribe`, {
+                const apiUrl = import.meta.env.REACT_APP_API_URL || '';
+                await axios.post(`${apiUrl}/users/push/unsubscribe`, {
                     endpoint: subscription.endpoint
                 }, {
                     headers: {

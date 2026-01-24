@@ -591,7 +591,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                   <em>Для всех</em>
                 </MenuItem>
                 {users.map((user) => (
-                  <MenuItem key={user.id} value={user.id}>
+                  <MenuItem key={user._id || user.id} value={user._id || user.id}>
                     {user.fullName} ({user.role})
                   </MenuItem>
                 ))}
