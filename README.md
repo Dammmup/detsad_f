@@ -1,217 +1,148 @@
-# Frontend Documentation
+# Детсад Управление - Фронтенд
 
-## Overview
+Веб-приложение для управления детским садом, предоставляющее удобный интерфейс для администраторов, воспитателей и других сотрудников.
 
-This is the frontend application for the Kindergarten Management System. It's built with React and Material-UI, providing a comprehensive interface for managing all aspects of a kindergarten.
+## Архитектура
 
-## Technologies Used
+Фронтенд-приложение построено на React с использованием TypeScript. Архитектура приложения следует современным практикам React-разработки с компонентным подходом и разделением ответственности.
 
-- **React** - JavaScript library for building user interfaces
-- **Material-UI** - React components for faster and easier web development
-- **TypeScript** - Typed superset of JavaScript
-- **Axios** - Promise based HTTP client
-- **React Router** - Declarative routing for React
-- **XLSX** - Library for reading and writing Excel files
-- **FileSaver** - Client-side solution for saving files
+### Структура проекта:
+- `src/app/` - основные компоненты приложения (макеты, навигация)
+- `src/modules/` - модули приложения, каждый со своей логикой
+- `src/entities/` - сущности приложения (дети, группы, сотрудники и т.д.)
+- `src/shared/` - переиспользуемые компоненты, хуки, утилиты и сервисы
 
-## Project Structure
+### Технологии:
+- React 18+
+- TypeScript
+- React Router для навигации
+- Axios для HTTP запросов
+- Tailwind CSS или Material UI для стилизации
+- Redux или React Context для управления состоянием
+- Service Workers для PWA функциональности
 
-```
-src/
-├── components/          # Reusable UI components
-│   ├── App.tsx         # Main application component
-│   ├── Sidebar/        # Sidebar navigation
-│   └── context/        # React context providers
-├── hooks/              # Custom React hooks
-├── pages/              # Page components
-│   ├── Children/       # Children management pages
-│   ├── Staff/          # Staff management pages
-│   ├── Documents/      # Document management pages
-│   ├── Reports/       # Reporting pages
-│   └── Settings/       # Settings pages
-├── services/          # API service clients
-│   └── api/            # Individual API modules
-├── types/              # TypeScript type definitions
-└── utils/              # Utility functions
-    ├── api.ts          # API client utilities
-    ├── excelExport.ts  # Excel export utilities
-    ├── format.ts       # Data formatting utilities
-    └── validation.ts   # Data validation utilities
-```
+## Сущности
 
-## Key Features
+### Пользователи:
+- Авторизация и управление профилем
+- Ролевая система доступа
 
-### 1. User Management
-- User authentication (login/logout)
-- Role-based access control
-- User profile management
-- Password reset functionality
+### Дети:
+- Карточки детей с основной информацией
+- История посещений
+- Финансовая информация
 
-### 2. Children Management
-- Child registration and profile management
-- Group assignment
-- Parent information management
-- Medical information tracking
+### Группы:
+- Управление составом групп
+- Расписание занятий
 
-### 3. Staff Management
-- Employee profile management
-- Role and permission assignment
-- Contact information
-- Employment details
+### Питание:
+- Ежедневное и недельное меню
+- Продукты и блюда
+- Журналы пищеблока
+- Закупки продуктов
 
-### 4. Attendance Tracking
-- Daily attendance marking for children
-- Staff time tracking
-- Absence reporting
-- Late arrival tracking
+### Медицина:
+- Медицинские карты детей
+- Журналы заболеваний
+- Контроль за здоровьем
 
-### 5. Scheduling
-- Staff shift scheduling
-- Group activity scheduling
-- Calendar view
-- Schedule notifications
+### Персонал:
+- Учет рабочего времени
+- Смены сотрудников
+- Зарплаты
 
-### 6. Documents
-- Document upload and management
-- Document templates
-- Document categorization
-- Document search and filtering
-- Document download and sharing
+### Финансы:
+- Оплаты родителей
+- Аренда и другие расходы
 
-#### Document Types
-- Contracts
-- Certificates
-- Reports
-- Policies
-- Other custom documents
+## Функционал
 
-#### Document Categories
-- Staff-related documents
-- Children-related documents
-- Financial documents
-- Administrative documents
-- Other custom categories
+### Административные функции:
+- Управление детьми и группами
+- Управление сотрудниками
+- Финансовый контроль
+- Отчеты и аналитика
 
-### 7. Reporting
-- Attendance reports
-- Financial reports
-- Staff performance reports
-- Child progress reports
-- Custom report generation
-- Report export (PDF, Excel, CSV)
+### Учет посещаемости:
+- Отслеживание посещений детей
+- Учет опозданий и прогулов
+- Отчеты по посещаемости
 
-### 8. Payroll
-- Salary calculation
-- Bonus and deduction tracking
-- Payroll reports
-- Payment history
+### Управление питанием:
+- Создание и редактирование меню
+- Контроль продуктовых запасов
+- Журналы качества питания
+- Отчеты по питанию
 
-### 9. Settings
-- System configuration
-- User preferences
-- Notification settings
-- Data backup and restore
+### Медицинский учет:
+- Ведение медицинских карт
+- Учет заболеваний и прививок
+- Контроль за здоровьем сотрудников
 
-## API Integration
+### Коммуникация:
+- Push-уведомления
+- Интеграция с Telegram ботом
+- Отправка сообщений родителям
 
-The frontend communicates with the backend API through service modules located in `src/services/`. Each module handles specific API endpoints:
+## Экраны
 
-- `auth.ts` - Authentication endpoints
-- `users.ts` - User management endpoints
-- `groups.ts` - Group management endpoints
-- `attendance.ts` - Attendance tracking endpoints
-- `shifts.ts` - Staff shift endpoints
-- `documents.ts` - Document management endpoints
-- `reports.ts` - Reporting endpoints
-- `payroll.ts` - Payroll endpoints
-- `settings.ts` - Settings endpoints
+### Главная страница:
+- Обзор текущего состояния детского сада
+- Сводная статистика
+- Быстрые действия
 
-## State Management
+### Управление детьми:
+- Список всех детей
+- Подробная информация о каждом ребенке
+- История посещений и оплат
 
-The application uses React Context API for state management:
+### Группы:
+- Список групп с составом
+- Расписание занятий
+- Статистика по группе
 
-- `AuthContext` - Authentication state
-- `GroupsContext` - Group data
-- `TimeTrackingContext` - Time tracking data
+### Посещаемость:
+- Еженедельный и ежедневный учет
+- Фильтрация по группам и детям
+- Отчеты по посещаемости
 
-## Routing
+### Питание:
+- Просмотр и редактирование меню
+- Учет продуктов
+- Журналы пищеблока
 
-The application uses React Router for navigation with the following main routes:
+### Медицина:
+- Медицинские карты
+- Журналы заболеваний
+- Контроль здоровья
 
-- `/login` - Login page
-- `/app` - Main application layout
-- `/app/dashboard` - Dashboard
-- `/app/children` - Children management
-- `/app/staff` - Staff management
-- `/app/documents` - Document management
-- `/app/reports` - Reporting
-- `/app/settings` - Settings
+### Финансы:
+- Управление оплатами
+- Отчеты по финансам
+- Контроль расходов
 
-## Styling
+### Персонал:
+- Список сотрудников
+- Учет рабочего времени
+- Зарплаты
 
-The application uses Material-UI for styling with a consistent theme. Custom styles are implemented using:
+### Отчеты:
+- Финансовые отчеты
+- Отчеты по посещаемости
+- Отчеты по питанию
+- Медицинская статистика
 
-- Material-UI's `sx` prop
-- Styled components
-- CSS modules where needed
+### Настройки:
+- Общие настройки системы
+- Настройки уведомлений
+- Управление пользователями
 
-## Data Export
+## Установка и запуск
 
-The application supports exporting data in multiple formats:
+1. Клонируйте репозиторий
+2. Установите зависимости: `npm install`
+3. Настройте переменные окружения
+4. Запустите приложение: `npm start`
 
-- **Excel** - Detailed reports with formatting
-- **PDF** - Printable reports
-- **CSV** - Simple data exports
-
-Export functionality is implemented in `src/utils/excelExport.ts`.
-
-## Validation
-
-Form validation is implemented using custom validation utilities in `src/utils/validation.ts`. The validation includes:
-
-- Required field validation
-- Email format validation
-- Phone number validation
-- Date validation
-- Numeric value validation
-- Custom business rule validation
-
-## Error Handling
-
-The application implements comprehensive error handling:
-
-- API error handling
-- Form validation errors
-- User-friendly error messages
-- Error logging
-
-## Testing
-
-The application includes unit tests and integration tests for critical components and services.
-
-## Deployment
-
-To build and deploy the application:
-
-1. Install dependencies: `npm install`
-2. Build the application: `npm run build`
-3. Serve the built files from the `build/` directory
-
-## Environment Variables
-
-The application uses environment variables for configuration:
-
-- `REACT_APP_API_URL` - Backend API URL
-- `REACT_APP_NAME` - Application name
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a pull request
-
-## License
-
-This project is licensed under the MIT License.
+Приложение будет доступно по адресу http://localhost:3000
