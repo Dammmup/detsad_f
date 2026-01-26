@@ -266,7 +266,7 @@ export const Sidebar = ({
           align='center'
           display='block'
         >
-          v1.0.0 • Clockster System
+          v1.0.0 • Aldamiram System
         </Typography>
       </Box>
     </Drawer>
