@@ -294,7 +294,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         const apiStatus = status === 'calculated' ? 'draft' : status;
 
         const deductions = originalRow.deductions || 0; // Используем вычеты из оригинальной строки
-        const total = Math.max(0, accruals + bonuses - penalties - advance - deductions);
+        const total = accruals + bonuses - penalties - advance - deductions;
 
         const updatedData = {
           ...editData,
