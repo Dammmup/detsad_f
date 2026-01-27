@@ -34,6 +34,18 @@ const PushNotificationPrompt: React.FC = () => {
                 }
             } else if (permission === 'denied') {
                 console.log('❌ Push notifications denied by user in browser settings.');
+
+                // Для мобильных устройств иногда можно показать инструкции по включению уведомлений
+                const mobilePromptShown = localStorage.getItem('mobile_push_prompt_shown');
+                const isMobileDevice = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+                if (isMobileDevice && !mobilePromptShown) {
+                    // Показываем напоминание о важности уведомлений на мобильных устройствах
+                    setTimeout(() => {
+                        setOpen(true);
+                        localStorage.setItem('mobile_push_prompt_shown', 'true');
+                    }, 5000);
+                }
             }
         };
 
@@ -87,7 +99,7 @@ const PushNotificationPrompt: React.FC = () => {
                 }
                 sx={{ width: '100%', boxShadow: 3 }}
             >
-                Включите push-уведомления, чтобы получать важные напоминания
+                Включите push-уведомления, чтобы получать важные уведомления о задачах и событиях
             </Alert>
         </Snackbar>
     );

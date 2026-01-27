@@ -42,8 +42,8 @@ const sidebarStructure: SidebarItem[] = [
     label: 'Моя зарплата',
     link: '/app/my-salary',
     icon: <AssessmentIcon />,
-    visibleFor: ['manager', 'teacher', 'assistant', 'nurse', 'psychologist', 'music_teacher', 'physical_teacher'],
-    // Доступно всем сотрудникам
+    visibleFor: ['admin', 'manager', 'teacher', 'assistant', 'nurse', 'cook', 'cleaner', 'security', 'psychologist', 'music_teacher', 'physical_teacher', 'staff', 'intern'],
+    // Доступно сотрудникам с разрешением на просмотр зарплаты
   },
   {
     id: 'children',

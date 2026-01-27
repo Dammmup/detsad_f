@@ -113,6 +113,7 @@ const defaultForm: StaffMember = {
   updatedAt: new Date().toISOString(),
   salaryType: 'day',
   salary: 0,
+  allowToSeePayroll: false,
 };
 
 const Staff = () => {
@@ -211,7 +212,7 @@ const Staff = () => {
   }, [staff, searchTerm, filterRole, activeTab]);
 
   const handleOpenModal = (member?: StaffMember) => {
-    setForm(member ? { ...member } : defaultForm);
+    setForm(member ? { ...member, allowToSeePayroll: member.allowToSeePayroll || false } : defaultForm);
     setEditId(member?.id || null);
     setModalOpen(true);
   };
@@ -266,6 +267,8 @@ const Staff = () => {
           salary: form.salary,
           salaryType: form.salaryType,
         });
+        // Обновляем поле allowToSeePayroll отдельно
+        await usersApi.updateAllowToSeePayroll(editId, !!form.allowToSeePayroll);
         handleCloseModal();
       } else {
 
@@ -643,6 +646,19 @@ const Staff = () => {
                   label='Активен'
                 />
               </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={form.allowToSeePayroll}
+                      onChange={(e) =>
+                        setForm({ ...form, allowToSeePayroll: e.target.checked })
+                      }
+                    />
+                  }
+                  label='Разрешить просмотр зарплаты'
+                />
+              </Grid>
             </Grid>
           </DialogContent>
 
@@ -660,7 +676,7 @@ const Staff = () => {
             </Button>
           </DialogActions>
         </Dialog>
-      </Paper>
+      </Paper >
     </>
   );
 };

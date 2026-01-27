@@ -26,6 +26,30 @@ export const createTask = async (
 ): Promise<TaskList> => {
   try {
     const response = await apiClient.post('/task-list', taskData);
+
+    // Попробовать показать локальное уведомление о создании задачи
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Задача создана', {
+          body: `Создана новая задача: "${taskData.title}"`,
+          icon: '/favicon.ico',
+          tag: 'task-created-' + Date.now()
+        });
+      } else if ('Notification' in window && Notification.permission !== 'denied') {
+        // Запросить разрешение на уведомления
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          new Notification('Задача создана', {
+            body: `Создана новая задача: "${taskData.title}"`,
+            icon: '/favicon.ico',
+            tag: 'task-created-' + Date.now()
+          });
+        }
+      }
+    } catch (notificationError) {
+      console.log('Ошибка при показе локального уведомления:', notificationError);
+    }
+
     return response.data;
   } catch (error: any) {
     console.error('Error creating task:', error);

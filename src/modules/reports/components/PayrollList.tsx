@@ -143,6 +143,13 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         try {
           const userData = getCurrentUser();
           if (userData) {
+            // Проверяем, есть ли право на просмотр зарплаты
+            if (personalOnly && !userData.allowToSeePayroll) {
+              setError('У вас нет доступа к информации о зарплате');
+              setLoading(false);
+              return;
+            }
+
             currentUserData = {
               id: userData.id || userData._id,
               role: userData.role || 'staff',

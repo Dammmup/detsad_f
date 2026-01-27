@@ -101,6 +101,7 @@ export interface User {
   staffId?: string;
   staffName?: string;
   tenant?: boolean;
+  allowToSeePayroll?: boolean;
 }
 
 export interface IRent {

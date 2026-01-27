@@ -41,6 +41,7 @@ class AuthApiClient extends BaseApiClient {
           shiftRate: response.user.shiftRate,
           staffId: response.user.staffId,
           staffName: response.user.staffName,
+          allowToSeePayroll: response.user.allowToSeePayroll,
         },
         token: response.token,
       };

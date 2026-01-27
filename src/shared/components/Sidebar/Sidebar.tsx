@@ -41,9 +41,16 @@ export const Sidebar = ({
 
     if (!item.visibleFor) return true;
 
-
     const userRole = currentUser?.role || 'staff';
-    return item.visibleFor.includes(userRole);
+    const isVisibleByRole = item.visibleFor.includes(userRole);
+
+    // Особая проверка для пункта "Моя зарплата"
+    if (item.id === 'my-salary' && isVisibleByRole) {
+      // Проверяем, есть ли у пользователя право просматривать зарплату
+      return currentUser?.allowToSeePayroll === true;
+    }
+
+    return isVisibleByRole;
   };
 
 
