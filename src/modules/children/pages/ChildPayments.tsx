@@ -825,10 +825,10 @@ const ChildPayments: React.FC = () => {
                   </TableCell>
                   <TableCell sx={{
                     p: isMobile ? 1 : 2,
-                    color: (payment.total - (payment.paidAmount || 0)) > 0 ? 'error.main' : 'success.main',
+                    color: ((payment.total + (payment.accruals || 0)) - (payment.paidAmount || 0)) > 0 ? 'error.main' : 'success.main',
                     fontWeight: 'bold'
                   }}>
-                    {payment.total - (payment.paidAmount || 0)} ₸
+                    {(payment.total + (payment.accruals || 0)) - (payment.paidAmount || 0)} ₸
                   </TableCell>
                   <TableCell sx={{ p: isMobile ? 1 : 2 }}>
                     {payment.accruals || 0} ₸

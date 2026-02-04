@@ -8,16 +8,7 @@ import {
   IconButton,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-import { getUsers } from '../../staff/services/users';
-import { EXTERNAL_ROLES } from '../../../shared/types/common';
-
-interface User {
-  _id?: string;
-  fullName: string;
-  role?: string;
-  email?: string;
-  phone?: string;
-}
+import { getExternalSpecialists, ExternalSpecialist } from '../services/externalSpecialists';
 
 interface RentTenantSelectorProps {
   selectedTenantIds: string[];
@@ -30,18 +21,15 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
   onTenantSelect,
   disabled = false,
 }) => {
-  const [allTenants, setAllTenants] = useState<User[]>([]);
-  const [selectedTenants, setSelectedTenants] = useState<User[]>([]);
+  const [allTenants, setAllTenants] = useState<ExternalSpecialist[]>([]);
+  const [selectedTenants, setSelectedTenants] = useState<ExternalSpecialist[]>([]);
 
 
   useEffect(() => {
     const fetchTenants = async () => {
       try {
-        const users = await getUsers();
-
-        const tenants = users.filter((user) => EXTERNAL_ROLES.includes(user.role as any));
+        const tenants = await getExternalSpecialists(true); // active only
         setAllTenants(tenants);
-
 
         const selected = tenants.filter(
           (tenant) => tenant._id && selectedTenantIds.includes(tenant._id),
@@ -56,7 +44,7 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
   }, [selectedTenantIds]);
 
 
-  const handleTenantChange = (event: any, newValue: User[]) => {
+  const handleTenantChange = (event: any, newValue: ExternalSpecialist[]) => {
     setSelectedTenants(newValue);
     onTenantSelect(
       newValue
@@ -69,8 +57,7 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
   const filteredTenants = allTenants.filter(
     (tenant) =>
       tenant._id &&
-      !selectedTenants.some((selected) => selected._id === tenant._id) &&
-      tenant.fullName.toLowerCase().includes(''),
+      !selectedTenants.some((selected) => selected._id === tenant._id),
   );
 
   return (
@@ -85,7 +72,7 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
       <Autocomplete
         multiple
         options={filteredTenants}
-        getOptionLabel={(option) => option.fullName}
+        getOptionLabel={(option) => option.name}
         value={selectedTenants}
         onChange={handleTenantChange}
         disabled={disabled}
@@ -104,7 +91,7 @@ const RentTenantSelector: React.FC<RentTenantSelectorProps> = ({
               const tagProps = getTagProps({ index });
               return (
                 <Chip
-                  label={option.fullName}
+                  label={option.name}
                   size='small'
                   {...tagProps}
                   onDelete={disabled ? undefined : tagProps.onDelete}

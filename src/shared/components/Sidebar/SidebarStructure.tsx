@@ -69,6 +69,13 @@ const sidebarStructure: SidebarItem[] = [
         link: '/app/children/attendance',
         icon: <CalendarViewWeekIcon />,
       },
+      {
+        id: 'children-payments',
+        label: 'Оплаты за посещение',
+        visibleFor: ['admin', 'manager'],
+        link: '/app/children/payments',
+        icon: <AssessmentIcon />,
+      }
     ],
   },
   {
@@ -95,12 +102,7 @@ const sidebarStructure: SidebarItem[] = [
         link: '/app/staff/attendance',
         icon: <AssignmentIndIcon />,
       },
-      {
-        id: 'children-payments',
-        label: 'Оплаты за посещение',
-        link: '/app/children/payments',
-        icon: <AssessmentIcon />,
-      },
+
     ],
   },
   {

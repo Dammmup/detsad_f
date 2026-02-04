@@ -32,6 +32,7 @@ import {
   AccountBalanceWallet as DebtIcon,
 } from '@mui/icons-material';
 import RentTenantSelector from './RentTenantSelector';
+import AddExternalSpecialistModal from './AddExternalSpecialistModal';
 
 interface Props {
   userId?: string;
@@ -93,6 +94,7 @@ const RentReport: React.FC<Props> = ({ userId }) => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [generating, setGenerating] = useState(false);
   const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
+  const [addSpecialistModalOpen, setAddSpecialistModalOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -451,9 +453,27 @@ const RentReport: React.FC<Props> = ({ userId }) => {
               <Button variant='contained' startIcon={generating ? <CircularProgress size={20} /> : <EditIcon />} onClick={handleGenerateRentSheets} disabled={generating}>
                 {generating ? 'Генерация...' : 'Сгенерировать'}
               </Button>
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<PeopleIcon />}
+                onClick={() => setAddSpecialistModalOpen(true)}
+              >
+                Добавить специалиста
+              </Button>
               <Button variant='outlined' color='info' startIcon={<VisibilityIcon />} onClick={handleExportToExcel}>Экспорт</Button>
             </Box>
           )}
+
+          <AddExternalSpecialistModal
+            open={addSpecialistModalOpen}
+            onClose={() => setAddSpecialistModalOpen(false)}
+            onSuccess={(specialist) => {
+              setSnackbarMessage(`Специалист ${specialist.name} добавлен`);
+              setSnackbarOpen(true);
+              // Можно добавить обновление списка если это необходимо, но список арендаторов обновляется в селекторе
+            }}
+          />
 
           <Box sx={{ mb: 2 }}>
             <RentTenantSelector

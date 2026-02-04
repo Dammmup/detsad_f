@@ -1,12 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  getUsers,
-  updateUser,
-  deleteUser,
-  usersApi,
-  createUser,
-} from '../../modules/staff/services/users';
-import {
   Table,
   TableHead,
   TableRow,
@@ -23,22 +16,14 @@ import {
   TextField,
   IconButton,
   InputAdornment,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormHelperText,
   Grid,
   Tooltip,
   Chip,
   Divider,
   Box,
   Typography,
-  OutlinedInput,
-  SelectChangeEvent,
-  Checkbox,
-  ListItemText,
   FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import {
   Edit,
@@ -50,148 +35,80 @@ import {
   Badge,
   Person,
 } from '@mui/icons-material';
-import { User as StaffMember, UserRole } from '../../shared/types/common';
-import { getGroups } from '../../modules/children/services/groups';
-import { useAuth } from '../../app/context/AuthContext';
 import ExportButton from '../../shared/components/ExportButton';
 import { exportData } from '../../shared/utils/exportUtils';
+import {
+  getExternalSpecialists,
+  createExternalSpecialist,
+  updateExternalSpecialist,
+  deleteExternalSpecialist,
+  ExternalSpecialist
+} from '../../modules/reports/services/externalSpecialists';
 
-
-const roleTranslations: Record<string, string> = {
-
-  admin: 'Администратор',
-  manager: 'Менеджер',
-  director: 'Директор',
-
-
-  teacher: 'Воспитатель',
-  assistant: 'Помощник воспитателя',
-  psychologist: 'Психолог',
-  speech_therapist: 'Логопед',
-  music_teacher: 'Музыкальный руководитель',
-  physical_education: 'Инструктор по физкультуре',
-
-
-  nurse: 'Медсестра',
-  doctor: 'Врач',
-
-
-  cook: 'Повар',
-  cleaner: 'Уборщица',
-  security: 'Охранник',
-  maintenance: 'Завхоз',
-  laundry: 'Прачка',
-
-
-  staff: 'Сотрудник',
-  substitute: 'Подменный сотрудник',
-  intern: 'Стажер',
-};
-
-
-const translateRole = (role: string): string => {
-  return roleTranslations[role] || role;
-};
-
-
-const getRoleByTranslation = (translation: string): string => {
-  const entry = Object.entries(roleTranslations).find(
-    ([_, value]) => value === translation,
-  );
-  return entry ? entry[0] : translation;
-};
-
-const defaultForm: StaffMember = {
-  _id: '',
-  id: '',
+const defaultForm: Partial<ExternalSpecialist> = {
+  name: '',
+  type: 'tenant',
   phone: '',
-  fullName: '',
-  role: 'tenant' as UserRole,
+  email: '',
+  description: '',
   active: true,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  salaryType: 'day',
-  salary: 0,
 };
 
 const Rent = () => {
-  const [staff, setStaff] = useState<any[]>([]);
-  const [filteredStaff, setFilteredStaff] = useState<any[]>([]);
+  const [specialists, setSpecialists] = useState<ExternalSpecialist[]>([]);
+  const [filteredSpecialists, setFilteredSpecialists] = useState<ExternalSpecialist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState<StaffMember>(defaultForm);
+  const [form, setForm] = useState<Partial<ExternalSpecialist>>(defaultForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
-  const { user: currentUser } = useAuth();
 
-
-  const availableRoles = [roleTranslations['tenant']].sort();
-
-  const fetchStaff = useCallback(() => {
+  const fetchSpecialists = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const includePasswords = currentUser?.role === 'admin';
-    getUsers(includePasswords)
-      .then((data) => {
-        const rentStaff = data.filter((user: any) => user.tenant === true);
-        setStaff(rentStaff);
-        setFilteredStaff(rentStaff);
-      })
-      .catch((err) => setError(err?.message || 'Ошибка загрузки'))
-      .finally(() => setLoading(false));
-  }, [currentUser?.role]);
-
-
-  const fetchGroups = async () => {
     try {
-      await getGroups();
-    } catch (err) {
-      console.error('Ошибка при загрузке групп:', err);
+      const data = await getExternalSpecialists(false); // fetch all, including inactive
+      const tenants = data.filter(s => s.type === 'tenant');
+      setSpecialists(tenants);
+      setFilteredSpecialists(tenants);
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка загрузки арендаторов');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchStaff();
-    fetchGroups();
-  }, [fetchStaff]);
-
+    fetchSpecialists();
+  }, [fetchSpecialists]);
 
   useEffect(() => {
-    if (!staff.length) return;
+    if (!specialists.length && !searchTerm) {
+      setFilteredSpecialists([]);
+      return;
+    }
 
-    let filtered = staff.filter((member) => member.role === 'tenant');
+    let filtered = specialists;
 
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (member) =>
-          member.fullName?.toLowerCase().includes(search) ||
+          member.name?.toLowerCase().includes(search) ||
           member.email?.toLowerCase().includes(search) ||
-          member.phone?.toLowerCase().includes(search) ||
-          translateRole(member.role || '')
-            .toLowerCase()
-            .includes(search),
+          member.phone?.toLowerCase().includes(search)
       );
     }
 
+    setFilteredSpecialists(filtered);
+  }, [specialists, searchTerm]);
 
-    if (filterRole.length > 0) {
-      filtered = filtered.filter((member) => {
-        const russianRole = translateRole(member.role || '');
-        return filterRole.includes(russianRole);
-      });
-    }
-
-    setFilteredStaff(filtered);
-  }, [staff, searchTerm, filterRole, currentUser?.role]);
-
-  const handleOpenModal = (member?: StaffMember) => {
+  const handleOpenModal = (member?: ExternalSpecialist) => {
     setForm(member ? { ...member } : defaultForm);
-    setEditId(member?.id || null);
+    setEditId(member?._id || null);
     setModalOpen(true);
   };
 
@@ -199,41 +116,22 @@ const Rent = () => {
     setModalOpen(false);
     setForm(defaultForm);
     setEditId(null);
+    setFormErrors({});
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
 
-
     if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
-
-
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-
-
-    if (formErrors[name]) {
-      setFormErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-  };
-
-
-  const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
-    const { value } = event.target;
-    setFilterRole(typeof value === 'string' ? value.split(',') : value);
-  };
-
 
   const validateForm = () => {
     const errors: { [key: string]: string } = {};
 
-    if (!form.fullName) errors.fullName = 'ФИО обязательно';
-    if (!form.role) errors.role = 'Должность обязательна';
+    if (!form.name) errors.name = 'ФИО/Название обязательно';
     if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) {
       errors.email = 'Неверный формат email';
     }
@@ -243,7 +141,6 @@ const Rent = () => {
   };
 
   const handleSave = async () => {
-
     if (!validateForm()) {
       return;
     }
@@ -251,18 +148,12 @@ const Rent = () => {
     setSaving(true);
     try {
       if (editId) {
-        await updateUser(editId, form);
-        await usersApi.updatePayrollSettings(editId, {
-          salary: form.salary,
-          salaryType: form.salaryType,
-        });
-        handleCloseModal();
+        await updateExternalSpecialist(editId, form);
       } else {
-
-        await createUser(form);
-        handleCloseModal();
+        await createExternalSpecialist({ ...form, type: 'tenant' });
       }
-      fetchStaff();
+      handleCloseModal();
+      fetchSpecialists();
     } catch (e: any) {
       alert(e?.response?.data?.message || 'Ошибка сохранения');
     } finally {
@@ -270,17 +161,16 @@ const Rent = () => {
     }
   };
 
-  const handleDelete = async (member: StaffMember) => {
-    if (!member.id) {
+  const handleDelete = async (member: ExternalSpecialist) => {
+    if (!member._id) {
       console.error('ID is undefined for deletion');
       return;
     }
     if (!window.confirm('Удалить арендатора?')) return;
     setSaving(true);
     try {
-      console.log('Attempting to delete user with ID:', member.id);
-      await deleteUser(member.id);
-      fetchStaff();
+      await deleteExternalSpecialist(member._id);
+      fetchSpecialists();
     } catch (e: any) {
       console.error('Error during deletion:', e);
       alert(e?.response?.data?.message || 'Ошибка удаления');
@@ -295,7 +185,6 @@ const Rent = () => {
   ) => {
     await exportData('tenant', exportFormat, {
       name: searchTerm,
-      role: filterRole,
     });
   };
 
@@ -330,7 +219,7 @@ const Rent = () => {
           </Button>
         </Box>
 
-        {/* Поиск и фильтры */}
+        {/* Поиск */}
         <Box mb={3} display='flex' flexWrap='wrap' gap={2}>
           <TextField
             placeholder='Поиск арендаторов...'
@@ -347,31 +236,6 @@ const Rent = () => {
               ),
             }}
           />
-
-          <FormControl size='small' sx={{ minWidth: '200px' }}>
-            <InputLabel id='role-filter-label'>Фильтр по должности</InputLabel>
-            <Select
-              labelId='role-filter-label'
-              multiple
-              value={filterRole}
-              onChange={handleFilterRoleChange}
-              input={<OutlinedInput label='Фильтр по должности' />}
-              renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {selected.map((value) => (
-                    <Chip key={value} label={value} size='small' />
-                  ))}
-                </Box>
-              )}
-            >
-              {availableRoles.map((role) => (
-                <MenuItem key={role} value={role}>
-                  <Checkbox checked={filterRole.indexOf(role) > -1} />
-                  <ListItemText primary={role} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
         </Box>
 
         {loading && <CircularProgress />}
@@ -379,9 +243,9 @@ const Rent = () => {
 
         {!loading && !error && (
           <>
-            {filteredStaff.length === 0 ? (
+            {filteredSpecialists.length === 0 ? (
               <Alert severity='info' style={{ marginTop: 16 }}>
-                {staff.length === 0
+                {specialists.length === 0
                   ? 'Нет арендаторов. Добавьте первого арендатора!'
                   : 'Нет арендаторов, соответствующих критериям поиска.'}
               </Alert>
@@ -389,21 +253,16 @@ const Rent = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>ФИО</TableCell>
-                    <TableCell>ИИН</TableCell>
-                    <TableCell>Должность</TableCell>
+                    <TableCell>ФИО / Название</TableCell>
                     <TableCell>Контакты</TableCell>
-                    <TableCell>Пароль</TableCell>
                     <TableCell>Статус</TableCell>
                     <TableCell align='right'>Действия</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredStaff.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell>{member.fullName}</TableCell>
-                      <TableCell>{member.iin || '—'}</TableCell>
-                      <TableCell>{translateRole(member.role || '')}</TableCell>
+                  {filteredSpecialists.map((member) => (
+                    <TableRow key={member._id}>
+                      <TableCell>{member.name}</TableCell>
                       <TableCell>
                         <Box display='flex' flexDirection='column'>
                           {member.phone && (
@@ -426,11 +285,6 @@ const Rent = () => {
                           )}
                         </Box>
                       </TableCell>
-                      {currentUser?.role === 'admin' ? (
-                        <TableCell>{member.initialPassword || '—'}</TableCell>
-                      ) : (
-                        <TableCell>—</TableCell>
-                      )}
                       <TableCell>
                         <Chip
                           label={member.active ? 'Активен' : 'Неактивен'}
@@ -490,43 +344,17 @@ const Rent = () => {
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
-                  label='ФИО'
-                  name='fullName'
-                  value={form.fullName}
+                  label='ФИО / Название'
+                  name='name'
+                  value={form.name}
                   onChange={handleChange}
                   fullWidth
                   required
-                  error={!!formErrors.fullName}
-                  helperText={formErrors.fullName}
+                  error={!!formErrors.name}
+                  helperText={formErrors.name}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth required error={!!formErrors.role}>
-                  <InputLabel>Должность</InputLabel>
-                  <Select
-                    name='role'
-                    value={translateRole(form.role || '')}
-                    onChange={(e) => {
-                      const russianRole = e.target.value as string;
-                      const englishRole = getRoleByTranslation(russianRole);
-                      setForm({
-                        ...form,
-                        role: englishRole as StaffMember['role'],
-                      });
-                    }}
-                    label='Должность'
-                  >
-                    {availableRoles.map((russianRole) => (
-                      <MenuItem key={russianRole} value={russianRole}>
-                        {russianRole}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formErrors.role && (
-                    <FormHelperText>{formErrors.role}</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
+
               <Grid item xs={12} md={6}>
                 <TextField
                   label='Телефон'
@@ -545,11 +373,30 @@ const Rent = () => {
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
-                  label='ИИН'
-                  name='iin'
-                  value={form.iin || ''}
+                  label='Email'
+                  name='email'
+                  value={form.email || ''}
                   onChange={handleChange}
                   fullWidth
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position='start'>
+                        <Email />
+                      </InputAdornment>
+                    ),
+                  }}
+                  error={!!formErrors.email}
+                  helperText={formErrors.email}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label='Описание / Примечание'
+                  name='description'
+                  value={form.description || ''}
+                  onChange={handleChange}
+                  fullWidth
+                  multiline
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -565,7 +412,6 @@ const Rent = () => {
                   label='Активен'
                 />
               </Grid>
-              {/* Поле арендатора больше не нужно, так как это теперь роль */}
             </Grid>
           </DialogContent>
 
