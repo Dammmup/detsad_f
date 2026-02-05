@@ -47,12 +47,16 @@ interface Summary {
   totalTenants: number;
   totalAmount: number;
   totalReceivable: number;
+  totalDebt: number;
+  totalOverpayment: number;
 }
 
 interface RentRow {
   tenantName: string;
   amount: number;
   paidAmount: number;
+  debt: number;
+  overpayment: number;
   status: string;
   tenantId: string;
   _id?: string;
@@ -141,34 +145,45 @@ const RentReport: React.FC<Props> = ({ userId }) => {
 
         const summaryData: Summary = {
           totalTenants: data.length,
-          totalAmount: data.reduce((sum, p) => {
-            const amount = p.amount || p.accruals || 0;
-            return sum + amount;
-          }, 0),
+          totalAmount: data.reduce((sum, p) => sum + (p.amount || p.accruals || 0), 0),
           totalReceivable: data.reduce((sum, p) => {
             const amount = p.amount || p.accruals || 0;
             const paid = p.paidAmount || 0;
             return sum + Math.max(0, amount - paid);
           }, 0),
+          totalDebt: data.reduce((sum, p) => {
+            const amount = p.amount || p.accruals || 0;
+            const paid = p.paidAmount || 0;
+            return sum + (paid < amount ? amount - paid : 0);
+          }, 0),
+          totalOverpayment: data.reduce((sum, p) => {
+            const amount = p.amount || p.accruals || 0;
+            const paid = p.paidAmount || 0;
+            return sum + (paid > amount ? paid - amount : 0);
+          }, 0),
         };
 
         setSummary(summaryData);
         setRows(
-          data.map((p: any) => ({
-            tenantName: p.tenantId?.fullName || p.tenantId?.name || 'Неизвестно',
-            amount: p.amount || p.accruals || 0,
-            paidAmount: Math.max(
+          data.map((p: any) => {
+            const amount = p.amount || p.accruals || 0;
+            const paidAmount = Math.max(
               0,
-              p.paidAmount ||
-              (p.accruals && p.total ? p.accruals - p.total : 0) ||
-              0,
-            ),
-            accruals: p.accruals || p.amount || 0,
-            status: p.status && p.status !== 'draft' ? p.status : 'active',
-            tenantId: p.tenantId?._id || p.tenantId?.id || p.tenantId || '',
-            _id: p._id || undefined,
-            paymentDate: p.paymentDate || undefined,
-          })),
+              p.paidAmount || (p.accruals && p.total ? p.accruals - p.total : 0) || 0
+            );
+            return {
+              tenantName: p.tenantId?.fullName || p.tenantId?.name || 'Неизвестно',
+              amount,
+              paidAmount,
+              debt: paidAmount < amount ? amount - paidAmount : 0,
+              overpayment: paidAmount > amount ? paidAmount - amount : 0,
+              accruals: p.accruals || p.amount || 0,
+              status: p.status && p.status !== 'draft' ? p.status : 'active',
+              tenantId: p.tenantId?._id || p.tenantId?.id || p.tenantId || '',
+              _id: p._id || undefined,
+              paymentDate: p.paymentDate || undefined,
+            };
+          }),
         );
       } catch (e: any) {
         if (mounted) setError(e?.message || 'Ошибка загрузки аренды');
@@ -203,15 +218,16 @@ const RentReport: React.FC<Props> = ({ userId }) => {
           return;
         }
 
+        const amount = editData.amount !== undefined ? editData.amount : originalRow.amount;
+        const paidAmount = editData.paidAmount !== undefined ? editData.paidAmount : originalRow.paidAmount;
+
         const updatedData = {
           ...editData,
-          amount: editData.amount !== undefined ? editData.amount : originalRow.amount,
-          paidAmount: editData.paidAmount !== undefined ? editData.paidAmount : originalRow.paidAmount,
-          total: Math.max(
-            0,
-            (editData.amount !== undefined ? editData.amount : originalRow.amount) -
-            (editData.paidAmount !== undefined ? editData.paidAmount : originalRow.paidAmount),
-          ),
+          amount,
+          paidAmount,
+          debt: paidAmount < amount ? amount - paidAmount : 0,
+          overpayment: paidAmount > amount ? paidAmount - amount : 0,
+          total: Math.max(0, amount - paidAmount),
           paymentDate: editData.paymentDate || originalRow.paymentDate
         };
 
@@ -319,8 +335,9 @@ const RentReport: React.FC<Props> = ({ userId }) => {
         return {
           'Арендатор': row.tenantName,
           'Сумма аренды': row.amount || row.accruals || 0,
-          'Оплачено/Предоплачено': row.paidAmount,
-          'Остаток к оплате': total,
+          'Оплачено': row.paidAmount,
+          'Долг': row.debt,
+          'Переплата': row.overpayment,
           'Статус': row.status,
           'Дата оплаты': row.paymentDate ? new Date(row.paymentDate).toLocaleDateString('ru-RU') : 'Не оплачено',
         };
@@ -434,8 +451,8 @@ const RentReport: React.FC<Props> = ({ userId }) => {
                 { label: 'Арендаторов', value: summary?.totalTenants || 0, color: '#6366f1', icon: <PeopleIcon /> },
                 { label: 'Сумма аренды', value: (summary?.totalAmount || 0).toLocaleString('ru-RU') + ' ₸', color: '#10b981', icon: <EditIcon /> },
                 { label: 'Оплачено', value: (rows.reduce((sum, r) => sum + (r.paidAmount || 0), 0)).toLocaleString('ru-RU') + ' ₸', color: '#2196f3', icon: <DebtIcon /> },
-                { label: 'Просрочено', value: (rows.filter(r => isOverduePayment(r.paymentDate) && (r.amount - r.paidAmount > 0)).reduce((sum, r) => sum + Math.max(0, (r.amount || r.accruals || 0) - r.paidAmount), 0)).toLocaleString('ru-RU') + ' ₸', color: '#f43f5e', icon: <CancelIcon /> },
-                { label: 'Остаток', value: (summary?.totalReceivable || 0).toLocaleString('ru-RU') + ' ₸', color: '#8b5cf6', icon: <VisibilityIcon /> },
+                { label: 'Долг', value: (summary?.totalDebt || 0).toLocaleString('ru-RU') + ' ₸', color: '#f43f5e', icon: <CancelIcon /> },
+                { label: 'Переплата', value: (summary?.totalOverpayment || 0).toLocaleString('ru-RU') + ' ₸', color: '#8b5cf6', icon: <VisibilityIcon /> },
               ].map((stat, idx) => (
                 <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Box sx={{ width: 48, height: 48, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: `${stat.color}15`, color: stat.color }}>{stat.icon}</Box>
@@ -491,7 +508,8 @@ const RentReport: React.FC<Props> = ({ userId }) => {
                       <TableCell sx={{ fontWeight: 'bold' }}>Арендатор</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Сумма аренды</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Оплачено</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Остаток</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Долг</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Переплата</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Дата оплаты</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Статус</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Действия</TableCell>
@@ -537,15 +555,24 @@ const RentReport: React.FC<Props> = ({ userId }) => {
                         </TableCell>
                         <TableCell>
                           <Typography
-                            variant='body1'
+                            variant='body2'
                             sx={{
                               fontWeight: '900',
-                              color: 'primary.main',
-                              borderBottom: '1px dashed currentColor',
-                              display: 'inline-block'
+                              color: r.debt > 0 ? 'error.main' : 'text.secondary',
                             }}
                           >
-                            {(r.amount - r.paidAmount).toLocaleString('ru-RU')} ₸
+                            {r.debt.toLocaleString('ru-RU')} ₸
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography
+                            variant='body2'
+                            sx={{
+                              fontWeight: '900',
+                              color: r.overpayment > 0 ? 'success.main' : 'text.secondary',
+                            }}
+                          >
+                            {r.overpayment.toLocaleString('ru-RU')} ₸
                           </Typography>
                         </TableCell>
                         <TableCell>

@@ -228,8 +228,8 @@ const StaffAttendanceTracking: React.FC = () => {
           });
         }
 
-        // PROMPT: "не шли запросы пока ты не укажешь стартовый и конечный период а так же сотрудника"
-        if (viewMode === 'range' && (selectedStaff === 'all' || !startDate || !endDate)) {
+        // PROMPT: "не шли запросы пока ты не укажешь стартовый и конечный период"
+        if (viewMode === 'range' && (!startDate || !endDate)) {
           setRecords([]);
           return;
         }
@@ -1161,12 +1161,15 @@ const StaffAttendanceTracking: React.FC = () => {
 
 
       const transformedRecords = attendanceRecords.map((record: any) => {
+        const staffRawId = record.staffId?._id || record.staffId;
+        const staffIdStr = typeof staffRawId === 'string' ? staffRawId : staffRawId?.toString() || '';
+
         return {
           id: record._id || record.id || '',
-          staffId: record.staffId._id || record.staffId,
+          staffId: staffIdStr,
           staffName:
-            record.staffId.fullName ||
-            getStaffName(record.staffId._id || record.staffId || ''),
+            record.staffId?.fullName ||
+            getStaffName(staffIdStr),
           date: record.date,
           actualStart: record.actualStart
             ? new Date(record.actualStart).toLocaleTimeString('ru-RU', {
