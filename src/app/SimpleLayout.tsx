@@ -268,7 +268,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             {/* Отчеты */}
             <Route path='reports' element={isAdminOrManager ? <Reports /> : <Navigate to="/app/dashboard" />} />
             <Route path='reports/payroll' element={isAdminOrManager ? <ReportsSalary /> : <Navigate to="/app/dashboard" />} />
-            <Route path='reports/rent' element={isAdminOrManager ? <ReportsRent /> : <Navigate to="/app/dashboard" />} />
+            <Route path='rent' element={isAdminOrManager ? <ReportsRent /> : <Navigate to="/app/dashboard" />} />
 
             {/* Статистика */}
             <Route path='statistics' element={userRole === 'admin' ? <Statistics /> : <Navigate to="/app/dashboard" />} />
