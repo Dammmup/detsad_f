@@ -709,6 +709,9 @@ const StaffSchedule: React.FC = () => {
                                     {(record.earlyLeaveMinutes ?? 0) > 0 && (
                                       <Chip label={`Ух: ${record.earlyLeaveMinutes}м`} size='small' color='warning' variant='outlined' sx={{ fontSize: '0.6rem' }} />
                                     )}
+                                    {record.actualStart && record.actualEnd && (
+                                      <Chip label="✓" size='small' color='success' variant='outlined' sx={{ fontSize: '0.6rem', minWidth: 'auto' }} />
+                                    )}
                                     {record.actualStart && !record.actualEnd && (
                                       <Chip label="На работе" size='small' color='success' variant='outlined' sx={{ fontSize: '0.6rem' }} />
                                     )}
@@ -830,7 +833,7 @@ const StaffSchedule: React.FC = () => {
           </DialogActions>
         </Dialog>
       </Box>
-    </LocalizationProvider>
+    </LocalizationProvider >
   );
 };
 

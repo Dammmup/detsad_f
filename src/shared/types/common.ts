@@ -213,8 +213,8 @@ export const STATUS_COLORS: Record<string, StatusColor> = {
   absent: 'error',
   early_departure: 'warning',
   present: 'success',
-  no_clock_in: 'error',
-  no_clock_out: 'error',
+  no_clock_in: 'warning',
+  no_clock_out: 'warning',
   early_leave: 'warning',
   late_arrival: 'warning',
 
@@ -241,6 +241,8 @@ export const STATUS_TEXT: Record<string, string> = {
   checked_in: 'На работе',
   checked_out: 'Ушел',
   late: 'Опоздание',
+  no_clock_in: 'Нет прихода',
+  no_clock_out: 'Нет ухода',
 };
 
 

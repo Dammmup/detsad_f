@@ -102,8 +102,21 @@ const sidebarStructure: SidebarItem[] = [
         link: '/app/staff/attendance',
         icon: <AssignmentIndIcon />,
       },
+      {
+        id: 'reports-payroll',
+        label: 'Зарплаты',
+        link: '/app/reports/payroll',
+        icon: <AssessmentIcon />,
+      },
 
     ],
+  },
+  {
+    id: 'rent',
+    label: 'Аренда',
+    visibleFor: ['admin', 'manager'],
+    link: '/app/rent',
+    icon: <AssessmentIcon />,
   },
   {
     id: 'documents',
@@ -129,18 +142,6 @@ const sidebarStructure: SidebarItem[] = [
         id: 'reports-all',
         label: 'Все отчеты',
         link: '/app/reports',
-        icon: <AssessmentIcon />,
-      },
-      {
-        id: 'reports-payroll',
-        label: 'Зарплаты',
-        link: '/app/reports/payroll',
-        icon: <AssessmentIcon />,
-      },
-      {
-        id: 'reports-rent',
-        label: 'Аренда',
-        link: '/app/reports/rent',
         icon: <AssessmentIcon />,
       },
     ],

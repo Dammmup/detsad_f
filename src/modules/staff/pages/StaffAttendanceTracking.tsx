@@ -32,6 +32,8 @@ import {
   ListItemText,
   Dialog,
   Tooltip,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import {
   AccessTime,
@@ -132,9 +134,12 @@ const StaffAttendanceTracking: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   const [staffList, setStaffList] = useState<any[]>([]);
   const [records, setRecords] = useState<TimeRecord[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const saved = localStorage.getItem('sat_selectedDate');
+    return saved ? new Date(saved) : new Date();
+  });
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedStaff, setSelectedStaff] = useState('all');
+  const [selectedStaff, setSelectedStaff] = useState(() => localStorage.getItem('sat_selectedStaff') || 'all');
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [tabValue, setTabValue] = useState(0);
@@ -145,14 +150,30 @@ const StaffAttendanceTracking: React.FC = () => {
   const [currentStaffId, setCurrentStaffId] = useState('');
   const [isImporting, setIsImporting] = useState(false);
 
+  const [viewMode, setViewMode] = useState<'day' | 'range'>(() => {
+    const saved = localStorage.getItem('sat_viewMode');
+    return (saved === 'day' || saved === 'range') ? saved : 'day';
+  });
+  const [startDate, setStartDate] = useState(() => localStorage.getItem('sat_startDate') || moment().format('YYYY-MM-DD'));
+  const [endDate, setEndDate] = useState(() => localStorage.getItem('sat_endDate') || moment().format('YYYY-MM-DD'));
+
   // Рабочие часы из настроек
   const [workingHours, setWorkingHours] = useState({ start: '09:00', end: '18:00' });
 
   // Массовое обновление
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
-  const [bulkForm, setBulkForm] = useState({ actualStart: '', actualEnd: '', notes: '' });
+  const [bulkForm, setBulkForm] = useState({ actualStart: '', actualEnd: '', notes: '', status: '' });
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
+  // Сохранение состояния в localStorage
+  useEffect(() => {
+    localStorage.setItem('sat_viewMode', viewMode);
+    localStorage.setItem('sat_selectedDate', selectedDate.toISOString());
+    localStorage.setItem('sat_startDate', startDate);
+    localStorage.setItem('sat_endDate', endDate);
+    localStorage.setItem('sat_selectedStaff', selectedStaff);
+  }, [viewMode, selectedDate, startDate, endDate, selectedStaff]);
 
 
 
@@ -207,12 +228,25 @@ const StaffAttendanceTracking: React.FC = () => {
           });
         }
 
-        const startDate = moment(selectedDate).startOf('month').format('YYYY-MM-DD');
-        const endDate = moment(selectedDate).endOf('month').format('YYYY-MM-DD');
-        let filters: any = {
-          startDate,
-          endDate,
-        };
+        // PROMPT: "не шли запросы пока ты не укажешь стартовый и конечный период а так же сотрудника"
+        if (viewMode === 'range' && (selectedStaff === 'all' || !startDate || !endDate)) {
+          setRecords([]);
+          return;
+        }
+
+        if (staffList.length === 0) return;
+
+        let filters: any = {};
+
+        if (viewMode === 'day') {
+          const formattedDate = moment(selectedDate).format('YYYY-MM-DD');
+          filters.startDate = formattedDate;
+          filters.endDate = formattedDate;
+        } else {
+          filters.startDate = startDate;
+          filters.endDate = endDate;
+        }
+
         if (selectedStaff !== 'all') filters.staffId = selectedStaff;
 
         const response =
@@ -244,13 +278,20 @@ const StaffAttendanceTracking: React.FC = () => {
           return count || 22;
         };
 
-        const workDaysInMonth = getWorkDays(selectedDate);
+        const workDaysCache = new Map<string, number>();
+        const getCachedWorkDays = (d: Date) => {
+          const key = moment(d).format('YYYY-MM');
+          if (workDaysCache.has(key)) return workDaysCache.get(key)!;
+          const days = getWorkDays(d);
+          workDaysCache.set(key, days);
+          return days;
+        };
 
         shifts.forEach((shift: any) => {
           // Исправлено: ищем запись посещаемости по ID сотрудника И ДАТЕ
           const attendanceRecord = attendanceRecords.find((r: any) => {
-            const rStaffId = r.staffId._id || r.staffId;
-            const sStaffId = shift.staffId._id || shift.staffId;
+            const rStaffId = String(r.staffId._id || r.staffId);
+            const sStaffId = String(shift.staffId._id || shift.staffId);
             const rDate = moment(r.date).utcOffset(5).format('YYYY-MM-DD');
             return rStaffId === sStaffId && rDate === shift.date;
           });
@@ -261,6 +302,7 @@ const StaffAttendanceTracking: React.FC = () => {
           const salaryType = staff?.baseSalaryType || staff?.salaryType || 'month';
           const shiftRate = staff?.shiftRate || 0;
 
+          const workDaysInMonth = getCachedWorkDays(new Date(shift.date));
           let dailyAccrual = 0;
           if (salaryType === 'shift') {
             // Если shiftRate не задан, используем baseSalary как ставку за смену
@@ -416,10 +458,10 @@ const StaffAttendanceTracking: React.FC = () => {
         attendanceRecords.forEach((record: any) => {
           // Используем фиксированное смещение +5 для Алматы
           const localDate = moment(record.date).utcOffset(5).format('YYYY-MM-DD');
-          const key = `${record.staffId._id || record.staffId}-${localDate}`;
+          const currentKey = `${String(record.staffId._id || record.staffId)}-${localDate}`;
           const shiftExists = shifts.some(
             (shift: any) =>
-              `${shift.staffId._id || shift.staffId}-${shift.date}` === key,
+              `${String(shift.staffId._id || shift.staffId)}-${shift.date}` === currentKey,
           );
 
           if (!shiftExists) {
@@ -430,6 +472,7 @@ const StaffAttendanceTracking: React.FC = () => {
             const salaryType = staff?.baseSalaryType || staff?.salaryType || 'month';
             const shiftRate = staff?.shiftRate || 0;
 
+            const workDaysInMonth = getCachedWorkDays(new Date(record.date));
             let dailyAccrual = 0;
             if (salaryType === 'shift') {
               // Если shiftRate не задан, используем baseSalary как ставку за смену
@@ -531,14 +574,19 @@ const StaffAttendanceTracking: React.FC = () => {
           }
         });
 
+        // Сортируем все записи по дате
+        allRecords.sort((a, b) => moment(a.date).diff(moment(b.date)));
+
         let filteredRecords = [...allRecords];
 
-        // Для ТАБЛИЦЫ фильтруем только выбранный день
-        const selectedDayStr = moment(selectedDate).format('YYYY-MM-DD');
-        filteredRecords = filteredRecords.filter(r => {
-          const rDate = moment(r.date).format('YYYY-MM-DD');
-          return rDate === selectedDayStr;
-        });
+        // Для ТАБЛИЦЫ фильтруем только выбранный день, если мы в режиме 'day'
+        if (viewMode === 'day') {
+          const selectedDayStr = moment(selectedDate).format('YYYY-MM-DD');
+          filteredRecords = filteredRecords.filter(r => {
+            const rDate = moment(r.date).format('YYYY-MM-DD');
+            return rDate === selectedDayStr;
+          });
+        }
 
         if (searchTerm) {
           const search = searchTerm.toLowerCase();
@@ -569,6 +617,9 @@ const StaffAttendanceTracking: React.FC = () => {
     };
     fetchRecords();
   }, [
+    viewMode,
+    startDate,
+    endDate,
     selectedStaff,
     selectedDate,
     filterRole,
@@ -603,6 +654,12 @@ const StaffAttendanceTracking: React.FC = () => {
   });
 
   const handleOpenMarkDialog = () => {
+    setMarkForm((prev) => ({
+      ...prev,
+      actualStart: workingHours.start,
+      actualEnd: workingHours.end,
+      date: moment(selectedDate).format('YYYY-MM-DD'),
+    }));
     setMarkDialogOpen(true);
   };
   const handleCloseMarkDialog = () => {
@@ -905,8 +962,12 @@ const StaffAttendanceTracking: React.FC = () => {
   };
 
   const handleEditRecord = (record: TimeRecord) => {
+    // Если время прихода/ухода не указано, подставляем рабочие часы для удобства
+    const editRecord = { ...record };
+    if (!editRecord.actualStart) editRecord.actualStart = workingHours.start;
+    if (!editRecord.actualEnd) editRecord.actualEnd = workingHours.end;
 
-    setSelectedRecord(record);
+    setSelectedRecord(editRecord);
     setEditDialogOpen(true);
   };
 
@@ -948,6 +1009,7 @@ const StaffAttendanceTracking: React.FC = () => {
         const updateData: any = {
           notes: selectedRecord.notes,
           lateMinutes: selectedRecord.lateMinutes,
+          status: selectedRecord.statuses[0],
         };
 
         // Добавляем actualStart только если он указан (не пустая строка)
@@ -1019,10 +1081,7 @@ const StaffAttendanceTracking: React.FC = () => {
       // Обрабатываем запланированные записи - создаем новые
       for (const plannedId of plannedIds) {
         try {
-          // Формат plannedId: staffId_date
           const [staffId, dateStr] = plannedId.split('_');
-
-          // Формируем данные для создания
           const createData: any = {
             staffId,
             date: dateStr,
@@ -1037,6 +1096,9 @@ const StaffAttendanceTracking: React.FC = () => {
           if (bulkForm.notes) {
             createData.notes = bulkForm.notes;
           }
+          if (bulkForm.status) {
+            createData.status = bulkForm.status;
+          }
 
           await staffAttendanceTrackingService.createRecord(createData);
           successCount++;
@@ -1048,13 +1110,12 @@ const StaffAttendanceTracking: React.FC = () => {
 
       // Обрабатываем существующие записи через bulk update
       if (existingIds.length > 0) {
-        // Передаем только время, бэкенд сам возьмет дату из записи
         const updateData: any = {
           ids: existingIds,
-          // Передаем время как строку, бэкенд применит к дате каждой записи
           timeStart: bulkForm.actualStart || undefined,
           timeEnd: bulkForm.actualEnd || undefined,
-          notes: bulkForm.notes || undefined
+          notes: bulkForm.notes || undefined,
+          status: bulkForm.status || undefined
         };
 
         const response = await staffAttendanceTrackingService.bulkUpdate(updateData);
@@ -1069,9 +1130,7 @@ const StaffAttendanceTracking: React.FC = () => {
 
       setBulkDialogOpen(false);
       setSelectedIds([]);
-      setBulkForm({ actualStart: '', actualEnd: '', notes: '' });
-
-      // Перезагружаем данные
+      setBulkForm({ actualStart: '', actualEnd: '', notes: '', status: '' });
       window.location.reload();
     } catch (e: any) {
       console.error('Error bulk updating:', e);
@@ -1187,7 +1246,8 @@ const StaffAttendanceTracking: React.FC = () => {
               setBulkForm({
                 actualStart: workingHours.start,
                 actualEnd: workingHours.end,
-                notes: ''
+                notes: '',
+                status: ''
               });
               setBulkDialogOpen(true);
             }}
@@ -1227,6 +1287,15 @@ const StaffAttendanceTracking: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
+            {records.length === 0 && viewMode === 'range' && selectedStaff === 'all' && (
+              <TableRow>
+                <TableCell colSpan={9} align="center" sx={{ py: 10 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    Выберите сотрудника и период для отображения данных в режиме периода
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
             {records.map((record) => (
               <TableRow key={record.id} selected={selectedIds.includes(record.id)}>
                 <TableCell padding="checkbox">
@@ -1510,18 +1579,57 @@ const StaffAttendanceTracking: React.FC = () => {
       </Box>
 
       <Paper sx={{ p: 2, mb: 2 }}>
-        <DateNavigator />
+        {viewMode === 'day' && <DateNavigator />}
         <Box display='flex' flexWrap='wrap' gap={2} alignItems='center' p={2}>
-          {/* Выбор даты */}
-          <TextField
-            label='Дата'
-            type='date'
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={(_, value) => value && setViewMode(value)}
             size='small'
-            value={moment(selectedDate).format('YYYY-MM-DD')}
-            onChange={(e) => setSelectedDate(new Date(e.target.value))}
-            sx={{ minWidth: '180px' }}
-            InputLabelProps={{ shrink: true }}
-          />
+            color='primary'
+          >
+            <ToggleButton value='day'>День</ToggleButton>
+            <ToggleButton value='range' onClick={() => {
+              if (viewMode === 'day') {
+                setStartDate(moment(selectedDate).startOf('month').format('YYYY-MM-DD'));
+                setEndDate(moment(selectedDate).endOf('month').format('YYYY-MM-DD'));
+              }
+            }}>Период</ToggleButton>
+          </ToggleButtonGroup>
+
+          {/* Выбор даты */}
+          {viewMode === 'day' ? (
+            <TextField
+              label='Дата'
+              type='date'
+              size='small'
+              value={moment(selectedDate).format('YYYY-MM-DD')}
+              onChange={(e) => setSelectedDate(new Date(e.target.value))}
+              sx={{ minWidth: '180px' }}
+              InputLabelProps={{ shrink: true }}
+            />
+          ) : (
+            <>
+              <TextField
+                label='Начало'
+                type='date'
+                size='small'
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                sx={{ minWidth: '150px' }}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label='Конец'
+                type='date'
+                size='small'
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                sx={{ minWidth: '150px' }}
+                InputLabelProps={{ shrink: true }}
+              />
+            </>
+          )}
           {(tabValue === 3 || tabValue === 4) && (
             <TextField
               label='Дата'
@@ -1869,6 +1977,21 @@ const StaffAttendanceTracking: React.FC = () => {
             onChange={(e) => setBulkForm(prev => ({ ...prev, actualEnd: e.target.value }))}
             InputLabelProps={{ shrink: true }}
           />
+          <TextField
+            label="Статус"
+            select
+            fullWidth
+            sx={{ mb: 2, mt: 2 }}
+            value={bulkForm.status}
+            onChange={(e) => setBulkForm(prev => ({ ...prev, status: e.target.value }))}
+          >
+            <MenuItem value="">Не менять статус</MenuItem>
+            {Object.entries(STATUS_TEXT).map(([key, label]) => (
+              <MenuItem key={key} value={key}>
+                {label}
+              </MenuItem>
+            ))}
+          </TextField>
           <TextField
             label="Примечание"
             multiline
