@@ -23,6 +23,7 @@ import StaffScheduleWidget from '../components/StaffScheduleWidget';
 import BirthdaysCalendarWidget from '../components/BirthdaysCalendarWidget';
 
 import DateNavigator from '../../../shared/components/DateNavigator';
+import ReportsWidget from '../../reports/components/ReportsWidget';
 
 const Dashboard = () => {
   const { user: currentUser } = useAuth();
@@ -84,6 +85,7 @@ const Dashboard = () => {
       }}
     >
       <DateNavigator />
+      {!isStaff && <ReportsWidget />}
       {/* На мобильных список задач всегда сверху и в одну колонку */}
       {isMobile && (
         <Box sx={{ mb: 3 }}>

@@ -43,7 +43,7 @@ import {
   Schedule,
   Person,
   Search as SearchIcon,
-  FileUpload as FileUploadIcon,
+  FileUpload,
   Smartphone,
   Computer,
   Tablet,
@@ -63,10 +63,8 @@ import {
 } from '../../../shared/types/common';
 import {
   getKindergartenSettings,
-  KindergartenSettings,
 } from '../../settings/services/settings';
 import DateNavigator from '../../../shared/components/DateNavigator';
-import { importStaffAttendance } from '../../../shared/services/importService';
 import { useSnackbar } from 'notistack';
 import { collectDeviceMetadata } from '../../../shared/utils/deviceMetadata';
 import { STATUS_TEXT } from '../../../shared/types/common';
@@ -165,6 +163,15 @@ const StaffAttendanceTracking: React.FC = () => {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkForm, setBulkForm] = useState({ actualStart: '', actualEnd: '', notes: '', status: '' });
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
+  // Массовая корректировка статусов за период
+  const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
+  const [bulkStatusForm, setBulkStatusForm] = useState({
+    startDate: moment().startOf('month').format('YYYY-MM-DD'),
+    endDate: moment().format('YYYY-MM-DD'),
+    status: 'completed',
+    staffId: 'all'
+  });
 
   // Сохранение состояния в localStorage
   useEffect(() => {
@@ -1140,6 +1147,29 @@ const StaffAttendanceTracking: React.FC = () => {
     }
   };
 
+  const handleBulkStatusUpdate = async () => {
+    setIsBulkUpdating(true);
+    try {
+      const filters = {
+        startDate: bulkStatusForm.startDate,
+        endDate: bulkStatusForm.endDate,
+        status: bulkStatusForm.status,
+        staffId: bulkStatusForm.staffId === 'all' ? undefined : bulkStatusForm.staffId
+      };
+
+      await shiftsApi.bulkUpdateStatus(filters);
+
+      enqueueSnackbar('Статусы успешно обновлены', { variant: 'success' });
+      setBulkStatusDialogOpen(false);
+      window.location.reload();
+    } catch (e: any) {
+      console.error('Error bulk status updating:', e);
+      enqueueSnackbar(e.response?.data?.error || 'Ошибка массового обновления статусов', { variant: 'error' });
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
   const handleDeleteRecord = async (id: string) => {
     try {
 
@@ -1556,28 +1586,15 @@ const StaffAttendanceTracking: React.FC = () => {
             Создать смену
           </Button>
           <Button
-            variant='outlined'
-            startIcon={isImporting ? <AccessTime /> : <FileUploadIcon />}
-            onClick={async () => {
-              try {
-                setIsImporting(true);
-                const year = moment(currentDate).year();
-                const result = await importStaffAttendance(year);
-                if (result.success) {
-                  enqueueSnackbar(`Импорт завершён: смен ${result.stats.shiftsCreated || 0}, посещаемость ${result.stats.attendanceCreated || 0}`, { variant: 'success' });
-                } else {
-                  enqueueSnackbar(result.error || 'Ошибка импорта', { variant: 'error' });
-                }
-              } catch (error: any) {
-                enqueueSnackbar(error?.message || 'Ошибка импорта', { variant: 'error' });
-              } finally {
-                setIsImporting(false);
-              }
-            }}
-            disabled={isImporting}
+            variant='contained'
+            color='secondary'
+            startIcon={<Edit />}
+            onClick={() => setBulkStatusDialogOpen(true)}
+            sx={{ mr: 1 }}
           >
-            {isImporting ? 'Импорт...' : 'Импорт'}
+            Массовая корректировка
           </Button>
+
         </Box>
       </Box>
 
@@ -2013,6 +2030,88 @@ const StaffAttendanceTracking: React.FC = () => {
             startIcon={isBulkUpdating ? <Schedule /> : <Check />}
           >
             {isBulkUpdating ? 'Обновление...' : 'Обновить'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Status Update Dialog */}
+      <Dialog
+        open={bulkStatusDialogOpen}
+        onClose={() => setBulkStatusDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Массовая корректировка статусов</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, mt: 1 }}>
+            Выберите период и статус для массового обновления.
+            Если выбран статус "Завершено", время прихода и ухода будет установлено согласно настройкам.
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Сотрудник</InputLabel>
+                <Select
+                  value={bulkStatusForm.staffId}
+                  label='Сотрудник'
+                  onChange={(e) => setBulkStatusForm(prev => ({ ...prev, staffId: e.target.value }))}
+                >
+                  <MenuItem value='all'>Все сотрудники</MenuItem>
+                  {staffList.map((staff: any) => (
+                    <MenuItem key={staff.id} value={staff.id}>
+                      {staff.fullName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                label='Начало'
+                type='date'
+                fullWidth
+                value={bulkStatusForm.startDate}
+                onChange={(e) => setBulkStatusForm(prev => ({ ...prev, startDate: e.target.value }))}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                label='Конец'
+                type='date'
+                fullWidth
+                value={bulkStatusForm.endDate}
+                onChange={(e) => setBulkStatusForm(prev => ({ ...prev, endDate: e.target.value }))}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label='Статус'
+                select
+                fullWidth
+                value={bulkStatusForm.status}
+                onChange={(e) => setBulkStatusForm(prev => ({ ...prev, status: e.target.value }))}
+              >
+                {Object.entries(STATUS_TEXT).map(([key, label]) => (
+                  <MenuItem key={key} value={key}>
+                    {label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkStatusDialogOpen(false)}>Отмена</Button>
+          <Button
+            variant='contained'
+            color='primary'
+            onClick={handleBulkStatusUpdate}
+            disabled={isBulkUpdating}
+            startIcon={isBulkUpdating ? <Schedule /> : <Check />}
+          >
+            {isBulkUpdating ? 'Обновление...' : 'Применить'}
           </Button>
         </DialogActions>
       </Dialog>

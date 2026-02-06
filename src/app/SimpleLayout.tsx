@@ -35,7 +35,7 @@ import StaffSchedule from '../modules/staff/pages/StaffSchedule';
 import WeeklyAttendance from '../modules/children/pages/WeeklyAttendance';
 import ReportsSalary from '../modules/reports/components/PayrollList';
 import { logout, getCurrentUser } from '../services';
-import Reports from '../modules/reports/pages/Reports';
+import ReportsWidget from '../modules/reports/components/ReportsWidget';
 import StaffAttendanceTracking from '../modules/staff/pages/StaffAttendanceTracking';
 import { Documents } from '../modules/documents/pages/Documents';
 import TubPositiveJournal from '../modules/medicine/pages/TubPositiveJournal';
@@ -262,11 +262,11 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
               path='staff/attendance'
               element={<StaffAttendanceTracking />}
             />
-            <Route path='staff/reports' element={isAdminOrManager ? <Reports /> : <Navigate to="/app/dashboard" />} />
+            <Route path='staff/reports' element={isAdminOrManager ? <ReportsWidget /> : <Navigate to="/app/dashboard" />} />
             {/* Документы */}
             <Route path='documents' element={<Documents />} />
             {/* Отчеты */}
-            <Route path='reports' element={isAdminOrManager ? <Reports /> : <Navigate to="/app/dashboard" />} />
+            <Route path='reports' element={isAdminOrManager ? <ReportsWidget /> : <Navigate to="/app/dashboard" />} />
             <Route path='reports/payroll' element={isAdminOrManager ? <ReportsSalary /> : <Navigate to="/app/dashboard" />} />
             <Route path='rent' element={isAdminOrManager ? <ReportsRent /> : <Navigate to="/app/dashboard" />} />
 

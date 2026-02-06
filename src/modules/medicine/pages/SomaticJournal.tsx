@@ -22,7 +22,7 @@ import {
 } from '@mui/material';
 import { getUsers } from '../../staff/services/userService';
 import childrenApi from '../../children/services/children';
-import { User } from '../../../shared/types/common';
+import { User, Child } from '../../../shared/types/common';
 import {
   getSomaticRecords,
   createSomaticRecord,
@@ -44,22 +44,20 @@ import { AnyAaaaRecord } from 'dns';
 
 export default function SomaticJournal() {
   const [records, setRecords] = useState<SomaticRecord[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [diagnosisFilter, setDiagnosisFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const [onlyCurrentYear, setOnlyCurrentYear] = useState(true);
+  const [onlyCurrentYear, setOnlyCurrentYear] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [newRecord, setNewRecord] = useState<Partial<SomaticRecord>>({});
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      childrenApi.getAll().then((children) => {
-        setUsers(children as any);
-      }),
+      childrenApi.getAll().then(setChildren),
       getSomaticRecords().then(setRecords),
     ]).finally(() => setLoading(false));
   }, []);
@@ -69,12 +67,12 @@ export default function SomaticJournal() {
     let filtered = [...records];
     if (search) {
       filtered = filtered.filter((r) =>
-        (r.fio || '').toLowerCase().includes(search.toLowerCase()),
+        (r.fio || (r.childId && typeof r.childId === 'object' && (r.childId as any).fullName) || '').toLowerCase().includes(search.toLowerCase()),
       );
     }
     if (diagnosisFilter) {
       filtered = filtered.filter((r) =>
-        r.diagnosis.toLowerCase().includes(diagnosisFilter.toLowerCase()),
+        (r.diagnosis || '').toLowerCase().includes(diagnosisFilter.toLowerCase()),
       );
     }
     if (fromDate) {
@@ -214,7 +212,7 @@ export default function SomaticJournal() {
 
 
   const handleChildSelect = (id: string) => {
-    const child = users.find((u) => u.id === id || u._id === id);
+    const child = children.find((c) => c.id === id || c._id === id);
     if (child) {
       setNewRecord((r) => ({
         ...r,
@@ -231,7 +229,7 @@ export default function SomaticJournal() {
     setDiagnosisFilter('');
     setFromDate('');
     setToDate('');
-    setOnlyCurrentYear(true);
+    setOnlyCurrentYear(false);
   };
 
   return (
@@ -358,7 +356,7 @@ export default function SomaticJournal() {
             margin='dense'
           >
             <MenuItem value=''>—</MenuItem>
-            {users.map((child) => (
+            {children.map((child) => (
               <MenuItem
                 key={child.id || child._id}
                 value={child.id || child._id}

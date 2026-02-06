@@ -61,6 +61,12 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return data;
   }
 
+  async bulkUpdateStatus(filters: { staffId?: string; startDate: string; endDate: string; status: string }): Promise<any> {
+    const { data } = await apiClient.post(`${this.endpoint}/bulk-update-status`, filters);
+    this.clearCache();
+    return data;
+  }
+
   async copyWeek(fromDate: string, toDate: string, staffIds?: string[]): Promise<any> {
     const { data } = await apiClient.post(`${this.endpoint}/copy-week`, { fromDate, toDate, staffIds });
     this.clearCache();

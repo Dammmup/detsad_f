@@ -241,6 +241,7 @@ export const STATUS_TEXT: Record<string, string> = {
   checked_in: 'На работе',
   checked_out: 'Ушел',
   late: 'Опоздание',
+  late_arrival: 'Поздний приход',
   no_clock_in: 'Нет прихода',
   no_clock_out: 'Нет ухода',
 };

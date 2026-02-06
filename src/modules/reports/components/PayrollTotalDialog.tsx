@@ -36,18 +36,6 @@ const PayrollTotalDialog: React.FC<Props> = ({ open, onClose, data }) => {
 
     const isShiftBased = data.baseSalaryType === 'shift';
 
-    // Calculate base part details
-    // If shift based, baseSalary IS the rate.
-    // If month based: Show formula: Base / Norm * Worked
-    const baseDescription = isShiftBased
-        ? `${data.workedShifts} смен * ${data.baseSalary.toLocaleString()} тг`
-        : (typeof data.normDays === 'number' && data.normDays > 0)
-            ? `${data.baseSalary.toLocaleString()} / ${data.normDays} дн. * ${data.workedDays} дн.`
-            : `Оклад за месяц`;
-
-    // Determine effective daily/shift rate for month-based if relevant, or just show accrued
-    // For month based: accruals is calculated based on working days.
-    // We can show: (Base / Norm) * Worked
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>

@@ -4,6 +4,7 @@ import {
 } from '@mui/material';
 import {
   Download,
+  Upload,
 
 } from '@mui/icons-material';
 
@@ -26,7 +27,7 @@ const ExportButton: React.FC<ExportButtonProps> = ({
     <Button
       variant='contained'
       color='primary'
-      startIcon={<Download />}
+      startIcon={<Upload />}
       onClick={handleExport}
     >
       Экспорт

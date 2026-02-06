@@ -122,30 +122,10 @@ const sidebarStructure: SidebarItem[] = [
     id: 'documents',
     label: 'Документы',
     icon: <InsertDriveFileIcon />,
+    link: '/app/documents',
     visibleFor: ['admin', 'manager', 'psychologist'],
-    children: [
-      {
-        id: 'documents-all',
-        label: 'Все документы',
-        link: '/app/documents',
-        icon: <InsertDriveFileIcon />,
-      },
-    ],
   },
-  {
-    id: 'reports',
-    label: 'Отчеты',
-    icon: <AssessmentIcon />,
-    visibleFor: ['admin', 'manager'],
-    children: [
-      {
-        id: 'reports-all',
-        label: 'Все отчеты',
-        link: '/app/reports',
-        icon: <AssessmentIcon />,
-      },
-    ],
-  },
+
   {
     id: 'statistics',
     label: 'Статистика',
