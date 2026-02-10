@@ -143,8 +143,8 @@ export interface IChildPayment {
   deductions?: number;
   comments?: string;
   paidAmount?: number;
-  paymentDate?: string;
-  paidAt?: string;
+  paymentDate?: Date;
+  paidAt?: Date;
   createdAt: string;
   updatedAt: string;
 }

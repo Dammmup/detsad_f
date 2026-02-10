@@ -72,16 +72,9 @@ const isOverduePayment = (paymentDate: string | undefined): boolean => {
   const paymentDateObj = new Date(paymentDate);
   const currentDate = new Date();
 
-  const paymentDateOnly = new Date(
-    paymentDateObj.getFullYear(),
-    paymentDateObj.getMonth(),
-    paymentDateObj.getDate(),
-  );
-  const currentDateOnly = new Date(
-    currentDate.getFullYear(),
-    currentDate.getMonth(),
-    currentDate.getDate(),
-  );
+  // Убираем время из дат для корректного сравнения
+  const paymentDateOnly = new Date(paymentDateObj.getFullYear(), paymentDateObj.getMonth(), paymentDateObj.getDate());
+  const currentDateOnly = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
 
   return paymentDateOnly < currentDateOnly;
 };
@@ -138,6 +131,7 @@ const RentReport: React.FC<Props> = ({ userId }) => {
           params.userId = userId;
         }
 
+
         const rentsData = await getRents(params);
 
         if (!mounted) return;
@@ -145,39 +139,44 @@ const RentReport: React.FC<Props> = ({ userId }) => {
 
         const summaryData: Summary = {
           totalTenants: data.length,
-          totalAmount: data.reduce((sum, p) => sum + (p.amount || p.accruals || 0), 0),
-          totalReceivable: data.reduce((sum, p) => {
+          totalAmount: data.reduce((sum: number, p: any) => {
             const amount = p.amount || p.accruals || 0;
-            const paid = p.paidAmount || 0;
-            return sum + Math.max(0, amount - paid);
+            return sum + (typeof amount === 'number' ? amount : 0);
           }, 0),
-          totalDebt: data.reduce((sum, p) => {
+          totalReceivable: data.reduce((sum: number, p: any) => {
             const amount = p.amount || p.accruals || 0;
             const paid = p.paidAmount || 0;
-            return sum + (paid < amount ? amount - paid : 0);
+            const receivable = Math.max(0, (typeof amount === 'number' ? amount : 0) - (typeof paid === 'number' ? paid : 0));
+            return sum + receivable;
           }, 0),
-          totalOverpayment: data.reduce((sum, p) => {
+          totalDebt: data.reduce((sum: number, p: any) => {
             const amount = p.amount || p.accruals || 0;
             const paid = p.paidAmount || 0;
-            return sum + (paid > amount ? paid - amount : 0);
+            const debt = (typeof paid === 'number' && typeof amount === 'number' && paid < amount) ? amount - paid : 0;
+            return sum + debt;
+          }, 0),
+          totalOverpayment: data.reduce((sum: number, p: any) => {
+            const amount = p.amount || p.accruals || 0;
+            const paid = p.paidAmount || 0;
+            const overpayment = (typeof paid === 'number' && typeof amount === 'number' && paid > amount) ? paid - amount : 0;
+            return sum + overpayment;
           }, 0),
         };
-
         setSummary(summaryData);
         setRows(
           data.map((p: any) => {
-            const amount = p.amount || p.accruals || 0;
+            const amount = typeof p.amount === 'number' ? p.amount : (typeof p.accruals === 'number' ? p.accruals : 0);
             const paidAmount = Math.max(
               0,
-              p.paidAmount || (p.accruals && p.total ? p.accruals - p.total : 0) || 0
+              typeof p.paidAmount === 'number' ? p.paidAmount : (typeof p.accruals === 'number' && typeof p.total === 'number' ? p.accruals - p.total : 0)
             );
             return {
               tenantName: p.tenantId?.fullName || p.tenantId?.name || 'Неизвестно',
               amount,
               paidAmount,
-              debt: paidAmount < amount ? amount - paidAmount : 0,
-              overpayment: paidAmount > amount ? paidAmount - amount : 0,
-              accruals: p.accruals || p.amount || 0,
+              debt: (typeof paidAmount === 'number' && typeof amount === 'number' && paidAmount < amount) ? amount - paidAmount : 0,
+              overpayment: (typeof paidAmount === 'number' && typeof amount === 'number' && paidAmount > amount) ? paidAmount - amount : 0,
+              accruals: typeof p.accruals === 'number' ? p.accruals : (typeof p.amount === 'number' ? p.amount : 0),
               status: p.status && p.status !== 'draft' ? p.status : 'active',
               tenantId: p.tenantId?._id || p.tenantId?.id || p.tenantId || '',
               _id: p._id || undefined,
@@ -257,13 +256,29 @@ const RentReport: React.FC<Props> = ({ userId }) => {
 
           const updatedTotalAmount = updatedRows.reduce((sum, p) => {
             const amount = p.amount || p.accruals || 0;
-            return sum + amount;
+            return sum + (typeof amount === 'number' ? amount : 0);
+          }, 0);
+
+          const updatedTotalDebt = updatedRows.reduce((sum, p) => {
+            const amount = p.amount || p.accruals || 0;
+            const paid = p.paidAmount || 0;
+            const debt = (typeof paid === 'number' && typeof amount === 'number' && paid < amount) ? amount - paid : 0;
+            return sum + debt;
+          }, 0);
+
+          const updatedTotalOverpayment = updatedRows.reduce((sum, p) => {
+            const amount = p.amount || p.accruals || 0;
+            const paid = p.paidAmount || 0;
+            const overpayment = (typeof paid === 'number' && typeof amount === 'number' && paid > amount) ? paid - amount : 0;
+            return sum + overpayment;
           }, 0);
 
           return {
             totalTenants: prev.totalTenants,
             totalAmount: updatedTotalAmount,
             totalReceivable: updatedTotalReceivable,
+            totalDebt: updatedTotalDebt,
+            totalOverpayment: updatedTotalOverpayment,
           };
         });
 
@@ -298,10 +313,38 @@ const RentReport: React.FC<Props> = ({ userId }) => {
 
         setSummary((prev) => {
           if (!prev) return null;
+          const updatedTotalAmount = updatedRows.reduce((sum, p) => {
+            const amount = p.amount || p.accruals || 0;
+            return sum + (typeof amount === 'number' ? amount : 0);
+          }, 0);
+
+          const updatedTotalReceivable = updatedRows.reduce((sum, p) => {
+            const amount = p.amount || p.accruals || 0;
+            const paid = p.paidAmount || 0;
+            const receivable = Math.max(0, (typeof amount === 'number' ? amount : 0) - (typeof paid === 'number' ? paid : 0));
+            return sum + receivable;
+          }, 0);
+
+          const updatedTotalDebt = updatedRows.reduce((sum, p) => {
+            const amount = p.amount || p.accruals || 0;
+            const paid = p.paidAmount || 0;
+            const debt = (typeof paid === 'number' && typeof amount === 'number' && paid < amount) ? amount - paid : 0;
+            return sum + debt;
+          }, 0);
+
+          const updatedTotalOverpayment = updatedRows.reduce((sum, p) => {
+            const amount = p.amount || p.accruals || 0;
+            const paid = p.paidAmount || 0;
+            const overpayment = (typeof paid === 'number' && typeof amount === 'number' && paid > amount) ? paid - amount : 0;
+            return sum + overpayment;
+          }, 0);
+
           return {
             totalTenants: updatedRows.length,
-            totalAmount: updatedRows.reduce((sum, p) => sum + (p.amount || p.accruals || 0), 0),
-            totalReceivable: updatedRows.reduce((sum, p) => sum + Math.max(0, (p.amount || p.accruals || 0) - p.paidAmount), 0),
+            totalAmount: updatedTotalAmount,
+            totalReceivable: updatedTotalReceivable,
+            totalDebt: updatedTotalDebt,
+            totalOverpayment: updatedTotalOverpayment,
           };
         });
 

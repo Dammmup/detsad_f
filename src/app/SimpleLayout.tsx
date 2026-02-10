@@ -60,6 +60,7 @@ import Qwen3Chat from '../modules/ai/components/Qwen3Chat';
 import ProfilePage from '../modules/staff/pages/ProfilePage';
 import ProductAccountingPage from '../modules/food/pages/ProductAccountingPage';
 import Statistics from '../modules/dashboard/pages/Statistics';
+import MenuCalendarPage from '../modules/food/pages/MenuCalendarPage';
 import PushNotificationPrompt from '../shared/components/PushNotificationPrompt';
 
 interface SimpleLayoutProps {
@@ -278,6 +279,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path='cyclogram' element={<Cyclogram />} />
             <Route path='settings' element={userRole === 'admin' ? <Settings /> : <Navigate to="/app/dashboard" />} />
             <Route path='food/products' element={isAdminOrManager || userRole === 'cook' ? <ProductAccountingPage /> : <Navigate to="/app/dashboard" />} />
+            <Route path='food/calendar' element={isAdminOrManager || userRole === 'cook' ? <MenuCalendarPage /> : <Navigate to="/app/dashboard" />} />
             <Route path='med/menu-admin' element={isAdminOrManager ? <MenuItemsAdminPage /> : <Navigate to="/app/dashboard" />} />
 
             {/* Медицинский кабинет и журналы */}

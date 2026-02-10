@@ -30,6 +30,7 @@
     "axios": "^0.27.2",
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.1",
+    "date-fns": "^2.30.0",
     "docx": "^9.5.1",
     "file-saver": "^2.0.5",
     "formik": "^2.2.9",

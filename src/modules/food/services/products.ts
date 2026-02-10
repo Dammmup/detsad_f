@@ -25,7 +25,6 @@ export interface Product {
     storageConditions?: string;
     notes?: string;
     status: 'active' | 'inactive' | 'discontinued';
-    childCount: number;
     purchaseDays: number;
     purchaseDate: string;
     createdAt?: string;

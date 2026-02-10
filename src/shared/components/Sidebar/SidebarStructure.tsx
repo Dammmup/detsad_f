@@ -161,6 +161,13 @@ const sidebarStructure: SidebarItem[] = [
     icon: <AssessmentIcon />,
     visibleFor: ['admin', 'cook'],
   },
+  {
+    id: 'food-calendar',
+    label: 'Календарь меню',
+    link: '/app/food/calendar',
+    icon: <CalendarViewWeekIcon />,
+    visibleFor: ['admin', 'cook'],
+  },
   medicalSidebarSection,
 ];
 

@@ -110,7 +110,7 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                             onChange={(e) => setForm({ ...form, name: e.target.value })}
                         />
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid item xs={12}>
                         <FormControl fullWidth>
                             <InputLabel>Категория</InputLabel>
                             <Select
@@ -124,15 +124,6 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                                 <MenuItem value="snack">Полдник</MenuItem>
                             </Select>
                         </FormControl>
-                    </Grid>
-                    <Grid item xs={6}>
-                        <TextField
-                            fullWidth
-                            label="Порций на 1 ребёнка"
-                            type="number"
-                            value={form.servingsCount || 1}
-                            onChange={(e) => setForm({ ...form, servingsCount: parseInt(e.target.value) || 1 })}
-                        />
                     </Grid>
                     <Grid item xs={12}>
                         <TextField
@@ -149,7 +140,7 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                 <Divider sx={{ my: 3 }} />
 
                 <Typography variant="h6" gutterBottom>
-                    🥗 Ингредиенты (на 1 ребёнка)
+                    🥗 Ингредиенты (на 1 порцию)
                 </Typography>
 
                 <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
@@ -173,6 +164,7 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                             size="small"
                             value={ingredientQty || ''}
                             onChange={(e) => setIngredientQty(Number(e.target.value))}
+                            inputProps={{ step: "any" }}
                         />
                     </Grid>
                     <Grid item xs={4} sm={2}>
@@ -206,7 +198,7 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                             <TableHead>
                                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
                                     <TableCell><strong>Продукт</strong></TableCell>
-                                    <TableCell align="right"><strong>Кол-во на 1 реб.</strong></TableCell>
+                                    <TableCell align="right"><strong>Количество (на 1 порцию)</strong></TableCell>
                                     <TableCell align="center"><strong>Действие</strong></TableCell>
                                 </TableRow>
                             </TableHead>

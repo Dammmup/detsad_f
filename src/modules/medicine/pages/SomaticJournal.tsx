@@ -20,6 +20,7 @@ import {
   FormControlLabel,
   CircularProgress,
 } from '@mui/material';
+import moment from 'moment'; // Import moment
 import { getUsers } from '../../staff/services/userService';
 import childrenApi from '../../children/services/children';
 import { User, Child } from '../../../shared/types/common';
@@ -41,6 +42,12 @@ import { saveAs } from 'file-saver';
 
 import { SomaticRecord } from '../../../shared/types/somatic';
 import { AnyAaaaRecord } from 'dns';
+
+// Helper function to format dates
+const formatDate = (date: Date | string | undefined | null): string => {
+  if (!date) return '';
+  return moment(date).format('DD/MM/YYYY');
+};
 
 export default function SomaticJournal() {
   const [records, setRecords] = useState<SomaticRecord[]>([]);
@@ -85,12 +92,13 @@ export default function SomaticJournal() {
       const year = new Date().getFullYear();
       filtered = filtered.filter(
         (r) => {
-          // Check date field (from backend)
-          const dateStr = r.date ? String(r.date).substring(0, 4) : '';
-          // Also check legacy fromDate/toDate fields
-          return dateStr === year.toString() ||
-            (r.fromDate || '').startsWith(year.toString()) ||
-            (r.toDate || '').startsWith(year.toString());
+          const recordDate = r.date ? new Date(r.date) : null;
+          const recordFromDate = r.fromDate ? new Date(r.fromDate) : null;
+          const recordToDate = r.toDate ? new Date(r.toDate) : null;
+
+          return (recordDate && recordDate.getFullYear() === year) ||
+                 (recordFromDate && recordFromDate.getFullYear() === year) ||
+                 (recordToDate && recordToDate.getFullYear() === year);
         }
       );
     }
@@ -170,7 +178,6 @@ export default function SomaticJournal() {
                     '№',
                     'ФИО',
                     'Дата рождения',
-                    'Адрес',
                     'Диагноз',
                     'С даты',
                     'По дату',
@@ -186,11 +193,10 @@ export default function SomaticJournal() {
                       children: [
                         String(idx + 1),
                         r.fio ?? '',
-                        r.birthdate ?? '',
-                        r.address ?? '',
+                        formatDate(r.birthdate), // Formatted for export
                         r.diagnosis ?? '',
-                        r.fromDate ?? '',
-                        r.toDate ?? '',
+                        formatDate(r.fromDate), // Formatted for export
+                        formatDate(r.toDate),   // Formatted for export
                         String(r.days ?? ''),
                         r.notes ?? '',
                       ].map(
@@ -311,12 +317,12 @@ export default function SomaticJournal() {
             // Get child info from populated childId or use legacy fields
             const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
             const fio = r.fio || childInfo?.fullName || '';
-            const birthdate = r.birthdate || (childInfo?.birthday ? new Date(childInfo.birthday).toLocaleDateString('ru-RU') : '');
-            const address = r.address || childInfo?.address || '';
+            const birthdate = formatDate(r.birthdate || childInfo?.birthday); // Formatted for display
             // Format dates
-            const dateStr = r.date ? new Date(r.date).toLocaleDateString('ru-RU') : '';
-            const fromDateStr = r.fromDate || dateStr;
-            const toDateStr = r.toDate || dateStr;
+            const dateStr = formatDate(r.date); // Formatted for display
+            const fromDateStr = formatDate(r.fromDate) || dateStr; // Formatted for display
+            const toDateStr = formatDate(r.toDate) || dateStr; // Formatted for display
+            const address = r.address || childInfo?.address || '';
 
             return (
               <TableRow key={r.id || r._id}>

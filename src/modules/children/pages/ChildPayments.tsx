@@ -346,7 +346,21 @@ const ChildPayments: React.FC = () => {
 
   const markAsPaid = async (paymentId: string) => {
     try {
-      await childPaymentApi.update(paymentId, { status: 'paid' });
+      // Находим текущий платёж для получения суммы долга
+      const payment = payments.find(p => p._id === paymentId);
+      if (!payment) {
+        setError('Платёж не найден');
+        return;
+      }
+
+      // Вычисляем полную сумму к оплате (total + accruals)
+      const totalAmount = (payment.total || 0) + (payment.accruals || 0);
+
+      await childPaymentApi.update(paymentId, {
+        status: 'paid',
+        paidAmount: totalAmount,
+        paymentDate: new Date()
+      });
 
       fetchPayments();
     } catch (error) {
@@ -358,7 +372,11 @@ const ChildPayments: React.FC = () => {
 
   const cancelPayment = async (paymentId: string) => {
     try {
-      await childPaymentApi.update(paymentId, { status: 'active' });
+      await childPaymentApi.update(paymentId, {
+        status: 'active',
+        paidAmount: 0,
+        paymentDate: undefined
+      });
 
       fetchPayments();
     } catch (error) {

@@ -82,6 +82,7 @@ import WeeklyMenuTab from '../components/WeeklyMenuTab';
 import PurchasesTab from '../components/PurchasesTab';
 import ReportsTab from '../components/ReportsTab';
 import DishDialog from '../components/DishDialog';
+import ProductCalculationDialog from '../components/ProductCalculationDialog';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -131,7 +132,6 @@ const ProductAccountingPage: React.FC = () => {
         minStockLevel: 0,
         maxStockLevel: 1000,
         storageConditions: '',
-        childCount: 0,
         purchaseDays: 0,
         status: 'active'
     });
@@ -154,6 +154,9 @@ const ProductAccountingPage: React.FC = () => {
     const [childCountInput, setChildCountInput] = useState<number>(30);
     const [addDishDialogOpen, setAddDishDialogOpen] = useState(false);
     const [selectedMealType, setSelectedMealType] = useState<MealType>('breakfast');
+
+    const [calculationDialogOpen, setCalculationDialogOpen] = useState(false);
+    const [selectedDishForCalculation, setSelectedDishForCalculation] = useState<Dish | null>(null);
 
     // Load data
     const loadProducts = useCallback(async () => {
@@ -215,7 +218,6 @@ const ProductAccountingPage: React.FC = () => {
                 minStockLevel: 0,
                 maxStockLevel: 1000,
                 storageConditions: '',
-                childCount: 0,
                 purchaseDays: 0,
                 status: 'active'
             });
@@ -435,7 +437,6 @@ const ProductAccountingPage: React.FC = () => {
                                             <TableCell align="right"><strong>Запас</strong></TableCell>
                                             <TableCell align="right"><strong>Цена</strong></TableCell>
                                             <TableCell><strong>Срок годности</strong></TableCell>
-                                            <TableCell><strong>На детей</strong></TableCell>
                                             <TableCell><strong>На дней</strong></TableCell>
                                             <TableCell align="center"><strong>Действия</strong></TableCell>
                                         </TableRow>
@@ -458,7 +459,6 @@ const ProductAccountingPage: React.FC = () => {
                                                 <TableCell align="right">{product.stockQuantity} {product.unit}</TableCell>
                                                 <TableCell align="right">{product.price?.toLocaleString()} ₸</TableCell>
                                                 <TableCell>{formatDate(product.expirationDate)}</TableCell>
-                                                <TableCell>{product.childCount || '-'}</TableCell>
                                                 <TableCell>{product.purchaseDays || '-'}</TableCell>
                                                 <TableCell align="center">
                                                     <IconButton size="small" onClick={() => handleOpenProductDialog(product)}>
@@ -508,6 +508,14 @@ const ProductAccountingPage: React.FC = () => {
                                                 <IconButton size="small" color="error" onClick={() => handleDeleteDish(dish)}>
                                                     <DeleteIcon fontSize="small" />
                                                 </IconButton>
+                                                <Tooltip title="Показать расчет на количество детей">
+                                                    <IconButton size="small" onClick={() => {
+                                                        setSelectedDishForCalculation(dish);
+                                                        setCalculationDialogOpen(true);
+                                                    }}>
+                                                        <RestaurantIcon fontSize="small" /> {/* Using RestaurantIcon for now */}
+                                                    </IconButton>
+                                                </Tooltip>
                                             </Box>
                                         </CardContent>
                                     </Card>
@@ -710,15 +718,6 @@ const ProductAccountingPage: React.FC = () => {
                         <Grid item xs={6}>
                             <TextField
                                 fullWidth
-                                label="На сколько детей"
-                                type="number"
-                                value={productForm.childCount || 0}
-                                onChange={(e) => setProductForm({ ...productForm, childCount: parseInt(e.target.value) || 0 })}
-                            />
-                        </Grid>
-                        <Grid item xs={6}>
-                            <TextField
-                                fullWidth
                                 label="На сколько дней"
                                 type="number"
                                 value={productForm.purchaseDays || 0}
@@ -776,6 +775,15 @@ const ProductAccountingPage: React.FC = () => {
                     <Button onClick={() => setAddDishDialogOpen(false)}>Закрыть</Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Product Calculation Dialog */}
+            <ProductCalculationDialog
+                open={calculationDialogOpen}
+                onClose={() => setCalculationDialogOpen(false)}
+                dish={selectedDishForCalculation}
+                allProducts={products} // Pass all products for lookup
+                initialChildCount={childCountInput} // Pass current child count from Menu tab
+            />
         </Box>
     );
 };

@@ -434,7 +434,7 @@ const StaffAttendanceTracking: React.FC = () => {
             } else {
               displayStatus = ({
                 completed: ShiftStatus.checked_out,
-                late: ShiftStatus.absent,
+                late: ShiftStatus.late_arrival,
                 absent: ShiftStatus.absent,
                 in_progress: ShiftStatus.checked_in,
                 pending_approval: ShiftStatus.absent

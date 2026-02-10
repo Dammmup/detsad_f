@@ -7,12 +7,7 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   private readonly CACHE_DURATION = 2 * 60 * 1000;
 
   async getAll(filters?: ShiftFilters): Promise<Shift[]> {
-    const cacheKey = `${this.CACHE_KEY}_${JSON.stringify(filters)}`;
-    const cached = apiCache.get<Shift[]>(cacheKey);
-    if (cached) return cached;
-
     const data = await super.getAll(filters);
-    apiCache.set(cacheKey, data, this.CACHE_DURATION);
     return data;
   }
 

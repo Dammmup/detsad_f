@@ -474,6 +474,31 @@ const StaffSchedule: React.FC = () => {
     });
   };
 
+  // Функция для вычисления "отображаемого" статуса на основе данных посещаемости
+  const getDisplayStatus = (shift: any, attendanceRecord: any): ShiftStatus => {
+    if (attendanceRecord) {
+      // Если есть и приход и уход - смена завершена
+      if (attendanceRecord.actualStart && attendanceRecord.actualEnd) {
+        const lateMin = attendanceRecord.lateMinutes || 0;
+        // Если опоздание >= 15 минут, показываем как "Опоздание"
+        if (lateMin >= 15) {
+          return ShiftStatus.late;
+        }
+        return ShiftStatus.completed;
+      }
+      // Если есть только приход - в процессе или опоздание
+      if (attendanceRecord.actualStart && !attendanceRecord.actualEnd) {
+        const lateMin = attendanceRecord.lateMinutes || 0;
+        if (lateMin >= 15) {
+          return ShiftStatus.late;
+        }
+        return ShiftStatus.in_progress;
+      }
+    }
+    // Если нет данных посещаемости - берём статус из смены
+    return shift.status as ShiftStatus;
+  };
+
   if (loading && shifts.length === 0 && staff.length === 0) {
     return (
       <Box display='flex' justifyContent='center' alignItems='center' minHeight='200px'>
@@ -688,19 +713,27 @@ const StaffSchedule: React.FC = () => {
                               }}
                             >
                               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                {dayShifts.map((shift) => (
-                                  <Chip
-                                    key={shift.id || shift._id}
-                                    label={STATUS_TEXT[shift.status] || shift.status}
-                                    size='small'
-                                    color={STATUS_COLORS[shift.status] || 'default'}
-                                    sx={{ fontSize: '0.65rem' }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleEditShift(shift);
-                                    }}
-                                  />
-                                ))}
+                                {dayShifts.map((shift) => {
+                                  // Находим соответствующую запись посещаемости для этой смены
+                                  const attendanceRecord = recordsForDay.find(r => {
+                                    const rId = r.staffId?._id || r.staffId;
+                                    return rId === staffId;
+                                  });
+                                  const displayStatus = getDisplayStatus(shift, attendanceRecord);
+                                  return (
+                                    <Chip
+                                      key={shift.id || shift._id}
+                                      label={STATUS_TEXT[displayStatus] || displayStatus}
+                                      size='small'
+                                      color={STATUS_COLORS[displayStatus] || 'default'}
+                                      sx={{ fontSize: '0.65rem' }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditShift(shift);
+                                      }}
+                                    />
+                                  );
+                                })}
                                 {recordsForDay.map((record) => (
                                   <Box key={record._id} sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3 }}>
                                     {(record.lateMinutes ?? 0) > 0 && (
