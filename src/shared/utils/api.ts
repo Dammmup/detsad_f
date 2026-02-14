@@ -200,56 +200,6 @@ export class BaseApiClient {
 
 
 
-interface CacheItem<T> {
-  data: T;
-  timestamp: number;
-  expiresIn: number;
-}
-
-export class ApiCache {
-  private cache = new Map<string, CacheItem<any>>();
-
-  get<T>(key: string): T | null {
-    const item = this.cache.get(key);
-
-    if (!item) {
-      return null;
-    }
-
-    const now = Date.now();
-    if (now - item.timestamp > item.expiresIn) {
-      this.cache.delete(key);
-      return null;
-    }
-
-    return item.data;
-  }
-
-  set<T>(key: string, data: T, expiresIn: number = 5 * 60 * 1000): void {
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now(),
-      expiresIn,
-    });
-  }
-
-  delete(key: string): void {
-    this.cache.delete(key);
-  }
-
-  clear(): void {
-    this.cache.clear();
-  }
-
-  size(): number {
-    return this.cache.size;
-  }
-}
-
-
-export const apiCache = new ApiCache();
-
-
 
 export const normalizeMongoObject = <T extends Record<string, any>>(
   obj: T,

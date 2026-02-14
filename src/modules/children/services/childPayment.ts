@@ -4,8 +4,14 @@ import api from '../../../shared/services/base';
 const API_BASE_URL = '/child-payments';
 
 const childPaymentApi = {
-  getAll: async (): Promise<IChildPayment[]> => {
-    const response = await api.get(API_BASE_URL);
+  getAll: async (filters?: { monthPeriod?: string; childId?: string; status?: string }): Promise<IChildPayment[]> => {
+    const params = new URLSearchParams();
+    if (filters?.monthPeriod) params.append('monthPeriod', filters.monthPeriod);
+    if (filters?.childId) params.append('childId', filters.childId);
+    if (filters?.status) params.append('status', filters.status);
+
+    const url = params.toString() ? `${API_BASE_URL}?${params.toString()}` : API_BASE_URL;
+    const response = await api.get(url);
     return response.data;
   },
 

@@ -80,21 +80,36 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
         setIngredientQty(0);
     };
 
-    const handleRemoveIngredient = (productId: string) => {
+    const handleRemoveIngredient = (productId: string | any) => {
+        const idToRemove = typeof productId === 'string' ? productId : productId._id || productId.id;
         setForm({
             ...form,
-            ingredients: (form.ingredients || []).filter(i => i.productId !== productId)
+            ingredients: (form.ingredients || []).filter(i => {
+                const iId = typeof i.productId === 'string' ? i.productId : (i.productId as any)._id || (i.productId as any).id;
+                return iId !== idToRemove;
+            })
         });
     };
 
-    const getProductName = (productId: string) => {
+    const getProductName = (productId: string | any) => {
+        if (typeof productId !== 'string' && productId) {
+            return productId.name || 'Неизвестный продукт';
+        }
         const product = products.find(p => (p._id || p.id) === productId);
         return product?.name || 'Неизвестный продукт';
     };
 
     const handleSave = () => {
         if (!form.name?.trim()) return;
-        onSave(form);
+
+        // Prepare data for save - ensure ingredients are just { productId: string, ... }
+        const ingredientsToSave = form.ingredients?.map(ing => ({
+            productId: typeof ing.productId === 'string' ? ing.productId : (ing.productId as any)._id || (ing.productId as any).id,
+            quantity: ing.quantity,
+            unit: ing.unit
+        }));
+
+        onSave({ ...form, ingredients: ingredientsToSave });
     };
 
     return (
@@ -110,7 +125,7 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                             onChange={(e) => setForm({ ...form, name: e.target.value })}
                         />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid item xs={6}>
                         <FormControl fullWidth>
                             <InputLabel>Категория</InputLabel>
                             <Select
@@ -122,6 +137,25 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                                 <MenuItem value="lunch">Обед</MenuItem>
                                 <MenuItem value="dinner">Ужин</MenuItem>
                                 <MenuItem value="snack">Полдник</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item xs={6}>
+                        <FormControl fullWidth>
+                            <InputLabel>Подкатегория</InputLabel>
+                            <Select
+                                value={form.subcategory || 'other'}
+                                label="Подкатегория"
+                                onChange={(e) => setForm({ ...form, subcategory: e.target.value as Dish['subcategory'] })}
+                            >
+                                <MenuItem value="soup">Первое блюдо (Суп)</MenuItem>
+                                <MenuItem value="main">Второе блюдо</MenuItem>
+                                <MenuItem value="garnish">Гарнир</MenuItem>
+                                <MenuItem value="porridge">Каша</MenuItem>
+                                <MenuItem value="salad">Салат</MenuItem>
+                                <MenuItem value="drink">Напиток</MenuItem>
+                                <MenuItem value="baking">Выпечка</MenuItem>
+                                <MenuItem value="other">Прочее</MenuItem>
                             </Select>
                         </FormControl>
                     </Grid>
@@ -146,7 +180,10 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                 <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
                     <Grid item xs={12} sm={5}>
                         <Autocomplete
-                            options={products.filter(p => !form.ingredients?.some(i => i.productId === (p._id || p.id)))}
+                            options={products.filter(p => !form.ingredients?.some(i => {
+                                const iId = typeof i.productId === 'string' ? i.productId : (i.productId as any)._id || (i.productId as any).id;
+                                return iId === (p._id || p.id);
+                            }))}
                             getOptionLabel={(o) => o.name}
                             value={selectedProduct}
                             onChange={(_, v) => {
@@ -203,17 +240,20 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {form.ingredients?.map((ing) => (
-                                    <TableRow key={ing.productId}>
-                                        <TableCell>{getProductName(ing.productId)}</TableCell>
-                                        <TableCell align="right">{ing.quantity} {ing.unit}</TableCell>
-                                        <TableCell align="center">
-                                            <IconButton size="small" color="error" onClick={() => handleRemoveIngredient(ing.productId)}>
-                                                <DeleteIcon fontSize="small" />
-                                            </IconButton>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {form.ingredients?.map((ing, index) => {
+                                    const productId = typeof ing.productId === 'string' ? ing.productId : (ing.productId as any)._id || (ing.productId as any).id;
+                                    return (
+                                        <TableRow key={productId || index}>
+                                            <TableCell>{getProductName(ing.productId)}</TableCell>
+                                            <TableCell align="right">{ing.quantity} {ing.unit}</TableCell>
+                                            <TableCell align="center">
+                                                <IconButton size="small" color="error" onClick={() => handleRemoveIngredient(productId)}>
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     </TableContainer>

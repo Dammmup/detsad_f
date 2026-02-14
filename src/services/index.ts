@@ -11,7 +11,6 @@ export {
   apiClient,
   createApiInstance,
   BaseCrudApiClient as BaseApiClient,
-  apiCache,
 } from '../shared/utils/api';
 
 export * from '../shared/utils/format';

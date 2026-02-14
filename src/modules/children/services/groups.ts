@@ -1,28 +1,15 @@
-import { BaseCrudApiClient, apiCache } from '../../../shared/utils/api';
+import { BaseCrudApiClient } from '../../../shared/utils/api';
 import { Group, User, ID } from '../../../shared/types/common';
 
 class GroupsApiClient extends BaseCrudApiClient<Group> {
   protected endpoint = '/groups';
-  private readonly CACHE_KEY = 'groups';
-  private readonly TEACHERS_CACHE_KEY = 'teachers';
-  private readonly CACHE_DURATION = 5 * 60 * 1000;
 
   async getAll(): Promise<Group[]> {
-    const cached = apiCache.get<Group[]>(this.CACHE_KEY);
-    if (cached) {
-      return cached;
-    }
-
     const groups = await super.getAll();
-
-
-    apiCache.set(this.CACHE_KEY, groups, this.CACHE_DURATION);
-
     return groups;
   }
 
   async create(groupData: Partial<Group>): Promise<Group> {
-
     const payload: any = {
       name: groupData.name,
       description: groupData.description,
@@ -37,13 +24,10 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
       delete payload.teacher;
     }
     const group = await super.create(payload);
-
-    this.clearCache();
     return group;
   }
 
   async update(id: ID, groupData: Partial<Group>): Promise<Group> {
-
     const payload: any = {
       ...groupData,
       ageGroup: Array.isArray(groupData.ageGroup)
@@ -54,22 +38,14 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
       delete payload.teacher;
     }
     const group = await this.put<Group>(`${this.endpoint}/${id}`, payload);
-    this.clearCache();
     return group;
   }
 
   async deleteItem(id: ID): Promise<void> {
-
     await this.delete(`${this.endpoint}/${id}`);
-    this.clearCache();
   }
 
   async getTeachers(): Promise<User[]> {
-    const cached = apiCache.get<User[]>(this.TEACHERS_CACHE_KEY);
-    if (cached) {
-      return cached;
-    }
-
     try {
       const teachers = await this.get<User[]>('/users/teachers', {
         params: {
@@ -78,18 +54,12 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
         },
       });
 
-
       const formattedTeachers = teachers.map((teacher) => ({
         ...teacher,
         id: teacher._id || teacher.id,
         name: teacher.fullName,
       }));
 
-      apiCache.set(
-        this.TEACHERS_CACHE_KEY,
-        formattedTeachers,
-        this.CACHE_DURATION,
-      );
       return formattedTeachers;
     } catch (error) {
       console.warn('Could not fetch teachers, using empty list as fallback');
@@ -98,16 +68,7 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
   }
 
   async getGroupChildren(groupId: ID): Promise<User[]> {
-    const cacheKey = `group_children_${groupId}`;
-
-    const cached = apiCache.get<User[]>(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
     const children = await this.get<User[]>(`/users/group/${groupId}/children`);
-
-    apiCache.set(cacheKey, children, this.CACHE_DURATION);
     return children;
   }
 
@@ -136,19 +97,15 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     const group = await this.patch<Group>(`${this.endpoint}/${groupId}`, {
       teacher: teacherId,
     });
-
-    this.clearCache();
     return group;
   }
 
   async addChild(groupId: ID, childId: ID): Promise<void> {
     await this.post(`${this.endpoint}/${groupId}/children`, { childId });
-    this.clearGroupChildrenCache(groupId);
   }
 
   async removeChild(groupId: ID, childId: ID): Promise<void> {
     await this.delete(`${this.endpoint}/${groupId}/children/${childId}`);
-    this.clearGroupChildrenCache(groupId);
   }
 
   async addChildren(
@@ -163,7 +120,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
       `${this.endpoint}/${groupId}/children/bulk`,
       { childIds },
     );
-    this.clearGroupChildrenCache(groupId);
     return result;
   }
 
@@ -181,9 +137,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
       toGroupId,
       childIds,
     });
-
-    this.clearGroupChildrenCache(fromGroupId);
-    this.clearGroupChildrenCache(toGroupId);
     return result;
   }
 
@@ -191,7 +144,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
     const group = await this.patch<Group>(`${this.endpoint}/${groupId}`, {
       isActive,
     });
-    this.clearCache();
     return group;
   }
 
@@ -212,16 +164,7 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
   }
 
   async getAgeGroups(): Promise<string[]> {
-    const cacheKey = 'age_groups';
-
-    const cached = apiCache.get<string[]>(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
     const ageGroups = await this.get<string[]>('/groups/age-groups');
-
-    apiCache.set(cacheKey, ageGroups, this.CACHE_DURATION);
     return ageGroups;
   }
 
@@ -230,16 +173,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
       params: { format },
       responseType: 'blob',
     });
-  }
-
-  clearCache(): void {
-    apiCache.delete(this.CACHE_KEY);
-    apiCache.delete(this.TEACHERS_CACHE_KEY);
-    apiCache.delete('age_groups');
-  }
-
-  private clearGroupChildrenCache(groupId: ID): void {
-    apiCache.delete(`group_children_${groupId}`);
   }
 
   async createFromTemplate(
@@ -254,8 +187,6 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
       templateId,
       ...groupData,
     });
-
-    this.clearCache();
     return group;
   }
 
@@ -268,24 +199,7 @@ class GroupsApiClient extends BaseCrudApiClient<Group> {
       defaultMaxStudents: number;
     }>
   > {
-    const cacheKey = 'group_templates';
-
-    const cached = apiCache.get<
-      Array<{
-        id: ID;
-        name: string;
-        description?: string;
-        ageGroup: string;
-        defaultMaxStudents: number;
-      }>
-    >(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
     const templates = await this.get('/groups/templates');
-
-    apiCache.set(cacheKey, templates, this.CACHE_DURATION);
     return templates;
   }
 }

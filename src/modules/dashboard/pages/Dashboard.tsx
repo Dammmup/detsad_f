@@ -161,7 +161,7 @@ const Dashboard = () => {
                   sx={{
                     height: '100%',
                     background:
-                      'linear-gradient(135deg, #a0a0a0 0%, #808080 100%)',
+                      'linear-gradient(135deg, rgb(102, 126, 234) 0%, rgb(118, 75, 162) 100%)',
                     color: 'white',
                     boxShadow:
                       '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)',
@@ -220,7 +220,7 @@ const Dashboard = () => {
                         border: '1px solid rgba(255,0.3)',
                         boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
                         '&:hover': {
-                          backgroundColor: 'rgba(255,0.3)',
+                          backgroundColor: 'green',
                           transform: 'translateY(-2px)',
                         },
                       }}
@@ -239,7 +239,7 @@ const Dashboard = () => {
                   sx={{
                     height: '100%',
                     background:
-                      'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                      'linear-gradient(135deg, rgb(102, 126, 234) 0%, rgb(118, 75, 162) 100%)',
                     color: 'white',
                     boxShadow:
                       '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)',
@@ -282,11 +282,11 @@ const Dashboard = () => {
                         minWidth: '180px',
                         fontSize: '0.875rem',
                         padding: '8px 16px',
-                        backgroundColor: 'rgba(255,255,0.2)',
+                        backgroundColor: 'rgb(24, 144, 255)',
                         backdropFilter: 'blur(10px)',
                         border: '1px solid rgba(255,255,0.3)',
                         '&:hover': {
-                          backgroundColor: 'rgba(255,255,0.3)',
+                          backgroundColor: 'green',
                         },
                       }}
                     >

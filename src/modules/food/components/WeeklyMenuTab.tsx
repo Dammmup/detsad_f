@@ -289,7 +289,10 @@ const WeeklyMenuTab: React.FC = () => {
                 <DialogTitle>Добавить блюдо - {WEEKDAY_NAMES[selectedDay]}, {getMealTypeName(selectedMealType)}</DialogTitle>
                 <DialogContent>
                     <List>
-                        {dishes.filter(d => d.category === selectedMealType).map((dish) => (
+                        {dishes.filter(d =>
+                            d.category === selectedMealType ||
+                            ['drink', 'salad', 'baking'].includes(d.subcategory || '')
+                        ).map((dish) => (
                             <ListItem key={dish._id} button onClick={() => handleAddDish(dish._id!)}>
                                 <ListItemText primary={dish.name} />
                             </ListItem>

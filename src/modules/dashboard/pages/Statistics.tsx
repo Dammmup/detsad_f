@@ -45,6 +45,7 @@ import { getGroups } from '../../children/services/groups';
 import staffAttendanceApi from '../../staff/services/staffAttendance';
 import { getChildAttendance } from '../../children/services/childAttendance';
 import { getPayrollsByUsers } from '../../staff/services/payroll';
+import { shiftsApi } from '../../staff/services/shifts';
 import DateNavigator from '../../../shared/components/DateNavigator';
 
 interface StaffStats {
@@ -52,6 +53,8 @@ interface StaffStats {
     byRole: { [role: string]: number };
     topAbsent: Array<{ name: string; absences: number; rate: number }>;
     topLate: Array<{ name: string; lateCount: number; avgMinutes: number }>;
+    earlyLeavers: Array<{ name: string; count: number; avgMinutes: number }>;
+    missingMarkings: Array<{ name: string; count: number; type: 'no_clock_in' | 'no_clock_out' | 'both' }>;
     avgAttendanceRate: number;
 }
 
@@ -122,13 +125,14 @@ const Statistics: React.FC = () => {
             const period = moment(currentDate).format('YYYY-MM');
 
             // Загружаем данные
-            const [users, children, groups, staffAttendanceRes, childAttendance, payrolls] = await Promise.all([
+            const [users, children, groups, staffAttendanceRes, childAttendance, payrolls, shifts] = await Promise.all([
                 getUsers(),
                 childrenApi.getAll(),
                 getGroups(),
                 staffAttendanceApi.getAll({ startDate: startOfMonth, endDate: endOfMonth }).catch(() => ({ data: [] })),
                 getChildAttendance({ startDate: startOfMonth, endDate: endOfMonth }).catch(() => []),
                 getPayrollsByUsers({ period }).catch(() => []),
+                shiftsApi.getAll({ startDate: startOfMonth, endDate: endOfMonth }).catch(() => []),
             ]);
             const staffAttendance = Array.isArray(staffAttendanceRes) ? staffAttendanceRes : (staffAttendanceRes?.data || []);
 
@@ -140,23 +144,64 @@ const Statistics: React.FC = () => {
                 byRole[role] = (byRole[role] || 0) + 1;
             });
 
-            // Подсчёт отсутствий и опозданий
-            const userAttendanceMap: { [userId: string]: { absences: number; lateCount: number; totalLateMinutes: number; daysWorked: number } } = {};
+            // Подсчёт отсутствий, опозданий, ранних уходов и пропущенных отметок
+            const userAttendanceMap: {
+                [userId: string]: {
+                    absences: number;
+                    lateCount: number;
+                    totalLateMinutes: number;
+                    daysWorked: number;
+                    earlyLeaveCount: number;
+                    totalEarlyLeaveMinutes: number;
+                    noClockIn: number;
+                    noClockOut: number;
+                }
+            } = {};
 
             staffAttendance.forEach((att: any) => {
-                const userId = typeof att.userId === 'object' ? att.userId._id : att.userId;
+                const userId = typeof att.userId === 'object' ? att.userId._id : (att.staffId?._id || att.staffId || att.userId);
                 if (!userAttendanceMap[userId]) {
-                    userAttendanceMap[userId] = { absences: 0, lateCount: 0, totalLateMinutes: 0, daysWorked: 0 };
+                    userAttendanceMap[userId] = { absences: 0, lateCount: 0, totalLateMinutes: 0, daysWorked: 0, earlyLeaveCount: 0, totalEarlyLeaveMinutes: 0, noClockIn: 0, noClockOut: 0 };
                 }
 
                 if (att.status === 'absent') {
                     userAttendanceMap[userId].absences++;
-                } else if (att.status === 'present' || att.status === 'late') {
+                } else if (att.status === 'present' || att.status === 'late' || att.status === 'completed') {
                     userAttendanceMap[userId].daysWorked++;
                     if (att.lateMinutes && att.lateMinutes > 0) {
                         userAttendanceMap[userId].lateCount++;
                         userAttendanceMap[userId].totalLateMinutes += att.lateMinutes;
                     }
+                    if (att.earlyLeaveMinutes && att.earlyLeaveMinutes > 0) {
+                        userAttendanceMap[userId].earlyLeaveCount++;
+                        userAttendanceMap[userId].totalEarlyLeaveMinutes += att.earlyLeaveMinutes;
+                    }
+
+                    if (!att.actualStart && (att.status === 'completed' || att.status === 'present')) {
+                        userAttendanceMap[userId].noClockIn++;
+                    }
+                    if (!att.actualEnd && (att.status === 'completed' || att.status === 'present')) {
+                        userAttendanceMap[userId].noClockOut++;
+                    }
+                }
+            });
+
+            // Анализ смен для поиска пропущенных отметок (смена есть, а записи в посещаемости нет)
+            shifts.forEach((shift: any) => {
+                const userId = typeof shift.staffId === 'object' ? shift.staffId._id : shift.staffId;
+                if (!userAttendanceMap[userId]) {
+                    userAttendanceMap[userId] = { absences: 0, lateCount: 0, totalLateMinutes: 0, daysWorked: 0, earlyLeaveCount: 0, totalEarlyLeaveMinutes: 0, noClockIn: 0, noClockOut: 0 };
+                }
+
+                const attendanceOnDate = staffAttendance.find((att: any) => {
+                    const attUserId = typeof att.userId === 'object' ? att.userId._id : (att.staffId?._id || att.staffId || att.userId);
+                    const attDate = moment(att.date).format('YYYY-MM-DD');
+                    return attUserId === userId && attDate === shift.date;
+                });
+
+                if (!attendanceOnDate && shift.status !== 'absent') {
+                    userAttendanceMap[userId].noClockIn++;
+                    userAttendanceMap[userId].noClockOut++;
                 }
             });
 
@@ -187,6 +232,36 @@ const Statistics: React.FC = () => {
                 .sort((a, b) => b.lateCount - a.lateCount)
                 .slice(0, 5);
 
+            const earlyLeavers = Object.entries(userAttendanceMap)
+                .map(([userId, stats]) => {
+                    const user = users.find(u => (u._id || u.id) === userId);
+                    return {
+                        name: user?.fullName || 'Неизвестный',
+                        count: stats.earlyLeaveCount,
+                        avgMinutes: stats.earlyLeaveCount > 0 ? Math.round(stats.totalEarlyLeaveMinutes / stats.earlyLeaveCount) : 0
+                    };
+                })
+                .filter(u => u.count > 0)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 5);
+
+            const missingMarkings = Object.entries(userAttendanceMap)
+                .map(([userId, stats]) => {
+                    const user = users.find(u => (u._id || u.id) === userId);
+                    let type: 'no_clock_in' | 'no_clock_out' | 'both' = 'both';
+                    if (stats.noClockIn > 0 && stats.noClockOut === 0) type = 'no_clock_in';
+                    else if (stats.noClockIn === 0 && stats.noClockOut > 0) type = 'no_clock_out';
+
+                    return {
+                        name: user?.fullName || 'Неизвестный',
+                        count: stats.noClockIn + stats.noClockOut,
+                        type
+                    };
+                })
+                .filter(u => u.count > 0)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 5);
+
             const totalAttendanceDays = Object.values(userAttendanceMap).reduce((sum, s) => sum + s.daysWorked + s.absences, 0);
             const totalDaysWorked = Object.values(userAttendanceMap).reduce((sum, s) => sum + s.daysWorked, 0);
             const avgAttendanceRate = totalAttendanceDays > 0 ? Math.round((totalDaysWorked / totalAttendanceDays) * 100) : 100;
@@ -196,6 +271,8 @@ const Statistics: React.FC = () => {
                 byRole,
                 topAbsent,
                 topLate,
+                earlyLeavers,
+                missingMarkings,
                 avgAttendanceRate
             });
 
@@ -475,6 +552,74 @@ const Statistics: React.FC = () => {
                                 <Box textAlign="center" py={3}>
                                     <CheckCircle sx={{ fontSize: 48, color: 'success.main', mb: 1 }} />
                                     <Typography color="text.secondary">Нет частых опозданий</Typography>
+                                </Box>
+                            )}
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                {/* Ранние уходы */}
+                <Grid item xs={12} md={6}>
+                    <Card>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom display="flex" alignItems="center">
+                                <TrendingDown sx={{ mr: 1, color: '#ff9800' }} /> Ранние уходы
+                            </Typography>
+                            {staffStats?.earlyLeavers && staffStats.earlyLeavers.length > 0 ? (
+                                <List dense>
+                                    {staffStats.earlyLeavers.map((item, index) => (
+                                        <ListItem key={index}>
+                                            <ListItemAvatar>
+                                                <Avatar sx={{ bgcolor: '#fff3e0' }}>{index + 1}</Avatar>
+                                            </ListItemAvatar>
+                                            <ListItemText
+                                                primary={item.name}
+                                                secondary={`${item.count} раз ушел(ла) раньше, в среднем ${item.avgMinutes} мин`}
+                                            />
+                                            <Chip label={`${item.count}×`} sx={{ bgcolor: '#ff9800', color: 'white' }} size="small" />
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            ) : (
+                                <Box textAlign="center" py={3}>
+                                    <CheckCircle sx={{ fontSize: 48, color: 'success.main', mb: 1 }} />
+                                    <Typography color="text.secondary">Все уходят вовремя</Typography>
+                                </Box>
+                            )}
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                {/* Отсутствие отметок */}
+                <Grid item xs={12} md={6}>
+                    <Card>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom display="flex" alignItems="center">
+                                <Warning sx={{ mr: 1, color: 'error.main' }} /> Забывают отметиться
+                            </Typography>
+                            {staffStats?.missingMarkings && staffStats.missingMarkings.length > 0 ? (
+                                <List dense>
+                                    {staffStats.missingMarkings.map((item, index) => (
+                                        <ListItem key={index}>
+                                            <ListItemAvatar>
+                                                <Avatar sx={{ bgcolor: 'error.light' }}>{index + 1}</Avatar>
+                                            </ListItemAvatar>
+                                            <ListItemText
+                                                primary={item.name}
+                                                secondary={
+                                                    item.type === 'no_clock_in' ? 'Часто не отмечают приход' :
+                                                        item.type === 'no_clock_out' ? 'Часто не отмечают уход' :
+                                                            'Не отмечают ни приход, ни уход'
+                                                }
+                                            />
+                                            <Chip label={`${item.count} отм.`} color="error" size="small" />
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            ) : (
+                                <Box textAlign="center" py={3}>
+                                    <CheckCircle sx={{ fontSize: 48, color: 'success.main', mb: 1 }} />
+                                    <Typography color="text.secondary">Все отмечаются исправно</Typography>
                                 </Box>
                             )}
                         </CardContent>

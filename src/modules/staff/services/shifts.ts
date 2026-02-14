@@ -1,10 +1,8 @@
 import { Shift, ShiftFormData, ShiftFilters, ShiftStatus } from '../../../shared/types/staff';
-import { BaseCrudApiClient, apiCache, apiClient } from '../../../shared/utils/api';
+import { BaseCrudApiClient, apiClient } from '../../../shared/utils/api';
 
 class ShiftsApiClient extends BaseCrudApiClient<Shift> {
   endpoint = '/staff-shifts';
-  private readonly CACHE_KEY = 'shifts';
-  private readonly CACHE_DURATION = 2 * 60 * 1000;
 
   async getAll(filters?: ShiftFilters): Promise<Shift[]> {
     const data = await super.getAll(filters);
@@ -17,77 +15,61 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
 
   async create(data: ShiftFormData | any): Promise<Shift> {
     const shift = await super.create(data);
-    this.clearCache();
     return shift;
   }
 
   async update(id: string, data: Partial<Shift>): Promise<Shift> {
     const shift = await super.update(id, data);
-    this.clearCache();
     return shift;
   }
 
   async deleteItem(id: string): Promise<void> {
     await super.deleteItem(id);
-    this.clearCache();
   }
 
   async updateStatus(id: string, status: string): Promise<Shift> {
     const { data } = await apiClient.put(`${this.endpoint}/${id}`, { status });
-    this.clearCache();
     return data;
   }
 
   async bulkCreate(shifts: ShiftFormData[]): Promise<any> {
     const { data } = await apiClient.post(`${this.endpoint}/bulk`, { shifts });
-    this.clearCache();
     return data;
   }
 
   async bulkUpdate(updates: Array<{ id: string; data: Partial<Shift> }>): Promise<any> {
     const { data } = await apiClient.post(`${this.endpoint}/bulk-update`, { updates });
-    this.clearCache();
     return data;
   }
 
   async bulkDelete(ids: string[]): Promise<any> {
     const { data } = await apiClient.post(`${this.endpoint}/bulk-delete`, { ids });
-    this.clearCache();
     return data;
   }
 
   async bulkUpdateStatus(filters: { staffId?: string; startDate: string; endDate: string; status: string }): Promise<any> {
     const { data } = await apiClient.post(`${this.endpoint}/bulk-update-status`, filters);
-    this.clearCache();
     return data;
   }
 
   async copyWeek(fromDate: string, toDate: string, staffIds?: string[]): Promise<any> {
     const { data } = await apiClient.post(`${this.endpoint}/copy-week`, { fromDate, toDate, staffIds });
-    this.clearCache();
     return data;
   }
 
   async checkIn(shiftId: string, deviceMetadata?: object): Promise<Shift> {
     const { data } = await apiClient.post(`${this.endpoint}/checkin/${shiftId}`, { deviceMetadata });
-    this.clearCache();
     return data;
   }
 
   async checkOut(shiftId: string, deviceMetadata?: object): Promise<Shift> {
     const { data } = await apiClient.post(`${this.endpoint}/checkout/${shiftId}`, { deviceMetadata });
-    this.clearCache();
     return data;
   }
 
   async requestShift(shiftData: Omit<ShiftFormData, 'status'>): Promise<Shift> {
     const { data } = await apiClient.post(`${this.endpoint}/request`, { ...shiftData, status: 'pending_approval' });
-    this.clearCache();
     return data;
-  }
-
-  private clearCache(): void {
-    apiCache.clear();
   }
 }
 

@@ -14,6 +14,8 @@ import { User } from '../../../shared/types/common';
 import { Document, Packer, Paragraph, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
 import childrenApi from '../../children/services/children';
+import childHealthPassportApi from '../services/childHealthPassport';
+import { toast } from 'react-toastify';
 
 
 interface ChildPassportForm {
@@ -39,6 +41,7 @@ export default function ChildHealthPassportPage() {
   const [selectedId, setSelectedId] = React.useState('');
   const [children, setChildren] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
   const [form, setForm] = React.useState<ChildPassportForm>({
     fio: '',
     iin: '',
@@ -78,12 +81,72 @@ export default function ChildHealthPassportPage() {
         ...f,
         fio: child.fullName || '',
         iin: child.iin || '',
-        birthdate: child.birthday || '',
+        birthdate: child.birthday ? new Date(child.birthday).toISOString().split('T')[0] : '',
         gender: '',
         address: child.notes || '',
       }));
+
+      // Load data from DB
+      childHealthPassportApi.getByChildId(selectedId).then((passports) => {
+        if (passports && passports.length > 0) {
+          const p = passports[0]; // Take the first one
+          setForm((f) => ({
+            ...f,
+            gender: p.gender || '',
+            address: p.address || f.address,
+            clinic: p.clinic || '',
+            bloodGroup: p.bloodType || '',
+            rhesus: p.rhesusFactor || '',
+            disability: p.disability || '',
+            dispensary: p.dispensary || '',
+            diagnosis: p.diagnosis || '',
+            allergy: p.allergies?.join(', ') || '',
+            infections: p.infections || '',
+            hospitalizations: p.hospitalizations || '',
+            incapacity: p.incapacity || '',
+            checkups: p.checkups || '',
+          }));
+        }
+      }).catch(err => {
+        console.error('Error loading passport:', err);
+      });
     }
   }, [selectedId, children]);
+
+  const handleSave = async () => {
+    if (!selectedId) {
+      toast.error('Выберите ребенка');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await childHealthPassportApi.upsert({
+        childId: selectedId,
+        birthDate: form.birthdate || undefined,
+        gender: form.gender,
+        address: form.address,
+        clinic: form.clinic,
+        bloodType: form.bloodGroup,
+        rhesusFactor: form.rhesus,
+        disability: form.disability,
+        dispensary: form.dispensary,
+        diagnosis: form.diagnosis,
+        allergies: form.allergy.split(',').map(s => s.trim()).filter(Boolean),
+        infections: form.infections,
+        hospitalizations: form.hospitalizations,
+        incapacity: form.incapacity,
+        checkups: form.checkups,
+        birthPlace: form.address || 'Не указано', // Fallback
+      });
+      toast.success('Данные успешно сохранены в базе');
+    } catch (err: any) {
+      console.error('Error saving passport:', err);
+      toast.error('Ошибка при сохранении: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -323,9 +386,20 @@ export default function ChildHealthPassportPage() {
             multiline
             minRows={2}
           />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-            <Button variant='contained' onClick={handleExport}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gap: 2 }}>
+            <Button
+              variant='outlined'
+              onClick={handleExport}
+              disabled={!selectedId}
+            >
               Скачать в Word
+            </Button>
+            <Button
+              variant='contained'
+              onClick={handleSave}
+              disabled={!selectedId || saving}
+            >
+              {saving ? <CircularProgress size={24} /> : 'Сохранить в базу'}
             </Button>
           </Box>
         </Stack>

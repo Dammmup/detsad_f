@@ -4,18 +4,18 @@ export interface PerishableBrak {
     id?: string;
     _id?: string;
     // Backend fields (optional for backward compatibility)
-    productId?: string;
+    productId?: string | { _id: string; name: string };
     productName?: string;
     batchNumber?: string;
     expirationDate?: Date | string;
     quantity?: number;
     unit?: string;
     reason?: string;
-    inspector?: string;
+    inspector?: string | { _id: string; fullName: string; role: string };
     inspectionDate?: Date | string;
     disposalMethod?: string;
     disposalDate?: Date | string;
-    disposedBy?: string;
+    disposedBy?: string | { _id: string; fullName: string; role: string };
     notes?: string;
     attachments?: string[];
     status?: 'pending' | 'disposed' | 'reviewed';

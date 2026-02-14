@@ -228,11 +228,11 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
             startIcon={<Add />}
             onClick={() => setShowAddTaskDialog(true)}
             sx={{
-              backgroundColor: 'rgba(255,255,0.2)',
+              backgroundColor: 'rgb(24, 144, 255)',
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(255,255,0.3)',
               '&:hover': {
-                backgroundColor: 'rgba(255,255,0.3)',
+                backgroundColor: 'green',
               },
             }}
           >

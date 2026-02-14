@@ -80,18 +80,20 @@ const ChildPayments: React.FC = () => {
   const isMobile = useMediaQuery('(max-width:900px)');
 
 
-  const fetchPayments = async () => {
+  const fetchPayments = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const paymentsList = await childPaymentApi.getAll();
+      // Формируем monthPeriod в формате YYYY-MM для фильтрации на сервере
+      const monthPeriod = moment(currentDate).format('YYYY-MM');
+      const paymentsList = await childPaymentApi.getAll({ monthPeriod });
       setPayments(paymentsList);
     } catch (e: any) {
       setError(e?.message || 'Ошибка загрузки оплат');
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentDate]);
 
   const fetchChildren = async () => {
     try {
@@ -110,6 +112,7 @@ const ChildPayments: React.FC = () => {
       setGroups([]);
     }
   };
+
   const handleGeneratePayments = React.useCallback(async () => {
     setIsGenerating(true);
     setError(null);
@@ -121,7 +124,7 @@ const ChildPayments: React.FC = () => {
     } finally {
       setIsGenerating(false);
     }
-  }, [currentDate]);
+  }, [currentDate, fetchPayments]);
   useEffect(() => {
     setGenerationAttempted(false);
     fetchPayments();
@@ -135,17 +138,11 @@ const ChildPayments: React.FC = () => {
   }, [payments]);
 
 
+  // Фильтрация платежей (теперь только по имени/группе, период фильтруется на сервере)
   useEffect(() => {
-    const monthStart = moment(currentDate).startOf('month');
-    const monthEnd = moment(currentDate).endOf('month');
+    let result = [...payments];
 
-    let result = payments.filter((payment) => {
-      if (!payment.period || !payment.period.start) return false;
-      const paymentDate = moment(payment.period.start);
-      return paymentDate.isBetween(monthStart, monthEnd, undefined, '[]');
-    });
-
-
+    // Фильтр по имени ребёнка
     if (nameFilter) {
       result = result.filter((payment) => {
         const child = children.find(
@@ -162,7 +159,7 @@ const ChildPayments: React.FC = () => {
       });
     }
 
-
+    // Фильтр по группе
     if (groupFilter) {
       result = result.filter((payment) => {
         const child = children.find(
@@ -183,6 +180,7 @@ const ChildPayments: React.FC = () => {
 
     setFilteredPayments(result);
 
+    // Автогенерация при пустом списке (опционально)
     if (
       result.length === 0 &&
       !loading &&
@@ -199,11 +197,9 @@ const ChildPayments: React.FC = () => {
     children,
     nameFilter,
     groupFilter,
-    currentDate,
     loading,
     generationAttempted,
     isGenerating,
-    handleGeneratePayments
   ]);
 
 

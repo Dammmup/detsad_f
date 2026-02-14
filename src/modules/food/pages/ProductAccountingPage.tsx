@@ -140,9 +140,13 @@ const ProductAccountingPage: React.FC = () => {
     const [dishes, setDishes] = useState<Dish[]>([]);
     const [dishDialogOpen, setDishDialogOpen] = useState(false);
     const [editingDish, setEditingDish] = useState<Dish | null>(null);
+    const [dishCategoryFilter, setDishCategoryFilter] = useState<string>('all');
+    const [dishSubcategoryFilter, setDishSubcategoryFilter] = useState<string>('all');
+
     const [dishForm, setDishForm] = useState<Partial<Dish>>({
         name: '',
         category: 'breakfast',
+        subcategory: 'other',
         ingredients: [],
         servingsCount: 1,
         isActive: true
@@ -178,13 +182,17 @@ const ProductAccountingPage: React.FC = () => {
 
     const loadDishes = useCallback(async () => {
         try {
-            const data = await getDishes();
+            const filters: any = {};
+            if (dishCategoryFilter !== 'all') filters.category = dishCategoryFilter;
+            if (dishSubcategoryFilter !== 'all') filters.subcategory = dishSubcategoryFilter;
+
+            const data = await getDishes(filters);
             setDishes(data);
         } catch (error) {
             console.error('Error loading dishes:', error);
             toast.error('Ошибка загрузки блюд');
         }
-    }, []);
+    }, [dishCategoryFilter, dishSubcategoryFilter]);
 
     const loadTodayMenu = useCallback(async () => {
         try {
@@ -480,7 +488,41 @@ const ProductAccountingPage: React.FC = () => {
                 {/* Dishes Tab */}
                 <TabPanel value={tabValue} index={1}>
                     <Box sx={{ px: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+                            <Box sx={{ display: 'flex', gap: 2 }}>
+                                <FormControl size="small" sx={{ minWidth: 150 }}>
+                                    <InputLabel>Приём пищи</InputLabel>
+                                    <Select
+                                        value={dishCategoryFilter}
+                                        label="Приём пищи"
+                                        onChange={(e) => setDishCategoryFilter(e.target.value)}
+                                    >
+                                        <MenuItem value="all">Все</MenuItem>
+                                        <MenuItem value="breakfast">Завтрак</MenuItem>
+                                        <MenuItem value="lunch">Обед</MenuItem>
+                                        <MenuItem value="snack">Полдник</MenuItem>
+                                        <MenuItem value="dinner">Ужин</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <FormControl size="small" sx={{ minWidth: 150 }}>
+                                    <InputLabel>Подкатегория</InputLabel>
+                                    <Select
+                                        value={dishSubcategoryFilter}
+                                        label="Подкатегория"
+                                        onChange={(e) => setDishSubcategoryFilter(e.target.value)}
+                                    >
+                                        <MenuItem value="all">Все</MenuItem>
+                                        <MenuItem value="soup">Первое блюдо (Суп)</MenuItem>
+                                        <MenuItem value="main">Второе блюдо</MenuItem>
+                                        <MenuItem value="garnish">Гарнир</MenuItem>
+                                        <MenuItem value="porridge">Каша</MenuItem>
+                                        <MenuItem value="salad">Салат</MenuItem>
+                                        <MenuItem value="drink">Напиток</MenuItem>
+                                        <MenuItem value="baking">Выпечка</MenuItem>
+                                        <MenuItem value="other">Прочее</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Box>
                             <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDishDialog()}>
                                 Добавить блюдо
                             </Button>
@@ -754,7 +796,10 @@ const ProductAccountingPage: React.FC = () => {
                 <DialogContent>
                     <List>
                         {dishes
-                            .filter((d) => d.category === selectedMealType && d.isActive)
+                            .filter((d) =>
+                                (d.category === selectedMealType || ['drink', 'salad', 'baking'].includes(d.subcategory || ''))
+                                && d.isActive
+                            )
                             .map((dish) => (
                                 <ListItem
                                     key={dish._id || dish.id}

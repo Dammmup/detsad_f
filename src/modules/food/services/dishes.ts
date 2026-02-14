@@ -7,6 +7,7 @@ export interface Dish {
     name: string;
     description?: string;
     category: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+    subcategory?: 'soup' | 'main' | 'porridge' | 'salad' | 'drink' | 'baking' | 'garnish' | 'other';
     ingredients: ProductIngredient[];
     servingsCount: number;
     preparationTime?: number;
@@ -33,10 +34,12 @@ export interface DishAvailability {
 // Получить все блюда
 export const getDishes = async (filters?: {
     category?: string;
+    subcategory?: string;
     isActive?: boolean;
 }): Promise<Dish[]> => {
     const params = new URLSearchParams();
     if (filters?.category) params.append('category', filters.category);
+    if (filters?.subcategory && filters.subcategory !== 'all') params.append('subcategory', filters.subcategory);
     if (filters?.isActive !== undefined) params.append('isActive', String(filters.isActive));
 
     const queryString = params.toString();
