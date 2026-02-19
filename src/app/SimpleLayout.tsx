@@ -15,7 +15,7 @@ import {
   ListItemIcon,
   ListItemText,
 } from '@mui/material';
-import { Menu as MenuIcon, AccountCircle as AccountCircleIcon, ExitToApp as ExitToAppIcon, MoreVert as MoreVertIcon } from '@mui/icons-material';
+import { Menu as MenuIcon, AccountCircle as AccountCircleIcon, ExitToApp as ExitToAppIcon, MoreVert as MoreVertIcon, Today as TodayIcon } from '@mui/icons-material';
 
 
 import Dashboard from '../modules/dashboard/pages/Dashboard';
@@ -33,6 +33,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import StaffSchedule from '../modules/staff/pages/StaffSchedule';
 
 import WeeklyAttendance from '../modules/children/pages/WeeklyAttendance';
+import DailyAttendance from '../modules/children/pages/DailyAttendance';
 import ReportsSalary from '../modules/reports/components/PayrollList';
 import { logout, getCurrentUser } from '../services';
 import ReportsWidget from '../modules/reports/components/ReportsWidget';
@@ -104,6 +105,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
   const currentUser = getCurrentUser();
   const userRole = currentUser?.role || 'staff';
   const isAdminOrManager = userRole === 'admin' || userRole === 'manager';
+  const hasMedAccess = isAdminOrManager || ['doctor', 'nurse'].includes(userRole);
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -254,7 +256,11 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path='dashboard' element={<Dashboard />} />
             {/* Дети */}
             <Route path='children' element={<Children />} />
-            <Route path='children/attendance' element={<WeeklyAttendance />} />
+            <Route
+              path='children/attendance'
+              element={isAdminOrManager ? <WeeklyAttendance /> : <Navigate to="/app/children/daily-attendance" replace />}
+            />
+            <Route path='children/daily-attendance' element={<DailyAttendance />} />
             <Route path='children/payments' element={<ChildPayments />} />
             {/* Сотрудники */}
             <Route path='staff' element={isAdminOrManager ? <Staff /> : <Navigate to="/app/dashboard" />} />
@@ -283,54 +289,54 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path='med/menu-admin' element={isAdminOrManager ? <MenuItemsAdminPage /> : <Navigate to="/app/dashboard" />} />
 
             {/* Медицинский кабинет и журналы */}
-            <Route path='med' element={<MedCabinetPage />} />
-            <Route path='med/passport' element={<ChildHealthPassportPage />} />
-            <Route path='med/mantoux' element={<MantouxJournal />} />
-            <Route path='med/somatic' element={<SomaticJournal />} />
-            <Route path='med/helminth' element={<HelminthJournal />} />
+            <Route path='med' element={hasMedAccess ? <MedCabinetPage /> : <Navigate to="/app/dashboard" />} />
+            <Route path='med/passport' element={hasMedAccess ? <ChildHealthPassportPage /> : <Navigate to="/app/dashboard" />} />
+            <Route path='med/mantoux' element={hasMedAccess ? <MantouxJournal /> : <Navigate to="/app/dashboard" />} />
+            <Route path='med/somatic' element={hasMedAccess ? <SomaticJournal /> : <Navigate to="/app/dashboard" />} />
+            <Route path='med/helminth' element={hasMedAccess ? <HelminthJournal /> : <Navigate to="/app/dashboard" />} />
             <Route
               path='med/infectious'
-              element={<InfectiousDiseasesJournal />}
+              element={hasMedAccess ? <InfectiousDiseasesJournal /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/contact-infection'
-              element={<ContactInfectionJournal />}
+              element={hasMedAccess ? <ContactInfectionJournal /> : <Navigate to="/app/dashboard" />}
             />
-            <Route path='med/risk-group' element={<RiskGroupChildren />} />
-            <Route path='med/tub-positive' element={<TubPositiveJournal />} />
+            <Route path='med/risk-group' element={hasMedAccess ? <RiskGroupChildren /> : <Navigate to="/app/dashboard" />} />
+            <Route path='med/tub-positive' element={hasMedAccess ? <TubPositiveJournal /> : <Navigate to="/app/dashboard" />} />
             <Route
               path='med/organoleptic-journal'
-              element={<OrganolepticJournalPage />}
+              element={hasMedAccess ? <OrganolepticJournalPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/food-norms-control'
-              element={<FoodNormsControlPage />}
+              element={hasMedAccess ? <FoodNormsControlPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/perishable-brak'
-              element={<PerishableBrakPage />}
+              element={hasMedAccess ? <PerishableBrakPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/food-certificates'
-              element={<ProductCertificatePage />}
+              element={hasMedAccess ? <ProductCertificatePage /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/detergents'
-              element={<DetergentLogPage />}
+              element={hasMedAccess ? <DetergentLogPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/food-stock'
-              element={<FoodStockLogPage />}
+              element={hasMedAccess ? <FoodStockLogPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/canteen-staff-health'
-              element={<FoodStaffHealthPage />}
+              element={hasMedAccess ? <FoodStaffHealthPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route path='profile' element={<ProfilePage />} />
             <Route path='my-salary' element={<ReportsSalary personalOnly={true} />} />
 
             {/* Fallback */}
-            <Route path='*' element={<Dashboard />} />
+            <Route path='*' element={<Navigate to="/app/dashboard" replace />} />
           </Routes>
         </Container>
       </Box>

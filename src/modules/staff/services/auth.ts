@@ -6,7 +6,7 @@ class AuthApiClient extends BaseApiClient {
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      console.log('🔐 Попытка входа для:', credentials.phone);
+
 
       const response = await this.post<{
         user: any;
@@ -49,7 +49,7 @@ class AuthApiClient extends BaseApiClient {
 
       this.saveAuthData(authData);
 
-      console.log('✅ Успешный вход:', authData.user.fullName);
+
       return authData;
     } catch (error: any) {
       console.error('❌ Ошибка входа:', error);
@@ -69,7 +69,7 @@ class AuthApiClient extends BaseApiClient {
     } finally {
 
       this.clearAuthData();
-      console.log('🚪 Пользователь вышел из системы');
+
     }
   }
 

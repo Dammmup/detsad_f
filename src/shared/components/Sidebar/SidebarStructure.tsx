@@ -12,6 +12,7 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import CalendarViewWeekIcon from '@mui/icons-material/CalendarViewWeek';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
+import TodayIcon from '@mui/icons-material/Today';
 
 export interface SidebarItem {
   id: string;
@@ -65,9 +66,17 @@ const sidebarStructure: SidebarItem[] = [
       },
       {
         id: 'children-attendance',
-        label: 'Посещаемость',
+        label: 'Посещаемость (неделя)',
+        visibleFor: ['admin', 'manager', 'director'],
         link: '/app/children/attendance',
         icon: <CalendarViewWeekIcon />,
+      },
+      {
+        id: 'children-daily-attendance',
+        label: 'Посещаемость',
+        visibleFor: ['teacher', 'assistant'],
+        link: '/app/children/daily-attendance',
+        icon: <TodayIcon />,
       },
       {
         id: 'children-payments',

@@ -7,6 +7,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { getCurrentUser, isAuthenticated, logout } from '../../modules/staff/services/auth';
+import { clearGroupsCache } from './GroupsContext';
 import { User } from '../../shared/types/common';
 import { useNavigate } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
@@ -44,9 +45,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (currentUser && authenticated) {
         setUser(currentUser);
         setIsLoggedIn(true);
-        console.log('✅ Пользователь авторизован:', currentUser.fullName);
       } else {
-        console.log('❌ Пользователь не авторизован');
         setUser(null);
         setIsLoggedIn(false);
       }
@@ -73,14 +72,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('auth_token', token);
     }
 
-    console.log('🔐 Пользователь вошел в систему:', userData.fullName);
+
   };
 
 
   const handleLogout = async () => {
 
     if (logoutInProgress) {
-      console.log('⚠️ Выход уже выполняется, повторный вызов отклонён.');
       return;
     }
 
@@ -88,7 +86,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     try {
       await logout();
-      console.log('🚪 Пользователь вышел из системы');
+      clearGroupsCache();
 
       setUser(null);
       setIsLoggedIn(false);
@@ -175,9 +173,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       const authValid = await checkAuth();
 
       if (!authValid) {
-        console.log('🚫 Пользователь не авторизован, редиректим');
-
-        window.location.href = '/login';
+        navigate('/login', { replace: true });
       } else {
         setChecking(false);
       }

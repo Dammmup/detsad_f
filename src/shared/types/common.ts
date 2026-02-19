@@ -244,6 +244,7 @@ export const STATUS_TEXT: Record<string, string> = {
   late_arrival: 'Поздний приход',
   no_clock_in: 'Нет прихода',
   no_clock_out: 'Нет ухода',
+  absent: 'Отсутствует'
 };
 
 

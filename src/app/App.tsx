@@ -3,8 +3,6 @@ import '../global-responsive.css';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { SnackbarProvider } from '../shared/components/Snackbar';
 import Login from '../pages/LoginSimple';
-import Groups from '../modules/children/pages/Groups';
-import Children from '../modules/children/pages/Children';
 import { AuthProvider, ProtectedRoute } from './context/AuthContext';
 import { GroupsProvider } from './context/GroupsContext';
 import { DateProvider } from './context/DateContext';
@@ -22,8 +20,6 @@ export const App = () => {
               <Routes>
                 {/* Публичные маршруты */}
                 <Route path='/login' element={<Login />} />
-                <Route path='/groups' element={<Groups />} />
-                <Route path='/children' element={<Children />} />
 
                 {/* Защищенные маршруты */}
                 <Route

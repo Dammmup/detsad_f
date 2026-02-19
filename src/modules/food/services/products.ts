@@ -1,4 +1,4 @@
-import api from '../../../shared/services/base';
+import { apiClient as api } from '../../../shared/utils/api';
 
 export interface ProductIngredient {
     productId: string;

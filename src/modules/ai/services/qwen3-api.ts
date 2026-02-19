@@ -18,7 +18,7 @@ const getAuthToken = (): string | null => {
 };
 
 export class Qwen3ApiService {
-  private static readonly API_URL = `${process.env.REACT_APP_API_URL}/qwen3-chat/chat`;
+  private static readonly API_URL = `${import.meta.env.VITE_API_URL}/qwen3-chat/chat`;
 
   static async sendMessage(
     messages: ChatMessage[],

@@ -293,15 +293,10 @@ export const TimeTrackingProvider = ({
   }, [getCurrentLocation]);
 
 
-  useEffect(() => {
-    fetchTimeStatus();
-    const interval = setInterval(() => {
-      fetchTimeStatus().catch(() => {
 
-      });
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [fetchTimeStatus]);
+  useEffect(() => {
+    setLoading(false);
+  }, []);
 
   const value = {
 

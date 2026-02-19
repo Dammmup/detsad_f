@@ -62,8 +62,9 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
       setError(null);
       try {
 
-        const taskList = await getTaskList({});
-        setTasks(taskList);
+        const taskList: any = await getTaskList({});
+        const tasksArray = Array.isArray(taskList) ? taskList : (taskList?.items || taskList?.data || []);
+        setTasks(tasksArray);
       } catch (err: any) {
         setError(err.message);
         console.error('Error fetching tasks:', err);

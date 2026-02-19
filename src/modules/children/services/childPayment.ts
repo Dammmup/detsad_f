@@ -1,5 +1,5 @@
 import { IChildPayment } from '../../../shared/types/common';
-import api from '../../../shared/services/base';
+import { apiClient as api } from '../../../shared/utils/api';
 
 const API_BASE_URL = '/child-payments';
 

@@ -252,7 +252,8 @@ const StaffSchedule: React.FC = () => {
 
         setStaff(staffData);
         setShifts(shiftsData);
-        setAttendanceRecords(attendanceData.data || []);
+        const rawAttendance = attendanceData?.data || attendanceData || [];
+        setAttendanceRecords(Array.isArray(rawAttendance) ? rawAttendance : (rawAttendance?.items || rawAttendance?.data || []));
 
         try {
           const hData = await getHolidays();

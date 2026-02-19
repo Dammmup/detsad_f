@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { getGroups } from '../../modules/children/services/groups';
+import { formatDate, getWeekday, formatDateWithWeekday } from './format';
 
 export interface ExportConfig {
   filename: string;
@@ -15,46 +16,6 @@ export interface ExportConfig {
 }
 
 
-export const formatDate = (date: Date): string => {
-
-  if (isNaN(date.getTime())) {
-    return '';
-  }
-
-  return date.toLocaleDateString('ru-RU', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-};
-
-export const getWeekday = (date: Date): string => {
-
-  if (isNaN(date.getTime())) {
-    return '';
-  }
-
-  const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-  return weekdays[date.getDay()];
-};
-
-export const formatDateWithWeekday = (dateString: string): string => {
-
-  if (!dateString) {
-    return '';
-  }
-
-  const date = new Date(dateString);
-
-
-  if (isNaN(date.getTime())) {
-    return '';
-  }
-
-  const formattedDate = formatDate(date);
-  const weekday = getWeekday(date);
-  return `${formattedDate} (${weekday})`;
-};
 
 
 export const exportToExcel = (config: ExportConfig): void => {

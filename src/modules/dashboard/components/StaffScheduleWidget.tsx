@@ -73,7 +73,8 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = () => {
             startDate: todayStr,
             endDate: todayStr,
           });
-          attendanceRecords = attendanceResponse.data || [];
+          const rawRecords = attendanceResponse?.data || attendanceResponse || [];
+          attendanceRecords = Array.isArray(rawRecords) ? rawRecords : (rawRecords?.items || rawRecords?.data || []);
         } catch (e) {
           console.warn('Could not load attendance records:', e);
         }

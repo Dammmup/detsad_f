@@ -34,6 +34,11 @@ let groupsCache: Group[] | null = null;
 let cacheTimestamp = 0;
 const CACHE_DURATION = 5 * 60 * 1000;
 
+export const clearGroupsCache = () => {
+  groupsCache = null;
+  cacheTimestamp = 0;
+};
+
 
 
 export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {

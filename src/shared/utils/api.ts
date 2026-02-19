@@ -4,7 +4,7 @@ import { ApiError, DelayFunction, ErrorHandler } from '../types/common';
 
 
 export const API_BASE_URL =
-  process.env.REACT_APP_API_URL || 'https://api.detsad.pro';
+  import.meta.env.VITE_API_URL || 'http://localhost:8080';
 export const API_TIMEOUT = 120000;
 export const RETRY_DELAY = 2000;
 export const MAX_RETRIES = 3;
@@ -211,8 +211,13 @@ export const normalizeMongoObject = <T extends Record<string, any>>(
 };
 
 export const normalizeMongoArray = <T extends Record<string, any>>(
-  arr: T[],
+  arr: T[] | any,
 ): T[] => {
+  if (!arr) return [];
+  if (!Array.isArray(arr)) {
+    const extracted = arr.items || arr.data || [];
+    return Array.isArray(extracted) ? extracted.map(normalizeMongoObject) : [];
+  }
   return arr.map(normalizeMongoObject);
 };
 

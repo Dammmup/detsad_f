@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Box,
     Typography,
@@ -37,6 +37,7 @@ import {
     Accordion,
     AccordionSummary,
     AccordionDetails,
+    TableSortLabel,
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -135,6 +136,36 @@ const ProductAccountingPage: React.FC = () => {
         purchaseDays: 0,
         status: 'active'
     });
+
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Product; direction: 'asc' | 'desc' } | null>(null);
+
+    const handleSort = (key: keyof Product) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const sortedProducts = useMemo(() => {
+        if (!sortConfig) return products;
+
+        return [...products].sort((a, b) => {
+            const aValue = a[sortConfig.key];
+            const bValue = b[sortConfig.key];
+
+            if (aValue === undefined || aValue === null) return 1;
+            if (bValue === undefined || bValue === null) return -1;
+
+            if (aValue < bValue) {
+                return sortConfig.direction === 'asc' ? -1 : 1;
+            }
+            if (aValue > bValue) {
+                return sortConfig.direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+    }, [products, sortConfig]);
 
     // Dishes state
     const [dishes, setDishes] = useState<Dish[]>([]);
@@ -440,17 +471,65 @@ const ProductAccountingPage: React.FC = () => {
                                 <Table size="small">
                                     <TableHead>
                                         <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-                                            <TableCell><strong>Название</strong></TableCell>
-                                            <TableCell><strong>Категория</strong></TableCell>
-                                            <TableCell align="right"><strong>Запас</strong></TableCell>
-                                            <TableCell align="right"><strong>Цена</strong></TableCell>
-                                            <TableCell><strong>Срок годности</strong></TableCell>
-                                            <TableCell><strong>На дней</strong></TableCell>
+                                            <TableCell>
+                                                <TableSortLabel
+                                                    active={sortConfig?.key === 'name'}
+                                                    direction={sortConfig?.key === 'name' ? sortConfig.direction : 'asc'}
+                                                    onClick={() => handleSort('name')}
+                                                >
+                                                    <strong>Название</strong>
+                                                </TableSortLabel>
+                                            </TableCell>
+                                            <TableCell>
+                                                <TableSortLabel
+                                                    active={sortConfig?.key === 'category'}
+                                                    direction={sortConfig?.key === 'category' ? sortConfig.direction : 'asc'}
+                                                    onClick={() => handleSort('category')}
+                                                >
+                                                    <strong>Категория</strong>
+                                                </TableSortLabel>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <TableSortLabel
+                                                    active={sortConfig?.key === 'stockQuantity'}
+                                                    direction={sortConfig?.key === 'stockQuantity' ? sortConfig.direction : 'asc'}
+                                                    onClick={() => handleSort('stockQuantity')}
+                                                >
+                                                    <strong>Запас</strong>
+                                                </TableSortLabel>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <TableSortLabel
+                                                    active={sortConfig?.key === 'price'}
+                                                    direction={sortConfig?.key === 'price' ? sortConfig.direction : 'asc'}
+                                                    onClick={() => handleSort('price')}
+                                                >
+                                                    <strong>Цена</strong>
+                                                </TableSortLabel>
+                                            </TableCell>
+                                            <TableCell>
+                                                <TableSortLabel
+                                                    active={sortConfig?.key === 'expirationDate'}
+                                                    direction={sortConfig?.key === 'expirationDate' ? sortConfig.direction : 'asc'}
+                                                    onClick={() => handleSort('expirationDate')}
+                                                >
+                                                    <strong>Срок годности</strong>
+                                                </TableSortLabel>
+                                            </TableCell>
+                                            <TableCell>
+                                                <TableSortLabel
+                                                    active={sortConfig?.key === 'purchaseDays'}
+                                                    direction={sortConfig?.key === 'purchaseDays' ? sortConfig.direction : 'asc'}
+                                                    onClick={() => handleSort('purchaseDays')}
+                                                >
+                                                    <strong>На дней</strong>
+                                                </TableSortLabel>
+                                            </TableCell>
                                             <TableCell align="center"><strong>Действия</strong></TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {products.map((product) => (
+                                        {sortedProducts.map((product) => (
                                             <TableRow
                                                 key={product._id || product.id}
                                                 sx={{

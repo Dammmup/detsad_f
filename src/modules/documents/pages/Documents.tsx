@@ -42,11 +42,13 @@ import {
   FilterList as FilterIcon,
 } from '@mui/icons-material';
 import {
-  formatFileSize,
-  getFileIcon,
-  getTypeText,
-  getCategoryText,
-} from '../../../shared/utils/documentUtils';
+  getDocumentTypeText,
+  getDocumentCategoryText,
+} from '../../../shared/utils/documents';
+import { formatFileSize } from '../../../shared/utils/format';
+import PdfIcon from '@mui/icons-material/PictureAsPdf';
+import ExcelIcon from '@mui/icons-material/TableChart';
+import FileIcon from '@mui/icons-material/InsertDriveFile';
 import moment from 'moment';
 import 'moment/locale/ru';
 import { Document as DocumentType } from '../../../shared/types/documents';
@@ -89,6 +91,22 @@ const roleTranslations: Record<string, string> = {
   staff: 'Сотрудник',
   substitute: 'Подменный сотрудник',
   intern: 'Стажер',
+};
+
+const getFileIcon = (fileName: string) => {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'pdf':
+      return <PdfIcon color='error' />;
+    case 'xlsx':
+    case 'xls':
+      return <ExcelIcon color='success' />;
+    case 'doc':
+    case 'docx':
+      return <FileIcon color='primary' />;
+    default:
+      return <FileIcon />;
+  }
 };
 
 export const Documents = () => {
@@ -535,8 +553,8 @@ export const Documents = () => {
                         </Box>
                       </Box>
                     </TableCell>
-                    <TableCell>{getTypeText(document.type)}</TableCell>
-                    <TableCell>{getCategoryText(document.category)}</TableCell>
+                    <TableCell>{getDocumentTypeText(document.type)}</TableCell>
+                    <TableCell>{getDocumentCategoryText(document.category)}</TableCell>
                     <TableCell>
                       <Typography variant='body2'>
                         {document.fileName}
