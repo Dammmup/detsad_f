@@ -27,6 +27,7 @@ export default defineConfig({
             '/stats': 'http://localhost:8080',
             '/holidays': 'http://localhost:8080',
             '/fine': 'http://localhost:8080',
+            '/audit-log': 'http://localhost:8080',
             '/api': 'http://localhost:8080',
         },
     },

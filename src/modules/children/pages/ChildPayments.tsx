@@ -39,6 +39,7 @@ import ExportButton from '../../../shared/components/ExportButton';
 import { exportChildPayments } from '../../../shared/utils/excelExport';
 import DateNavigator from '../../../shared/components/DateNavigator';
 import { importChildPayments } from '../../../shared/services/importService';
+import AuditLogButton from '../../../shared/components/AuditLogButton';
 
 const ChildPayments: React.FC = () => {
   const { currentDate } = useDate();
@@ -77,6 +78,10 @@ const ChildPayments: React.FC = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
+  // Флаги для предотвращения повторных загрузок
+  const [childrenLoaded, setChildrenLoaded] = useState(false);
+  const [groupsLoaded, setGroupsLoaded] = useState(false);
+
   const isMobile = useMediaQuery('(max-width:900px)');
 
 
@@ -95,23 +100,27 @@ const ChildPayments: React.FC = () => {
     }
   }, [currentDate]);
 
-  const fetchChildren = async () => {
+  const fetchChildren = React.useCallback(async () => {
+    if (childrenLoaded) return;
     try {
       const childrenList = await childrenApi.getAll();
       setChildren(childrenList);
+      setChildrenLoaded(true);
     } catch {
       setChildren([]);
     }
-  };
+  }, [childrenLoaded]);
 
-  const fetchGroups = async () => {
+  const fetchGroups = React.useCallback(async () => {
+    if (groupsLoaded) return;
     try {
       const groupsList = await groupsApi.getAll();
       setGroups(groupsList);
+      setGroupsLoaded(true);
     } catch {
       setGroups([]);
     }
-  };
+  }, [groupsLoaded]);
 
   const handleGeneratePayments = React.useCallback(async () => {
     setIsGenerating(true);
@@ -125,12 +134,13 @@ const ChildPayments: React.FC = () => {
       setIsGenerating(false);
     }
   }, [currentDate, fetchPayments]);
+
+  // Загружаем данные только один раз при монтировании
   useEffect(() => {
-    setGenerationAttempted(false);
     fetchPayments();
     fetchChildren();
     fetchGroups();
-  }, [currentDate]);
+  }, []); // Пустой массив - только при монтировании
 
 
   useEffect(() => {
@@ -456,6 +466,7 @@ const ChildPayments: React.FC = () => {
             </Typography>
           )}
         </Box>
+        <AuditLogButton entityType="childPayment" />
         <Button
           variant='contained'
           startIcon={<Add />}
@@ -868,6 +879,7 @@ const ChildPayments: React.FC = () => {
                     </Typography>
                   </TableCell>
                   <TableCell align='right' sx={{ p: isMobile ? 1 : 2 }}>
+                    <AuditLogButton entityType="childPayment" entityId={payment._id} entityName={child?.fullName} />
                     <IconButton
                       size={isMobile ? 'small' : 'medium'}
                       onClick={() => handleOpenModal(payment)}

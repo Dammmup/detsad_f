@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 let LayoutStateContext = React.createContext<any>({});
 let LayoutDispatchContext = React.createContext<any>({});
@@ -17,9 +17,13 @@ function LayoutProvider({ children }: { children: React.ReactNode }) {
   let [state, dispatch] = React.useReducer(layoutReducer, {
     isSidebarOpened: true,
   });
+
+  const stateValue = useMemo(() => state, [state.isSidebarOpened]);
+  const dispatchValue = useMemo(() => dispatch, [dispatch]);
+
   return (
-    <LayoutStateContext.Provider value={state}>
-      <LayoutDispatchContext.Provider value={dispatch}>
+    <LayoutStateContext.Provider value={stateValue}>
+      <LayoutDispatchContext.Provider value={dispatchValue}>
         {children}
       </LayoutDispatchContext.Provider>
     </LayoutStateContext.Provider>

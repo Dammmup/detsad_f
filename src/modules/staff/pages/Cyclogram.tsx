@@ -10,6 +10,7 @@ import {
   Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import DayConstructor from './DayConstructor';
+import AuditLogButton from '../../../shared/components/AuditLogButton';
 
 const Cyclogram: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
@@ -30,6 +31,7 @@ const Cyclogram: React.FC = () => {
         <Typography variant='h5' display='flex' alignItems='center'>
           <ScheduleIcon sx={{ mr: 1 }} /> Циклограмма
         </Typography>
+        <AuditLogButton entityType="dailySchedule" />
       </Box>
 
       {/* Вкладки */}

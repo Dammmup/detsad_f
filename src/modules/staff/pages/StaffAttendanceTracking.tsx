@@ -68,6 +68,7 @@ import DateNavigator from '../../../shared/components/DateNavigator';
 import { useSnackbar } from 'notistack';
 import { collectDeviceMetadata } from '../../../shared/utils/deviceMetadata';
 import { STATUS_TEXT } from '../../../shared/types/common';
+import AuditLogButton from '../../../shared/components/AuditLogButton';
 moment.locale('ru');
 
 interface TimeRecord {
@@ -1555,6 +1556,12 @@ const StaffAttendanceTracking: React.FC = () => {
                   >
                     <Visibility />
                   </IconButton>
+                  <AuditLogButton
+                    entityType="staffAttendance"
+                    entityId={record.id}
+                    entityName={record.staffName}
+                    size="small"
+                  />
                 </TableCell>
               </TableRow>
             ))}
@@ -1594,7 +1601,7 @@ const StaffAttendanceTracking: React.FC = () => {
           >
             Массовая корректировка
           </Button>
-
+          <AuditLogButton entityType="staffAttendance" />
         </Box>
       </Box>
 

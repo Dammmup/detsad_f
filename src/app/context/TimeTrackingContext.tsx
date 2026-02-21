@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
 } from 'react';
 import { toast } from 'react-toastify';
 import { apiClient } from '../../shared/utils/api';
@@ -298,14 +299,11 @@ export const TimeTrackingProvider = ({
     setLoading(false);
   }, []);
 
-  const value = {
-
+  const value = useMemo(() => ({
     timeStatus,
     loading,
     location,
     locationError,
-
-
     fetchTimeStatus,
     getCurrentLocation,
     clockIn,
@@ -314,8 +312,6 @@ export const TimeTrackingProvider = ({
     endBreak,
     getTimeEntries,
     getTimeSummary,
-
-
     formatTime: (date: string | number | Date) => {
       return new Date(date).toLocaleTimeString('ru-RU', {
         hour: '2-digit',
@@ -323,7 +319,6 @@ export const TimeTrackingProvider = ({
         second: '2-digit',
       });
     },
-
     formatDuration: (startTime: string | number | Date) => {
       const now = new Date();
       const diff = now.getTime() - new Date(startTime).getTime();
@@ -331,11 +326,23 @@ export const TimeTrackingProvider = ({
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       return `${hours}ч ${minutes}м`;
     },
-
     formatHours: (hours: number) => {
       return `${hours.toFixed(2)}ч`;
     },
-  };
+  }), [
+    timeStatus,
+    loading,
+    location,
+    locationError,
+    fetchTimeStatus,
+    getCurrentLocation,
+    clockIn,
+    clockOut,
+    startBreak,
+    endBreak,
+    getTimeEntries,
+    getTimeSummary,
+  ]);
 
   return (
     <TimeTrackingContext.Provider value={value}>

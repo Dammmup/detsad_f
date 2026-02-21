@@ -37,6 +37,7 @@ import { useAuth } from '../../../app/context/AuthContext';
 import { SelectChangeEvent } from '@mui/material/Select';
 import apiClient from '../../../shared/utils/api';
 import ExportButton from '../../../shared/components/ExportButton';
+import AuditLogButton from '../../../shared/components/AuditLogButton';
 
 
 
@@ -87,10 +88,9 @@ const Groups = () => {
   const [form, setForm] = useState<GroupFormData>(defaultForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-
+  const [teachersLoaded, setTeachersLoaded] = useState(false);
+  const [groupsLoaded, setGroupsLoaded] = useState(false);
 
   const [expandedGroups, setExpandedGroups] = useState<{
     [groupId: string]: {
@@ -102,6 +102,9 @@ const Groups = () => {
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
   const isAdminOrManager = currentUser?.role === 'admin' || currentUser?.role === 'manager';
+
+  // Стабильные ссылки на функции контекста
+  const { fetchGroups: contextFetchGroups, updateGroup: contextUpdateGroup, createGroup: contextCreateGroup, deleteGroup: contextDeleteGroup, getGroup: contextGetGroup } = groupsContext;
 
   const handleExport = async (
     _exportType: string,
@@ -129,8 +132,8 @@ const Groups = () => {
   };
 
   const fetchTeachers = async () => {
+    if (teachersLoaded) return;
     try {
-
       const { getUsers } = await import('../../staff/services/userService');
       const users = await getUsers();
       const filtered = users.filter((u: any) =>
@@ -139,17 +142,19 @@ const Groups = () => {
       setTeacherList(
         filtered.map((u: any) => ({ id: u.id || u._id, fullName: u.fullName })),
       );
+      setTeachersLoaded(true);
     } catch (e) {
       setTeacherList([]);
     }
   };
 
-  const fetchGroups = async () => {
+  const fetchGroupsInternal = useCallback(async () => {
+    if (!isLoggedIn || !currentUser || authLoading || groupsLoaded) return;
+
     setLoading(true);
     setError(null);
     try {
-      const data = await groupsContext.fetchGroups(true);
-
+      const data = await contextFetchGroups(true);
 
       const formattedData = Array.isArray(data)
         ? data.map((group) => ({
@@ -174,26 +179,21 @@ const Groups = () => {
         : [];
 
       setGroups(formattedData);
+      setGroupsLoaded(true);
     } catch (err: any) {
       setError(err?.message || 'Ошибка загрузки групп');
     } finally {
       setLoading(false);
     }
-  };
+  }, [isLoggedIn, currentUser, authLoading, groupsLoaded, contextFetchGroups]);
 
-  const fetchGroupsCallback = useCallback(fetchGroups, [groupsContext]);
-
-
+  // Загрузка данных при первом рендере
   useEffect(() => {
-    (async () => {
-      if (isLoggedIn && currentUser && !authLoading) {
-        if (process.env.NODE_ENV !== 'production')
-          console.log('User authenticated, loading groups and teachers...');
-        await fetchGroupsCallback();
-        await fetchTeachers();
-      }
-    })();
-  }, [isLoggedIn, currentUser, authLoading, fetchGroupsCallback]);
+    if (isLoggedIn && currentUser && !authLoading) {
+      fetchGroupsInternal();
+      fetchTeachers();
+    }
+  }, [isLoggedIn, currentUser, authLoading]);
 
 
   useEffect(() => {
@@ -283,13 +283,13 @@ const Groups = () => {
       };
 
       if (editId) {
-        await groupsContext.updateGroup(editId, groupData);
+        await contextUpdateGroup(editId, groupData);
       } else {
-        await groupsContext.createGroup(groupData);
+        await contextCreateGroup(groupData);
       }
 
       handleCloseModal();
-      await fetchGroups();
+      await fetchGroupsInternal();
     } catch (e: any) {
       alert(e?.message || 'Ошибка сохранения');
     } finally {
@@ -303,8 +303,8 @@ const Groups = () => {
     if (!window.confirm('Удалить группу?')) return;
     setSaving(true);
     try {
-      await groupsContext.deleteGroup(id);
-      await fetchGroups();
+      await contextDeleteGroup(id);
+      await fetchGroupsInternal();
     } catch (e: any) {
       alert(e?.message || 'Ошибка удаления');
     } finally {
@@ -350,7 +350,7 @@ const Groups = () => {
           let children: Child[] = (group && (group as any).children) || [];
           if (!children.length) {
 
-            const fullGroup = await groupsContext.getGroup(groupId);
+            const fullGroup = await contextGetGroup(groupId);
             children = ((fullGroup as any).children || []) as Child[];
           }
           setExpandedGroups((prev) => ({
@@ -383,6 +383,7 @@ const Groups = () => {
         Группы
       </h1>
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        <AuditLogButton entityType="group" />
         <ExportButton
           exportTypes={[{ value: 'groups', label: 'Список групп' }]}
           onExport={handleExport}
@@ -462,6 +463,7 @@ const Groups = () => {
                             <Visibility color="primary" />
                           )}
                         </IconButton>
+                        <AuditLogButton entityType="group" entityId={group._id || group.id} entityName={group.name} />
                         {isAdminOrManager && (
                           <>
                             <IconButton onClick={() => handleOpenModal(group)}>

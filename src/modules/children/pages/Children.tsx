@@ -31,6 +31,7 @@ import apiClient from '../../../shared/utils/api';
 import ChildrenModal from '../components/ChildrenModal';
 
 import ExportButton from '../../../shared/components/ExportButton';
+import AuditLogButton from '../../../shared/components/AuditLogButton';
 import { useAuth } from '../../../app/context/AuthContext';
 
 const Children: React.FC = () => {
@@ -292,6 +293,7 @@ const Children: React.FC = () => {
           flexDirection={isMobile ? 'column' : 'row'}
           gap={1}
         >
+          <AuditLogButton entityType="child" />
           <ExportButton
             exportTypes={[{ value: 'children', label: 'Список детей' }]}
             onExport={handleExport}
@@ -648,6 +650,7 @@ const Children: React.FC = () => {
                     {child.active ? 'Активен' : 'Неактивен'}
                   </TableCell>
                   <TableCell align='right' sx={{ p: isMobile ? 1 : 2 }}>
+                    <AuditLogButton entityType="child" entityId={child._id} entityName={child.fullName} />
                     <IconButton
                       size={isMobile ? 'small' : 'medium'}
                       onClick={() => handleOpenModal(child)}
@@ -657,6 +660,7 @@ const Children: React.FC = () => {
                     <IconButton
                       size={isMobile ? 'small' : 'medium'}
                       onClick={() => handleDelete(child.id || child._id)}
+                      sx={{ visibility: currentUser?.role === 'admin' ? 'visible' : 'hidden' }}
                     >
                       <Delete fontSize={isMobile ? 'small' : 'medium'} />
                     </IconButton>

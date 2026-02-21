@@ -63,6 +63,7 @@ import AttendanceBulkModal from '../components/AttendanceBulkModal';
 import ExportButton from '../../../shared/components/ExportButton';
 import DateNavigator from '../../../shared/components/DateNavigator';
 import { importChildAttendance } from '../../../shared/services/importService';
+import AuditLogButton from '../../../shared/components/AuditLogButton';
 
 
 const ATTENDANCE_STATUSES = {
@@ -172,16 +173,10 @@ const WeeklyAttendance: React.FC = () => {
           currentUser.role === 'teacher' ||
           currentUser.role === 'assistant'
         ) {
-          const myGroup = groupsData.find(
-            (g) =>
-              g.teacher === currentUser.id ||
-              g.teacher === currentUser._id ||
-              g.teacherId === currentUser.id ||
-              g.teacherId === currentUser._id ||
-              (typeof g.teacher === 'object' && ((g.teacher as any)._id === currentUser._id || (g.teacher as any).id === currentUser.id))
-          );
-          if (myGroup && (myGroup.id || myGroup._id)) {
-            setSelectedGroup(myGroup.id || myGroup._id || '');
+          // Бэкенд уже фильтрует группы, оставляя только те, где пользователь учитель или помощник
+          // Просто выбираем первую группу из отфильтрованного списка
+          if (groupsData.length > 0 && (groupsData[0].id || groupsData[0]._id)) {
+            setSelectedGroup(groupsData[0].id || groupsData[0]._id || '');
           }
         }
       } catch (err: any) {
@@ -408,7 +403,10 @@ const WeeklyAttendance: React.FC = () => {
                 justifyContent='space-between'
                 alignItems='center'
               >
-                <Typography variant='h5'>Посещаемость</Typography>
+                <Box display='flex' alignItems='center' gap={1}>
+                  <Typography variant='h5'>Посещаемость</Typography>
+                  <AuditLogButton entityType="childAttendance" />
+                </Box>
                 <Box display='flex' gap={2}>
                   <Button
                     variant='contained'

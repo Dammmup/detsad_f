@@ -33,6 +33,7 @@ import {
 } from '@mui/icons-material';
 import RentTenantSelector from './RentTenantSelector';
 import AddExternalSpecialistModal from './AddExternalSpecialistModal';
+import AuditLogButton from '../../../shared/components/AuditLogButton';
 
 interface Props {
   userId?: string;
@@ -522,6 +523,7 @@ const RentReport: React.FC<Props> = ({ userId }) => {
                 Добавить специалиста
               </Button>
               <Button variant='outlined' color='info' startIcon={<VisibilityIcon />} onClick={handleExportToExcel}>Экспорт</Button>
+              <AuditLogButton entityType="rent" />
             </Box>
           )}
 

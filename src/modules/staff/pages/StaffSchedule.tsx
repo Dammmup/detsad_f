@@ -47,6 +47,7 @@ import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { Search as SearchIcon } from '@mui/icons-material';
 import ExportButton from '../../../shared/components/ExportButton';
+import AuditLogButton from '../../../shared/components/AuditLogButton';
 import {
   exportStaffAttendance,
 } from '../../../shared/utils/excelExport';
@@ -532,6 +533,7 @@ const StaffSchedule: React.FC = () => {
               <Box display='flex' justifyContent='space-between' alignItems='center'>
                 <Typography variant='h5'>График смен</Typography>
                 <Box>
+                  <AuditLogButton entityType="staffShift" />
                   <ExportButton
                     exportTypes={[{ value: 'staff-schedule', label: 'График смен' }]}
                     onExport={handleExport}

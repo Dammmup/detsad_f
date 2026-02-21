@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useMemo, useCallback, ReactNode } from 'react';
 
 interface DateContextType {
   currentDate: Date;
@@ -8,10 +8,15 @@ interface DateContextType {
 const DateContext = createContext<DateContextType | undefined>(undefined);
 
 export const DateProvider = ({ children }: { children: ReactNode }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+
+  const value = useMemo(() => ({
+    currentDate,
+    setCurrentDate,
+  }), [currentDate]);
 
   return (
-    <DateContext.Provider value={{ currentDate, setCurrentDate }}>
+    <DateContext.Provider value={value}>
       {children}
     </DateContext.Provider>
   );

@@ -22,6 +22,7 @@ import {
 import { Add, Delete } from '@mui/icons-material';
 import { User } from '../../../shared/types/common';
 import { useAuth } from '../../../app/context/AuthContext';
+import AuditLogButton from '../../../shared/components/AuditLogButton';
 import {
   getTaskList,
   createTask,
@@ -223,22 +224,25 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
           >
             📋 Уведомления
           </Typography>
-          <Button
-            variant='contained'
-            size='small'
-            startIcon={<Add />}
-            onClick={() => setShowAddTaskDialog(true)}
-            sx={{
-              backgroundColor: 'rgb(24, 144, 255)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,0.3)',
-              '&:hover': {
-                backgroundColor: 'green',
-              },
-            }}
-          >
-            Добавить
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <AuditLogButton entityType="task" />
+            <Button
+              variant='contained'
+              size='small'
+              startIcon={<Add />}
+              onClick={() => setShowAddTaskDialog(true)}
+              sx={{
+                backgroundColor: 'rgb(24, 144, 255)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,0.3)',
+                '&:hover': {
+                  backgroundColor: 'green',
+                },
+              }}
+            >
+              Добавить
+            </Button>
+          </Box>
         </Box>
 
         {error && (

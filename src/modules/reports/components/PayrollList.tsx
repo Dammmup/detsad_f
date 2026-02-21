@@ -55,6 +55,7 @@ import { UserRole } from '../../../shared/types/common';
 import { PayrollRecord as Payroll } from '../../../shared/types/staff';
 import FinesDetailsDialog from './FinesDetailsDialog';
 import PayrollTotalDialog from './PayrollTotalDialog';
+import AuditLogButton from '../../../shared/components/AuditLogButton';
 
 interface Props {
   userId?: string;
@@ -144,7 +145,8 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
           const userData = getCurrentUser();
           if (userData) {
             // Проверяем, есть ли право на просмотр зарплаты
-            if (personalOnly && !userData.allowToSeePayroll) {
+            const isAdmin = userData.role === 'admin';
+            if (personalOnly && !userData.allowToSeePayroll && !isAdmin) {
               setError('У вас нет доступа к информации о зарплате');
               setLoading(false);
               return;
@@ -1035,7 +1037,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             <Box sx={{ textAlign: 'center', mb: 3 }}>
               <Typography variant='h3' sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>Расчетные листы</Typography>
               <Typography variant='h6' sx={{ color: 'text.secondary', fontWeight: 'medium' }}>Управление зарплатами за {selectedMonthLabel}</Typography>
-              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
                 <TextField
                   label='Выберите месяц'
                   type='month'
@@ -1044,6 +1046,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                   onChange={(e) => setSelectedMonth(e.target.value)}
                   InputLabelProps={{ shrink: true }}
                 />
+                <AuditLogButton entityType="payroll" />
               </Box>
             </Box>
 

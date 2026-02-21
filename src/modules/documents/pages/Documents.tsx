@@ -60,6 +60,7 @@ import {
   deleteDocument,
   downloadDocument,
 } from '../services/documents';
+import AuditLogButton from '../../../shared/components/AuditLogButton';
 
 
 const roleTranslations: Record<string, string> = {
@@ -369,11 +370,13 @@ export const Documents = () => {
           Документы
         </Typography>
         <Box>
+          <AuditLogButton entityType="document" />
           <Button
             variant='contained'
             color='primary'
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
+            sx={{ ml: 1 }}
           >
             Добавить документ
           </Button>

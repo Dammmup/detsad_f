@@ -14,6 +14,11 @@ import {
     Chip,
     Paper,
     Divider,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    SelectChangeEvent,
 } from '@mui/material';
 import {
     CheckCircle as CheckCircleIcon,
@@ -34,6 +39,7 @@ import {
     bulkSaveChildAttendance,
     ChildAttendanceRecord,
 } from '../services/childAttendance';
+import AuditLogButton from '../../../shared/components/AuditLogButton';
 
 const ATTENDANCE_STATUSES = [
     { id: 'present', label: 'Присутствует', color: 'success', icon: <CheckCircleIcon /> },
@@ -50,6 +56,8 @@ const DailyAttendance: React.FC = () => {
     const [saving, setSaving] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState(moment());
     const [group, setGroup] = useState<any>(null);
+    const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+    const [groupsList, setGroupsList] = useState<any[]>([]);
     const [children, setChildren] = useState<Child[]>([]);
     const [attendance, setAttendance] = useState<Record<string, ChildAttendanceRecord>>({});
 
@@ -61,18 +69,15 @@ const DailyAttendance: React.FC = () => {
             setLoading(true);
             try {
                 const groupsData = await getGroups();
-                const myGroup = groupsData.find(
-                    (g: any) =>
-                        g.teacher === currentUser.id ||
-                        g.teacher === currentUser._id ||
-                        g.teacherId === currentUser.id ||
-                        g.teacherId === currentUser._id ||
-                        (typeof g.teacher === 'object' && ((g.teacher as any)._id === currentUser._id || (g.teacher as any).id === currentUser.id))
-                );
+                setGroupsList(groupsData || []);
 
-                if (myGroup) {
-                    setGroup(myGroup);
-                    const groupId = myGroup.id || myGroup._id;
+                // Бэкенд уже фильтрует группы, оставляя только те, где пользователь учитель или помощник
+                // Просто выбираем первую группу из отфильтрованного списка
+                if (groupsData.length > 0) {
+                    const firstGroup = groupsData[0];
+                    const groupId = firstGroup.id || firstGroup._id;
+                    setSelectedGroupId(groupId);
+                    setGroup(firstGroup);
 
                     const [childrenList, attendanceRecords] = await Promise.all([
                         childrenApi.getAll(),
@@ -107,6 +112,45 @@ const DailyAttendance: React.FC = () => {
 
         fetchData();
     }, [currentUser, selectedDate, enqueueSnackbar]);
+
+    const handleGroupChange = async (e: SelectChangeEvent<string>) => {
+        const newGroupId = e.target.value;
+        setSelectedGroupId(newGroupId);
+        const newGroup = groupsList.find((g: any) => (g.id || g._id) === newGroupId);
+        if (newGroup) {
+            setGroup(newGroup);
+            setLoading(true);
+            try {
+                const [childrenList, attendanceRecords] = await Promise.all([
+                    childrenApi.getAll(),
+                    getChildAttendance({
+                        groupId: newGroupId,
+                        date: selectedDate.format('YYYY-MM-DD'),
+                    }),
+                ]);
+
+                const filteredChildren = childrenList.filter((child: Child) => {
+                    if (typeof child.groupId === 'object' && child.groupId !== null) {
+                        return (child.groupId as any)._id === newGroupId || (child.groupId as any).id === newGroupId;
+                    }
+                    return child.groupId === newGroupId;
+                });
+
+                setChildren(filteredChildren);
+
+                const attendanceMap: Record<string, ChildAttendanceRecord> = {};
+                attendanceRecords.forEach((record) => {
+                    attendanceMap[record.childId] = record;
+                });
+                setAttendance(attendanceMap);
+            } catch (error) {
+                console.error('Error fetching group data:', error);
+                enqueueSnackbar('Ошибка при загрузке данных группы', { variant: 'error' });
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
 
     const handleStatusChange = async (childId: string, status: any) => {
         if (!group) return;
@@ -179,7 +223,7 @@ const DailyAttendance: React.FC = () => {
         );
     }
 
-    if (!group) {
+    if (!group && groupsList.length === 0) {
         return (
             <Box p={3} textAlign="center">
                 <Typography variant="h6" color="textSecondary">
@@ -195,9 +239,27 @@ const DailyAttendance: React.FC = () => {
                 <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
                     <Box>
                         <Box display="flex" alignItems="center" gap={2} mb={1}>
-                            <Typography variant="h5" fontWeight="bold">
-                                {group.name}
-                            </Typography>
+                            {groupsList.length > 1 ? (
+                                <FormControl size="small" sx={{ minWidth: 200 }}>
+                                    <InputLabel>Выберите группу</InputLabel>
+                                    <Select
+                                        value={selectedGroupId}
+                                        label="Выберите группу"
+                                        onChange={handleGroupChange}
+                                    >
+                                        {groupsList.map((g: any) => (
+                                            <MenuItem key={g.id || g._id} value={g.id || g._id}>
+                                                {g.name}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            ) : (
+                                <Typography variant="h5" fontWeight="bold">
+                                    {group.name}
+                                </Typography>
+                            )}
+                            <AuditLogButton entityType="childAttendance" />
                             <Button
                                 variant="contained"
                                 color="success"

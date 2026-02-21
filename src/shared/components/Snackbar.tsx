@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import Slide from '@mui/material/Slide';
@@ -51,8 +51,10 @@ const SnackbarProvider = ({
     dispatchAction({ type: ACTIONS.close });
   };
 
+  const contextValue = useMemo(() => state, [state.open, state.message, state.type]);
+
   return (
-    <SnackbarContext.Provider value={state}>
+    <SnackbarContext.Provider value={contextValue}>
       <Snackbar
         open={state.open}
         autoHideDuration={state.autoHideDuration}

@@ -36,6 +36,7 @@ import {
   Person,
 } from '@mui/icons-material';
 import ExportButton from '../../shared/components/ExportButton';
+import AuditLogButton from '../../shared/components/AuditLogButton';
 import { exportData } from '../../shared/utils/exportUtils';
 import {
   getExternalSpecialists,
@@ -209,14 +210,17 @@ const Rent = () => {
               onExport={handleExport}
             />
           </Box>
-          <Button
-            variant='contained'
-            color='primary'
-            startIcon={<Add />}
-            onClick={() => handleOpenModal()}
-          >
-            Добавить арендатора
-          </Button>
+          <Box mb={2} sx={{ display: 'flex', gap: 1 }}>
+            <AuditLogButton entityType="externalSpecialist" />
+            <Button
+              variant='contained'
+              color='primary'
+              startIcon={<Add />}
+              onClick={() => handleOpenModal()}
+            >
+              Добавить арендатора
+            </Button>
+          </Box>
         </Box>
 
         {/* Поиск */}

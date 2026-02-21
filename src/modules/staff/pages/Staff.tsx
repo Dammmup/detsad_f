@@ -54,6 +54,7 @@ import { User as StaffMember, UserRole, STAFF_ROLES, EXTERNAL_ROLES } from '../.
 import { getGroups } from '../../children/services/groups';
 import { useAuth } from '../../../app/context/AuthContext';
 import ExportButton from '../../../shared/components/ExportButton';
+import AuditLogButton from '../../../shared/components/AuditLogButton';
 import { exportData } from '../../../shared/utils/exportUtils';
 
 
@@ -332,7 +333,8 @@ const Staff = () => {
           >
             <Person style={{ marginRight: 8 }} /> Сотрудники
           </Typography>
-          <Box mb={2}>
+          <Box mb={2} display='flex' alignItems='center' gap={1}>
+            <AuditLogButton entityType="staff" />
             <ExportButton
               exportTypes={[{ value: 'staff', label: 'Список сотрудников' }]}
               onExport={handleExport}
@@ -508,6 +510,7 @@ const Staff = () => {
                         />
                       </TableCell>
                       <TableCell align='right'>
+                        <AuditLogButton entityType="staff" entityId={member._id} entityName={member.fullName} />
                         <Tooltip title='Редактировать'>
                           <IconButton onClick={() => handleOpenModal(member)}>
                             <Edit />

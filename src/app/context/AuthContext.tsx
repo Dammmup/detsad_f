@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   ReactNode,
 } from 'react';
 import { getCurrentUser, isAuthenticated, logout } from '../../modules/staff/services/auth';
@@ -133,14 +134,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [user]);
 
-  const value: AuthContextType = {
+  const value = useMemo(() => ({
     user,
     isLoggedIn,
     loading,
     login: handleLogin,
     logout: handleLogout,
     checkAuth,
-  };
+  }), [user, isLoggedIn, loading, handleLogin, handleLogout, checkAuth]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

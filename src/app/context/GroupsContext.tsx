@@ -3,6 +3,7 @@ import React, {
   useContext,
   useState,
   useCallback,
+  useMemo,
   ReactNode,
 } from 'react';
 import * as groupsApi from '../../modules/children/services/groups';
@@ -51,7 +52,6 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
 
     const now = Date.now();
     if (!force && groupsCache && now - cacheTimestamp < CACHE_DURATION) {
-      setGroups(groupsCache as Group[]);
       return groupsCache;
     }
 
@@ -168,21 +168,21 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
     await fetchGroups(true);
   };
 
+  const value = useMemo(() => ({
+    groups,
+    loading,
+    error,
+    fetchGroups,
+    createGroup,
+    updateGroup,
+    deleteGroup,
+    refreshGroups,
+    getGroup,
+    getTeachers,
+  }), [groups, loading, error, fetchGroups, createGroup, updateGroup, deleteGroup, refreshGroups, getGroup, getTeachers]);
+
   return (
-    <GroupsContext.Provider
-      value={{
-        groups,
-        loading,
-        error,
-        fetchGroups,
-        createGroup,
-        updateGroup,
-        deleteGroup,
-        refreshGroups,
-        getGroup,
-        getTeachers,
-      }}
-    >
+    <GroupsContext.Provider value={value}>
       {children}
     </GroupsContext.Provider>
   );
