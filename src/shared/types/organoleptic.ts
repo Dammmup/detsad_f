@@ -4,6 +4,8 @@ export interface OrganolepticRecord {
     date: Date | string;
     dish: string; // Changed from dishName back to dish
     group?: string; // Added back
+    category?: string;
+    subcategory?: string;
     appearance: number;
     smell: number;
     taste: number;

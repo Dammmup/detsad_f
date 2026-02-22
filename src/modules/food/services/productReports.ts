@@ -98,3 +98,21 @@ export const getSummaryReport = async (startDate: string, endDate: string): Prom
     const { data } = await api.get(`/product-reports/summary?startDate=${startDate}&endDate=${endDate}`);
     return data;
 };
+export interface NormsData {
+    period: { startDate: string; endDate: string };
+    totalChildDays: number;
+    daysCount: number;
+    consumption: {
+        productId: string;
+        productName: string;
+        totalConsumed: number;
+        unit: string;
+        category?: string;
+    }[];
+}
+
+// Данные для ведомости норм
+export const getNormsData = async (startDate: string, endDate: string): Promise<NormsData> => {
+    const { data } = await api.get(`/product-reports/norms-data?startDate=${startDate}&endDate=${endDate}`);
+    return data;
+};

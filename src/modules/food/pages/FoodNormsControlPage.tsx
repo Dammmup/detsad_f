@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -15,59 +15,99 @@ import {
   MenuItem,
   InputAdornment,
   IconButton,
+  FormControl,
+  InputLabel,
+  CircularProgress,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
+import { getNormsData, NormsData } from '../services/productReports';
+import { SANPIN_NORMS, CATEGORY_MAPPING } from '../../../shared/constants/foodNorms';
 
-const MONTHS = [
-  'Январь',
-  'Февраль',
-  'Март',
-  'Апрель',
-  'Май',
-  'Июнь',
-  'Июль',
-  'Август',
-  'Сентябрь',
-  'Октябрь',
-  'Ноябрь',
-  'Декабрь',
+const AGE_GROUPS = [
+  { value: '1-3', label: '1-3 года' },
+  { value: '3-7', label: '3-7 лет' },
 ];
-const GROUPS = ['Группа 1', 'Группа 2', 'Группа 3'];
-const STATUSES = ['Все', 'В норме', 'Отклонение', 'Превышение'];
+
+interface NormRow {
+  category: string;
+  norm: number;
+  actual: number;
+  deviation: number;
+  unit: string;
+  status: string;
+}
 
 const FoodNormsControlPage: React.FC = () => {
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<NormRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [days, setDays] = useState(10);
+  const [ageGroup, setAgeGroup] = useState<'1-3' | '3-7'>('3-7');
   const [search, setSearch] = useState('');
-  const [month, setMonth] = useState(MONTHS[0]);
-  const [year, setYear] = useState(new Date().getFullYear().toString());
-  const [group, setGroup] = useState(GROUPS[0]);
-  const [status, setStatus] = useState('Все');
   const [note, setNote] = useState('');
 
+  const calculateReport = async () => {
+    setLoading(true);
+    try {
+      const end = new Date(startDate);
+      end.setDate(end.getDate() + days - 1);
+      const endDateStr = end.toISOString().slice(0, 10);
+
+      const data: NormsData = await getNormsData(startDate, endDateStr);
+
+      if (!data.totalChildDays) {
+        setRows([]);
+        return;
+      }
+
+      // Группируем расход по категориям СанПиН
+      const categorizedConsumption: Record<string, number> = {};
+
+      data.consumption.forEach(item => {
+        // Определяем категорию СанПиН через маппинг по имени продукта или его категории
+        // Сначала пробуем найти точное соответствие в маппинге для продукта (если бы оно было)
+        // Но сейчас у нас маппинг категорий.
+        const sanpinCat = CATEGORY_MAPPING[item.category || ''] || 'Прочее';
+        categorizedConsumption[sanpinCat] = (categorizedConsumption[sanpinCat] || 0) + item.totalConsumed;
+      });
+
+      // Формируем строки для таблицы
+      const newRows = SANPIN_NORMS.map(norm => {
+        const actualTotalGrams = categorizedConsumption[norm.category] || 0;
+        // Среднее на 1 ребенка в день
+        // Важно: если единица "шт" (для яиц), оставляем как есть, если "г", то в расчетах обычно все в граммах
+        const actualAvg = actualTotalGrams / data.totalChildDays;
+
+        const targetNorm = norm.norms[ageGroup];
+        const deviation = targetNorm ? Math.round(((actualAvg - targetNorm) / targetNorm) * 100) : 0;
+
+        return {
+          category: norm.category,
+          unit: norm.unit,
+          norm: targetNorm,
+          actual: Number(actualAvg.toFixed(2)),
+          deviation,
+          status: getStatus(targetNorm, actualAvg)
+        };
+      });
+
+      setRows(newRows);
+    } catch (error) {
+      console.error('Ошибка при расчете норм:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    calculateReport();
+  }, [startDate, days, ageGroup]);
 
   const filteredRows = rows.filter((row) => {
-
-    const matchesSearch = !search ||
-      row.product.toLowerCase().includes(search.toLowerCase());
-
-
-    const matchesStatus = status === 'Все' || row.status === status;
-
-    return matchesSearch && matchesStatus;
+    return !search || row.category.toLowerCase().includes(search.toLowerCase());
   });
-
-  const handleAutoFill = () => {
-
-  };
-
-  const handleAdd = () => {
-    setRows((prev) => [
-      ...prev,
-      { product: '', norm: 0, actual: 0, deviation: 0, status: 'В норме' },
-    ]);
-  };
 
   const handleExport = async (
     exportType: string,
@@ -76,186 +116,131 @@ const FoodNormsControlPage: React.FC = () => {
     await exportData('food-norms-control', exportFormat, {
       rows: filteredRows,
       note,
-      month,
-      year,
-      group,
+      startDate,
+      days,
+      ageGroup,
     });
   };
 
   function getStatus(norm: number, actual: number) {
     if (!norm) return 'В норме';
-    const deviation = Math.abs(((actual - norm) / norm) * 100);
-    if (deviation <= 10) return 'В норме';
-    if (deviation <= 20) return 'Отклонение';
-    return 'Превышение';
+    const deviation = ((actual - norm) / norm) * 100;
+    if (Math.abs(deviation) <= 10) return 'В норме';
+    if (deviation > 10) return 'Превышение';
+    return 'Отклонение';
   }
+
+  const getRowColor = (status: string) => {
+    switch (status) {
+      case 'Превышение': return '#ffe0e0';
+      case 'Отклонение': return '#fffbe0';
+      default: return 'inherit';
+    }
+  };
 
   return (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
       <Typography variant='h4' gutterBottom>
-        Ведомость контроля за выполнением норм пищевой продукции (Форма 4)
+        Ведомость контроля норм питания (СанПиН)
       </Typography>
+
       <Paper sx={{ mb: 2, p: 2 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
-          <Select
-            size='small'
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            sx={{ width: 120 }}
-          >
-            {MONTHS.map((m) => (
-              <MenuItem key={m} value={m}>
-                {m}
-              </MenuItem>
-            ))}
-          </Select>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mb={2} alignItems="center">
           <TextField
-            label='Год'
+            type='date'
+            label='Начало периода'
             size='small'
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-            sx={{ width: 100 }}
+            InputLabelProps={{ shrink: true }}
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
           />
-          <Select
+          <TextField
+            type='number'
+            label='Период (дней)'
             size='small'
-            value={group}
-            onChange={(e) => setGroup(e.target.value)}
-            sx={{ minWidth: 180 }}
-          >
-            {GROUPS.map((g) => (
-              <MenuItem key={g} value={g}>
-                {g}
-              </MenuItem>
-            ))}
-          </Select>
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+            sx={{ width: 120 }}
+          />
+          <FormControl size='small' sx={{ minWidth: 150 }}>
+            <InputLabel>Возраст</InputLabel>
+            <Select
+              value={ageGroup}
+              label='Возраст'
+              onChange={(e) => setAgeGroup(e.target.value as any)}
+            >
+              {AGE_GROUPS.map((ag) => (
+                <MenuItem key={ag.value} value={ag.value}>
+                  {ag.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <TextField
             size='small'
-            placeholder='Поиск по продуктам...'
+            placeholder='Поиск по категориям...'
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             InputProps={{
               endAdornment: (
                 <InputAdornment position='end'>
-                  <IconButton size='small'>
-                    <SearchIcon />
-                  </IconButton>
+                  <SearchIcon />
                 </InputAdornment>
               ),
             }}
             sx={{ minWidth: 200 }}
           />
-          <Select
-            size='small'
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            sx={{ minWidth: 140 }}
-          >
-            {STATUSES.map((s) => (
-              <MenuItem key={s} value={s}>
-                {s}
-              </MenuItem>
-            ))}
-          </Select>
-          <Button variant='contained' size='small' onClick={handleAutoFill}>
-            Генерировать по меню
-          </Button>
+          <Box sx={{ flexGrow: 1 }} />
           <ExportButton
             exportTypes={[
               {
                 value: 'food-norms-control',
-                label: 'Ведомость контроля норм питания',
+                label: 'Ведомость норм питания',
               },
             ]}
             onExport={handleExport}
           />
         </Stack>
-        <Table size='small' sx={{ minWidth: 800, overflowX: 'auto' }}>
-          <TableHead>
-            <TableRow>
-              <TableCell>№</TableCell>
-              <TableCell>Наименование пищевой продукции</TableCell>
-              <TableCell>Норма (г/мл брутто на 1 ребенка в день)</TableCell>
-              <TableCell>Фактически</TableCell>
-              <TableCell>Отклонение от нормы (%)</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredRows.length === 0 && (
+
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Table size='small' sx={{ minWidth: 800 }}>
+            <TableHead>
               <TableRow>
-                <TableCell
-                  colSpan={5}
-                  align='center'
-                  sx={{ color: 'text.disabled' }}
-                >
-                  Продукты отсутствуют. Добавьте продукты вручную.
-                </TableCell>
+                <TableCell>Наименование группы продуктов</TableCell>
+                <TableCell align="center">Ед. изм.</TableCell>
+                <TableCell align="center">Норма (на 1 реб.)</TableCell>
+                <TableCell align="center">Факт (среднее)</TableCell>
+                <TableCell align="center">Отклонение (%)</TableCell>
               </TableRow>
-            )}
-            {filteredRows.map((row, idx) => (
-              <TableRow key={idx}>
-                <TableCell>{idx + 1}</TableCell>
-                <TableCell>
-                  <TextField
-                    size='small'
-                    value={row.product}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setRows((prev) =>
-                        prev.map((r, i) =>
-                          i === idx ? { ...r, product: v } : r,
-                        ),
-                      );
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <TextField
-                    size='small'
-                    type='number'
-                    value={row.norm}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      setRows((prev) =>
-                        prev.map((r, i) => (i === idx ? { ...r, norm: v } : r)),
-                      );
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <TextField
-                    size='small'
-                    type='number'
-                    value={row.actual}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      setRows((prev) =>
-                        prev.map((r, i) =>
-                          i === idx
-                            ? {
-                              ...r,
-                              actual: v,
-                              deviation: r.norm
-                                ? Math.round(((v - r.norm) / r.norm) * 100)
-                                : 0,
-                              status: getStatus(r.norm, v),
-                            }
-                            : r,
-                        ),
-                      );
-                    }}
-                  />
-                </TableCell>
-                <TableCell>{row.deviation}%</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-          <Button variant='outlined' size='small' onClick={handleAdd}>
-            Добавить продукт
-          </Button>
-        </Box>
+            </TableHead>
+            <TableBody>
+              {filteredRows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} align='center' sx={{ py: 3, color: 'text.disabled' }}>
+                    Нет данных за выбранный период. Убедитесь, что меню заполнено и продукты списаны.
+                  </TableCell>
+                </TableRow>
+              )}
+              {filteredRows.map((row, idx) => (
+                <TableRow key={idx} sx={{ backgroundColor: getRowColor(row.status) }}>
+                  <TableCell>{row.category}</TableCell>
+                  <TableCell align="center">{row.unit}</TableCell>
+                  <TableCell align="center">{row.norm}</TableCell>
+                  <TableCell align="center">{row.actual}</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>
+                    {row.deviation > 0 ? `+${row.deviation}` : row.deviation}%
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Paper>
+
       <Box sx={{ mb: 2 }}>
         <Typography variant='subtitle1'>Примечание</Typography>
         <TextField
@@ -264,26 +249,14 @@ const FoodNormsControlPage: React.FC = () => {
           minRows={2}
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder='Дополнительные заметки к ведомости...'
+          placeholder='Заметки к ведомости...'
         />
       </Box>
-      <Box sx={{ fontSize: 13, color: 'text.secondary' }}>
-        <b>Обозначения:</b>
-        <br />
-        <span style={{ background: '#e0ffe0', padding: '0 4px' }}>
-          Норма (отклонение ≤ 10%)
-        </span>{' '}
-        &nbsp;
-        <span style={{ background: '#fffbe0', padding: '0 4px' }}>
-          Отклонение (10% &lt; отклонение ≤ 20%)
-        </span>{' '}
-        &nbsp;
-        <span style={{ background: '#ffe0e0', padding: '0 4px' }}>
-          Превышение (отклонение &gt; 20%)
-        </span>{' '}
-        &nbsp;
-        <br />
-        Единицы измерения: г/мл брутто на 1 ребенка
+
+      <Box sx={{ fontSize: 13, color: 'text.secondary', p: 1, border: '1px dashed #ccc', borderRadius: 1 }}>
+        <b>Справка:</b> Расчет производится как (Общий расход продукта) / (Всего дето-дней за период).
+        Дето-день — это присутствие одного ребенка в течение одного дня.
+        Нормы соответствуют СанПиН 2.3/2.4.3590-20.
       </Box>
     </Box>
   );

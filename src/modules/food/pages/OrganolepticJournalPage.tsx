@@ -42,6 +42,18 @@ const GROUPS = [
   'Подготовительная',
 ];
 
+const CATEGORY_ORDER = ['breakfast', 'lunch', 'snack', 'dinner', 'dessert', 'drink', 'other'];
+
+const CATEGORY_LABELS: Record<string, string> = {
+  breakfast: 'Завтрак',
+  lunch: 'Обед',
+  snack: 'Полдник',
+  dinner: 'Ужин',
+  dessert: 'Десерт',
+  drink: 'Напиток',
+  other: 'Прочее',
+};
+
 export default function OrganolepticJournalPage() {
   const [records, setRecords] = useState<OrganolepticRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,6 +141,19 @@ export default function OrganolepticJournalPage() {
     });
   };
 
+  const groupedRecords = records.reduce((acc, record) => {
+    const cat = record.category || 'other';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(record);
+    return acc;
+  }, {} as Record<string, OrganolepticRecord[]>);
+
+  const sortedCategories = CATEGORY_ORDER.filter(cat => groupedRecords[cat]);
+  // Add categories that might not be in the order list
+  Object.keys(groupedRecords).forEach(cat => {
+    if (!sortedCategories.includes(cat)) sortedCategories.push(cat);
+  });
+
   return (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
       <Typography variant='h4' gutterBottom>
@@ -215,33 +240,42 @@ export default function OrganolepticJournalPage() {
                 </TableCell>
               </TableRow>
             )}
-            {records.map((r) => (
-              <TableRow key={r._id}>
-                <TableCell>{r.dish}</TableCell>
-                <TableCell>{r.group}</TableCell>
-                <TableCell>{r.appearance}</TableCell>
-                <TableCell>{r.taste}</TableCell>
-                <TableCell>{r.smell}</TableCell>
-                <TableCell>{r.decision}</TableCell>
-                <TableCell>
-                  <Button
-                    size='small'
-                    onClick={() => {
-                      setEditRecord(r);
-                      setModalOpen(true);
-                    }}
-                  >
-                    Редактировать
-                  </Button>
-                  <Button
-                    size='small'
-                    color='error'
-                    onClick={() => r._id && handleDelete(r._id)}
-                  >
-                    Удалить
-                  </Button>
-                </TableCell>
-              </TableRow>
+            {sortedCategories.map((cat) => (
+              <React.Fragment key={cat}>
+                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableCell colSpan={7} sx={{ fontWeight: 'bold' }}>
+                    {CATEGORY_LABELS[cat] || cat}
+                  </TableCell>
+                </TableRow>
+                {groupedRecords[cat].map((r) => (
+                  <TableRow key={r._id}>
+                    <TableCell>{r.dish}</TableCell>
+                    <TableCell>{r.group}</TableCell>
+                    <TableCell>{r.appearance}</TableCell>
+                    <TableCell>{r.taste}</TableCell>
+                    <TableCell>{r.smell}</TableCell>
+                    <TableCell>{r.decision}</TableCell>
+                    <TableCell>
+                      <Button
+                        size='small'
+                        onClick={() => {
+                          setEditRecord(r);
+                          setModalOpen(true);
+                        }}
+                      >
+                        Редактировать
+                      </Button>
+                      <Button
+                        size='small'
+                        color='error'
+                        onClick={() => r._id && handleDelete(r._id)}
+                      >
+                        Удалить
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </React.Fragment>
             ))}
           </TableBody>
         </Table>
@@ -260,6 +294,22 @@ export default function OrganolepticJournalPage() {
             fullWidth
             margin='dense'
           />
+          <FormControl fullWidth margin='dense'>
+            <InputLabel>Категория</InputLabel>
+            <Select
+              value={editRecord?.category || ''}
+              label='Категория'
+              onChange={(e) =>
+                setEditRecord((i: any) => ({ ...i, category: e.target.value }))
+              }
+            >
+              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                <MenuItem key={value} value={value}>
+                  {label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <TextField
             label='Группа'
             value={editRecord?.group || ''}

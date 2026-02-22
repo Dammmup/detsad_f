@@ -26,7 +26,10 @@ interface MenuItem {
     name: string;
     category: 'breakfast' | 'lunch' | 'dinner' | 'snack';
     ingredients: Array<{
-        productName: string;
+        productId?: {
+            _id: string;
+            name: string;
+        };
         quantity: number;
         unit: string;
     }>;
@@ -356,7 +359,7 @@ const MenuCalendarPage: React.FC = () => {
                                                         <Typography variant="subtitle1"><strong>{dish.name}</strong></Typography>
                                                         <Typography variant="body2" color="text.secondary">
                                                             {dish.ingredients.map((ing: any) =>
-                                                                `${ing.productName} - ${ing.quantity}${ing.unit}`
+                                                                `${ing.productId?.name || 'Продукт'} - ${ing.quantity}${ing.unit}`
                                                             ).join(', ')}
                                                         </Typography>
                                                     </Box>
@@ -379,7 +382,7 @@ const MenuCalendarPage: React.FC = () => {
                                                         <Typography variant="subtitle1"><strong>{dish.name}</strong></Typography>
                                                         <Typography variant="body2" color="text.secondary">
                                                             {dish.ingredients.map((ing: any) =>
-                                                                `${ing.productName} - ${ing.quantity}${ing.unit}`
+                                                                `${ing.productId?.name || 'Продукт'} - ${ing.quantity}${ing.unit}`
                                                             ).join(', ')}
                                                         </Typography>
                                                     </Box>
@@ -402,7 +405,7 @@ const MenuCalendarPage: React.FC = () => {
                                                         <Typography variant="subtitle1"><strong>{dish.name}</strong></Typography>
                                                         <Typography variant="body2" color="text.secondary">
                                                             {dish.ingredients.map((ing: any) =>
-                                                                `${ing.productName} - ${ing.quantity}${ing.unit}`
+                                                                `${ing.productId?.name || 'Продукт'} - ${ing.quantity}${ing.unit}`
                                                             ).join(', ')}
                                                         </Typography>
                                                     </Box>
@@ -425,7 +428,7 @@ const MenuCalendarPage: React.FC = () => {
                                                         <Typography variant="subtitle1"><strong>{dish.name}</strong></Typography>
                                                         <Typography variant="body2" color="text.secondary">
                                                             {dish.ingredients.map((ing: any) =>
-                                                                `${ing.productName} - ${ing.quantity}${ing.unit}`
+                                                                `${ing.productId?.name} - ${ing.quantity}${ing.unit}`
                                                             ).join(', ')}
                                                         </Typography>
                                                     </Box>

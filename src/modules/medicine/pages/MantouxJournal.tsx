@@ -148,7 +148,7 @@ export default function MantouxJournal() {
                         r.year,
                         r.atr,
                         r.diagnosis,
-                        String(r.mm),
+                        String(r.mm ?? 0),
                         r.has063 ? 'Да' : 'Нет',
                       ].map(
                         (val) =>
@@ -246,7 +246,7 @@ export default function MantouxJournal() {
                 <TableCell>{r.year}</TableCell>
                 <TableCell>{r.atr}</TableCell>
                 <TableCell>{r.diagnosis}</TableCell>
-                <TableCell>{r.mm}</TableCell>
+                <TableCell>{r.mm ?? 0}</TableCell>
                 <TableCell>{r.reactionSize}</TableCell>
                 <TableCell>{r.reactionType}</TableCell>
                 <TableCell>{r.injectionSite}</TableCell>
