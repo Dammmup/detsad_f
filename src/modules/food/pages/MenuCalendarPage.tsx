@@ -18,8 +18,10 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import CloseIcon from '@mui/icons-material/Close';
-import { getDailyMenus, DailyMenu as DailyMenuType, Meal } from '../services/dailyMenu';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { getDailyMenus, DailyMenu as DailyMenuType, Meal, deleteDailyMenu } from '../services/dailyMenu';
 import { Dish } from '../services/dishes';
+import { toast } from 'react-toastify';
 
 interface MenuItem {
     _id: string;
@@ -43,28 +45,28 @@ const MenuCalendarPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     // Fetch menus for the current month
+    const fetchMenus = async () => {
+        setLoading(true);
+        try {
+            // Calculate start and end dates for the current month
+            const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+            const menus = await getDailyMenus({
+                startDate: startDate.toISOString().split('T')[0],
+                endDate: endDate.toISOString().split('T')[0]
+            });
+
+            setDailyMenus(menus);
+            setError(null);
+        } catch (err) {
+            setError('Ошибка загрузки меню: ' + (err as Error).message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchMenus = async () => {
-            setLoading(true);
-            try {
-                // Calculate start and end dates for the current month
-                const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-                const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-
-                const menus = await getDailyMenus({
-                    startDate: startDate.toISOString(),
-                    endDate: endDate.toISOString()
-                });
-
-                setDailyMenus(menus);
-                setError(null);
-            } catch (err) {
-                setError('Ошибка загрузки меню: ' + (err as Error).message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchMenus();
     }, [currentDate]);
 
@@ -72,6 +74,29 @@ const MenuCalendarPage: React.FC = () => {
     const getMenuForDate = (date: Date): DailyMenuType | undefined => {
         const dateString = date.toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
         return dailyMenus.find(menu => menu.date.startsWith(dateString));
+    };
+
+    // Close dialog
+    const handleCloseDialog = () => {
+        setSelectedDate(null);
+    };
+
+    // Handle delete menu
+    const handleDeleteMenu = async () => {
+        if (!selectedMenu || !selectedMenu._id) return;
+
+        if (!window.confirm('Вы уверены, что хотите удалить меню на этот день?')) {
+            return;
+        }
+
+        try {
+            await deleteDailyMenu(selectedMenu._id);
+            toast.success('Меню успешно удалено');
+            handleCloseDialog();
+            fetchMenus(); // Refresh calendar
+        } catch (err) {
+            toast.error('Ошибка при удалении меню: ' + (err as Error).message);
+        }
     };
 
     // Generate calendar days for current month
@@ -87,8 +112,8 @@ const MenuCalendarPage: React.FC = () => {
         // Starting day (Sunday = 0, Monday = 1, etc.)
         const startDayIndex = firstDay.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-        // Days from previous month to show
-        const prevMonthDays = startDayIndex;
+        // Days from previous month to show (adjust for Monday start)
+        const prevMonthDays = startDayIndex === 0 ? 6 : startDayIndex - 1;
 
         // Total days to show in calendar (6 weeks)
         const totalDays = 42; // 6 weeks * 7 days
@@ -123,11 +148,6 @@ const MenuCalendarPage: React.FC = () => {
         if (date.getMonth() === currentDate.getMonth()) {
             setSelectedDate(date);
         }
-    };
-
-    // Close dialog
-    const handleCloseDialog = () => {
-        setSelectedDate(null);
     };
 
     // Format date for display
@@ -290,22 +310,22 @@ const MenuCalendarPage: React.FC = () => {
                                             {isCurrentMonth && hasMenu && dateMenu && (
                                                 <>
                                                     {dateMenu.meals?.breakfast?.dishes && dateMenu.meals.breakfast.dishes.length > 0 && (
-                                                        <Typography variant="caption" noWrap>
+                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>
                                                             🥣 {dateMenu.meals.breakfast.dishes[0]?.name || ''}
                                                         </Typography>
                                                     )}
                                                     {dateMenu.meals?.lunch?.dishes && dateMenu.meals.lunch.dishes.length > 0 && (
-                                                        <Typography variant="caption" noWrap>
+                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>
                                                             🍲 {dateMenu.meals.lunch.dishes[0]?.name || ''}
                                                         </Typography>
                                                     )}
                                                     {dateMenu.meals?.snack?.dishes && dateMenu.meals.snack.dishes.length > 0 && (
-                                                        <Typography variant="caption" noWrap>
+                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>
                                                             🍰 {dateMenu.meals.snack.dishes[0]?.name || ''}
                                                         </Typography>
                                                     )}
                                                     {dateMenu.meals?.dinner?.dishes && dateMenu.meals.dinner.dishes.length > 0 && (
-                                                        <Typography variant="caption" noWrap>
+                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>
                                                             🥗 {dateMenu.meals.dinner.dishes[0]?.name || ''}
                                                         </Typography>
                                                     )}
@@ -341,9 +361,19 @@ const MenuCalendarPage: React.FC = () => {
                         <DialogContent dividers>
                             {selectedMenu ? (
                                 <Box>
-                                    <Typography variant="h6" gutterBottom>
-                                        Блюда на {selectedDate.toLocaleDateString('ru-RU')}
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                        <Typography variant="h6">
+                                            Детали меню
+                                        </Typography>
+                                        <Button
+                                            variant="outlined"
+                                            color="error"
+                                            startIcon={<DeleteIcon />}
+                                            onClick={handleDeleteMenu}
+                                        >
+                                            Удалить меню на день
+                                        </Button>
+                                    </Box>
 
                                     <Divider sx={{ my: 2 }} />
 
@@ -452,7 +482,9 @@ const MenuCalendarPage: React.FC = () => {
                                     )}
                                 </Box>
                             ) : (
-                                <Typography>Меню на выбранную дату отсутствует</Typography>
+                                <Box sx={{ py: 3, textAlign: 'center' }}>
+                                    <Typography color="text.secondary">Меню на выбранную дату отсутствует</Typography>
+                                </Box>
                             )}
                         </DialogContent>
                         <DialogActions>
@@ -462,6 +494,12 @@ const MenuCalendarPage: React.FC = () => {
                 )}
             </Box>
         </LocalizationProvider>
+    );
+};
+
+export default MenuCalendarPage;
+            </Box >
+        </LocalizationProvider >
     );
 };
 
