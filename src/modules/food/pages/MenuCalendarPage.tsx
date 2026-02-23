@@ -1,29 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Box,
-    Paper,
-    Typography,
-    Grid,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    Alert,
-    Chip,
-    Divider,
-    IconButton
+    Box, Paper, Typography, Grid, Dialog, DialogTitle, DialogContent,
+    DialogActions, Button, Alert, Chip, Divider, IconButton,
+    FormControl, InputLabel, Select, MenuItem as MuiMenuItem, TextField, CircularProgress
 } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { getDailyMenus, DailyMenu as DailyMenuType, Meal, deleteDailyMenu } from '../services/dailyMenu';
+import {
+    WeeklyMenuTemplate, getWeeklyMenuTemplates, applyTemplateToWeek, applyTemplateToMonth
+} from '../services/weeklyMenuTemplate';
 import { Dish } from '../services/dishes';
 import { toast } from 'react-toastify';
 
-interface MenuItem {
+interface IMenuItem {
     _id: string;
     name: string;
     category: 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -41,14 +34,20 @@ const MenuCalendarPage: React.FC = () => {
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [dailyMenus, setDailyMenus] = useState<DailyMenuType[]>([]);
+    const [templates, setTemplates] = useState<WeeklyMenuTemplate[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [applying, setApplying] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Form state for applying template
+    const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+    const [applyChildCount, setApplyChildCount] = useState<number>(30);
+    const [applyType, setApplyType] = useState<'week' | 'month'>('week');
 
     // Fetch menus for the current month
     const fetchMenus = async () => {
         setLoading(true);
         try {
-            // Calculate start and end dates for the current month
             const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
             const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
@@ -66,19 +65,31 @@ const MenuCalendarPage: React.FC = () => {
         }
     };
 
+    // Fetch templates
+    const fetchTemplates = async () => {
+        try {
+            const data = await getWeeklyMenuTemplates({ isActive: true });
+            setTemplates(data);
+        } catch (err) {
+            console.error('Error fetching templates:', err);
+        }
+    };
+
     useEffect(() => {
         fetchMenus();
+        fetchTemplates();
     }, [currentDate]);
 
     // Get menu for selected date
     const getMenuForDate = (date: Date): DailyMenuType | undefined => {
-        const dateString = date.toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
+        const dateString = date.toISOString().split('T')[0];
         return dailyMenus.find(menu => menu.date.startsWith(dateString));
     };
 
     // Close dialog
     const handleCloseDialog = () => {
         setSelectedDate(null);
+        setSelectedTemplateId('');
     };
 
     // Handle delete menu
@@ -93,96 +104,61 @@ const MenuCalendarPage: React.FC = () => {
             await deleteDailyMenu(selectedMenu._id);
             toast.success('Меню успешно удалено');
             handleCloseDialog();
-            fetchMenus(); // Refresh calendar
+            fetchMenus();
         } catch (err) {
             toast.error('Ошибка при удалении меню: ' + (err as Error).message);
         }
     };
 
-    // Generate calendar days for current month
+    // Handle apply template
+    const handleApplyTemplate = async () => {
+        if (!selectedTemplateId || !selectedDate) return;
+
+        setApplying(true);
+        try {
+            const startDateStr = selectedDate.toISOString().split('T')[0];
+            const result = applyType === 'week'
+                ? await applyTemplateToWeek(selectedTemplateId, startDateStr, applyChildCount)
+                : await applyTemplateToMonth(selectedTemplateId, startDateStr, applyChildCount);
+
+            toast.success(result.message);
+            handleCloseDialog();
+            fetchMenus();
+        } catch (err) {
+            toast.error('Ошибка при применении шаблона: ' + (err as Error).message);
+        } finally {
+            setApplying(false);
+        }
+    };
+
+    // Generate calendar days
     const generateCalendarDays = (): Date[] => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
-
-        // First day of month
         const firstDay = new Date(year, month, 1);
-        // Last day of month
         const lastDay = new Date(year, month + 1, 0);
-
-        // Starting day (Sunday = 0, Monday = 1, etc.)
-        const startDayIndex = firstDay.getDay(); // 0 = Sunday, 1 = Monday, etc.
-
-        // Days from previous month to show (adjust for Monday start)
+        const startDayIndex = firstDay.getDay();
         const prevMonthDays = startDayIndex === 0 ? 6 : startDayIndex - 1;
-
-        // Total days to show in calendar (6 weeks)
-        const totalDays = 42; // 6 weeks * 7 days
-
+        const totalDays = 42;
         const days: Date[] = [];
 
-        // Add days from previous month
         for (let i = prevMonthDays - 1; i >= 0; i--) {
-            const date = new Date(year, month, 1 - i - 1);
-            days.push(date);
+            days.push(new Date(year, month, 1 - i - 1));
         }
-
-        // Add days from current month
         for (let i = 1; i <= lastDay.getDate(); i++) {
-            const date = new Date(year, month, i);
-            days.push(date);
+            days.push(new Date(year, month, i));
         }
-
-        // Add days from next month to fill up the grid
         const remainingDays = totalDays - days.length;
         for (let i = 1; i <= remainingDays; i++) {
-            const date = new Date(year, month + 1, i);
-            days.push(date);
+            days.push(new Date(year, month + 1, i));
         }
-
         return days;
     };
 
-    // Handle date selection
     const handleDateClick = (date: Date) => {
-        // Only allow selecting dates from the current month
         if (date.getMonth() === currentDate.getMonth()) {
             setSelectedDate(date);
         }
-    };
-
-    // Format date for display
-    const formatDate = (date: Date): string => {
-        return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-    };
-
-    // Get day of week name
-    const getDayOfWeek = (date: Date): string => {
-        const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-        return days[date.getDay()];
-    };
-
-    // Render meal chips
-    const renderMealChips = (meals: MenuItem[], category: string) => {
-        if (!meals || meals.length === 0) return null;
-
-        return (
-            <Box sx={{ mt: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                    {category}:
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                    {meals.map((dish, idx) => (
-                        <Chip
-                            key={idx}
-                            label={dish.name}
-                            size="small"
-                            variant="outlined"
-                            sx={{ fontSize: '0.7rem', height: '20px' }}
-                        />
-                    ))}
-                </Box>
-            </Box>
-        );
     };
 
     const calendarDays = generateCalendarDays();
@@ -216,118 +192,62 @@ const MenuCalendarPage: React.FC = () => {
                     </Grid>
                 </Paper>
 
-                {error && (
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                        {error}
-                    </Alert>
-                )}
+                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                 {loading ? (
                     <Typography>Загрузка...</Typography>
                 ) : (
                     <Paper elevation={3}>
                         <Grid container spacing={0} sx={{ maxWidth: '100%', overflowX: 'auto' }}>
-                            {/* Day headers */}
                             {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((day, index) => (
                                 <Grid item xs={12 / 7} key={`header-${index}`}>
-                                    <Box
-                                        sx={{
-                                            p: 1.5,
-                                            textAlign: 'center',
-                                            backgroundColor: '#f5f5f5',
-                                            borderBottom: '1px solid #e0e0e0',
-                                            borderRight: index < 6 ? '1px solid #e0e0e0' : 'none',
-                                            fontWeight: 'bold'
-                                        }}
-                                    >
-                                        {day}
-                                    </Box>
+                                    <Box sx={{
+                                        p: 1.5, textAlign: 'center', backgroundColor: '#f5f5f5',
+                                        borderBottom: '1px solid #e0e0e0', borderRight: index < 6 ? '1px solid #e0e0e0' : 'none',
+                                        fontWeight: 'bold'
+                                    }}>{day}</Box>
                                 </Grid>
                             ))}
 
-                            {/* Calendar days */}
                             {calendarDays.map((date, index) => {
                                 const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-                                const hasMenu = !!getMenuForDate(date);
-                                const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
-
-                                // Get the menu for this date to show abbreviated version
                                 const dateMenu = getMenuForDate(date);
+                                const hasMenu = !!dateMenu;
+                                const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
 
                                 return (
                                     <Grid item xs={12 / 7} key={`day-${index}`}>
                                         <Box
                                             sx={{
-                                                minHeight: 100,
-                                                p: 1,
-                                                borderRight: index % 7 !== 6 ? '1px solid #e0e0e0' : 'none',
+                                                minHeight: 100, p: 1, borderRight: index % 7 !== 6 ? '1px solid #e0e0e0' : 'none',
                                                 borderBottom: '1px solid #e0e0e0',
-                                                backgroundColor: isCurrentMonth
-                                                    ? (isSelected
-                                                        ? '#e3f2fd'
-                                                        : hasMenu
-                                                            ? '#f0f8ff'
-                                                            : 'inherit')
-                                                    : '#fafafa',
+                                                backgroundColor: isCurrentMonth ? (isSelected ? '#e3f2fd' : hasMenu ? '#f0f8ff' : 'inherit') : '#fafafa',
                                                 cursor: isCurrentMonth ? 'pointer' : 'default',
-                                                '&:hover': {
-                                                    backgroundColor: isCurrentMonth && !isSelected ? '#f0f8ff' : 'inherit'
-                                                }
+                                                '&:hover': { backgroundColor: isCurrentMonth && !isSelected ? '#f0f8ff' : 'inherit' }
                                             }}
                                             onClick={() => isCurrentMonth && handleDateClick(date)}
                                         >
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    mb: 0.5
-                                                }}
-                                            >
-                                                <Typography
-                                                    variant="body2"
-                                                    sx={{
-                                                        fontWeight: isCurrentMonth ? 'normal' : 'light',
-                                                        color: isCurrentMonth ? 'inherit' : 'text.disabled'
-                                                    }}
-                                                >
-                                                    {date.getDate()}
-                                                </Typography>
-                                                {hasMenu && (
-                                                    <Box
-                                                        sx={{
-                                                            width: 8,
-                                                            height: 8,
-                                                            borderRadius: '50%',
-                                                            backgroundColor: 'primary.main',
-                                                            ml: 0.5
-                                                        }}
-                                                    />
-                                                )}
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                                <Typography variant="body2" sx={{
+                                                    fontWeight: isCurrentMonth ? 'normal' : 'light',
+                                                    color: isCurrentMonth ? 'inherit' : 'text.disabled'
+                                                }}>{date.getDate()}</Typography>
+                                                {hasMenu && <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'primary.main', ml: 0.5 }} />}
                                             </Box>
 
-                                            {/* Show abbreviated menu for the day */}
                                             {isCurrentMonth && hasMenu && dateMenu && (
                                                 <>
-                                                    {dateMenu.meals?.breakfast?.dishes && dateMenu.meals.breakfast.dishes.length > 0 && (
-                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>
-                                                            🥣 {dateMenu.meals.breakfast.dishes[0]?.name || ''}
-                                                        </Typography>
+                                                    {dateMenu.meals?.breakfast?.dishes?.length > 0 && (
+                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>🥣 {dateMenu.meals.breakfast.dishes[0]?.name}</Typography>
                                                     )}
-                                                    {dateMenu.meals?.lunch?.dishes && dateMenu.meals.lunch.dishes.length > 0 && (
-                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>
-                                                            🍲 {dateMenu.meals.lunch.dishes[0]?.name || ''}
-                                                        </Typography>
+                                                    {dateMenu.meals?.lunch?.dishes?.length > 0 && (
+                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>🍲 {dateMenu.meals.lunch.dishes[0]?.name}</Typography>
                                                     )}
-                                                    {dateMenu.meals?.snack?.dishes && dateMenu.meals.snack.dishes.length > 0 && (
-                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>
-                                                            🍰 {dateMenu.meals.snack.dishes[0]?.name || ''}
-                                                        </Typography>
+                                                    {dateMenu.meals?.snack?.dishes?.length > 0 && (
+                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>🍰 {dateMenu.meals.snack.dishes[0]?.name}</Typography>
                                                     )}
-                                                    {dateMenu.meals?.dinner?.dishes && dateMenu.meals.dinner.dishes.length > 0 && (
-                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>
-                                                            🥗 {dateMenu.meals.dinner.dishes[0]?.name || ''}
-                                                        </Typography>
+                                                    {dateMenu.meals?.dinner?.dishes?.length > 0 && (
+                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>🥗 {dateMenu.meals.dinner.dishes[0]?.name}</Typography>
                                                     )}
                                                 </>
                                             )}
@@ -339,167 +259,82 @@ const MenuCalendarPage: React.FC = () => {
                     </Paper>
                 )}
 
-                {/* Menu detail dialog */}
-                {selectedDate && (
-                    <Dialog
-                        open={!!selectedDate}
-                        onClose={handleCloseDialog}
-                        maxWidth="md"
-                        fullWidth
-                    >
-                        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            Меню на {selectedDate.toLocaleDateString('ru-RU', {
-                                day: 'numeric',
-                                month: 'long',
-                                year: 'numeric',
-                                weekday: 'long'
-                            })}
-                            <IconButton onClick={handleCloseDialog}>
-                                <CloseIcon />
-                            </IconButton>
-                        </DialogTitle>
-                        <DialogContent dividers>
-                            {selectedMenu ? (
-                                <Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                        <Typography variant="h6">
-                                            Детали меню
-                                        </Typography>
-                                        <Button
-                                            variant="outlined"
-                                            color="error"
-                                            startIcon={<DeleteIcon />}
-                                            onClick={handleDeleteMenu}
-                                        >
-                                            Удалить меню на день
-                                        </Button>
-                                    </Box>
-
-                                    <Divider sx={{ my: 2 }} />
-
-                                    {/* Breakfast */}
-                                    <Box sx={{ mb: 3 }}>
-                                        <Typography variant="h6" color="primary" sx={{ display: 'flex', alignItems: 'center' }}>
-                                            🥣 Завтрак
-                                        </Typography>
-                                        {selectedMenu.meals?.breakfast?.dishes && selectedMenu.meals.breakfast.dishes.length > 0 ? (
-                                            <Box>
-                                                {selectedMenu.meals.breakfast.dishes.map((dish, idx) => (
+                <Dialog open={!!selectedDate} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+                    <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        {selectedDate?.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long' })}
+                        <IconButton onClick={handleCloseDialog}><CloseIcon /></IconButton>
+                    </DialogTitle>
+                    <DialogContent dividers>
+                        {selectedMenu ? (
+                            <Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                    <Typography variant="h6">Детали меню</Typography>
+                                    <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteMenu}>Удалить меню на день</Button>
+                                </Box>
+                                <Divider sx={{ my: 2 }} />
+                                {(['breakfast', 'lunch', 'snack', 'dinner'] as const).map(mealType => {
+                                    const meal = selectedMenu.meals?.[mealType];
+                                    const icons = { breakfast: '🥣 Завтрак', lunch: '🍲 Обед', snack: '🍰 Полдник', dinner: '🥗 Ужин' };
+                                    return (
+                                        <Box key={mealType} sx={{ mb: 3 }}>
+                                            <Typography variant="h6" color="primary">{icons[mealType]}</Typography>
+                                            {meal?.dishes?.length > 0 ? (
+                                                meal.dishes.map((dish: any, idx: number) => (
                                                     <Box key={idx} sx={{ mb: 2, pl: 2 }}>
                                                         <Typography variant="subtitle1"><strong>{dish.name}</strong></Typography>
                                                         <Typography variant="body2" color="text.secondary">
-                                                            {dish.ingredients.map((ing: any) =>
-                                                                `${ing.productId?.name || 'Продукт'} - ${ing.quantity}${ing.unit}`
-                                                            ).join(', ')}
+                                                            {dish.ingredients.map((ing: any) => `${ing.productId?.name || 'Продукт'} - ${ing.quantity}${ing.unit}`).join(', ')}
                                                         </Typography>
                                                     </Box>
-                                                ))}
-                                            </Box>
-                                        ) : (
-                                            <Typography color="text.secondary">Нет блюд</Typography>
-                                        )}
-                                    </Box>
-
-                                    {/* Lunch */}
-                                    <Box sx={{ mb: 3 }}>
-                                        <Typography variant="h6" color="primary" sx={{ display: 'flex', alignItems: 'center' }}>
-                                            🍲 Обед
-                                        </Typography>
-                                        {selectedMenu.meals?.lunch?.dishes && selectedMenu.meals.lunch.dishes.length > 0 ? (
-                                            <Box>
-                                                {selectedMenu.meals.lunch.dishes.map((dish, idx) => (
-                                                    <Box key={idx} sx={{ mb: 2, pl: 2 }}>
-                                                        <Typography variant="subtitle1"><strong>{dish.name}</strong></Typography>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            {dish.ingredients.map((ing: any) =>
-                                                                `${ing.productId?.name || 'Продукт'} - ${ing.quantity}${ing.unit}`
-                                                            ).join(', ')}
-                                                        </Typography>
-                                                    </Box>
-                                                ))}
-                                            </Box>
-                                        ) : (
-                                            <Typography color="text.secondary">Нет блюд</Typography>
-                                        )}
-                                    </Box>
-
-                                    {/* Snack */}
-                                    <Box sx={{ mb: 3 }}>
-                                        <Typography variant="h6" color="primary" sx={{ display: 'flex', alignItems: 'center' }}>
-                                            🍰 Полдник
-                                        </Typography>
-                                        {selectedMenu.meals?.snack?.dishes && selectedMenu.meals.snack.dishes.length > 0 ? (
-                                            <Box>
-                                                {selectedMenu.meals.snack.dishes.map((dish, idx) => (
-                                                    <Box key={idx} sx={{ mb: 2, pl: 2 }}>
-                                                        <Typography variant="subtitle1"><strong>{dish.name}</strong></Typography>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            {dish.ingredients.map((ing: any) =>
-                                                                `${ing.productId?.name || 'Продукт'} - ${ing.quantity}${ing.unit}`
-                                                            ).join(', ')}
-                                                        </Typography>
-                                                    </Box>
-                                                ))}
-                                            </Box>
-                                        ) : (
-                                            <Typography color="text.secondary">Нет блюд</Typography>
-                                        )}
-                                    </Box>
-
-                                    {/* Dinner */}
-                                    <Box sx={{ mb: 3 }}>
-                                        <Typography variant="h6" color="primary" sx={{ display: 'flex', alignItems: 'center' }}>
-                                            🥗 Ужин
-                                        </Typography>
-                                        {selectedMenu.meals?.dinner?.dishes && selectedMenu.meals.dinner.dishes.length > 0 ? (
-                                            <Box>
-                                                {selectedMenu.meals.dinner.dishes.map((dish, idx) => (
-                                                    <Box key={idx} sx={{ mb: 2, pl: 2 }}>
-                                                        <Typography variant="subtitle1"><strong>{dish.name}</strong></Typography>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            {dish.ingredients.map((ing: any) =>
-                                                                `${ing.productId?.name} - ${ing.quantity}${ing.unit}`
-                                                            ).join(', ')}
-                                                        </Typography>
-                                                    </Box>
-                                                ))}
-                                            </Box>
-                                        ) : (
-                                            <Typography color="text.secondary">Нет блюд</Typography>
-                                        )}
-                                    </Box>
-
-                                    <Divider sx={{ my: 2 }} />
-
-                                    <Typography variant="body2" color="text.secondary">
-                                        Детей: {selectedMenu.totalChildCount}
-                                    </Typography>
-
-                                    {selectedMenu.notes && (
-                                        <Box sx={{ mt: 2 }}>
-                                            <Typography variant="body2"><strong>Примечания:</strong> {selectedMenu.notes}</Typography>
+                                                ))
+                                            ) : <Typography color="text.secondary">Нет блюд</Typography>}
                                         </Box>
-                                    )}
-                                </Box>
-                            ) : (
-                                <Box sx={{ py: 3, textAlign: 'center' }}>
-                                    <Typography color="text.secondary">Меню на выбранную дату отсутствует</Typography>
-                                </Box>
-                            )}
-                        </DialogContent>
-                        <DialogActions>
-                            <Button onClick={handleCloseDialog}>Закрыть</Button>
-                        </DialogActions>
-                    </Dialog>
-                )}
+                                    );
+                                })}
+                                <Divider sx={{ my: 2 }} />
+                                <Typography variant="body2" color="text.secondary">Детей: {selectedMenu.totalChildCount}</Typography>
+                                {selectedMenu.notes && <Box sx={{ mt: 2 }}><Typography variant="body2"><strong>Примечания:</strong> {selectedMenu.notes}</Typography></Box>}
+                            </Box>
+                        ) : (
+                            <Box sx={{ py: 2 }}>
+                                <Typography variant="h6" gutterBottom>Применить шаблон меню</Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>На выбранную дату меню отсутствует. Вы можете применить существующий шаблон.</Typography>
+
+                                <Grid container spacing={2}>
+                                    <Grid item xs={12}>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Выберите шаблон</InputLabel>
+                                            <Select value={selectedTemplateId} label="Выберите шаблон" onChange={(e: any) => setSelectedTemplateId(e.target.value)}>
+                                                {templates.map(t => <MuiMenuItem key={t._id} value={t._id}>{t.name}</MuiMenuItem>)}
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <TextField fullWidth type="number" label="Количество детей" value={applyChildCount} onChange={(e: any) => setApplyChildCount(Number(e.target.value))} />
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Период</InputLabel>
+                                            <Select value={applyType} label="Период" onChange={(e: any) => setApplyType(e.target.value as any)}>
+                                                <MuiMenuItem value="week">Неделя</MuiMenuItem>
+                                                <MuiMenuItem value="month">Месяц</MuiMenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                </Grid>
+                                <Button
+                                    variant="contained" fullWidth size="large" startIcon={<PlayArrowIcon />} sx={{ mt: 3 }}
+                                    onClick={handleApplyTemplate} disabled={!selectedTemplateId || applying}
+                                >
+                                    {applying ? <CircularProgress size={24} /> : 'Применить шаблон'}
+                                </Button>
+                            </Box>
+                        )}
+                    </DialogContent>
+                    <DialogActions><Button onClick={handleCloseDialog}>Закрыть</Button></DialogActions>
+                </Dialog>
             </Box>
         </LocalizationProvider>
-    );
-};
-
-export default MenuCalendarPage;
-            </Box >
-        </LocalizationProvider >
     );
 };
 
