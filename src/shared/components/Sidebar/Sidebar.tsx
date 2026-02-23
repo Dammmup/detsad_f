@@ -45,9 +45,9 @@ export const Sidebar = ({
     const isVisibleByRole = item.visibleFor.includes(userRole);
 
     // Особая проверка для пункта "Моя зарплата"
-    if (item.id === 'my-salary' && isVisibleByRole) {
-      // Администраторы видят всегда, остальные (включая менеджеров) — по флагу
-      return userRole === 'admin' || currentUser?.allowToSeePayroll === true;
+    if (item.id === 'my-salary') {
+      // Видно только сотрудникам с разрешением allowToSeePayroll
+      return currentUser?.allowToSeePayroll === true;
     }
 
     return isVisibleByRole;

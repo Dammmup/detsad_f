@@ -333,7 +333,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
               element={hasMedAccess ? <FoodStaffHealthPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route path='profile' element={<ProfilePage />} />
-            <Route path='my-salary' element={<ReportsSalary personalOnly={true} />} />
+            <Route path='my-salary' element={currentUser?.allowToSeePayroll ? <ReportsSalary personalOnly={true} /> : <Navigate to="/app/dashboard" />} />
 
             {/* Fallback */}
             <Route path='*' element={<Navigate to="/app/dashboard" replace />} />
