@@ -49,7 +49,7 @@ const sidebarStructure: SidebarItem[] = [
     id: 'children',
     label: 'Дети',
     icon: <ChildCareIcon />,
-    visibleFor: ['admin', 'manager', 'teacher', 'assistant', 'nurse', 'psychologist', 'music_teacher', 'physical_teacher'],
+    visibleFor: ['admin', 'manager', 'teacher', 'nurse', 'psychologist', 'music_teacher', 'physical_teacher'],
     children: [
       {
         id: 'children-list',
@@ -182,17 +182,42 @@ const sidebarStructure: SidebarItem[] = [
 
 
 export const getFilteredSidebarStructure = (
-  userRole: string = 'staff',
+  user: any
 ): SidebarItem[] => {
+  const userRole = user?.role || 'staff';
+  const accessControls = user?.accessControls;
+
+  const checkVisibility = (item: SidebarItem) => {
+    // Если есть индивидуальные права, проверяем их в первую очередь
+    if (accessControls) {
+      if (item.id === 'children' && accessControls.canSeeChildren !== undefined && accessControls.canSeeChildren !== null) {
+        return accessControls.canSeeChildren;
+      }
+      if ((item.id === 'food-products' || item.id === 'food-calendar') && accessControls.canSeeFood !== undefined && accessControls.canSeeFood !== null) {
+        return accessControls.canSeeFood;
+      }
+      if (item.id === 'rent' && accessControls.canSeeRent !== undefined && accessControls.canSeeRent !== null) {
+        return accessControls.canSeeRent;
+      }
+      if (item.id === 'staff' && accessControls.canSeeStaff !== undefined && accessControls.canSeeStaff !== null) {
+        return accessControls.canSeeStaff;
+      }
+      if (item.id === 'organization' && accessControls.canSeeSettings !== undefined && accessControls.canSeeSettings !== null) {
+        return accessControls.canSeeSettings;
+      }
+    }
+
+    // Если индивидуальных прав нет, используем стандартную логику по роли
+    return !item.visibleFor || item.visibleFor.includes(userRole);
+  };
+
   return sidebarStructure
-    .filter((item) => !item.visibleFor || item.visibleFor.includes(userRole))
+    .filter(checkVisibility)
     .map((item) => {
       if (item.children) {
         return {
           ...item,
-          children: item.children.filter(
-            (child) => !child.visibleFor || child.visibleFor.includes(userRole),
-          ),
+          children: item.children.filter(checkVisibility),
         };
       }
       return item;

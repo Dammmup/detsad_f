@@ -102,6 +102,13 @@ export interface User {
   staffName?: string;
   tenant?: boolean;
   allowToSeePayroll?: boolean;
+  accessControls?: {
+    canSeeChildren?: boolean;
+    canSeeFood?: boolean;
+    canSeeRent?: boolean;
+    canSeeStaff?: boolean;
+    canSeeSettings?: boolean;
+  };
 }
 
 export interface IRent {

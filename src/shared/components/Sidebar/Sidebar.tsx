@@ -39,16 +39,36 @@ export const Sidebar = ({
 
   const isItemVisible = (item: any): boolean => {
 
-    if (!item.visibleFor) return true;
+    if (!item.visibleFor && !item.id) return true;
 
     const userRole = currentUser?.role || 'staff';
-    const isVisibleByRole = item.visibleFor.includes(userRole);
+    const accessControls = currentUser?.accessControls;
+
+    if (accessControls) {
+      if (item.id === 'children' && accessControls.canSeeChildren !== undefined && accessControls.canSeeChildren !== null) {
+        return accessControls.canSeeChildren;
+      }
+      if ((item.id === 'food-products' || item.id === 'food-calendar') && accessControls.canSeeFood !== undefined && accessControls.canSeeFood !== null) {
+        return accessControls.canSeeFood;
+      }
+      if (item.id === 'rent' && accessControls.canSeeRent !== undefined && accessControls.canSeeRent !== null) {
+        return accessControls.canSeeRent;
+      }
+      if (item.id === 'staff' && accessControls.canSeeStaff !== undefined && accessControls.canSeeStaff !== null) {
+        return accessControls.canSeeStaff;
+      }
+      if (item.id === 'organization' && accessControls.canSeeSettings !== undefined && accessControls.canSeeSettings !== null) {
+        return accessControls.canSeeSettings;
+      }
+    }
 
     // Особая проверка для пункта "Моя зарплата"
     if (item.id === 'my-salary') {
       // Видно только сотрудникам с разрешением allowToSeePayroll
       return currentUser?.allowToSeePayroll === true;
     }
+
+    const isVisibleByRole = !item.visibleFor || item.visibleFor.includes(userRole);
 
     return isVisibleByRole;
   };

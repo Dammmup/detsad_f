@@ -49,6 +49,7 @@ import {
   Phone,
   Badge,
   Person,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { User as StaffMember, UserRole, STAFF_ROLES, EXTERNAL_ROLES } from '../../../shared/types/common';
 import { getGroups } from '../../children/services/groups';
@@ -232,6 +233,17 @@ const Staff = () => {
     if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: '' }));
     }
+  };
+
+  const handleAccessControlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setForm((prevForm) => ({
+      ...prevForm,
+      accessControls: {
+        ...(prevForm.accessControls || {}),
+        [name]: checked
+      }
+    }));
   };
 
 
@@ -653,7 +665,7 @@ const Staff = () => {
                 <FormControlLabel
                   control={
                     <Checkbox
-                      checked={form.allowToSeePayroll}
+                      checked={form.allowToSeePayroll || false}
                       onChange={(e) =>
                         setForm({ ...form, allowToSeePayroll: e.target.checked })
                       }
@@ -662,6 +674,88 @@ const Staff = () => {
                   label='Разрешить просмотр зарплаты'
                 />
               </Grid>
+
+              {/* Индивидуальные доступы */}
+              {currentUser?.role === 'admin' && (
+                <>
+                  <Grid item xs={12} sx={{ mt: 2 }}>
+                    <Typography variant='subtitle1' gutterBottom>
+                      <SettingsIcon style={{ marginRight: 8, verticalAlign: 'middle' }} /> Индивидуальные права доступа
+                    </Typography>
+                    <Divider sx={{ mb: 2 }} />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          name="canSeeChildren"
+                          checked={form.accessControls?.canSeeChildren === true}
+                          indeterminate={form.accessControls?.canSeeChildren === null || form.accessControls?.canSeeChildren === undefined}
+                          onChange={handleAccessControlChange}
+                        />
+                      }
+                      label='Раздел "Дети"'
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          name="canSeeFood"
+                          checked={form.accessControls?.canSeeFood === true}
+                          indeterminate={form.accessControls?.canSeeFood === null || form.accessControls?.canSeeFood === undefined}
+                          onChange={handleAccessControlChange}
+                        />
+                      }
+                      label='Раздел "Склад и Питание"'
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          name="canSeeRent"
+                          checked={form.accessControls?.canSeeRent === true}
+                          indeterminate={form.accessControls?.canSeeRent === null || form.accessControls?.canSeeRent === undefined}
+                          onChange={handleAccessControlChange}
+                        />
+                      }
+                      label='Раздел "Аренда"'
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          name="canSeeStaff"
+                          checked={form.accessControls?.canSeeStaff === true}
+                          indeterminate={form.accessControls?.canSeeStaff === null || form.accessControls?.canSeeStaff === undefined}
+                          onChange={handleAccessControlChange}
+                        />
+                      }
+                      label='Раздел "Сотрудники"'
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          name="canSeeSettings"
+                          checked={form.accessControls?.canSeeSettings === true}
+                          indeterminate={form.accessControls?.canSeeSettings === null || form.accessControls?.canSeeSettings === undefined}
+                          onChange={handleAccessControlChange}
+                        />
+                      }
+                      label='Настройки организации'
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Alert severity="info" sx={{ mt: 1 }}>
+                      Indeterminate статус (-) означает, что доступ определяется по умолчанию из должности сотрудника. Галочка дает доступ даже если по должности нельзя. Пустой квадрат - явно запрещает.
+                    </Alert>
+                  </Grid>
+                </>
+              )}
             </Grid>
           </DialogContent>
 
