@@ -24,8 +24,8 @@ class PayrollApiClient extends BaseCrudApiClient<PayrollRecord> {
     return data;
   }
 
-  async generateSheets(period: string): Promise<any> {
-    const { data } = await apiClient.post(`${this.endpoint}/generate-sheets`, { period }, { timeout: 60000 });
+  async generateSheets(period: string, force: boolean = false): Promise<any> {
+    const { data } = await apiClient.post(`${this.endpoint}/generate-sheets`, { period, force }, { timeout: 60000 });
     return data;
   }
 
@@ -55,7 +55,7 @@ export const deletePayroll = (id: string) => payrollApi.deleteItem(id);
 export const approvePayroll = (id: string) => payrollApi.approve(id);
 export const markPayrollAsPaid = (id: string) => payrollApi.markAsPaid(id);
 export const calculatePayroll = (staffId: string, month: string) => payrollApi.calculate(staffId, month);
-export const generatePayrollSheets = (period: string) => payrollApi.generateSheets(period);
+export const generatePayrollSheets = (period: string, force: boolean = false) => payrollApi.generateSheets(period, force);
 export const addFine = (id: string, fineData: any) => payrollApi.addFine(id, fineData);
 export const removeFine = (id: string, fineIndex: number) => payrollApi.removeFine(id, fineIndex);
 export const calculateDebt = (period: string) => payrollApi.calculateDebt(period);

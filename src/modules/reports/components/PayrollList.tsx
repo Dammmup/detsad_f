@@ -580,7 +580,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
 
     try {
       setRefreshing(true);
-      await generatePayrollSheets(monthToRefresh);
+      await generatePayrollSheets(monthToRefresh, true); // Передаем force: true
       setSnackbarMessage('Все расчетные листы успешно обновлены');
       setSnackbarOpen(true);
       await reloadPayrolls();
