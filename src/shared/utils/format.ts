@@ -4,9 +4,25 @@ import { StatusColor, STATUS_COLORS, STATUS_TEXT } from '../types/common';
 
 
 
+// Таймзона по умолчанию - Алматы (Казахстан)
+const ALMATY_TIMEZONE = 'Asia/Almaty';
+
+// Получить текущую дату в таймзоне Алматы
+export const getAlmatyDate = (): Date => {
+  const now = new Date();
+  const almatyTime = now.toLocaleString('en-US', { timeZone: ALMATY_TIMEZONE });
+  return new Date(almatyTime);
+};
+
+// Получить строку даты в формате YYYY-MM-DD для таймзоны Алматы
+export const getAlmatyDateString = (): string => {
+  return getAlmatyDate().toISOString().split('T')[0];
+};
+
 export const formatDate = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return dateObj.toLocaleDateString('ru-RU', {
+    timeZone: ALMATY_TIMEZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -16,6 +32,7 @@ export const formatDate = (date: Date | string): string => {
 export const formatTime = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return dateObj.toLocaleTimeString('ru-RU', {
+    timeZone: ALMATY_TIMEZONE,
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -24,6 +41,7 @@ export const formatTime = (date: Date | string): string => {
 export const formatDateTime = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return dateObj.toLocaleString('ru-RU', {
+    timeZone: ALMATY_TIMEZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -40,7 +58,7 @@ export const getWeekday = (date: Date | string): string => {
 
 export const getFullWeekday = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return dateObj.toLocaleDateString('ru-RU', { weekday: 'long' });
+  return dateObj.toLocaleDateString('ru-RU', { timeZone: ALMATY_TIMEZONE, weekday: 'long' });
 };
 
 export const formatDateWithWeekday = (date: Date | string): string => {
@@ -50,7 +68,7 @@ export const formatDateWithWeekday = (date: Date | string): string => {
 };
 
 export const getCurrentPeriod = (): string => {
-  const now = new Date();
+  const now = getAlmatyDate();
   const monthNames = [
     'Январь',
     'Февраль',
@@ -72,7 +90,7 @@ export const getCurrentMonthRange = (): {
   startDate: string;
   endDate: string;
 } => {
-  const now = new Date();
+  const now = getAlmatyDate();
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
   const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
@@ -109,7 +127,7 @@ export const formatMinutesToReadable = (minutes: number): string => {
 };
 
 export const getCurrentTime = (): string => {
-  const now = new Date();
+  const now = getAlmatyDate();
   return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 };
 
@@ -227,14 +245,14 @@ export const formatAddress = (address: string): string => {
 
 export const isToday = (date: Date | string): boolean => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
-  const today = new Date();
+  const today = getAlmatyDate();
 
   return dateObj.toDateString() === today.toDateString();
 };
 
 export const isYesterday = (date: Date | string): boolean => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
-  const yesterday = new Date();
+  const yesterday = getAlmatyDate();
   yesterday.setDate(yesterday.getDate() - 1);
 
   return dateObj.toDateString() === yesterday.toDateString();
@@ -242,7 +260,7 @@ export const isYesterday = (date: Date | string): boolean => {
 
 export const getRelativeTime = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
-  const now = new Date();
+  const now = getAlmatyDate();
   const diffMs = now.getTime() - dateObj.getTime();
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMinutes / 60);
@@ -263,7 +281,7 @@ export const getRelativeTime = (date: Date | string): string => {
 
 export const calculateAge = (birthDate: Date | string): number => {
   const birth = typeof birthDate === 'string' ? new Date(birthDate) : birthDate;
-  const today = new Date();
+  const today = getAlmatyDate();
 
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();

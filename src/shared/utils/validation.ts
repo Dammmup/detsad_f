@@ -1,6 +1,6 @@
 
 
-
+import { getAlmatyDate } from './format';
 
 export const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -188,7 +188,7 @@ export const isValidTime = (timeString: string): boolean => {
 
 export const isNotFutureDate = (dateString: string): boolean => {
   const date = new Date(dateString);
-  const today = new Date();
+  const today = getAlmatyDate();
   today.setHours(23, 59, 59, 999);
 
   return date <= today;
@@ -199,7 +199,7 @@ export const isNotTooOldDate = (
   maxYearsAgo: number = 100,
 ): boolean => {
   const date = new Date(dateString);
-  const minDate = new Date();
+  const minDate = getAlmatyDate();
   minDate.setFullYear(minDate.getFullYear() - maxYearsAgo);
 
   return date >= minDate;
@@ -215,7 +215,7 @@ export const isValidAgeRange = (
   }
 
   const birth = new Date(birthDate);
-  const today = new Date();
+  const today = getAlmatyDate();
 
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();

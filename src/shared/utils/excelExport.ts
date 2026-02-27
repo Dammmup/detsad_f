@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { getGroups } from '../../modules/children/services/groups';
-import { formatDate, getWeekday, formatDateWithWeekday } from './format';
+import { formatDate, getWeekday, formatDateWithWeekday, getAlmatyDate, getAlmatyDateString } from './format';
 
 export interface ExportConfig {
   filename: string;
@@ -38,7 +38,7 @@ export const exportToExcel = (config: ExportConfig): void => {
 
   let fullTitle = title;
   if (includeDate) {
-    const currentDate = new Date();
+    const currentDate = getAlmatyDate();
 
     if (!isNaN(currentDate.getTime())) {
       fullTitle += ` - ${formatDate(currentDate)}`;
@@ -102,7 +102,7 @@ export const exportToExcel = (config: ExportConfig): void => {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
 
-  const timestamp = new Date().toISOString().slice(0, 10);
+  const timestamp = getAlmatyDateString();
   const fullFilename = `${filename}_${timestamp}.xlsx`;
 
   saveAs(blob, fullFilename);
@@ -399,7 +399,7 @@ export const exportChildrenAttendance = async (
     ...allDates.map((dateStr) => {
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return dateStr;
-      const weekday = date.toLocaleDateString('ru-RU', { weekday: 'short' });
+      const weekday = date.toLocaleDateString('ru-RU', { timeZone: 'Asia/Almaty', weekday: 'short' });
       return `${date.getDate()}.${date.getMonth() + 1} (${weekday})`;
     }),
     'Явок (+)',
@@ -530,7 +530,7 @@ export const exportStaffAttendance = async (
     ...allDates.map((dateStr) => {
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return dateStr;
-      const weekday = date.toLocaleDateString('ru-RU', { weekday: 'short' });
+      const weekday = date.toLocaleDateString('ru-RU', { timeZone: 'Asia/Almaty', weekday: 'short' });
       return `${date.getDate()}.${date.getMonth() + 1} (${weekday})`;
     }),
     'Явок',
@@ -642,7 +642,7 @@ export const exportStaffAttendance = async (
 
 
 export const getCurrentPeriod = (): string => {
-  const now = new Date();
+  const now = getAlmatyDate();
   const monthNames = [
     'Январь',
     'Февраль',
@@ -665,7 +665,7 @@ export const getCurrentMonthRange = (): {
   startDate: string;
   endDate: string;
 } => {
-  const now = new Date();
+  const now = getAlmatyDate();
 
 
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1);

@@ -9,7 +9,7 @@ import {
   TemplateType,
   TemplateCategory,
 } from '../types/documents';
-import { formatFileSize, formatDate, formatDateWithWeekday } from './format';
+import { formatFileSize, formatDate, formatDateWithWeekday, getAlmatyDate } from './format';
 
 
 
@@ -377,7 +377,7 @@ export const validateDocument = (
     const expiryDate = new Date(document.expiryDate);
     const uploadDate = document.uploadDate
       ? new Date(document.uploadDate)
-      : new Date();
+      : getAlmatyDate();
 
     if (expiryDate < uploadDate) {
       errors.push('Дата истечения срока должна быть позже даты загрузки');
