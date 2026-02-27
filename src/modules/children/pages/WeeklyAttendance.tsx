@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import moment from 'moment';
 import 'moment/locale/ru';
 import { useSnackbar } from 'notistack';
@@ -40,6 +40,7 @@ import {
   Schedule,
   EventNote as EventNoteIcon,
   FileUpload as FileUploadIcon,
+  Save as SaveIcon,
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -64,6 +65,9 @@ import ExportButton from '../../../shared/components/ExportButton';
 import DateNavigator from '../../../shared/components/DateNavigator';
 import { importChildAttendance } from '../../../shared/services/importService';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
+
+// Таймер автосохранения (в миллисекундах)
+const AUTO_SAVE_DELAY = 5000;
 
 
 const ATTENDANCE_STATUSES = {
@@ -108,6 +112,16 @@ const WeeklyAttendance: React.FC = () => {
   const [groups, setGroups] = useState<any[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [attendanceData, setAttendanceData] = useState<AttendanceData>({});
+
+  // Буфер для накопления изменений перед отправкой
+  const [pendingChanges, setPendingChanges] = useState<Array<{
+    childId: string;
+    date: string;
+    status: 'present' | 'absent' | 'late' | 'sick' | 'vacation';
+    notes?: string;
+  }>>([]);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
   const [isImporting, setIsImporting] = useState(false);
@@ -242,6 +256,69 @@ const WeeklyAttendance: React.FC = () => {
   }, [currentDate, selectedGroup, enqueueSnackbar]);
 
 
+  // Функция автосохранения накопленных изменений
+  const flushPendingChanges = async () => {
+    if (!selectedGroup || pendingChanges.length === 0) return;
+
+    setIsAutoSaving(true);
+    const changesToSave = [...pendingChanges];
+
+    try {
+      await bulkSaveChildAttendance(changesToSave as Array<{
+        childId: string;
+        date: string;
+        status: 'present' | 'absent' | 'late' | 'sick' | 'vacation';
+        notes?: string;
+      }>, selectedGroup);
+
+      // Очищаем буфер
+      setPendingChanges([]);
+
+      enqueueSnackbar(`Сохранено изменений: ${changesToSave.length}`, { variant: 'success', autoHideDuration: 2000 });
+    } catch (err: any) {
+      console.error('Error auto-saving attendance:', err);
+      enqueueSnackbar('Ошибка при автосохранении', { variant: 'error' });
+    } finally {
+      setIsAutoSaving(false);
+    }
+  };
+
+  // Таймер автосохранения
+  useEffect(() => {
+    if (pendingChanges.length > 0 && !isAutoSaving) {
+      // Очищаем предыдущий таймер
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+
+      // Устанавливаем новый таймер
+      autoSaveTimerRef.current = setTimeout(() => {
+        flushPendingChanges();
+      }, AUTO_SAVE_DELAY);
+    }
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [pendingChanges, isAutoSaving, selectedGroup]);
+
+  // Сохранение при смене группы
+  useEffect(() => {
+    if (pendingChanges.length > 0) {
+      flushPendingChanges();
+    }
+  }, [selectedGroup]);
+
+  // Сохранение при изменении недели (через currentDate)
+  useEffect(() => {
+    if (pendingChanges.length > 0) {
+      flushPendingChanges();
+    }
+  }, [currentDate]);
+
+
   const handleGroupChange = (e: SelectChangeEvent<string>) => {
     setSelectedGroup(e.target.value);
   };
@@ -307,9 +384,14 @@ const WeeklyAttendance: React.FC = () => {
         notes: existingAttendance?.notes || '',
       };
 
-      await bulkSaveChildAttendance([record], selectedGroup);
+      // Добавляем изменение в буфер вместо немедленной отправки
+      setPendingChanges(prev => {
+        // Удаляем предыдущее изменение для того же ребёнка и даты
+        const filtered = prev.filter(c => !(c.childId === child.id && c.date === dateString));
+        return [...filtered, record];
+      });
 
-
+      // Сразу обновляем локальное состояние
       setAttendanceData((prev) => ({
         ...prev,
         [child.id!]: {
@@ -321,12 +403,12 @@ const WeeklyAttendance: React.FC = () => {
         },
       }));
 
-      enqueueSnackbar(`${child.fullName}: ${ATTENDANCE_STATUSES[nextStatus]}`, {
-        variant: 'success',
+      enqueueSnackbar(`${child.fullName}: ${ATTENDANCE_STATUSES[nextStatus]} (в очереди на сохранение)`, {
+        variant: 'info',
       });
     } catch (err: any) {
-      console.error('Error saving attendance:', err);
-      enqueueSnackbar('Ошибка при сохранении', { variant: 'error' });
+      console.error('Error queuing attendance change:', err);
+      enqueueSnackbar('Ошибка при постановке в очередь', { variant: 'error' });
     }
   };
 
@@ -408,6 +490,18 @@ const WeeklyAttendance: React.FC = () => {
                   <AuditLogButton entityType="childAttendance" />
                 </Box>
                 <Box display='flex' gap={2}>
+                  {pendingChanges.length > 0 && (
+                    <Button
+                      variant='contained'
+                      color='primary'
+                      startIcon={isAutoSaving ? <CircularProgress size={16} color='inherit' /> : <SaveIcon />}
+                      onClick={flushPendingChanges}
+                      size='small'
+                      disabled={isAutoSaving}
+                    >
+                      Сохранить ({pendingChanges.length})
+                    </Button>
+                  )}
                   <Button
                     variant='contained'
                     color='primary'

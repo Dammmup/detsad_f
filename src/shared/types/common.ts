@@ -253,7 +253,13 @@ export const STATUS_TEXT: Record<string, string> = {
   no_clock_out: 'Нет ухода',
   absent: 'Отсутствует'
 };
-
+export const SHIFT_STATUS_TEXT: Record<string, string> = {
+  scheduled: 'Запланирована',
+  completed: 'Завершена',
+  absent: 'Отсутствует',
+  sick: 'Больничный',
+  vacation: 'Отпуск',
+};
 
 export enum ShiftStatus {
   scheduled = 'scheduled',
@@ -269,6 +275,8 @@ export enum ShiftStatus {
   checked_out = 'checked_out',
   early_leave = 'early_leave',
   late_arrival = 'late_arrival',
+  sick = 'sick',
+  vacation = 'vacation',
 }
 
 export interface Shift {

@@ -60,6 +60,7 @@ import {
   ShiftStatus,
   STATUS_COLORS,
   ROLE_TRANSLATIONS,
+  SHIFT_STATUS_TEXT,
 } from '../../../shared/types/common';
 import {
   getKindergartenSettings,
@@ -265,6 +266,8 @@ const StaffAttendanceTracking: React.FC = () => {
 
         const attendanceMap = new Map();
         attendanceRecords.forEach((record: any) => {
+          // Проверяем, что staffId существует
+          if (!record.staffId) return;
           // Используем фиксированное смещение +5 для Алматы
           const localDate = moment(record.date).utcOffset(5).format('YYYY-MM-DD');
           const key = `${record.staffId._id || record.staffId}-${localDate}`;
@@ -296,15 +299,19 @@ const StaffAttendanceTracking: React.FC = () => {
         };
 
         shifts.forEach((shift: any) => {
+          // Проверяем, что staffId существует
+          if (!shift.staffId) return;
+
           // Исправлено: ищем запись посещаемости по ID сотрудника И ДАТЕ
           const attendanceRecord = attendanceRecords.find((r: any) => {
+            if (!r.staffId) return false;
             const rStaffId = String(r.staffId._id || r.staffId);
             const sStaffId = String(shift.staffId._id || shift.staffId);
             const rDate = moment(r.date).utcOffset(5).format('YYYY-MM-DD');
             return rStaffId === sStaffId && rDate === shift.date;
           });
 
-          const staffId = shift.staffId._id || shift.staffId;
+          const staffId = shift.staffId?._id || shift.staffId;
           const staff = staffList.find((s) => s.id === staffId || s._id === staffId);
           const baseSalary = staff?.baseSalary || 180000;
           const salaryType = staff?.baseSalaryType || staff?.salaryType || 'month';
@@ -386,7 +393,7 @@ const StaffAttendanceTracking: React.FC = () => {
               id: attendanceRecord._id || attendanceRecord.id || '',
               staffId: staffId,
               staffName:
-                attendanceRecord.staffId.fullName ||
+                attendanceRecord.staffId?.fullName ||
                 getStaffName(staffId),
               date: attendanceRecord.date,
               actualStart: attendanceRecord.actualStart
@@ -443,11 +450,11 @@ const StaffAttendanceTracking: React.FC = () => {
             }
 
             allRecords.push({
-              id: `${shift.staffId._id || shift.staffId}_${shift.date}`, // Временный ID для смены
-              staffId: shift.staffId._id || shift.staffId,
+              id: `${shift.staffId?._id || shift.staffId}_${shift.date}`, // Временный ID для смены
+              staffId: shift.staffId?._id || shift.staffId,
               staffName:
-                shift.staffId.fullName ||
-                getStaffName(shift.staffId._id || shift.staffId || ''),
+                shift.staffId?.fullName ||
+                getStaffName(shift.staffId?._id || shift.staffId || ''),
               date: shift.date,
               actualStart: undefined,
               actualEnd: undefined,
@@ -464,17 +471,20 @@ const StaffAttendanceTracking: React.FC = () => {
         });
 
         attendanceRecords.forEach((record: any) => {
+          // Проверяем, что staffId существует
+          if (!record.staffId) return;
+
           // Используем фиксированное смещение +5 для Алматы
           const localDate = moment(record.date).utcOffset(5).format('YYYY-MM-DD');
           const currentKey = `${String(record.staffId._id || record.staffId)}-${localDate}`;
           const shiftExists = shifts.some(
             (shift: any) =>
-              `${String(shift.staffId._id || shift.staffId)}-${shift.date}` === currentKey,
+              `${String(shift.staffId?._id || shift.staffId)}-${shift.date}` === currentKey,
           );
 
           if (!shiftExists) {
             const staff = staffList.find(
-              (s) => s.id === record.staffId._id || s.id === record.staffId,
+              (s) => s.id === record.staffId?._id || s.id === record.staffId,
             );
             const baseSalary = staff?.baseSalary || 180000;
             const salaryType = staff?.baseSalaryType || staff?.salaryType || 'month';
@@ -553,10 +563,10 @@ const StaffAttendanceTracking: React.FC = () => {
 
             allRecords.push({
               id: record._id || record.id || '',
-              staffId: record.staffId._id || record.staffId,
+              staffId: record.staffId?._id || record.staffId,
               staffName:
-                record.staffId.fullName ||
-                getStaffName(record.staffId._id || record.staffId || ''),
+                record.staffId?.fullName ||
+                getStaffName(record.staffId?._id || record.staffId || ''),
               date: record.date,
               actualStart: record.actualStart
                 ? new Date(record.actualStart).toLocaleTimeString('ru-RU', {
@@ -1870,7 +1880,7 @@ const StaffAttendanceTracking: React.FC = () => {
                   }
                   fullWidth
                 >
-                  {Object.entries(STATUS_TEXT).map(([key, label]) => (
+                  {Object.entries(SHIFT_STATUS_TEXT).map(([key, label]) => (
                     <MenuItem key={key} value={key}>
                       {label}
                     </MenuItem>
@@ -2100,7 +2110,7 @@ const StaffAttendanceTracking: React.FC = () => {
                 value={bulkStatusForm.status}
                 onChange={(e) => setBulkStatusForm(prev => ({ ...prev, status: e.target.value }))}
               >
-                {Object.entries(STATUS_TEXT).map(([key, label]) => (
+                {Object.entries(SHIFT_STATUS_TEXT).map(([key, label]) => (
                   <MenuItem key={key} value={key}>
                     {label}
                   </MenuItem>
