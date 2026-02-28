@@ -206,8 +206,11 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             0,
           ),
           totalAdvance: workedEmployees.reduce((sum, p) => sum + (p.advance || 0), 0),
-          totalPenalties: workedEmployees.reduce((sum, p) => sum + (p.penalties || 0) + (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0), 0),
-          totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total - (p.penalties || 0) - (p.latePenalties || 0) - (p.absencePenalties || 0) - (p.userFines || 0) + (p.bonuses || 0) || 0), 0),
+          totalPenalties: workedEmployees.reduce((sum, p) => {
+            const rowPenalties = (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0) + (p.deductions || 0);
+            return sum + rowPenalties;
+          }, 0),
+          totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total || 0), 0),
         };
 
 
@@ -218,7 +221,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             accruals: p.accruals || (p.baseSalaryType === 'shift' ? ((p.workedShifts || 0) * (p.shiftRate || p.baseSalary || 0)) : 0),
             bonuses: p.bonuses || 0,
             deductions: p.deductions || 0,
-            penalties: (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0),
+            penalties: (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0) + (p.deductions || 0),
             latePenalties: p.latePenalties || 0,
             absencePenalties: p.absencePenalties || 0,
             latePenaltyRate: globalLatePenaltyRate,
@@ -1054,7 +1057,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                 <Card elevation={0} sx={{ borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
                   <Box sx={{ p: 3, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 3 }}>
                     {[
-                      { label: 'Сотрудников', value: summary?.totalEmployees || 0, color: '#6366f1', icon: <PeopleIcon /> },
                       { label: 'Начислено', value: (summary?.totalAccruals || 0).toLocaleString() + ' ₸', color: '#10b981', icon: <EditIcon /> },
                       { label: 'Авансы', value: (summary?.totalAdvance || 0).toLocaleString() + ' ₸', color: '#2196f3', icon: <DebtIcon /> },
                       { label: 'Вычеты', value: (summary?.totalPenalties || 0).toLocaleString() + ' ₸', color: '#f43f5e', icon: <CancelIcon /> },

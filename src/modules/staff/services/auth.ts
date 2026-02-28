@@ -134,9 +134,18 @@ class AuthApiClient extends BaseApiClient {
       if (
         response &&
         typeof response === 'object' &&
-        response.valid !== undefined
+        response.data !== undefined &&
+        response.data.valid !== undefined
       ) {
-        return response.valid;
+        if (response.data.valid && response.data.user) {
+          // Обновляем данные пользователя в localStorage, если они пришли
+          const currentUser = this.getCurrentUser();
+          if (currentUser) {
+            const updatedUser = { ...currentUser, ...response.data.user };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          }
+        }
+        return response.data.valid === true;
       }
 
       return true;
