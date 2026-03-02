@@ -115,7 +115,7 @@ const ROLE_LABELS: Record<string, string> = {
   intern: 'Стажер',
 };
 
-const DAY_NAMES = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const DAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 
 
@@ -744,8 +744,8 @@ const StaffSchedule: React.FC = () => {
                           }}
                         >
                           <Box>
-                            <Box>{DAY_NAMES[day.getDay()]}</Box>
-                            <Box>{moment(day).format('D')}</Box>
+                            <Box>{DAY_NAMES[(day.getDay() + 6) % 7]}</Box>
+                            <Box>{moment(day).format('DD\\MM\\YYYY')}</Box>
                           </Box>
                         </TableCell>
                       );

@@ -19,6 +19,14 @@ import { setupAxios } from './shared/api/axiosSetup';
 // Initialize Axios
 setupAxios();
 
+import moment from 'moment';
+import 'moment/locale/ru';
+moment.updateLocale('ru', {
+  week: {
+    dow: 1, // Monday is the first day of the week.
+  }
+});
+
 const rootElement = document.getElementById('root');
 if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);

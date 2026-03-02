@@ -244,7 +244,7 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
               >
                 {selectedDates.map((date, index) => (
                   <Typography key={index} variant='body2'>
-                    {date.format('DD.MM.YYYY')}
+                    {date.format('DD\\MM\\YYYY')}
                   </Typography>
                 ))}
               </Box>
