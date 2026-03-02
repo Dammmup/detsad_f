@@ -295,14 +295,8 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
           editData.bonuses !== undefined
             ? editData.bonuses
             : originalRow.bonuses || 0;
-        const status =
-          editData.status && editData.status !== 'draft'
-            ? editData.status
-            : originalRow.status && originalRow.status !== 'draft'
-              ? originalRow.status
-              : 'calculated';
-
-        const apiStatus = status === 'calculated' ? 'draft' : status;
+        const status = editData.status ?? originalRow.status ?? 'draft';
+        const apiStatus = status;
 
         const deductions = originalRow.deductions || 0; // Используем вычеты из оригинальной строки
         const total = accruals + bonuses - penalties - advance - deductions;
@@ -316,11 +310,16 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         if (!payrollId) {
           console.log('Creating new payroll for virtual record');
           const newPayroll = await createPayroll({
-            staffId: { _id: originalRow.staffId } as any,
+            staffId: rowId as any, // Передаем ID сотрудника для бэкенда
             period: selectedMonth,
             baseSalary: editData.baseSalary ?? originalRow.baseSalary ?? 0,
             bonuses: editData.bonuses ?? originalRow.bonuses ?? 0,
-            ...updatedData
+            accruals: accruals,
+            penalties: penalties,
+            advance: advance,
+            deductions: deductions,
+            total: total,
+            status: apiStatus as 'draft' | 'approved' | 'paid',
           });
           payrollId = newPayroll._id;
         } else {
@@ -531,12 +530,13 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         advance: p.advance || 0,
         bonuses: p.bonuses || 0,
         total: p.total || 0,  // Используем уже вычисленное значение из backend
-        status: p.status && p.status !== 'draft' ? p.status : 'calculated',
+        status: p.status || 'draft',
         staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
         _id: p._id || undefined,
         baseSalary: p.baseSalary || 0,
         baseSalaryType: p.baseSalaryType || 'month',
         fines: p.fines || [],
+        deductions: p.deductions || 0, // Добавляем маппинг удержаний
         userFines: p.userFines || 0,
         workedShifts: p.workedShifts || 0,
         workedDays: p.workedDays || 0,
@@ -1212,19 +1212,31 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                                       paddingBottom: '2px'
                                     }}
                                   >
-                                    <Typography variant='body1' sx={{ fontWeight: '900', color: 'primary.main' }}>{r.total?.toLocaleString() || '0'} ₸</Typography>
+                                    <Typography
+                                      variant='body1'
+                                      sx={{
+                                        fontWeight: '900',
+                                        color: (r.total || 0) < 0 ? 'error.main' : 'primary.main'
+                                      }}
+                                    >
+                                      {r.total?.toLocaleString() || '0'} ₸
+                                    </Typography>
                                   </span>
                                 </Tooltip>
                               </TableCell>
                               <TableCell>
                                 {editingId === r.staffId ? (
                                   <Select size='small' value={editData.status ?? r.status} onChange={(e) => handleInputChange('status', e.target.value)}>
-                                    <MenuItem value='calculated'>Рассчитано</MenuItem>
+                                    <MenuItem value='draft'>Черновик</MenuItem>
                                     <MenuItem value='approved'>Утвержден</MenuItem>
                                     <MenuItem value='paid'>Оплачено</MenuItem>
                                   </Select>
                                 ) : (
-                                  <Chip label={r.status === 'paid' ? 'Оплачено' : r.status === 'approved' ? 'Утвержден' : 'Рассчитано'} color={r.status === 'paid' ? 'success' : r.status === 'approved' ? 'info' : 'warning'} size='small' />
+                                  <Chip
+                                    label={r.status === 'paid' ? 'Оплачено' : r.status === 'approved' ? 'Утвержден' : 'Черновик'}
+                                    color={r.status === 'paid' ? 'success' : r.status === 'approved' ? 'info' : 'warning'}
+                                    size='small'
+                                  />
                                 )}
                               </TableCell>
                               <TableCell>

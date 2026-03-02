@@ -48,6 +48,8 @@ const ProfilePage: React.FC = () => {
   });
   const [pushPermission, setPushPermission] = useState<string>('default');
   const [pushLoading, setPushLoading] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
     loadUserProfile();
@@ -55,6 +57,17 @@ const ProfilePage: React.FC = () => {
   }, []);
 
   const checkPushStatus = async () => {
+    const ua = navigator.userAgent;
+    const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    setIsIOS(ios);
+    setIsStandalone(standalone);
+
+    if (ios && !standalone) {
+      setPushPermission('ios-not-pwa');
+      return;
+    }
+
     const permission = await PushService.checkPermission();
     setPushPermission(permission);
   };
@@ -500,12 +513,34 @@ const ProfilePage: React.FC = () => {
                   Уведомления заблокированы в браузере. Разрешите их в настройках сайта.
                 </Typography>
               </>
-            ) : pushPermission === 'unsupported' ? (
+            ) : pushPermission === 'unsupported' || pushPermission === 'ios-not-pwa' ? (
               <>
                 <NotificationsOffIcon color='disabled' />
-                <Typography variant='body2' color='text.secondary'>
-                  Ваш браузер не поддерживает push-уведомления
-                </Typography>
+                <Box sx={{ flex: 1 }}>
+                  {isIOS && !isStandalone ? (
+                    <>
+                      <Typography variant='body2' color='text.secondary' gutterBottom>
+                        На iPhone push-уведомления работают только в режиме PWA.
+                      </Typography>
+                      <Typography variant='body2' color='text.secondary' component='div'>
+                        Как включить:
+                        <ol style={{ margin: '4px 0 0 0', paddingLeft: '20px' }}>
+                          <li>Нажмите кнопку «Поделиться» (↑) в Safari</li>
+                          <li>Выберите «На экран "Домой"»</li>
+                          <li>Откройте приложение с домашнего экрана</li>
+                          <li>Включите уведомления в профиле</li>
+                        </ol>
+                      </Typography>
+                      <Typography variant='caption' color='text.disabled'>
+                        Требуется iOS 16.4 или новее
+                      </Typography>
+                    </>
+                  ) : (
+                    <Typography variant='body2' color='text.secondary'>
+                      Ваш браузер не поддерживает push-уведомления
+                    </Typography>
+                  )}
+                </Box>
               </>
             ) : (
               <>
