@@ -18,6 +18,9 @@ import { styled } from '@mui/material/styles';
 import { authApi, getCurrentUser } from '../services/auth';
 import { usersApi, updateUser } from '../services/users';
 import { User } from '../../../shared/types/common';
+import PushService from '../../../shared/services/pushService';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import NotificationsOffIcon from '@mui/icons-material/NotificationsOff';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   maxWidth: 600,
@@ -43,10 +46,53 @@ const ProfilePage: React.FC = () => {
     newPassword: '',
     confirmPassword: '',
   });
+  const [pushPermission, setPushPermission] = useState<string>('default');
+  const [pushLoading, setPushLoading] = useState(false);
 
   useEffect(() => {
     loadUserProfile();
+    checkPushStatus();
   }, []);
+
+  const checkPushStatus = async () => {
+    const permission = await PushService.checkPermission();
+    setPushPermission(permission);
+  };
+
+  const handleEnablePush = async () => {
+    setPushLoading(true);
+    try {
+      const granted = await PushService.requestPermission();
+      if (granted) {
+        setPushPermission('granted');
+        setSuccess('Push-уведомления успешно включены');
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setPushPermission('denied');
+        setError('Вы отклонили запрос на уведомления. Включите их в настройках браузера.');
+      }
+    } catch (err) {
+      console.error('Ошибка при включении push:', err);
+      setError('Ошибка при включении уведомлений');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const handleDisablePush = async () => {
+    setPushLoading(true);
+    try {
+      await PushService.unsubscribeUser();
+      setPushPermission('default');
+      setSuccess('Push-уведомления отключены');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error('Ошибка при отключении push:', err);
+      setError('Ошибка при отключении уведомлений');
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   const loadUserProfile = async () => {
     try {
@@ -422,6 +468,63 @@ const ProfilePage: React.FC = () => {
               />
             </Box>
           )}
+        </Box>
+
+        <Divider sx={{ my: 2 }} />
+
+        <Box mt={2}>
+          <Typography variant='h6' gutterBottom>
+            Push-уведомления
+          </Typography>
+          <Box display='flex' alignItems='center' gap={2}>
+            {pushPermission === 'granted' ? (
+              <>
+                <NotificationsActiveIcon color='success' />
+                <Typography variant='body2' color='success.main' sx={{ flex: 1 }}>
+                  Уведомления включены
+                </Typography>
+                <Button
+                  variant='outlined'
+                  color='warning'
+                  size='small'
+                  onClick={handleDisablePush}
+                  disabled={pushLoading}
+                >
+                  {pushLoading ? <CircularProgress size={20} /> : 'Отключить'}
+                </Button>
+              </>
+            ) : pushPermission === 'denied' ? (
+              <>
+                <NotificationsOffIcon color='error' />
+                <Typography variant='body2' color='text.secondary' sx={{ flex: 1 }}>
+                  Уведомления заблокированы в браузере. Разрешите их в настройках сайта.
+                </Typography>
+              </>
+            ) : pushPermission === 'unsupported' ? (
+              <>
+                <NotificationsOffIcon color='disabled' />
+                <Typography variant='body2' color='text.secondary'>
+                  Ваш браузер не поддерживает push-уведомления
+                </Typography>
+              </>
+            ) : (
+              <>
+                <NotificationsOffIcon color='action' />
+                <Typography variant='body2' color='text.secondary' sx={{ flex: 1 }}>
+                  Уведомления не включены
+                </Typography>
+                <Button
+                  variant='contained'
+                  color='primary'
+                  size='small'
+                  onClick={handleEnablePush}
+                  disabled={pushLoading}
+                >
+                  {pushLoading ? <CircularProgress size={20} /> : 'Включить'}
+                </Button>
+              </>
+            )}
+          </Box>
         </Box>
 
         {!isEditing && (
