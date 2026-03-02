@@ -281,7 +281,7 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = () => {
                             mb: 0.5,
                           }}
                         >
-                          {moment(day).format('DD\\MM\\YYYY')}
+                          {moment(day).format('D')}
                         </Typography>
 
                         {/* Фото детей */}

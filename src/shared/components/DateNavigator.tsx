@@ -34,7 +34,7 @@ const DateNavigator: React.FC<DateNavigatorProps> = ({ viewType = 'month' }) => 
     if (viewType === 'week') {
       const start = mDate.clone().startOf('isoWeek');
       const end = mDate.clone().endOf('isoWeek');
-      return `${start.format('DD\\MM')} - ${end.format('DD\\MM\\YYYY')}`;
+      return `${start.format('DD.MM')} - ${end.format('DD.MM.YYYY')}`;
     }
     return mDate.format('MMMM YYYY');
   };

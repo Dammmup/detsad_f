@@ -142,7 +142,7 @@ const WeeklyAttendance: React.FC = () => {
 
       const monthStart = moment(currentDate).startOf('month');
       const monthEnd = moment(currentDate).endOf('month');
-      const period = `${monthStart.format('DD\\MM\\YYYY')} - ${monthEnd.format('DD\\MM\\YYYY')}`;
+      const period = `${monthStart.format('DD.MM.YYYY')} - ${monthEnd.format('DD.MM.YYYY')}`;
 
       const attendanceRecordsForExport = await getChildAttendance({
         groupId: selectedGroup,
@@ -571,7 +571,7 @@ const WeeklyAttendance: React.FC = () => {
                             p: 0.5, borderRadius: 1
                           }}>
                             <Box sx={{ fontWeight: 'bold' }}>{moment(day).format('dd')}</Box>
-                            <Box>{moment(day).format('DD\\MM\\YYYY')}</Box>
+                            <Box>{moment(day).format('D/MM')}</Box>
                           </Box>
                         </TableCell>
                       ))}

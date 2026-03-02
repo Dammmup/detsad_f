@@ -200,6 +200,7 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
             <Grid item xs={12} md={6}>
               <DatePicker
                 label='Начальная дата'
+                inputFormat='DD.MM.YYYY'
                 value={dateRange.start}
                 onChange={(newValue: moment.Moment | null) =>
                   setDateRange({ ...dateRange, start: newValue })
@@ -210,6 +211,7 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
             <Grid item xs={12} md={6}>
               <DatePicker
                 label='Конечная дата'
+                inputFormat='DD.MM.YYYY'
                 value={dateRange.end}
                 onChange={(newValue: moment.Moment | null) =>
                   setDateRange({ ...dateRange, end: newValue })
@@ -244,7 +246,7 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
               >
                 {selectedDates.map((date, index) => (
                   <Typography key={index} variant='body2'>
-                    {date.format('DD\\MM\\YYYY')}
+                    {date.format('DD.MM.YYYY')}
                   </Typography>
                 ))}
               </Box>

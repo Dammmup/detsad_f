@@ -46,7 +46,7 @@ import { AnyAaaaRecord } from 'dns';
 // Helper function to format dates
 const formatDate = (date: Date | string | undefined | null): string => {
   if (!date) return '';
-  return moment(date).format('DD\\MM\\YYYY');
+  return moment(date).format('DD.MM.YYYY');
 };
 
 export default function SomaticJournal() {

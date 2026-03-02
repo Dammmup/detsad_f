@@ -745,7 +745,7 @@ const StaffSchedule: React.FC = () => {
                         >
                           <Box>
                             <Box>{DAY_NAMES[(day.getDay() + 6) % 7]}</Box>
-                            <Box>{moment(day).format('DD\\MM\\YYYY')}</Box>
+                            <Box>{moment(day).format('D')}</Box>
                           </Box>
                         </TableCell>
                       );
@@ -932,6 +932,7 @@ const StaffSchedule: React.FC = () => {
                   <Grid item xs={12} sm={6}>
                     <DatePicker
                       label='Дата смены'
+                      inputFormat='DD.MM.YYYY'
                       value={moment(formData.date)}
                       onChange={(date) => date && handleDateChange(date.toDate())}
                       renderInput={(params) => <TextField {...params} fullWidth required />}
@@ -942,6 +943,7 @@ const StaffSchedule: React.FC = () => {
                     <Grid item xs={12} sm={6}>
                       <DatePicker
                         label='Начало периода'
+                        inputFormat='DD.MM.YYYY'
                         value={moment(formData.startDate)}
                         onChange={(date) => date && setFormData({ ...formData, startDate: date.format('YYYY-MM-DD') })}
                         renderInput={(params) => <TextField {...params} fullWidth required />}
@@ -950,6 +952,7 @@ const StaffSchedule: React.FC = () => {
                     <Grid item xs={12} sm={6}>
                       <DatePicker
                         label='Конец периода'
+                        inputFormat='DD.MM.YYYY'
                         value={moment(formData.endDate)}
                         onChange={(date) => date && setFormData({ ...formData, endDate: date.format('YYYY-MM-DD') })}
                         renderInput={(params) => <TextField {...params} fullWidth required />}

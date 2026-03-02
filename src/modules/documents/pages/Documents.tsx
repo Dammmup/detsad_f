@@ -568,7 +568,7 @@ export const Documents = () => {
                     </TableCell>
                     <TableCell>
                       {document.uploadDate
-                        ? moment(document.uploadDate).format('DD\\MM\\YYYY')
+                        ? moment(document.uploadDate).format('DD.MM.YYYY')
                         : '-'}
                     </TableCell>
                     <TableCell>{(document.uploader as any)?.fullName || '-'}</TableCell>
