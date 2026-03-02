@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import moment from 'moment';
+import axios from 'axios';
 import 'moment/locale/ru';
 import { useSnackbar } from 'notistack';
 import {
@@ -42,6 +43,7 @@ import {
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
+  Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -146,59 +148,7 @@ const StaffSchedule: React.FC = () => {
   const [workingSaturdays, setWorkingSaturdays] = useState<string[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteStartDate, setDeleteStartDate] = useState<moment.Moment | null>(null);
-  const [deleteEndDate, setDeleteEndDate] = useState<moment.Moment | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<'selected' | 'all'>('all');
 
-  // Bulk Delete Functions
-  const handleBulkDelete = async () => {
-    if (!deleteStartDate || !deleteEndDate) {
-      enqueueSnackbar('Выберите диапазон дат', { variant: 'error' });
-      return;
-    }
-
-    const startDateStr = deleteStartDate.format('YYYY-MM-DD');
-    const endDateStr = deleteEndDate.format('YYYY-MM-DD');
-
-    try {
-      setLoading(true);
-      const targetStaffIds = deleteTarget === 'selected' ? selectedStaff : [];
-
-      // Предполагаем наличие API для массового удаления, либо удаляем по одному
-      // В данном проекте обычно используется deleteShift по ID
-      // Но для массового удаления лучше иметь отдельный метод в сервисе
-      const shiftsToDelete = shifts.filter(s => {
-        const sDate = moment(s.date).format('YYYY-MM-DD');
-        const sId = typeof s.staffId === 'string' ? s.staffId : (s.staffId as any)?._id;
-        const inDateRange = sDate >= startDateStr && sDate <= endDateStr;
-        const isTarget = deleteTarget === 'all' || targetStaffIds.includes(sId);
-        return inDateRange && isTarget;
-      });
-
-      if (shiftsToDelete.length === 0) {
-        enqueueSnackbar('Смены для удаления не найдены', { variant: 'info' });
-        return;
-      }
-
-      await Promise.all(shiftsToDelete.map(s => deleteShift(s.id || s._id || '')));
-
-      enqueueSnackbar(`Удалено смен: ${shiftsToDelete.length}`, { variant: 'success' });
-
-      // Refresh data
-      const weekStart = moment(currentDate).startOf('isoWeek');
-      const weekEnd = moment(currentDate).endOf('isoWeek');
-      const updatedShifts = await getShifts(weekStart.format('YYYY-MM-DD'), weekEnd.format('YYYY-MM-DD'));
-      setShifts(updatedShifts);
-
-      setDeleteDialogOpen(false);
-    } catch (err) {
-      console.error('Error in bulk delete:', err);
-      enqueueSnackbar('Ошибка при удалении смен', { variant: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleExportFullMonth = async () => {
     const monthStart = moment(currentDate).startOf('month');
@@ -225,11 +175,16 @@ const StaffSchedule: React.FC = () => {
     handleExportFullMonth();
   };
 
-  const [formData, setFormData] = useState<ShiftFormData>({
+  const [assignmentType, setAssignmentType] = useState<'single' | 'period'>('single');
+  const [assignmentAction, setAssignmentAction] = useState<'create' | 'delete'>('create');
+  const [formData, setFormData] = useState<any>({
     userId: '',
     staffId: '',
     staffName: '',
     date: moment().format('YYYY-MM-DD'),
+    startDate: moment().format('YYYY-MM-DD'),
+    endDate: moment().format('YYYY-MM-DD'),
+    selectedDays: [1, 2, 3, 4, 5], // Пн-Пт по умолчанию
     notes: '',
     status: ShiftStatus.scheduled,
     alternativeStaffId: '',
@@ -365,33 +320,49 @@ const StaffSchedule: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev: any) => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev: any) => ({ ...prev, [name]: value }));
   };
 
   const handleDateChange = (date: Date | null) => {
     if (date) {
-      setFormData((prev) => ({ ...prev, date: moment(date).format('YYYY-MM-DD') }));
+      setFormData((prev: any) => ({ ...prev, date: moment(date).format('YYYY-MM-DD') }));
     }
   };
 
   const handleStaffSelect = (e: SelectChangeEvent<string>) => {
     const staffId = e.target.value;
     const selectedS = staff.find((s) => (s.id || s._id) === staffId);
-    setFormData((prev) => ({
+    setFormData((prev: any) => ({
       ...prev,
       staffId,
       staffName: selectedS?.fullName || '',
     }));
   };
 
+  const handleTestPush = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      await axios.post(`${apiUrl}/users/push/test`, {}, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      enqueueSnackbar('Тестовый пуш отправлен!', { variant: 'success' });
+    } catch (error: any) {
+      console.error('Test push error:', error);
+      const msg = error.response?.data?.message || 'Ошибка при отправке пуша';
+      enqueueSnackbar(msg, { variant: 'error' });
+    }
+  };
+
   const validateForm = (): boolean => {
-    if (!formData.staffId) {
-      enqueueSnackbar('Выберите сотрудника', { variant: 'error' });
+    const hasStaff = formData.staffId || selectedStaff.length > 0;
+    if (!hasStaff) {
+      enqueueSnackbar('Выберите сотрудника(ов)', { variant: 'error' });
       return false;
     }
     if (!formData.date) {
@@ -403,38 +374,142 @@ const StaffSchedule: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (assignmentType === 'single' && !validateForm()) return;
+    if (assignmentType === 'period' && (!formData.startDate || !formData.endDate)) {
+      enqueueSnackbar('Выберите период', { variant: 'error' });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const shiftData: Partial<Shift> = {
-        userId: formData.staffId,
-        staffId: formData.staffId,
-        staffName: formData.staffName,
-        date: formData.date,
-        notes: formData.notes,
-        status: formData.status,
-      };
+      const targetStaffIds = selectedStaff.length > 0
+        ? selectedStaff
+        : (formData.staffId ? [formData.staffId] : []);
 
-      if (editingShift) {
-        const id = editingShift.id || editingShift._id;
-        if (id) {
-          await updateShift(id, { ...shiftData, alternativeStaffId: formData.alternativeStaffId });
-          enqueueSnackbar('Смена успешно обновлена', { variant: 'success' });
+      if (targetStaffIds.length === 0) {
+        enqueueSnackbar('Выберите сотрудника(ов)', { variant: 'error' });
+        setLoading(false);
+        return;
+      }
+
+      if (assignmentType === 'single') {
+        const shiftData: Partial<Shift> = {
+          userId: formData.staffId,
+          staffId: formData.staffId,
+          staffName: formData.staffName,
+          date: formData.date,
+          notes: formData.notes,
+          status: formData.status,
+        };
+
+        if (editingShift) {
+          const id = editingShift.id || editingShift._id;
+          if (id) {
+            await updateShift(id, { ...shiftData, alternativeStaffId: formData.alternativeStaffId });
+            enqueueSnackbar('Смена успешно обновлена', { variant: 'success' });
+          }
+        } else if (assignmentAction === 'create') {
+          // Если выбрано несколько сотрудников через чекбоксы, но тип "один день"
+          const shiftsToCreate = targetStaffIds.map(sId => {
+            const staffMember = staff.find(s => (s.id || s._id) === sId);
+            return {
+              ...shiftData as any,
+              userId: sId,
+              staffId: sId,
+              staffName: staffMember?.fullName || formData.staffName,
+              alternativeStaffId: formData.alternativeStaffId
+            };
+          });
+          await shiftsApi.bulkCreate(shiftsToCreate);
+          enqueueSnackbar(`Создано смен: ${shiftsToCreate.length}`, { variant: 'success' });
+        } else {
+          // УДАЛЕНИЕ в режиме "Один день" для нескольких сотрудников
+          const shiftsToDelete = shifts.filter(s => {
+            const sId = typeof s.staffId === 'string' ? s.staffId : (s.staffId as any)?._id;
+            const sDate = moment(s.date).format('YYYY-MM-DD');
+            return targetStaffIds.includes(sId) && sDate === formData.date;
+          });
+
+          if (shiftsToDelete.length > 0) {
+            const idsToDelete = shiftsToDelete.map(s => s.id || s._id || '');
+            await shiftsApi.bulkDelete(idsToDelete);
+            enqueueSnackbar(`Удалено смен: ${idsToDelete.length}`, { variant: 'success' });
+          } else {
+            enqueueSnackbar('Смены для удаления не найдены', { variant: 'info' });
+          }
         }
       } else {
-        await createShift({ ...shiftData as any, alternativeStaffId: formData.alternativeStaffId });
-        enqueueSnackbar('Смена успешно создана', { variant: 'success' });
+        // Логика для ПЕРИОДА
+        const start = moment(formData.startDate);
+        const end = moment(formData.endDate);
+        const dates: string[] = [];
+        let current = start.clone();
+
+        while (current.isSameOrBefore(end)) {
+          const dayOfWeek = current.day(); // 0 (Вс) - 6 (Сб)
+          // Преобразуем 0 в 7 для удобства, если нужно, но оставим как есть 0-6
+          if (formData.selectedDays.includes(dayOfWeek)) {
+            dates.push(current.format('YYYY-MM-DD'));
+          }
+          current.add(1, 'day');
+        }
+
+        if (dates.length === 0) {
+          enqueueSnackbar('Нет дат, подходящих под выбранные дни недели', { variant: 'warning' });
+          setLoading(false);
+          return;
+        }
+
+        if (assignmentAction === 'create') {
+          const shiftsToCreate: any[] = [];
+          for (const sId of targetStaffIds) {
+            const staffMember = staff.find(s => (s.id || s._id) === sId);
+            for (const d of dates) {
+              shiftsToCreate.push({
+                userId: sId,
+                staffId: sId,
+                staffName: staffMember?.fullName || '',
+                date: d,
+                notes: formData.notes,
+                status: formData.status,
+                alternativeStaffId: formData.alternativeStaffId,
+              });
+            }
+          }
+          await shiftsApi.bulkCreate(shiftsToCreate);
+          enqueueSnackbar(`Создано смен: ${shiftsToCreate.length}`, { variant: 'success' });
+        } else {
+          // УДАЛЕНИЕ в периоде
+          const weekStart = moment(currentDate).startOf('month').subtract(1, 'month');
+          const weekEnd = moment(currentDate).endOf('month').add(1, 'month');
+          // Проще всего получить смены за период и отфильтровать
+          const currentShifts = await getShifts(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD'));
+          const idsToDelete = currentShifts
+            .filter(s => {
+              const sId = typeof s.staffId === 'string' ? s.staffId : (s.staffId as any)?._id;
+              const sDate = moment(s.date).format('YYYY-MM-DD');
+              return targetStaffIds.includes(sId) && dates.includes(sDate);
+            })
+            .map(s => s.id || s._id || '');
+
+          if (idsToDelete.length > 0) {
+            await shiftsApi.bulkDelete(idsToDelete);
+            enqueueSnackbar(`Удалено смен: ${idsToDelete.length}`, { variant: 'success' });
+          } else {
+            enqueueSnackbar('Смены для удаления не найдены', { variant: 'info' });
+          }
+        }
       }
 
       const weekStart = moment(currentDate).startOf('isoWeek');
       const weekEnd = moment(currentDate).endOf('isoWeek');
-      const shiftsData = await getShifts(weekStart.format('YYYY-MM-DD'), weekEnd.format('YYYY-MM-DD'));
-      setShifts(shiftsData);
+      const updatedShifts = await getShifts(weekStart.format('YYYY-MM-DD'), weekEnd.format('YYYY-MM-DD'));
+      setShifts(updatedShifts);
       handleCloseModal();
     } catch (err) {
-      console.error('Error saving shift:', err);
-      enqueueSnackbar('Ошибка при сохранении смены', { variant: 'error' });
+      console.error('Error saving/deleting shifts:', err);
+      enqueueSnackbar('Ошибка при выполнении операции', { variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -458,13 +533,18 @@ const StaffSchedule: React.FC = () => {
   const handleCloseModal = () => {
     setModalOpen(false);
     setEditingShift(null);
+    setAssignmentType('single');
+    setAssignmentAction('create');
     setFormData({
       userId: '',
       staffId: '',
       staffName: '',
       date: moment().format('YYYY-MM-DD'),
-      status: ShiftStatus.scheduled,
+      startDate: moment().format('YYYY-MM-DD'),
+      endDate: moment().format('YYYY-MM-DD'),
+      selectedDays: [1, 2, 3, 4, 5],
       notes: '',
+      status: ShiftStatus.scheduled,
       alternativeStaffId: '',
     });
   };
@@ -578,13 +658,20 @@ const StaffSchedule: React.FC = () => {
                     sx={{ ml: 2 }}
                     startIcon={<DeleteIcon />}
                     onClick={() => {
-                      setDeleteStartDate(moment(currentDate).startOf('isoWeek'));
-                      setDeleteEndDate(moment(currentDate).endOf('isoWeek'));
-                      setDeleteTarget(selectedStaff.length > 0 ? 'selected' : 'all');
-                      setDeleteDialogOpen(true);
+                      setAssignmentAction('delete');
+                      setModalOpen(true);
                     }}
                   >
                     Удалить смены
+                  </Button>
+                  <Button
+                    variant='outlined'
+                    color='info'
+                    sx={{ ml: 2 }}
+                    startIcon={<NotificationsIcon />}
+                    onClick={handleTestPush}
+                  >
+                    Тестовый Push
                   </Button>
                 </Box>
               </Box>
@@ -778,15 +865,60 @@ const StaffSchedule: React.FC = () => {
         </Card>
 
         {/* Shift Form Modal */}
-        <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth='sm' fullWidth>
+        <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth='md' fullWidth>
           <form onSubmit={handleSubmit}>
-            <DialogTitle>{editingShift ? 'Редактировать смену' : 'Добавить новую смену'}</DialogTitle>
+            <DialogTitle>{editingShift ? 'Редактировать смену' : 'Назначить/Удалить смены'}</DialogTitle>
             <DialogContent>
               <Grid container spacing={2} sx={{ mt: 1 }}>
+                {!editingShift && (
+                  <>
+                    <Grid item xs={12}>
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <RadioGroup
+                          row
+                          value={assignmentType}
+                          onChange={(e) => setAssignmentType(e.target.value as any)}
+                        >
+                          <FormControlLabel value="single" control={<Radio />} label="Один день" />
+                          <FormControlLabel value="period" control={<Radio />} label="Период" />
+                        </RadioGroup>
+
+                        <RadioGroup
+                          row
+                          value={assignmentAction}
+                          onChange={(e) => setAssignmentAction(e.target.value as any)}
+                        >
+                          <FormControlLabel value="create" control={<Radio color="primary" />} label="Назначить" />
+                          <FormControlLabel value="delete" control={<Radio color="error" />} label="Удалить" />
+                        </RadioGroup>
+                      </Box>
+                    </Grid>
+                    <Divider sx={{ width: '100%', my: 1 }} />
+                  </>
+                )}
+
                 <Grid item xs={12}>
                   <FormControl fullWidth required>
-                    <InputLabel>Сотрудник</InputLabel>
-                    <Select value={formData.staffId} onChange={handleStaffSelect} label='Сотрудник' required>
+                    <InputLabel>Сотрудник(и)</InputLabel>
+                    <Select
+                      multiple={!editingShift && selectedStaff.length > 1}
+                      value={editingShift ? formData.staffId : (selectedStaff.length > 0 ? selectedStaff : (formData.staffId ? [formData.staffId] : []))}
+                      onChange={(e) => {
+                        if (editingShift) {
+                          handleStaffSelect(e as any);
+                        } else {
+                          const val = e.target.value;
+                          if (Array.isArray(val)) {
+                            setSelectedStaff(val);
+                          } else {
+                            handleStaffSelect(e as any);
+                            setSelectedStaff([val]);
+                          }
+                        }
+                      }}
+                      label='Сотрудник(и)'
+                      required
+                    >
                       {staff.map((s) => (
                         <MenuItem key={s.id || s._id} value={s.id || s._id}>
                           {s.fullName} ({ROLE_LABELS[s.role as string] || s.role})
@@ -795,39 +927,114 @@ const StaffSchedule: React.FC = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={6}>
-                  <DatePicker
-                    label='Дата смены'
-                    value={moment(formData.date)}
-                    onChange={(date) => handleDateChange(date ? date.toDate() : null)}
-                    renderInput={(params) => <TextField {...params} fullWidth required />}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth required>
-                    <InputLabel>Статус</InputLabel>
-                    <Select name='status' value={formData.status} onChange={handleSelectChange} label='Статус' required>
-                      <MenuItem value='scheduled'>Запланирована</MenuItem>
-                      <MenuItem value='completed'>Завершена</MenuItem>
-                      <MenuItem value='in_progress'>В процессе</MenuItem>
-                      <MenuItem value='late'>Опоздание</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField label='Примечания' name='notes' value={formData.notes} onChange={handleInputChange} fullWidth multiline rows={2} />
-                </Grid>
-                <Grid item xs={12}>
-                  <FormControl fullWidth>
-                    <InputLabel>Альтернативный сотрудник</InputLabel>
-                    <Select name='alternativeStaffId' value={formData.alternativeStaffId || ''} onChange={handleSelectChange} label='Альтернативный сотрудник'>
-                      <MenuItem value=''>Нет альтернативного сотрудника</MenuItem>
-                      {staff.filter(s => s.role !== 'parent' && s.role !== 'child').map((s) => (
-                        <MenuItem key={s.id || s._id} value={s.id || s._id}>{s.fullName}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
+
+                {assignmentType === 'single' || editingShift ? (
+                  <Grid item xs={12} sm={6}>
+                    <DatePicker
+                      label='Дата смены'
+                      value={moment(formData.date)}
+                      onChange={(date) => date && handleDateChange(date.toDate())}
+                      renderInput={(params) => <TextField {...params} fullWidth required />}
+                    />
+                  </Grid>
+                ) : (
+                  <>
+                    <Grid item xs={12} sm={6}>
+                      <DatePicker
+                        label='Начало периода'
+                        value={moment(formData.startDate)}
+                        onChange={(date) => date && setFormData({ ...formData, startDate: date.format('YYYY-MM-DD') })}
+                        renderInput={(params) => <TextField {...params} fullWidth required />}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <DatePicker
+                        label='Конец периода'
+                        value={moment(formData.endDate)}
+                        onChange={(date) => date && setFormData({ ...formData, endDate: date.format('YYYY-MM-DD') })}
+                        renderInput={(params) => <TextField {...params} fullWidth required />}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" gutterBottom>Дни недели:</Typography>
+                      <Box display="flex" flexWrap="wrap" gap={1}>
+                        {[
+                          { label: 'Пн', value: 1 },
+                          { label: 'Вт', value: 2 },
+                          { label: 'Ср', value: 3 },
+                          { label: 'Чт', value: 4 },
+                          { label: 'Пт', value: 5 },
+                          { label: 'Сб', value: 6 },
+                          { label: 'Вс', value: 0 },
+                        ].map((day) => (
+                          <FormControlLabel
+                            key={day.value}
+                            control={
+                              <Checkbox
+                                checked={formData.selectedDays?.includes(day.value)}
+                                onChange={(e) => {
+                                  const currentDays = formData.selectedDays || [];
+                                  const newDays = e.target.checked
+                                    ? [...currentDays, day.value]
+                                    : currentDays.filter((d: number) => d !== day.value);
+                                  setFormData({ ...formData, selectedDays: newDays });
+                                }}
+                              />
+                            }
+                            label={day.label}
+                          />
+                        ))}
+                      </Box>
+                    </Grid>
+                  </>
+                )}
+
+                {assignmentAction === 'create' && (
+                  <>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth required>
+                        <InputLabel>Статус</InputLabel>
+                        <Select
+                          name='status'
+                          value={formData.status}
+                          onChange={handleSelectChange}
+                          label='Статус'
+                          required
+                        >
+                          <MenuItem value='scheduled'>Запланирована</MenuItem>
+                          <MenuItem value='completed'>Завершена</MenuItem>
+                          <MenuItem value='in_progress'>В процессе</MenuItem>
+                          <MenuItem value='late'>Опоздание</MenuItem>
+                          <MenuItem value='absent'>Отсутствует</MenuItem>
+                          <MenuItem value='vacation'>Отпуск</MenuItem>
+                          <MenuItem value='sick_leave'>Больничный</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label='Заметки'
+                        name='notes'
+                        value={formData.notes}
+                        onChange={handleInputChange}
+                        multiline
+                        rows={2}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FormControl fullWidth>
+                        <InputLabel>Альтернативный сотрудник</InputLabel>
+                        <Select name='alternativeStaffId' value={formData.alternativeStaffId || ''} onChange={handleSelectChange} label='Альтернативный сотрудник'>
+                          <MenuItem value=''>Нет альтернативного сотрудника</MenuItem>
+                          {staff.filter(s => s.role !== 'parent' && s.role !== 'child').map((s) => (
+                            <MenuItem key={s.id || s._id} value={s.id || s._id}>{s.fullName}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </>
+                )}
               </Grid>
             </DialogContent>
             <DialogActions sx={{ p: 2 }}>
@@ -850,34 +1057,16 @@ const StaffSchedule: React.FC = () => {
                 </Button>
               )}
               <Button onClick={handleCloseModal}>Отмена</Button>
-              <Button type='submit' variant='contained' color='primary' disabled={loading}>
-                {editingShift ? 'Сохранить' : 'Добавить'}
+              <Button
+                type='submit'
+                variant='contained'
+                color={assignmentAction === 'delete' ? 'error' : 'primary'}
+                disabled={loading}
+              >
+                {assignmentAction === 'delete' ? 'Удалить' : (editingShift ? 'Сохранить' : 'Применить')}
               </Button>
             </DialogActions>
           </form>
-        </Dialog>
-
-        {/* Delete Dialog */}
-        <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-          <DialogTitle>Удаление смен</DialogTitle>
-          <DialogContent>
-            <Box pt={1} display="flex" flexDirection="column" gap={2}>
-              <FormControl>
-                <RadioGroup value={deleteTarget} onChange={(e) => setDeleteTarget(e.target.value as any)}>
-                  <FormControlLabel value="selected" control={<Radio />} label="Выбранные сотрудники" disabled={selectedStaff.length === 0} />
-                  <FormControlLabel value="all" control={<Radio />} label="Все сотрудники" />
-                </RadioGroup>
-              </FormControl>
-              <Box display="flex" gap={2}>
-                <DatePicker label="С" value={deleteStartDate} onChange={setDeleteStartDate} renderInput={(p) => <TextField {...p} size='small' />} />
-                <DatePicker label="По" value={deleteEndDate} onChange={setDeleteEndDate} renderInput={(p) => <TextField {...p} size='small' />} />
-              </Box>
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
-            <Button onClick={handleBulkDelete} color="error" variant="contained">Удалить</Button>
-          </DialogActions>
         </Dialog>
       </Box>
     </LocalizationProvider >

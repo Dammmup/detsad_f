@@ -1,21 +1,31 @@
 /* eslint-disable no-restricted-globals */
 self.addEventListener('push', function (event) {
-    if (event.data) {
-        const data = event.data.json();
-        const options = {
-            body: data.body,
-            icon: '/favicon.ico', // Adjust path if needed
-            badge: '/favicon.ico',
-            data: {
-                url: data.url || '/'
-            },
-            vibrate: [100, 50, 100]
+    let data = {};
+    try {
+        if (event.data) {
+            data = event.data.json();
+        }
+    } catch (e) {
+        console.error('Error parsing push data as JSON:', e);
+        data = {
+            title: 'Уведомление',
+            body: event.data.text()
         };
-
-        event.waitUntil(
-            self.registration.showNotification(data.title, options)
-        );
     }
+
+    const options = {
+        body: data.body || 'Новое сообщение',
+        icon: '/favicon.png',
+        badge: '/favicon.png',
+        data: {
+            url: data.url || '/'
+        },
+        vibrate: [100, 50, 100]
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(data.title || 'Детский сад', options)
+    );
 });
 
 self.addEventListener('notificationclick', function (event) {
