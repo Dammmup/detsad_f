@@ -67,6 +67,7 @@ import {
   createShift,
   updateShift,
   deleteShift,
+  shiftsApi,
 } from '../services/shifts';
 import { getUsers } from '../services/users';
 import { User } from '../../../shared/types/common';
@@ -308,11 +309,16 @@ const StaffSchedule: React.FC = () => {
         return dayOfWeek !== 0 && dayOfWeek !== 6;
       });
 
+      // Получаем все смены за месяц одним запросом
+      const existingShifts = await getShifts(
+        monthStart.format('YYYY-MM-DD'),
+        monthEnd.format('YYYY-MM-DD'),
+      );
+
+      // Собираем все новые смены в один массив
+      const shiftsToCreate: any[] = [];
+
       for (const staffId of selectedStaff) {
-        const existingShifts = await getShifts(
-          monthStart.format('YYYY-MM-DD'),
-          monthEnd.format('YYYY-MM-DD'),
-        );
         const existingShiftDates = new Set(
           existingShifts
             .filter((shift) => (shift.staffId as any)?._id === staffId || shift.staffId === staffId)
@@ -323,22 +329,27 @@ const StaffSchedule: React.FC = () => {
           const dateStr = moment(date).format('YYYY-MM-DD');
           if (existingShiftDates.has(dateStr)) continue;
 
-          try {
-            await createShift({
-              userId: staffId,
-              staffId: staffId,
-              staffName: staff.find((s) => (s.id || s._id) === staffId)?.fullName || '',
-              date: dateStr,
-              notes: 'Рабочий день по графику 5/2',
-              status: ShiftStatus.scheduled,
-            });
-          } catch (error: any) {
-            console.error('Error creating shift:', error);
-          }
+          shiftsToCreate.push({
+            userId: staffId,
+            staffId: staffId,
+            staffName: staff.find((s) => (s.id || s._id) === staffId)?.fullName || '',
+            date: dateStr,
+            notes: 'Рабочий день по графику 5/2',
+            status: ShiftStatus.scheduled,
+          });
         }
       }
 
-      enqueueSnackbar('График 5/2 успешно назначен', { variant: 'success' });
+      if (shiftsToCreate.length === 0) {
+        enqueueSnackbar('Все смены уже назначены', { variant: 'info' });
+        setLoading(false);
+        return;
+      }
+
+      // Отправляем одним bulk-запросом
+      const result = await shiftsApi.bulkCreate(shiftsToCreate);
+      enqueueSnackbar(`График 5/2 назначен: создано ${result?.success || shiftsToCreate.length} смен`, { variant: 'success' });
+
       const weekStart = moment(currentDate).startOf('isoWeek');
       const weekEnd = moment(currentDate).endOf('isoWeek');
       const shiftsData = await getShifts(weekStart.format('YYYY-MM-DD'), weekEnd.format('YYYY-MM-DD'));
