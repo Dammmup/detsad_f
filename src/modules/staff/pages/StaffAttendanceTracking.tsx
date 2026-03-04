@@ -61,6 +61,7 @@ import {
   STATUS_COLORS,
   ROLE_TRANSLATIONS,
   SHIFT_STATUS_TEXT,
+  STAFF_ROLES,
 } from '../../../shared/types/common';
 import {
   getKindergartenSettings,
@@ -195,7 +196,7 @@ const StaffAttendanceTracking: React.FC = () => {
     const fetchStaff = async () => {
       try {
         const users = await getUsers();
-        setStaffList(users.filter((user: any) => user.active === true));
+        setStaffList(users.filter((user: any) => user.active === true && STAFF_ROLES.includes(user.role)));
       } catch {
         setStaffList([]);
       }

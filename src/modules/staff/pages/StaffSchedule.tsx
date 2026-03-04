@@ -63,6 +63,7 @@ import {
   ShiftFormData,
   STATUS_TEXT,
   STATUS_COLORS,
+  STAFF_ROLES,
 } from '../../../shared/types/common';
 import {
   getShifts,
@@ -207,7 +208,7 @@ const StaffSchedule: React.FC = () => {
           staffAttendanceTrackingService.getAllRecords({ startDate, endDate })
         ]);
 
-        setStaff(staffData);
+        setStaff(staffData.filter((u: any) => STAFF_ROLES.includes(u.role)));
         setShifts(shiftsData);
         const rawAttendance = attendanceData?.data || attendanceData || [];
         setAttendanceRecords(Array.isArray(rawAttendance) ? rawAttendance : (rawAttendance?.items || rawAttendance?.data || []));

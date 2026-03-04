@@ -51,7 +51,7 @@ import {
   removeFine,
 } from '../../staff/services/payroll';
 import { importPayrolls } from '../../../shared/services/importService';
-import { UserRole } from '../../../shared/types/common';
+import { UserRole, EXTERNAL_ROLES } from '../../../shared/types/common';
 import { PayrollRecord as Payroll } from '../../../shared/types/staff';
 import FinesDetailsDialog from './FinesDetailsDialog';
 import PayrollTotalDialog from './PayrollTotalDialog';
@@ -189,10 +189,9 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         const data = (payrollsData || []) as any[];
 
         // Исключаем арендаторов и логопедов - они платят нам, а не мы им
-        const excludedRoles = ['tenant', 'speech_therapist'];
         const filteredData = data.filter(p => {
-          const role = p.staffId?.role || '';
-          return !excludedRoles.includes(role);
+          const role = p.staffId?.role as UserRole;
+          return !EXTERNAL_ROLES.includes(role);
         });
 
 
@@ -496,10 +495,9 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     const data = (payrollsData || []) as any[];
 
     // Исключаем арендаторов и логопедов - они платят нам, а не мы им
-    const excludedRoles = ['tenant', 'speech_therapist'];
     const filteredData = data.filter(p => {
-      const role = p.staffId?.role || '';
-      return !excludedRoles.includes(role);
+      const role = p.staffId?.role as UserRole;
+      return !EXTERNAL_ROLES.includes(role);
     });
 
 
