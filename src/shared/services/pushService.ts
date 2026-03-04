@@ -34,9 +34,9 @@ export const PushService = {
 
             console.log('User is subscribed:', subscription);
 
-            // Используем системный apiClient, который сам добавит baseURL и Token
+            // Важно вызвать .toJSON(), иначе объект может быть пустым при сериализации
             await apiClient.post('/users/push/subscribe', {
-                subscription
+                subscription: subscription.toJSON()
             });
 
             console.log('Subscription saved on server');
@@ -81,6 +81,16 @@ export const PushService = {
             return true;
         }
         return false;
+    },
+
+    async testPush() {
+        try {
+            await apiClient.post('/users/push/test', {});
+            return true;
+        } catch (error) {
+            console.error('Error testing push', error);
+            return false;
+        }
     }
 };
 

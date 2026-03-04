@@ -92,6 +92,20 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleTestPush = async () => {
+    setPushLoading(true);
+    try {
+      await PushService.testPush();
+      setSuccess('Тестовое уведомление отправлено');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error('Ошибка при тесте push:', err);
+      setError('Ошибка при отправке тестового уведомления');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
   const handleDisablePush = async () => {
     setPushLoading(true);
     try {
@@ -502,8 +516,18 @@ const ProfilePage: React.FC = () => {
                   size='small'
                   onClick={handleDisablePush}
                   disabled={pushLoading}
+                  sx={{ mr: 1 }}
                 >
                   {pushLoading ? <CircularProgress size={20} /> : 'Отключить'}
+                </Button>
+                <Button
+                  variant='contained'
+                  color='info'
+                  size='small'
+                  onClick={handleTestPush}
+                  disabled={pushLoading}
+                >
+                  Тест
                 </Button>
               </>
             ) : pushPermission === 'denied' ? (
