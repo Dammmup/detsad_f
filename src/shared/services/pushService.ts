@@ -1,4 +1,4 @@
-import axios from 'axios';
+import apiClient from '../utils/api';
 
 const VAPID_PUBLIC_KEY = 'BJWw0OiYXGMun4pefNLc629UXVSQFiRUUR7YTq_7Pt7JCOp5azqLR0YgXjDXLj3Zd7-540KF8t7BLv6_NU_Q94I';
 
@@ -34,20 +34,9 @@ export const PushService = {
 
             console.log('User is subscribed:', subscription);
 
-            const userDataStr = localStorage.getItem('user');
-            const token = localStorage.getItem('auth_token');
-            if (!userDataStr || !token) {
-                console.error('User data or token not found in localStorage');
-                return;
-            }
-
-            const apiUrl = import.meta.env.VITE_API_URL || '';
-            await axios.post(`${apiUrl}/users/push/subscribe`, {
+            // Используем системный apiClient, который сам добавит baseURL и Token
+            await apiClient.post('/users/push/subscribe', {
                 subscription
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
             });
 
             console.log('Subscription saved on server');
@@ -63,15 +52,10 @@ export const PushService = {
 
             if (subscription) {
                 await subscription.unsubscribe();
-                const token = localStorage.getItem('auth_token');
 
-                const apiUrl = import.meta.env.VITE_API_URL || '';
-                await axios.post(`${apiUrl}/users/push/unsubscribe`, {
+                // Используем системный apiClient
+                await apiClient.post('/users/push/unsubscribe', {
                     endpoint: subscription.endpoint
-                }, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
                 });
                 console.log('User is unsubscribed');
             }

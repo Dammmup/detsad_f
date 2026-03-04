@@ -123,7 +123,7 @@ const RentReport: React.FC<Props> = ({ userId }) => {
         }
 
         const params: any = {
-          month: selectedMonth,
+          period: selectedMonth,
         };
 
         if (currentUserData && currentUserData.role !== 'admin') {
@@ -153,13 +153,13 @@ const RentReport: React.FC<Props> = ({ userId }) => {
           totalDebt: data.reduce((sum: number, p: any) => {
             const amount = p.amount || p.accruals || 0;
             const paid = p.paidAmount || 0;
-            const debt = (typeof paid === 'number' && typeof amount === 'number' && paid < amount) ? amount - paid : 0;
+            const debt = p.debt !== undefined && p.debt !== 0 ? p.debt : ((typeof paid === 'number' && typeof amount === 'number' && paid < amount) ? amount - paid : 0);
             return sum + debt;
           }, 0),
           totalOverpayment: data.reduce((sum: number, p: any) => {
             const amount = p.amount || p.accruals || 0;
             const paid = p.paidAmount || 0;
-            const overpayment = (typeof paid === 'number' && typeof amount === 'number' && paid > amount) ? paid - amount : 0;
+            const overpayment = p.overpayment !== undefined && p.overpayment !== 0 ? p.overpayment : ((typeof paid === 'number' && typeof amount === 'number' && paid > amount) ? paid - amount : 0);
             return sum + overpayment;
           }, 0),
         };
@@ -175,8 +175,8 @@ const RentReport: React.FC<Props> = ({ userId }) => {
               tenantName: p.tenantId?.fullName || p.tenantId?.name || 'Неизвестно',
               amount,
               paidAmount,
-              debt: (typeof paidAmount === 'number' && typeof amount === 'number' && paidAmount < amount) ? amount - paidAmount : 0,
-              overpayment: (typeof paidAmount === 'number' && typeof amount === 'number' && paidAmount > amount) ? paidAmount - amount : 0,
+              debt: p.debt !== undefined ? p.debt : ((typeof paidAmount === 'number' && typeof amount === 'number' && paidAmount < amount) ? amount - paidAmount : 0),
+              overpayment: p.overpayment !== undefined ? p.overpayment : ((typeof paidAmount === 'number' && typeof amount === 'number' && paidAmount > amount) ? paidAmount - amount : 0),
               accruals: typeof p.accruals === 'number' ? p.accruals : (typeof p.amount === 'number' ? p.amount : 0),
               status: p.status && p.status !== 'draft' ? p.status : 'active',
               tenantId: p.tenantId?._id || p.tenantId?.id || p.tenantId || '',
@@ -649,13 +649,13 @@ const RentReport: React.FC<Props> = ({ userId }) => {
                               variant='standard'
                             >
                               <MenuItem value='active'>Активен</MenuItem>
-                              <MenuItem value='paid_rent'>Оплачено</MenuItem>
+                              <MenuItem value='paid'>Оплачено</MenuItem>
                               <MenuItem value='overdue'>Просрочено</MenuItem>
                             </Select>
                           ) : (
                             <Chip
-                              label={r.status === 'paid_rent' ? 'Оплачено' : r.status === 'overdue' ? 'Просрочено' : 'Активен'}
-                              color={r.status === 'paid_rent' ? 'success' : r.status === 'overdue' ? 'error' : 'warning'}
+                              label={(r.status === 'paid' || (r.amount > 0 && r.paidAmount >= r.amount)) ? 'Оплачено' : r.status === 'overdue' ? 'Просрочено' : 'Активен'}
+                              color={(r.status === 'paid' || (r.amount > 0 && r.paidAmount >= r.amount)) ? 'success' : r.status === 'overdue' ? 'error' : 'warning'}
                               size='small'
                             />
                           )}

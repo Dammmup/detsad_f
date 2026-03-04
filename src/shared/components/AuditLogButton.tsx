@@ -11,7 +11,7 @@ interface AuditLogButtonProps {
   size?: 'small' | 'medium' | 'large';
 }
 
-const ALLOWED_ROLES = ['admin', 'manager'];
+const ALLOWED_ROLES = ['admin', 'manager', 'director'];
 
 const AuditLogButton: React.FC<AuditLogButtonProps> = ({
   entityType,

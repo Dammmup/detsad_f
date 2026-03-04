@@ -213,7 +213,7 @@ export const STATUS_COLORS: Record<string, StatusColor> = {
   late: 'primary',
   pending_approval: 'info',
   in_progress: 'warning',
-  checked_out: 'success',
+  checked_out: 'error',
   checked_in: 'warning',
   on_break: 'warning',
   overtime: 'secondary',

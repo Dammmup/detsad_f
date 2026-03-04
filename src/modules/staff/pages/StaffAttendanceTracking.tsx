@@ -945,7 +945,7 @@ const StaffAttendanceTracking: React.FC = () => {
     const totalRecords = records.length;
 
     const completedRecords = records.filter(
-      (r) => r.statuses.includes(ShiftStatus.completed),
+      (r) => r.statuses.includes(ShiftStatus.completed) || (r.actualStart && r.actualEnd),
     ).length;
     const totalPenalties = records.reduce((sum, r) => sum + (r.penalties || 0), 0);
     const avgWorkHours =
