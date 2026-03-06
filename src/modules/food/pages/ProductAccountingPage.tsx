@@ -125,6 +125,7 @@ const ProductAccountingPage: React.FC = () => {
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [productForm, setProductForm] = useState<Partial<Product>>({
         name: '',
+        code: '',
         category: '',
         unit: 'кг',
         supplier: '',
@@ -249,6 +250,7 @@ const ProductAccountingPage: React.FC = () => {
             setEditingProduct(null);
             setProductForm({
                 name: '',
+                code: '',
                 category: '',
                 unit: 'кг',
                 supplier: '',
@@ -482,6 +484,15 @@ const ProductAccountingPage: React.FC = () => {
                                             </TableCell>
                                             <TableCell>
                                                 <TableSortLabel
+                                                    active={sortConfig?.key === 'code'}
+                                                    direction={sortConfig?.key === 'code' ? sortConfig.direction : 'asc'}
+                                                    onClick={() => handleSort('code')}
+                                                >
+                                                    <strong>Код</strong>
+                                                </TableSortLabel>
+                                            </TableCell>
+                                            <TableCell>
+                                                <TableSortLabel
                                                     active={sortConfig?.key === 'category'}
                                                     direction={sortConfig?.key === 'category' ? sortConfig.direction : 'asc'}
                                                     onClick={() => handleSort('category')}
@@ -542,6 +553,7 @@ const ProductAccountingPage: React.FC = () => {
                                                     {isExpired(product) && <Chip size="small" label="Просрочен" color="error" sx={{ ml: 1 }} />}
                                                     {isExpiringSoon(product) && <Chip size="small" label="Скоро" color="warning" sx={{ ml: 1 }} />}
                                                 </TableCell>
+                                                <TableCell>{product.code || '-'}</TableCell>
                                                 <TableCell>{CATEGORIES.find(c => c.value === product.category)?.label || product.category}</TableCell>
                                                 <TableCell align="right">{product.stockQuantity} {product.unit}</TableCell>
                                                 <TableCell align="right">{product.price?.toLocaleString()} ₸</TableCell>
@@ -770,6 +782,14 @@ const ProductAccountingPage: React.FC = () => {
                                 label="Название"
                                 value={productForm.name || ''}
                                 onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <TextField
+                                fullWidth
+                                label="Код продукта"
+                                value={productForm.code || ''}
+                                onChange={(e) => setProductForm({ ...productForm, code: e.target.value })}
                             />
                         </Grid>
                         <Grid item xs={6}>

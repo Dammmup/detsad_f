@@ -9,6 +9,7 @@ export interface ProductIngredient {
 export interface Product {
     _id?: string;
     id?: string;
+    code?: string;
     name: string;
     description?: string;
     category: string;

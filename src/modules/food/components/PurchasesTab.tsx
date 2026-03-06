@@ -28,6 +28,7 @@ const PurchasesTab: React.FC = () => {
     const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]); // Фильтр по дате
     const [supplier, setSupplier] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [productCodeInput, setProductCodeInput] = useState('');
 
     const loadData = async () => {
         try {
@@ -68,11 +69,28 @@ const PurchasesTab: React.FC = () => {
     // Фильтрованные продукты для поиска
     const filteredProducts = useMemo(() => {
         if (!searchTerm) return products;
+        const lowerSearch = searchTerm.toLowerCase();
         return products.filter(p =>
-            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.category?.toLowerCase().includes(searchTerm.toLowerCase())
+            p.name.toLowerCase().includes(lowerSearch) ||
+            p.category?.toLowerCase().includes(lowerSearch) ||
+            p.code?.toLowerCase().includes(lowerSearch)
         );
     }, [products, searchTerm]);
+
+    const handleCodeInput = (code: string) => {
+        setProductCodeInput(code);
+        if (!code) return;
+
+        const product = products.find(p => p.code?.toLowerCase() === code.toLowerCase());
+        if (product) {
+            const isAlreadySelected = selectedProducts.some(sp => (sp.product._id || sp.product.id) === (product._id || product.id));
+            if (!isAlreadySelected) {
+                handleToggleProduct(product);
+                setProductCodeInput('');
+                toast.success(`Продукт "${product.name}" добавлен`);
+            }
+        }
+    };
 
     const handleToggleProduct = (product: Product) => {
         const existing = selectedProducts.find(sp => (sp.product._id || sp.product.id) === (product._id || product.id));
@@ -295,13 +313,27 @@ const PurchasesTab: React.FC = () => {
                             />
                         </Grid>
                         <Grid item xs={12}>
-                            <TextField
-                                fullWidth
-                                label="Поиск продуктов"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Введите название или категорию..."
-                            />
+                            <Grid container spacing={2}>
+                                <Grid item xs={8}>
+                                    <TextField
+                                        fullWidth
+                                        label="Поиск продуктов"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        placeholder="Название, категория или код..."
+                                    />
+                                </Grid>
+                                <Grid item xs={4}>
+                                    <TextField
+                                        fullWidth
+                                        label="По коду продукта"
+                                        value={productCodeInput}
+                                        onChange={(e) => handleCodeInput(e.target.value)}
+                                        placeholder="Введите код..."
+                                        autoFocus
+                                    />
+                                </Grid>
+                            </Grid>
                         </Grid>
                     </Grid>
 
