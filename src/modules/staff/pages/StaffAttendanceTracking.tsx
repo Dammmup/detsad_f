@@ -733,7 +733,7 @@ const StaffAttendanceTracking: React.FC = () => {
         if (myShift.id) {
           const deviceMetadata = collectDeviceMetadata();
           console.log('📱 [StaffAttendanceTracking] Calling checkIn with deviceMetadata:', deviceMetadata);
-          await shiftsApi.checkIn(myShift.id, deviceMetadata);
+          await shiftsApi.checkIn(myShift.id, undefined, undefined, deviceMetadata);
         }
         setCheckInDialogOpen(false);
 
@@ -813,7 +813,7 @@ const StaffAttendanceTracking: React.FC = () => {
         if (myShift.id) {
           if (myShift.id) {
             const deviceMetadata = collectDeviceMetadata();
-            await shiftsApi.checkOut(myShift.id, deviceMetadata);
+            await shiftsApi.checkOut(myShift.id, undefined, undefined, deviceMetadata);
           }
         }
         setCheckOutDialogOpen(false);
