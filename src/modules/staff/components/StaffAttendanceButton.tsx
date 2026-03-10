@@ -135,6 +135,8 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
     if (!currentUser || !currentUser.id) return;
     setLoading(true);
     try {
+      let userLat: number | undefined = undefined;
+      let userLng: number | undefined = undefined;
 
       if (geolocation) {
 
@@ -143,10 +145,11 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
             enableHighAccuracy: true,
           }),
         );
-        const { latitude, longitude } = pos.coords;
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
         const dist = haversineDistance(
-          latitude,
-          longitude,
+          userLat,
+          userLng,
           geolocation.latitude,
           geolocation.longitude,
         );
@@ -239,7 +242,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         if (myShift.id) {
           const deviceMetadata = collectDeviceMetadata();
           console.log('📱 [StaffAttendanceButton] Sending checkIn with deviceMetadata:', deviceMetadata);
-          await checkIn(myShift.id, deviceMetadata);
+          await checkIn(myShift.id, userLat, userLng, deviceMetadata);
         }
 
         setStatus('in_progress');
@@ -267,6 +270,9 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
     setLoading(true);
     try {
 
+      let userLat: number | undefined = undefined;
+      let userLng: number | undefined = undefined;
+
       if (geolocation) {
 
         const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
@@ -274,10 +280,11 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
             enableHighAccuracy: true,
           }),
         );
-        const { latitude, longitude } = pos.coords;
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
         const dist = haversineDistance(
-          latitude,
-          longitude,
+          userLat,
+          userLng,
           geolocation.latitude,
           geolocation.longitude,
         );
@@ -370,7 +377,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         if (myShift.id) {
           const deviceMetadata = collectDeviceMetadata();
           console.log('📱 [StaffAttendanceButton] Sending checkOut with deviceMetadata:', deviceMetadata);
-          await checkOut(myShift.id, deviceMetadata);
+          await checkOut(myShift.id, userLat, userLng, deviceMetadata);
         }
         setStatus('completed');
         setSnackbarMessage('Отметка об уходе успешно сохранена');

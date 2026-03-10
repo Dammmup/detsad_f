@@ -57,13 +57,13 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return data;
   }
 
-  async checkIn(shiftId: string, deviceMetadata?: object): Promise<Shift> {
-    const { data } = await apiClient.post(`${this.endpoint}/checkin/${shiftId}`, { deviceMetadata });
+  async checkIn(shiftId: string, latitude?: number, longitude?: number, deviceMetadata?: object): Promise<Shift> {
+    const { data } = await apiClient.post(`${this.endpoint}/checkin/${shiftId}`, { latitude, longitude, deviceMetadata });
     return data;
   }
 
-  async checkOut(shiftId: string, deviceMetadata?: object): Promise<Shift> {
-    const { data } = await apiClient.post(`${this.endpoint}/checkout/${shiftId}`, { deviceMetadata });
+  async checkOut(shiftId: string, latitude?: number, longitude?: number, deviceMetadata?: object): Promise<Shift> {
+    const { data } = await apiClient.post(`${this.endpoint}/checkout/${shiftId}`, { latitude, longitude, deviceMetadata });
     return data;
   }
 
@@ -79,8 +79,8 @@ export const createShift = (data: ShiftFormData) => shiftsApi.create(data);
 export const updateShift = (id: string, data: Partial<Shift>) => shiftsApi.update(id, data);
 export const deleteShift = (id: string) => shiftsApi.deleteItem(id);
 export const updateShiftStatus = (id: string, status: string) => shiftsApi.updateStatus(id, status);
-export const checkIn = (shiftId: string, deviceMetadata?: object) => shiftsApi.checkIn(shiftId, deviceMetadata);
-export const checkOut = (shiftId: string, deviceMetadata?: object) => shiftsApi.checkOut(shiftId, deviceMetadata);
+export const checkIn = (shiftId: string, latitude?: number, longitude?: number, deviceMetadata?: object) => shiftsApi.checkIn(shiftId, latitude, longitude, deviceMetadata);
+export const checkOut = (shiftId: string, latitude?: number, longitude?: number, deviceMetadata?: object) => shiftsApi.checkOut(shiftId, latitude, longitude, deviceMetadata);
 export const requestShift = (data: Omit<ShiftFormData, 'status'>) => shiftsApi.requestShift(data);
 export const getStaffShifts = (filters: ShiftFilters) => shiftsApi.getAll(filters);
 
