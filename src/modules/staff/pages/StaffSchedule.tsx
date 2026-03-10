@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import moment from 'moment';
-import axios from 'axios';
 import 'moment/locale/ru';
 import { useSnackbar } from 'notistack';
 import {
@@ -60,24 +59,19 @@ import DateNavigator from '../../../shared/components/DateNavigator';
 import {
   Shift,
   ShiftStatus,
-  ShiftFormData,
   STATUS_TEXT,
   STATUS_COLORS,
   STAFF_ROLES,
 } from '../../../shared/types/common';
 import {
   getShifts,
-  createShift,
   updateShift,
   deleteShift,
   shiftsApi,
 } from '../services/shifts';
 import { getUsers } from '../services/users';
-import { User } from '../../../shared/types/common';
-import { KindergartenSettings } from '../../settings/services/settings';
-import { getKindergartenSettings } from '../../settings/services/settings';
 import { getHolidays } from '../../../shared/services/common';
-import { staffAttendanceTrackingService, StaffAttendanceRecord } from '../services/staffAttendanceTracking';
+import { staffAttendanceTrackingService } from '../services/staffAttendanceTracking';
 
 
 
@@ -122,7 +116,6 @@ const DAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 
 const StaffSchedule: React.FC = () => {
-  const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
   const { currentDate } = useDate();
 
@@ -144,7 +137,6 @@ const StaffSchedule: React.FC = () => {
   const [shifts, setShifts] = useState<any[]>([]);
 
 
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [holidays, setHolidays] = useState<string[]>([]);
   const [workingSaturdays, setWorkingSaturdays] = useState<string[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
@@ -343,21 +335,6 @@ const StaffSchedule: React.FC = () => {
       staffId,
       staffName: selectedS?.fullName || '',
     }));
-  };
-
-  const handleTestPush = async () => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      const apiUrl = import.meta.env.VITE_API_URL || '';
-      await axios.post(`${apiUrl}/users/push/test`, {}, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      enqueueSnackbar('Тестовый пуш отправлен!', { variant: 'success' });
-    } catch (error: any) {
-      console.error('Test push error:', error);
-      const msg = error.response?.data?.message || 'Ошибка при отправке пуша';
-      enqueueSnackbar(msg, { variant: 'error' });
-    }
   };
 
   const validateForm = (): boolean => {
@@ -664,15 +641,6 @@ const StaffSchedule: React.FC = () => {
                     }}
                   >
                     Удалить смены
-                  </Button>
-                  <Button
-                    variant='outlined'
-                    color='info'
-                    sx={{ ml: 2 }}
-                    startIcon={<NotificationsIcon />}
-                    onClick={handleTestPush}
-                  >
-                    Тестовый Push
                   </Button>
                 </Box>
               </Box>

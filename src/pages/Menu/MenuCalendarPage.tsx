@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography, Paper } from '@mui/material';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
+import { CalendarPicker } from '@mui/x-date-pickers';
 import moment, { Moment } from 'moment';
 import 'moment/locale/ru'; // Import Russian locale for Moment.js
 
@@ -26,10 +26,9 @@ const MenuCalendarPage: React.FC = () => {
 
       <Paper elevation={3} sx={{ p: 2, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
         <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale="ru">
-          <DateCalendar
-            value={selectedDate}
+          <CalendarPicker
+            date={selectedDate}
             onChange={handleDateChange}
-            views={['day']} // Only show day view for selection
           />
         </LocalizationProvider>
 

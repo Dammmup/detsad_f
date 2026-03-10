@@ -48,12 +48,12 @@ const ProductCalculationDialog: React.FC<ProductCalculationDialogProps> = ({
         return dish.ingredients.map(ing => {
             // Safely get the product ID string, handling if ing.productId is an object
             const ingredientProductId = typeof ing.productId === 'object' && ing.productId !== null
-                ? (ing.productId as any)._id?.toString() || (ing.productId as any).id?.toString() || ing.productId.toString()
-                : ing.productId?.toString();
+                ? (ing.productId as any)._id?.toString() || (ing.productId as any).id?.toString() || String(ing.productId)
+                : String(ing.productId);
 
             const product = allProducts.find(p => (p._id?.toString() || p.id?.toString()) === ingredientProductId);
             const requiredQuantity = (ing.quantity / servingsPerDish) * childCount; // Scale by child count
-            
+
             return {
                 name: product?.name || `Неизвестный продукт (ID: ${ingredientProductId})` || 'Неизвестный продукт',
                 requiredQuantity: parseFloat(requiredQuantity.toFixed(2)),

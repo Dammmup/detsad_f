@@ -135,12 +135,16 @@ const ChildPayments: React.FC = () => {
     }
   }, [currentDate, fetchPayments]);
 
-  // Загружаем данные при монтировании и при изменении даты
+  // Загружаем связанные данные один раз
   useEffect(() => {
-    fetchPayments();
     fetchChildren();
     fetchGroups();
-  }, [fetchPayments, fetchChildren, fetchGroups]);
+  }, [fetchChildren, fetchGroups]);
+
+  // Загружаем оплаты при изменении месяца
+  useEffect(() => {
+    fetchPayments();
+  }, [currentDate, fetchPayments]);
 
 
   useEffect(() => {
