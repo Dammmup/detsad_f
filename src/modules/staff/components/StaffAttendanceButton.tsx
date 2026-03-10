@@ -413,14 +413,13 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
   }
   if (
     status === 'scheduled' ||
-    status === 'late' ||
     status === 'pending_approval' ||
     status === 'no_record'
   ) {
     buttonText = 'Отметить приход';
     buttonAction = handleCheckIn;
     buttonDisabled = loading || status === 'no_record';
-  } else if (status === 'in_progress') {
+  } else if (status === 'in_progress' || status === 'late') {
     buttonText = 'Отметить уход';
     buttonAction = handleCheckOut;
     buttonDisabled = loading;
@@ -460,7 +459,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
           background:
             status === 'completed'
               ? 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
-              : status === 'in_progress'
+              : status === 'in_progress' || status === 'late'
                 ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
                 : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           '&:hover': {
