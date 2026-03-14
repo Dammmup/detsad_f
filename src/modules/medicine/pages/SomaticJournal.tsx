@@ -42,6 +42,8 @@ import { saveAs } from 'file-saver';
 
 import { SomaticRecord } from '../../../shared/types/somatic';
 import { AnyAaaaRecord } from 'dns';
+import { useNavigate } from 'react-router-dom';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 // Helper function to format dates
 const formatDate = (date: Date | string | undefined | null): string => {
@@ -50,6 +52,7 @@ const formatDate = (date: Date | string | undefined | null): string => {
 };
 
 export default function SomaticJournal() {
+  const navigate = useNavigate();
   const [records, setRecords] = useState<SomaticRecord[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
@@ -240,6 +243,14 @@ export default function SomaticJournal() {
 
   return (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
+      <Button 
+        startIcon={<ArrowBackIcon />} 
+        onClick={() => navigate('/app/med')}
+        variant="outlined"
+        sx={{ mb: 2 }}
+      >
+        Назад к журналам
+      </Button>
       <Typography variant='h5' gutterBottom>
         Журнал соматической заболеваемости
       </Typography>

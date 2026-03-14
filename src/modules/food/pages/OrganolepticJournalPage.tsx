@@ -32,6 +32,8 @@ import {
 } from '../services/organolepticJournal';
 import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
+import { useNavigate } from 'react-router-dom';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const GROUPS = [
   'all',
@@ -55,6 +57,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export default function OrganolepticJournalPage() {
+  const navigate = useNavigate();
   const [records, setRecords] = useState<OrganolepticRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -156,6 +159,14 @@ export default function OrganolepticJournalPage() {
 
   return (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
+      <Button 
+        startIcon={<ArrowBackIcon />} 
+        onClick={() => navigate('/app/med')}
+        variant="outlined"
+        sx={{ mb: 2 }}
+      >
+        Назад к журналам
+      </Button>
       <Typography variant='h4' gutterBottom>
         Журнал органолептической оценки качества блюд
       </Typography>

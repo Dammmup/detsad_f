@@ -19,6 +19,8 @@ import {
 import { foodStockLogApi, FoodStockLog } from '../services/foodStockLog';
 import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
+import { useNavigate } from 'react-router-dom';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const defaultForm: FoodStockLog = {
   date: '',
@@ -107,6 +109,14 @@ const FoodStockLogPage: React.FC = () => {
 
   return (
     <Box p={3}>
+      <Button 
+        startIcon={<ArrowBackIcon />} 
+        onClick={() => navigate('/app/med')}
+        variant="outlined"
+        sx={{ mb: 2 }}
+      >
+        Назад к журналам
+      </Button>
       <Typography variant='h4' gutterBottom>
         Журнал учета приходов, расходов и остатков ежедневных продуктов
       </Typography>

@@ -34,6 +34,8 @@ import { userApi } from '../../staff/services/users';
 import { User } from '../../../shared/types/staff';
 import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
+import { useNavigate } from 'react-router-dom';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const defaultForm: Partial<FoodStaffDailyLog> = {
   date: new Date().toISOString().slice(0, 10),
@@ -140,6 +142,14 @@ const FoodStaffHealthPage: React.FC = () => {
 
   return (
     <Box p={3}>
+      <Button 
+        startIcon={<ArrowBackIcon />} 
+        onClick={() => navigate('/app/med')}
+        variant="outlined"
+        sx={{ mb: 2 }}
+      >
+        Назад к журналам
+      </Button>
       <Typography variant='h4' gutterBottom>
         Журнал регистрации состояния здоровья работников пищеблока
       </Typography>

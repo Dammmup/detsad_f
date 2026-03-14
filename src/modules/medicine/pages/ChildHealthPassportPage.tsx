@@ -16,6 +16,8 @@ import { saveAs } from 'file-saver';
 import childrenApi from '../../children/services/children';
 import childHealthPassportApi from '../services/childHealthPassport';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 
 interface ChildPassportForm {
@@ -38,6 +40,7 @@ interface ChildPassportForm {
 }
 
 export default function ChildHealthPassportPage() {
+  const navigate = useNavigate();
   const [selectedId, setSelectedId] = React.useState('');
   const [children, setChildren] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -221,6 +224,14 @@ export default function ChildHealthPassportPage() {
 
   return (
     <Box sx={{ p: { xs: 1, md: 3 }, maxWidth: 700, mx: 'auto' }}>
+      <Button 
+        startIcon={<ArrowBackIcon />} 
+        onClick={() => navigate('/app/med')}
+        variant="outlined"
+        sx={{ mb: 2 }}
+      >
+        Назад к журналам
+      </Button>
       <Paper sx={{ p: { xs: 1, md: 3 } }}>
         <Typography variant='h5' gutterBottom>
           Паспорт здоровья ребенка (форма 052-2/у)

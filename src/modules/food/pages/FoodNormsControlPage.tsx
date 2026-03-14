@@ -24,6 +24,8 @@ import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
 import { getNormsData, NormsData } from '../services/productReports';
 import { SANPIN_NORMS, CATEGORY_MAPPING } from '../../../shared/constants/foodNorms';
+import { useNavigate } from 'react-router-dom';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const AGE_GROUPS = [
   { value: '1-3', label: '1-3 года' },
@@ -140,6 +142,14 @@ const FoodNormsControlPage: React.FC = () => {
 
   return (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
+      <Button 
+        startIcon={<ArrowBackIcon />} 
+        onClick={() => navigate('/app/med')}
+        variant="outlined"
+        sx={{ mb: 2 }}
+      >
+        Назад к журналам
+      </Button>
       <Typography variant='h4' gutterBottom>
         Ведомость контроля норм питания (СанПиН)
       </Typography>

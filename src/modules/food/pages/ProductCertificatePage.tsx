@@ -22,6 +22,8 @@ import {
 } from '../services/productCertificate';
 import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
+import { useNavigate } from 'react-router-dom';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const defaultForm: ProductCertificate = {
   date: '',
