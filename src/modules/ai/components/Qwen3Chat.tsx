@@ -16,10 +16,12 @@ import {
   Close as CloseIcon,
   Chat as ChatIcon,
   AttachFile as AttachFileIcon,
+  Check as CheckIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Qwen3ApiService, Qwen3Response } from '../services/qwen3-api';
+import { Qwen3ApiService, Qwen3Response, PendingAction } from '../services/qwen3-api';
 
 import { getCurrentUser } from '../../staff/services/auth';
 
@@ -39,6 +41,7 @@ const Qwen3Chat: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [accessError, setAccessError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [sessionId] = useState(() => {
     let id = localStorage.getItem('qwen3-session-id');
     if (!id) {
@@ -56,17 +59,17 @@ const Qwen3Chat: React.FC = () => {
   const currentUser = getCurrentUser();
   const isAdmin = currentUser?.role === 'admin';
 
-
-
   // Показываем приветственное сообщение при открытии чата
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       const welcomeMessage: Message = {
         id: Date.now(),
         text: 'Привет! Я AI-ассистент детского сада. Могу помочь:\n\n' +
-          '📊 Получить данные (например: "Сколько активных сотрудников?")\n' +
-          '🗺️ Найти нужную страницу (например: "Где страница аренды?")\n' +
-          '❓ Ответить на вопросы о системе\n\n' +
+          '- Получить данные (например: "Сколько активных сотрудников?")\n' +
+          '- Найти нужную страницу (например: "Где страница аренды?")\n' +
+          '- Управлять оплатами (например: "Отметь оплату за Марину")\n' +
+          '- Анализировать зарплату (например: "Проверь зарплату Замиры")\n' +
+          '- Строить отчёты (например: "Кто опоздал сегодня?")\n\n' +
           'Чем могу помочь?',
         sender: 'ai',
         timestamp: new Date(),
@@ -100,8 +103,50 @@ const Qwen3Chat: React.FC = () => {
     setImagePreview(null);
   };
 
+  const handleConfirm = async () => {
+    if (!pendingAction || isProcessing) return;
+
+    setIsProcessing(true);
+    setPendingAction(null);
+
+    // Индикатор загрузки
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now(), text: '...', sender: 'ai', timestamp: new Date() },
+    ]);
+
+    try {
+      const result = await Qwen3ApiService.confirmAction(pendingAction);
+
+      setMessages((prev) => prev.filter((msg) => msg.text !== '...'));
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now() + 1, text: result.content || 'Действие выполнено.', sender: 'ai', timestamp: new Date() },
+      ]);
+    } catch (e: any) {
+      setMessages((prev) => prev.filter((msg) => msg.text !== '...'));
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now() + 1, text: e.message || 'Ошибка при выполнении действия.', sender: 'ai', timestamp: new Date() },
+      ]);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setPendingAction(null);
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now(), text: 'Действие отменено.', sender: 'ai', timestamp: new Date() },
+    ]);
+  };
+
   const handleSend = async () => {
     if ((!inputValue.trim() && !selectedImage) || isProcessing) return;
+
+    // Очищаем pendingAction если пользователь решил написать что-то новое
+    setPendingAction(null);
 
     const userMessage: Message = {
       id: Date.now(),
@@ -147,11 +192,20 @@ const Qwen3Chat: React.FC = () => {
         };
         setMessages((prev) => [...prev, aiMessage]);
 
-        // Небольшая задержка перед навигацией
         setTimeout(() => {
           navigate(response.navigateTo!);
           setIsOpen(false);
         }, 1000);
+      } else if (response.action === 'confirm_action' && response.pendingAction) {
+        // Показываем сообщение и сохраняем pendingAction
+        const aiMessage: Message = {
+          id: Date.now() + 2,
+          text: response.content,
+          sender: 'ai',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setPendingAction(response.pendingAction);
       } else {
         const aiMessage: Message = {
           id: Date.now() + 2,
@@ -272,7 +326,7 @@ const Qwen3Chat: React.FC = () => {
                     AI Ассистент
                   </Typography>
                   <Typography variant='caption' sx={{ opacity: 0.8 }}>
-                    Доступ к данным • Навигация
+                    Данные • Навигация • Управление
                   </Typography>
                 </Box>
                 <IconButton
@@ -399,6 +453,32 @@ const Qwen3Chat: React.FC = () => {
                   <div ref={messagesEndRef} />
                 </List>
               </Box>
+
+              {/* Confirmation Buttons */}
+              {pendingAction && !isProcessing && (
+                <Box sx={{ display: 'flex', gap: 1, px: 2, pb: 1 }}>
+                  <Button
+                    variant='contained'
+                    color='success'
+                    size='small'
+                    startIcon={<CheckIcon />}
+                    onClick={handleConfirm}
+                    sx={{ flex: 1, textTransform: 'none' }}
+                  >
+                    Подтвердить
+                  </Button>
+                  <Button
+                    variant='outlined'
+                    color='inherit'
+                    size='small'
+                    startIcon={<CancelIcon />}
+                    onClick={handleCancel}
+                    sx={{ flex: 1, textTransform: 'none' }}
+                  >
+                    Отменить
+                  </Button>
+                </Box>
+              )}
 
               {/* Input */}
               <Divider />

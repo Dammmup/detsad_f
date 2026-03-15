@@ -6,10 +6,18 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+export interface PendingAction {
+  id: string;
+  type: string;
+  description: string;
+  [key: string]: any;
+}
+
 export interface Qwen3Response {
   content: string;
-  action?: 'query' | 'navigate' | 'text';
+  action?: 'query' | 'navigate' | 'text' | 'confirm_action';
   navigateTo?: string;
+  pendingAction?: PendingAction;
 }
 
 // Получаем токен из localStorage
@@ -19,6 +27,7 @@ const getAuthToken = (): string | null => {
 
 export class Qwen3ApiService {
   private static readonly API_URL = `${import.meta.env.VITE_API_URL}/qwen3-chat/chat`;
+  private static readonly CONFIRM_URL = `${import.meta.env.VITE_API_URL}/qwen3-chat/confirm`;
 
   static async sendMessage(
     messages: ChatMessage[],
@@ -121,6 +130,38 @@ export class Qwen3ApiService {
       }
     } catch (error) {
       console.error('Error calling Qwen3 API through backend:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Подтверждение действия (оплата, создание, обновление)
+   */
+  static async confirmAction(pendingAction: PendingAction): Promise<Qwen3Response> {
+    try {
+      const token = getAuthToken();
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(this.CONFIRM_URL, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ pendingAction }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: Qwen3Response = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error confirming action:', error);
       throw error;
     }
   }
