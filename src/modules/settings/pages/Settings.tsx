@@ -62,6 +62,7 @@ import {
 } from '../services/settings';
 import MainEventsSettings from '../components/MainEventsSettings';
 import PushService from '../../../shared/services/pushService';
+import Integration1CSettingsTab from '../components/Integration1CSettingsTab';
 
 const Settings: React.FC = () => {
 
@@ -378,6 +379,7 @@ const Settings: React.FC = () => {
         <Tab label='Геолокация' />
         <Tab label='Автоматический экспорт' />
         <Tab label='Пользователи' />
+        <Tab label='Интеграция 1С' />
       </Tabs>
 
       {/* Содержимое вкладок */}
@@ -1210,6 +1212,13 @@ const Settings: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Вкладка 6: Интеграция 1С */}
+      {tabValue === 6 && (
+        <Box sx={{ mt: 3 }}>
+          <Integration1CSettingsTab />
+        </Box>
+      )}
     </Paper>
   );
 };
