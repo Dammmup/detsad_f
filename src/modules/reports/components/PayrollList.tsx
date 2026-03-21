@@ -1019,14 +1019,26 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                 }} />
               </Box>
 
-              <Tooltip title="Показать детальный расчет зарплаты">
-                <Button
-                  onClick={() => handleOpenTotalDialog(mySalary)}
-                  sx={{ mt: 4, color: 'rgba(255,255,255,0.6)', textTransform: 'none', '&:hover': { color: '#fff' } }}
-                >
-                  ПОКАЗАТЬ ДЕТАЛЬНЫЙ РАСЧЕТ / VIEW DETAILS
-                </Button>
-              </Tooltip>
+
+              <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'center', alignItems: 'center' }}>
+                <Tooltip title="Показать детальный расчет зарплаты">
+                  <Button
+                    onClick={() => handleOpenTotalDialog(mySalary)}
+                    sx={{ color: 'rgba(255,255,255,0.6)', textTransform: 'none', '&:hover': { color: '#fff' } }}
+                  >
+                    ПОКАЗАТЬ ДЕТАЛЬНЫЙ РАСЧЕТ / VIEW DETAILS
+                  </Button>
+                </Tooltip>
+
+                {mySalary?._id && (
+                  <AuditLogButton
+                    entityType="payroll"
+                    entityId={mySalary._id}
+                    entityName={`Зарплата: ${mySalary.staffName}`}
+                    size="small"
+                  />
+                )}
+              </Box>
               <PayrollTotalDialog open={totalDialogOpen} onClose={() => setTotalDialogOpen(false)} data={currentTotalRow} />
             </Box>
           );
@@ -1257,6 +1269,13 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                                         <VisibilityIcon />
                                       </IconButton>
                                     </Tooltip>
+                                    {r._id && (
+                                      <AuditLogButton
+                                        entityType="payroll"
+                                        entityId={r._id}
+                                        entityName={`Зарплата: ${r.staffName}`}
+                                      />
+                                    )}
                                     <Tooltip title='Удалить'>
                                       <IconButton
                                         color='error'
