@@ -1253,7 +1253,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                                       </IconButton>
                                     </Tooltip>
                                     <Tooltip title='Просмотр'>
-                                      <IconButton color='default' size='small'>
+                                      <IconButton color='default' size='small' onClick={() => handleOpenTotalDialog(r)}>
                                         <VisibilityIcon />
                                       </IconButton>
                                     </Tooltip>
