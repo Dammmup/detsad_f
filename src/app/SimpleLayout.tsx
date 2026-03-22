@@ -63,6 +63,7 @@ import ProductAccountingPage from '../modules/food/pages/ProductAccountingPage';
 import Statistics from '../modules/dashboard/pages/Statistics';
 import MenuCalendarPage from '../modules/food/pages/MenuCalendarPage';
 import PushNotificationPrompt from '../shared/components/PushNotificationPrompt';
+import AccountingPage from '../modules/accounting/pages/AccountingPage';
 
 interface SimpleLayoutProps {
   children?: React.ReactNode;
@@ -276,6 +277,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path='reports' element={isAdminOrManager ? <ReportsWidget /> : <Navigate to="/app/dashboard" />} />
             <Route path='reports/payroll' element={isAdminOrManager ? <ReportsSalary /> : <Navigate to="/app/dashboard" />} />
             <Route path='rent' element={isAdminOrManager ? <ReportsRent /> : <Navigate to="/app/dashboard" />} />
+            <Route path='accounting' element={userRole === 'admin' ? <AccountingPage /> : <Navigate to="/app/dashboard" />} />
 
             {/* Статистика */}
             <Route path='statistics' element={userRole === 'admin' ? <Statistics /> : <Navigate to="/app/dashboard" />} />

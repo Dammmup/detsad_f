@@ -55,6 +55,7 @@ const FoodStaffHealthPage: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Partial<FoodStaffDailyLog>>(defaultForm);
   const [editId, setEditId] = useState<string | undefined>();
+  const navigate = useNavigate();
 
   const fetchData = async () => {
     setLoading(true);
@@ -64,7 +65,8 @@ const FoodStaffHealthPage: React.FC = () => {
         userApi.getAll(),
       ]);
       setRows(logs);
-      setEmployees(staff.filter(u => ['manager', 'admin', 'doctor', 'nurse', 'employee'].includes(u.role)));
+      // Расширенный список ролей для сотрудников пищеблока: cook, staff, nurse, admin, manager, employee
+      setEmployees(staff.filter(u => ['manager', 'admin', 'doctor', 'nurse', 'employee', 'cook', 'staff'].includes(u.role)));
     } catch (error) {
       console.error('Ошибка загрузки данных:', error);
     } finally {
@@ -264,7 +266,7 @@ const FoodStaffHealthPage: React.FC = () => {
               <InputLabel>Сотрудник</InputLabel>
               <Select
                 name="staffId"
-                value={form.staffId}
+                value={form.staffId || ''}
                 label="Сотрудник"
                 onChange={(e) => setForm({ ...form, staffId: e.target.value as string })}
               >
@@ -277,17 +279,17 @@ const FoodStaffHealthPage: React.FC = () => {
             </FormControl>
 
             <FormControlLabel
-              control={<Switch checked={form.hasPustularDiseases} onChange={handleChange} name="hasPustularDiseases" />}
+              control={<Switch checked={!!form.hasPustularDiseases} onChange={handleChange} name="hasPustularDiseases" />}
               label="Гнойничковые заболевания"
             />
 
             <FormControlLabel
-              control={<Switch checked={form.hasAnginaSymptoms} onChange={handleChange} name="hasAnginaSymptoms" />}
+              control={<Switch checked={!!form.hasAnginaSymptoms} onChange={handleChange} name="hasAnginaSymptoms" />}
               label="Признаки ангины/ОРВИ"
             />
 
             <FormControlLabel
-              control={<Switch checked={form.familyHealthy} onChange={handleChange} name="familyHealthy" />}
+              control={<Switch checked={!!form.familyHealthy} onChange={handleChange} name="familyHealthy" />}
               label="Семья здорова"
             />
 
@@ -295,7 +297,7 @@ const FoodStaffHealthPage: React.FC = () => {
               <InputLabel>Результат осмотра</InputLabel>
               <Select
                 name="healthStatus"
-                value={form.healthStatus}
+                value={form.healthStatus || 'healthy'}
                 label="Результат осмотра"
                 onChange={(e) => setForm({ ...form, healthStatus: e.target.value as any })}
               >
@@ -307,7 +309,7 @@ const FoodStaffHealthPage: React.FC = () => {
             <TextField
               label='Примечания'
               name='notes'
-              value={form.notes}
+              value={form.notes || ''}
               onChange={handleChange}
               fullWidth
               multiline

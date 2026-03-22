@@ -3,7 +3,7 @@ import {
     Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
     Grid, FormControl, InputLabel, Select, MenuItem, Typography, IconButton,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Paper, Autocomplete, Box, Divider
+    Paper, Autocomplete, Box, Divider, Chip
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { Dish } from '../services/dishes';
@@ -25,11 +25,23 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
         ingredients: [],
         servingsCount: 1,
         description: '',
-        isActive: true
+        isActive: true,
+        recipeNumber: '',
+        recipeSource: '',
+        technologicalProcess: '',
+        yield: 0,
+        nutritionalInfo: {
+            calories: 0,
+            proteins: 0,
+            fats: 0,
+            carbs: 0
+        }
     });
     const [products, setProducts] = useState<Product[]>([]);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-    const [ingredientQty, setIngredientQty] = useState<number>(0);
+    const [grossQty, setGrossQty] = useState<number>(0);
+    const [ingredientQty, setIngredientQty] = useState<number>(0); // нетто
+    const [producedQty, setProducedQty] = useState<number>(0);
     const [ingredientUnit, setIngredientUnit] = useState<string>('г');
 
     useEffect(() => {
@@ -42,7 +54,17 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                 ingredients: [],
                 servingsCount: 1,
                 description: '',
-                isActive: true
+                isActive: true,
+                recipeNumber: '',
+                recipeSource: '',
+                technologicalProcess: '',
+                yield: 0,
+                nutritionalInfo: {
+                    calories: 0,
+                    proteins: 0,
+                    fats: 0,
+                    carbs: 0
+                }
             });
         }
     }, [dish, open]);
@@ -62,22 +84,29 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
     const handleAddIngredient = () => {
         if (!selectedProduct || ingredientQty <= 0) return;
 
-        const newIngredient: ProductIngredient = {
-            productId: selectedProduct._id || selectedProduct.id || '',
+        const newIngredient = {
+            productId: selectedProduct._id || (selectedProduct as any).id || '',
+            grossQuantity: grossQty || ingredientQty,
             quantity: ingredientQty,
+            producedQuantity: producedQty || ingredientQty,
             unit: ingredientUnit
         };
 
         // Проверяем что продукт ещё не добавлен
-        const exists = form.ingredients?.some(i => i.productId === newIngredient.productId);
+        const exists = form.ingredients?.some(i => {
+            const iId = typeof i.productId === 'string' ? i.productId : (i.productId as any)._id || (i.productId as any).id;
+            return iId === newIngredient.productId;
+        });
         if (exists) return;
 
         setForm({
             ...form,
-            ingredients: [...(form.ingredients || []), newIngredient]
+            ingredients: [...(form.ingredients || []), newIngredient as any]
         });
         setSelectedProduct(null);
+        setGrossQty(0);
         setIngredientQty(0);
+        setProducedQty(0);
     };
 
     const handleRemoveIngredient = (productId: string | any) => {
@@ -105,11 +134,19 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
         // Prepare data for save - ensure ingredients are just { productId: string, ... }
         const ingredientsToSave = form.ingredients?.map(ing => ({
             productId: typeof ing.productId === 'string' ? ing.productId : (ing.productId as any)._id || (ing.productId as any).id,
+            grossQuantity: ing.grossQuantity,
             quantity: ing.quantity,
+            producedQuantity: ing.producedQuantity,
             unit: ing.unit
         }));
 
-        onSave({ ...form, ingredients: ingredientsToSave });
+        onSave({ 
+            ...form, 
+            ingredients: ingredientsToSave,
+            yield: form.yield,
+            yield1kg: form.yield1kg,
+            nutritionalInfo: form.nutritionalInfo
+        });
     };
 
     return (
@@ -169,6 +206,112 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                             onChange={(e) => setForm({ ...form, description: e.target.value })}
                         />
                     </Grid>
+                    
+                    <Grid item xs={12}>
+                        <Divider sx={{ my: 1 }}><Chip label="Технологическая карта" size="small" /></Divider>
+                    </Grid>
+                    
+                    <Grid item xs={4}>
+                        <TextField
+                            fullWidth
+                            label="№ Рецептуры"
+                            value={form.recipeNumber || ''}
+                            onChange={(e) => setForm({ ...form, recipeNumber: e.target.value })}
+                        />
+                    </Grid>
+                    <Grid item xs={8}>
+                        <TextField
+                            fullWidth
+                            label="Источник рецептуры"
+                            value={form.recipeSource || ''}
+                            onChange={(e) => setForm({ ...form, recipeSource: e.target.value })}
+                        />
+                    </Grid>
+                    <Grid item xs={12}>
+                        <TextField
+                            fullWidth
+                            multiline
+                            rows={3}
+                            label="Технологический процесс"
+                            value={form.technologicalProcess || ''}
+                            onChange={(e) => setForm({ ...form, technologicalProcess: e.target.value })}
+                        />
+                    </Grid>
+                    <Grid item xs={12}>
+                         <Typography variant="subtitle2" gutterBottom>Пищевая ценность (на порцию)</Typography>
+                         <Grid container spacing={1}>
+                            <Grid item xs={3}>
+                                <TextField
+                                    fullWidth
+                                    type="number"
+                                    label="Белки"
+                                    size="small"
+                                    value={form.nutritionalInfo?.proteins || ''}
+                                    onChange={(e) => setForm({ 
+                                        ...form, 
+                                        nutritionalInfo: { ...(form.nutritionalInfo || {}), proteins: Number(e.target.value) } 
+                                    })}
+                                />
+                            </Grid>
+                            <Grid item xs={3}>
+                                <TextField
+                                    fullWidth
+                                    type="number"
+                                    label="Жиры"
+                                    size="small"
+                                    value={form.nutritionalInfo?.fats || ''}
+                                    onChange={(e) => setForm({ 
+                                        ...form, 
+                                        nutritionalInfo: { ...(form.nutritionalInfo || {}), fats: Number(e.target.value) } 
+                                    })}
+                                />
+                            </Grid>
+                            <Grid item xs={3}>
+                                <TextField
+                                    fullWidth
+                                    type="number"
+                                    label="Углеводы"
+                                    size="small"
+                                    value={form.nutritionalInfo?.carbs || ''}
+                                    onChange={(e) => setForm({ 
+                                        ...form, 
+                                        nutritionalInfo: { ...(form.nutritionalInfo || {}), carbs: Number(e.target.value) } 
+                                    })}
+                                />
+                            </Grid>
+                            <Grid item xs={3}>
+                                <TextField
+                                    fullWidth
+                                    type="number"
+                                    label="Калории"
+                                    size="small"
+                                    value={form.nutritionalInfo?.calories || ''}
+                                    onChange={(e) => setForm({ 
+                                        ...form, 
+                                        nutritionalInfo: { ...(form.nutritionalInfo || {}), calories: Number(e.target.value) } 
+                                    })}
+                                />
+                            </Grid>
+                         </Grid>
+                    </Grid>
+                    <Grid item xs={6}>
+                        <TextField
+                            fullWidth
+                            type="number"
+                            label="Выход блюда (г)"
+                            value={form.yield || ''}
+                            onChange={(e) => setForm({ ...form, yield: Number(e.target.value) })}
+                        />
+                    </Grid>
+                    <Grid item xs={6}>
+                        <TextField
+                            fullWidth
+                            type="number"
+                            label="Выход на 1 кг (г)"
+                            value={form.yield1kg || ''}
+                            onChange={(e) => setForm({ ...form, yield1kg: Number(e.target.value) })}
+                        />
+                    </Grid>
                 </Grid>
 
                 <Divider sx={{ my: 3 }} />
@@ -193,11 +336,22 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                             renderInput={(params) => <TextField {...params} label="Продукт" size="small" />}
                         />
                     </Grid>
-                    <Grid item xs={5} sm={3}>
+                    <Grid item xs={4} sm={2}>
                         <TextField
                             fullWidth
                             type="number"
-                            label="Количество"
+                            label="Брутто"
+                            size="small"
+                            value={grossQty || ''}
+                            onChange={(e) => setGrossQty(Number(e.target.value))}
+                            inputProps={{ step: "any" }}
+                        />
+                    </Grid>
+                    <Grid item xs={4} sm={2}>
+                        <TextField
+                            fullWidth
+                            type="number"
+                            label="Нетто"
                             size="small"
                             value={ingredientQty || ''}
                             onChange={(e) => setIngredientQty(Number(e.target.value))}
@@ -205,6 +359,17 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                         />
                     </Grid>
                     <Grid item xs={4} sm={2}>
+                        <TextField
+                            fullWidth
+                            type="number"
+                            label="Выход"
+                            size="small"
+                            value={producedQty || ''}
+                            onChange={(e) => setProducedQty(Number(e.target.value))}
+                            inputProps={{ step: "any" }}
+                        />
+                    </Grid>
+                    <Grid item xs={2} sm={1}>
                         <FormControl fullWidth size="small">
                             <InputLabel>Ед.</InputLabel>
                             <Select
@@ -235,7 +400,9 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                             <TableHead>
                                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
                                     <TableCell><strong>Продукт</strong></TableCell>
-                                    <TableCell align="right"><strong>Количество (на 1 порцию)</strong></TableCell>
+                                    <TableCell align="right"><strong>Брутто</strong></TableCell>
+                                    <TableCell align="right"><strong>Нетто</strong></TableCell>
+                                    <TableCell align="right"><strong>Выход</strong></TableCell>
                                     <TableCell align="center"><strong>Действие</strong></TableCell>
                                 </TableRow>
                             </TableHead>
@@ -244,8 +411,12 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                                     const productId = typeof ing.productId === 'string' ? ing.productId : (ing.productId as any)._id || (ing.productId as any).id;
                                     return (
                                         <TableRow key={productId || index}>
-                                            <TableCell>{getProductName(ing.productId)}</TableCell>
+                                            <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {getProductName(ing.productId)}
+                                            </TableCell>
+                                            <TableCell align="right">{ing.grossQuantity || '—'} {ing.unit}</TableCell>
                                             <TableCell align="right">{ing.quantity} {ing.unit}</TableCell>
+                                            <TableCell align="right">{ing.producedQuantity || '—'} {ing.unit}</TableCell>
                                             <TableCell align="center">
                                                 <IconButton size="small" color="error" onClick={() => handleRemoveIngredient(productId)}>
                                                     <DeleteIcon fontSize="small" />

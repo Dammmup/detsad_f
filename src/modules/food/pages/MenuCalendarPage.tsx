@@ -15,6 +15,7 @@ import {
 } from '../services/weeklyMenuTemplate';
 import { Dish } from '../services/dishes';
 import { toast } from 'react-toastify';
+import { format } from 'date-fns';
 
 interface IMenuItem {
     _id: string;
@@ -52,8 +53,8 @@ const MenuCalendarPage: React.FC = () => {
             const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
             const menus = await getDailyMenus({
-                startDate: startDate.toISOString().split('T')[0],
-                endDate: endDate.toISOString().split('T')[0]
+                startDate: format(startDate, 'yyyy-MM-dd'),
+                endDate: format(endDate, 'yyyy-MM-dd')
             });
 
             setDailyMenus(menus);
@@ -82,8 +83,14 @@ const MenuCalendarPage: React.FC = () => {
 
     // Get menu for selected date
     const getMenuForDate = (date: Date): DailyMenuType | undefined => {
-        const dateString = date.toISOString().split('T')[0];
-        return dailyMenus.find(menu => menu.date.startsWith(dateString));
+        const dateString = format(date, 'yyyy-MM-dd');
+        return dailyMenus.find(menu => {
+            try {
+                return format(new Date(menu.date), 'yyyy-MM-dd') === dateString;
+            } catch (e) {
+                return menu.date.startsWith(dateString);
+            }
+        });
     };
 
     // Close dialog
@@ -116,7 +123,7 @@ const MenuCalendarPage: React.FC = () => {
 
         setApplying(true);
         try {
-            const startDateStr = selectedDate.toISOString().split('T')[0];
+            const startDateStr = format(selectedDate, 'yyyy-MM-dd');
             const result = applyType === 'week'
                 ? await applyTemplateToWeek(selectedTemplateId, startDateStr, applyChildCount)
                 : await applyTemplateToMonth(selectedTemplateId, startDateStr, applyChildCount);

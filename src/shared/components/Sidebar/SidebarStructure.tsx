@@ -13,6 +13,7 @@ import CalendarViewWeekIcon from '@mui/icons-material/CalendarViewWeek';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import TodayIcon from '@mui/icons-material/Today';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 
 export interface SidebarItem {
   id: string;
@@ -135,6 +136,13 @@ const sidebarStructure: SidebarItem[] = [
     visibleFor: ['admin', 'manager', 'psychologist'],
   },
 
+  {
+    id: 'accounting',
+    label: 'Бухгалтерия',
+    icon: <AccountBalanceIcon />,
+    link: '/app/accounting',
+    visibleFor: ['admin'],
+  },
   {
     id: 'statistics',
     label: 'Статистика',

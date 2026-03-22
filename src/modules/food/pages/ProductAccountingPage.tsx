@@ -50,6 +50,8 @@ import {
     Restaurant as RestaurantIcon,
     PlayArrow as PlayArrowIcon,
     CheckCircle as CheckCircleIcon,
+    Description as DescriptionIcon, 
+    Print as PrintIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 
@@ -83,6 +85,7 @@ import WeeklyMenuTab from '../components/WeeklyMenuTab';
 import PurchasesTab from '../components/PurchasesTab';
 import ReportsTab from '../components/ReportsTab';
 import DishDialog from '../components/DishDialog';
+import TechnicalCard from '../components/TechnicalCard';
 import ProductCalculationDialog from '../components/ProductCalculationDialog';
 
 interface TabPanelProps {
@@ -193,6 +196,11 @@ const ProductAccountingPage: React.FC = () => {
 
     const [calculationDialogOpen, setCalculationDialogOpen] = useState(false);
     const [selectedDishForCalculation, setSelectedDishForCalculation] = useState<Dish | null>(null);
+    
+    // Tech card state
+    const [techCardDialogOpen, setTechCardDialogOpen] = useState(false);
+    const [selectedDishForTechCard, setSelectedDishForTechCard] = useState<Dish | null>(null);
+    const [tempDishForTechCard, setTempDishForTechCard] = useState<Dish | null>(null);
 
     // Load data
     const loadProducts = useCallback(async () => {
@@ -641,6 +649,15 @@ const ProductAccountingPage: React.FC = () => {
                                                 <IconButton size="small" color="error" onClick={() => handleDeleteDish(dish)}>
                                                     <DeleteIcon fontSize="small" />
                                                 </IconButton>
+                                                <Tooltip title="Технологическая карта (печать)">
+                                                    <IconButton size="small" color="primary" onClick={() => {
+                                                        setSelectedDishForTechCard(dish);
+                                                        setTempDishForTechCard(dish);
+                                                        setTechCardDialogOpen(true);
+                                                    }}>
+                                                        <DescriptionIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
                                                 <Tooltip title="Показать расчет на количество детей">
                                                     <IconButton size="small" onClick={() => {
                                                         setSelectedDishForCalculation(dish);
@@ -928,6 +945,59 @@ const ProductAccountingPage: React.FC = () => {
                 allProducts={products} // Pass all products for lookup
                 initialChildCount={childCountInput} // Pass current child count from Menu tab
             />
+
+            {/* Технологическая карта - Диалог просмотра и печати */}
+            <Dialog
+                open={techCardDialogOpen}
+                onClose={() => setTechCardDialogOpen(false)}
+                maxWidth="lg"
+                fullWidth
+            >
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    Просмотр и редактирование технологической карты
+                    <Box>
+                        <Button
+                            variant="outlined"
+                            startIcon={<PrintIcon />}
+                            onClick={() => window.print()}
+                            sx={{ mr: 1 }}
+                        >
+                            Печать
+                        </Button>
+                        <Button
+                            variant="contained"
+                            color="success"
+                            onClick={async () => {
+                                if (tempDishForTechCard) {
+                                    try {
+                                        await updateDish(tempDishForTechCard._id || tempDishForTechCard.id || '', tempDishForTechCard);
+                                        toast.success('Технологическая карта сохранена');
+                                        loadDishes();
+                                    } catch (e: any) {
+                                        toast.error(e.message || 'Ошибка сохранения');
+                                    }
+                                }
+                            }}
+                        >
+                            Сохранить изменения
+                        </Button>
+                    </Box>
+                </DialogTitle>
+                <DialogContent dividers>
+                    {tempDishForTechCard && (
+                        <TechnicalCard 
+                            dish={tempDishForTechCard} 
+                            editable={true}
+                            onUpdate={(updatedFields) => {
+                                setTempDishForTechCard({ ...tempDishForTechCard, ...updatedFields });
+                            }}
+                        />
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button onClick={() => setTechCardDialogOpen(false)}>Закрыть</Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

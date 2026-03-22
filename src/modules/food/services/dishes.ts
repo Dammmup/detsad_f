@@ -8,7 +8,13 @@ export interface Dish {
     description?: string;
     category: 'breakfast' | 'lunch' | 'dinner' | 'snack';
     subcategory?: 'soup' | 'main' | 'porridge' | 'salad' | 'drink' | 'baking' | 'garnish' | 'other';
-    ingredients: ProductIngredient[];
+    ingredients: {
+        productId: string | { _id: string; name: string; unit: string };
+        grossQuantity?: number;
+        quantity: number; // нетто
+        producedQuantity?: number;
+        unit: string;
+    }[];
     servingsCount: number;
     preparationTime?: number;
     isActive: boolean;
@@ -18,6 +24,19 @@ export interface Dish {
     };
     createdAt?: string;
     updatedAt?: string;
+
+    // Новые поля для техкарты
+    recipeNumber?: string;
+    recipeSource?: string;
+    technologicalProcess?: string;
+    yield?: number;
+    yield1kg?: number;
+    nutritionalInfo?: {
+        calories?: number;
+        proteins?: number;
+        fats?: number;
+        carbs?: number;
+    };
 }
 
 export interface DishAvailability {
