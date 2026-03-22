@@ -168,21 +168,27 @@ const TechnicalCard: React.FC<TechnicalCardProps> = ({
                         </TableRow>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 'bold' }}>ВЫХОД на 1 порцию</TableCell>
-                            <TableCell align="center"> — </TableCell>
-                            <TableCell align="center"> — </TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>{totals.gross.toFixed(2)}</TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>{totals.net.toFixed(2)}</TableCell>
                             <TableCell align="center" sx={{ fontWeight: 'bold' }}>
-                                {dish.yield !== undefined ? `${dish.yield} г` : ' — '}
+                                {dish.yield !== undefined ? `${dish.yield} г` : `${totals.produced.toFixed(2)} г`}
                             </TableCell>
-                            <TableCell align="center"> — </TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>{totals.net.toFixed(2)}</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 'bold' }}>ВЫХОД на 1 кг</TableCell>
-                            <TableCell align="center"> — </TableCell>
-                            <TableCell align="center"> — </TableCell>
                             <TableCell align="center" sx={{ fontWeight: 'bold' }}>
-                                {dish.yield1kg !== undefined ? `${dish.yield1kg} г` : ' — '}
+                                {dish.yield ? ((totals.gross * 1000) / dish.yield).toFixed(2) : ' — '}
                             </TableCell>
-                            <TableCell align="center"> — </TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>
+                                {dish.yield ? ((totals.net * 1000) / dish.yield).toFixed(2) : ' — '}
+                            </TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>
+                                {dish.yield1kg !== undefined ? `${dish.yield1kg} г` : '1000 г'}
+                            </TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>
+                                {dish.yield ? ((totals.net * 1000) / dish.yield).toFixed(2) : ' — '}
+                            </TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>

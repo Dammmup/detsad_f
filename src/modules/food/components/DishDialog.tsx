@@ -246,7 +246,7 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                                     type="number"
                                     label="Белки"
                                     size="small"
-                                    value={form.nutritionalInfo?.proteins || ''}
+                                    value={form.nutritionalInfo?.proteins ?? ''}
                                     onChange={(e) => setForm({ 
                                         ...form, 
                                         nutritionalInfo: { ...(form.nutritionalInfo || {}), proteins: Number(e.target.value) } 
@@ -259,7 +259,7 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                                     type="number"
                                     label="Жиры"
                                     size="small"
-                                    value={form.nutritionalInfo?.fats || ''}
+                                    value={form.nutritionalInfo?.fats ?? ''}
                                     onChange={(e) => setForm({ 
                                         ...form, 
                                         nutritionalInfo: { ...(form.nutritionalInfo || {}), fats: Number(e.target.value) } 
@@ -272,7 +272,7 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                                     type="number"
                                     label="Углеводы"
                                     size="small"
-                                    value={form.nutritionalInfo?.carbs || ''}
+                                    value={form.nutritionalInfo?.carbs ?? ''}
                                     onChange={(e) => setForm({ 
                                         ...form, 
                                         nutritionalInfo: { ...(form.nutritionalInfo || {}), carbs: Number(e.target.value) } 
@@ -285,7 +285,7 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
                                     type="number"
                                     label="Калории"
                                     size="small"
-                                    value={form.nutritionalInfo?.calories || ''}
+                                    value={form.nutritionalInfo?.calories ?? ''}
                                     onChange={(e) => setForm({ 
                                         ...form, 
                                         nutritionalInfo: { ...(form.nutritionalInfo || {}), calories: Number(e.target.value) } 
