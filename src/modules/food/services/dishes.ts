@@ -147,7 +147,7 @@ export const analyzePdf = async (file: File): Promise<PdfAnalysisResult> => {
 
     const { data } = await api.post('/dishes/analyze-pdf', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 180000 // 3 минуты — AI может долго обрабатывать
+        timeout: 600000 // 10 минут — AI может долго обрабатывать
     });
     return data;
 };

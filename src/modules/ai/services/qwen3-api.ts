@@ -26,8 +26,8 @@ const getAuthToken = (): string | null => {
 };
 
 export class Qwen3ApiService {
-  private static readonly API_URL = `${import.meta.env.VITE_API_URL}/qwen3-chat/chat`;
-  private static readonly CONFIRM_URL = `${import.meta.env.VITE_API_URL}/qwen3-chat/confirm`;
+  private static readonly API_URL = `${import.meta.env.VITE_API_URL || ''}/qwen3-chat/chat`.replace(/\/+/g, '/');
+  private static readonly CONFIRM_URL = `${import.meta.env.VITE_API_URL || ''}/qwen3-chat/confirm`.replace(/\/+/g, '/');
 
   static async sendMessage(
     messages: ChatMessage[],
@@ -96,7 +96,7 @@ export class Qwen3ApiService {
             ...msg,
             timestamp: msg.timestamp.toISOString(),
           })),
-          model: 'qwen-plus',
+          model: 'qwen-vl-max',
         };
 
         if (currentPage) {

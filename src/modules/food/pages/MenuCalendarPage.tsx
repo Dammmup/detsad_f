@@ -9,6 +9,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import PrintIcon from '@mui/icons-material/Print';
 import { getDailyMenus, DailyMenu as DailyMenuType, Meal, deleteDailyMenu } from '../services/dailyMenu';
 import {
     WeeklyMenuTemplate, getWeeklyMenuTemplates, applyTemplateToWeek, applyTemplateToMonth
@@ -136,6 +137,74 @@ const MenuCalendarPage: React.FC = () => {
         } finally {
             setApplying(false);
         }
+    };
+
+    // Print menu
+    const handlePrintMenu = () => {
+        if (!selectedMenu || !selectedDate) return;
+
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            toast.error('Разрешите всплывающие окна для работы печати');
+            return;
+        }
+
+        const dateStr = selectedDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long' });
+        
+        let html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <title>Меню на ${dateStr}</title>
+                <style>
+                    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #333; }
+                    h1 { text-align: center; color: #1976d2; margin-bottom: 30px; }
+                    h2 { border-bottom: 2px solid #1976d2; padding-bottom: 5px; margin-top: 25px; color: #1976d2; font-size: 1.3em; }
+                    .dish { margin-bottom: 12px; page-break-inside: avoid; }
+                    .dish-name { font-weight: bold; font-size: 1.1em; }
+                    .ingredients { color: #555; margin-left: 15px; margin-top: 4px; font-size: 0.9em; }
+                    .meta { margin-top: 40px; font-style: italic; color: #666; border-top: 1px dashed #ccc; padding-top: 10px; }
+                    @media print {
+                        body { padding: 0; }
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>Меню на ${dateStr}</h1>
+        `;
+
+        const mealLabels = { breakfast: 'Завтрак', lunch: 'Обед', snack: 'Полдник', dinner: 'Ужин' };
+        
+        (['breakfast', 'lunch', 'snack', 'dinner'] as const).forEach(mealType => {
+            const meal = selectedMenu.meals?.[mealType];
+            if (meal && meal.dishes && meal.dishes.length > 0) {
+                html += `<h2>${mealLabels[mealType]}</h2>`;
+                meal.dishes.forEach((dish: any) => {
+                    html += `<div class="dish"><div class="dish-name">${dish.name}</div>`;
+                    if (dish.ingredients && dish.ingredients.length > 0) {
+                        const ingStr = dish.ingredients.map((ing: any) => `${ing.productId?.name || 'Продукт'} — ${ing.quantity} ${ing.unit}`).join(', ');
+                        html += `<div class="ingredients">${ingStr}</div>`;
+                    }
+                    html += `</div>`;
+                });
+            }
+        });
+
+        html += `
+                <div class="meta">
+                    <p>Количество порций (детей): ${selectedMenu.totalChildCount || 0}</p>
+                    ${selectedMenu.notes ? `<p>Примечания: ${selectedMenu.notes}</p>` : ''}
+                </div>
+                <script>
+                    window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 300); }
+                </script>
+            </body>
+            </html>
+        `;
+
+        printWindow.document.write(html);
+        printWindow.document.close();
     };
 
     // Generate calendar days
@@ -276,7 +345,10 @@ const MenuCalendarPage: React.FC = () => {
                             <Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                     <Typography variant="h6">Детали меню</Typography>
-                                    <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteMenu}>Удалить меню на день</Button>
+                                    <Box sx={{ display: 'flex', gap: 2 }}>
+                                        <Button variant="outlined" color="primary" startIcon={<PrintIcon />} onClick={handlePrintMenu}>Печать</Button>
+                                        <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteMenu}>Удалить меню на день</Button>
+                                    </Box>
                                 </Box>
                                 <Divider sx={{ my: 2 }} />
                                 {(['breakfast', 'lunch', 'snack', 'dinner'] as const).map(mealType => {
