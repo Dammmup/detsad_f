@@ -25,10 +25,11 @@ export interface Dish {
     createdAt?: string;
     updatedAt?: string;
 
-    // Новые поля для техкарты
+    // Поля для техкарты
     recipeNumber?: string;
     recipeSource?: string;
     technologicalProcess?: string;
+    shelfLifeAndStorage?: string;
     yield?: number;
     yield1kg?: number;
     nutritionalInfo?: {
@@ -36,6 +37,20 @@ export interface Dish {
         proteins?: number;
         fats?: number;
         carbs?: number;
+    };
+    organoleptic?: {
+        appearance?: string;
+        consistency?: string;
+        color?: string;
+        tasteAndSmell?: string;
+    };
+    vitaminsAndMinerals?: {
+        A?: number;
+        D?: number;
+        E?: number;
+        K?: number;
+        C?: number;
+        dietaryFiber?: number;
     };
 }
 
@@ -110,5 +125,42 @@ export const getDishCost = async (id: string): Promise<{ cost: number }> => {
 // Проверить доступность ингредиентов
 export const checkDishAvailability = async (id: string, servings: number = 1): Promise<DishAvailability> => {
     const { data } = await api.get(`/dishes/${id}/availability?servings=${servings}`);
+    return data;
+};
+
+// Анализ PDF с технологическими картами через AI
+export interface PdfAnalysisResult {
+    success: boolean;
+    totalParsed: number;
+    existing: {
+        dish: { _id: string; name: string; recipeNumber?: string; category: string };
+        updates: Record<string, { old: any; new: any }>;
+        parsedData: any;
+    }[];
+    newDishes: any[];
+    message: string;
+}
+
+export const analyzePdf = async (file: File): Promise<PdfAnalysisResult> => {
+    const formData = new FormData();
+    formData.append('pdf', file);
+
+    const { data } = await api.post('/dishes/analyze-pdf', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 180000 // 3 минуты — AI может долго обрабатывать
+    });
+    return data;
+};
+
+// Подтверждение импорта из PDF
+export interface PdfImportResult {
+    success: boolean;
+    matched: number;
+    modified: number;
+    message: string;
+}
+
+export const confirmPdfImport = async (updates: { dishId: string; parsedData: any }[]): Promise<PdfImportResult> => {
+    const { data } = await api.post('/dishes/confirm-pdf-import', { updates });
     return data;
 };

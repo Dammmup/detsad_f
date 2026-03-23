@@ -51,7 +51,8 @@ import {
     PlayArrow as PlayArrowIcon,
     CheckCircle as CheckCircleIcon,
     Description as DescriptionIcon, 
-    Print as PrintIcon
+    Print as PrintIcon,
+    PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 
@@ -87,6 +88,7 @@ import ReportsTab from '../components/ReportsTab';
 import DishDialog from '../components/DishDialog';
 import TechnicalCard from '../components/TechnicalCard';
 import ProductCalculationDialog from '../components/ProductCalculationDialog';
+import PdfImportDialog from '../components/PdfImportDialog';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -201,6 +203,7 @@ const ProductAccountingPage: React.FC = () => {
     const [techCardDialogOpen, setTechCardDialogOpen] = useState(false);
     const [selectedDishForTechCard, setSelectedDishForTechCard] = useState<Dish | null>(null);
     const [tempDishForTechCard, setTempDishForTechCard] = useState<Dish | null>(null);
+    const [pdfImportDialogOpen, setPdfImportDialogOpen] = useState(false);
 
     // Load data
     const loadProducts = useCallback(async () => {
@@ -622,9 +625,19 @@ const ProductAccountingPage: React.FC = () => {
                                     </Select>
                                 </FormControl>
                             </Box>
-                            <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDishDialog()}>
-                                Добавить блюдо
-                            </Button>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                <Button
+                                    variant="outlined"
+                                    color="secondary"
+                                    startIcon={<PdfIcon />}
+                                    onClick={() => setPdfImportDialogOpen(true)}
+                                >
+                                    Импорт из PDF
+                                </Button>
+                                <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDishDialog()}>
+                                    Добавить блюдо
+                                </Button>
+                            </Box>
                         </Box>
 
                         <Grid container spacing={2}>
@@ -998,6 +1011,13 @@ const ProductAccountingPage: React.FC = () => {
                     <Button onClick={() => setTechCardDialogOpen(false)}>Закрыть</Button>
                 </DialogActions>
             </Dialog>
+
+            {/* PDF Import Dialog */}
+            <PdfImportDialog
+                open={pdfImportDialogOpen}
+                onClose={() => setPdfImportDialogOpen(false)}
+                onImportComplete={() => loadDishes()}
+            />
         </Box>
     );
 };
