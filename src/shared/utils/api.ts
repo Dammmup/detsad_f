@@ -15,11 +15,47 @@ export const delay: DelayFunction = (ms = RETRY_DELAY) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export const handleApiError: ErrorHandler = (error: any, context = '') => {
-  const errorMessage = error.response?.data?.message || error.message;
-  console.error(`Error ${context}:`, errorMessage);
+  let message = 'Произошла ошибка при выполнении запроса';
+  const status = error.response?.status;
+  const serverMessage = error.response?.data?.message || error.response?.data?.error;
 
-  const apiError = new Error(`Error ${context}: ${errorMessage}`) as ApiError;
-  apiError.status = error.response?.status;
+  if (serverMessage) {
+    message = serverMessage;
+  } else {
+    switch (status) {
+      case 400:
+        message = 'Некорректный запрос. Проверьте введенные данные.';
+        break;
+      case 401:
+        message = 'Ошибка авторизации. Пожалуйста, войдите в систему снова.';
+        break;
+      case 403:
+        message = 'У вас недостаточно прав для выполнения этого действия.';
+        break;
+      case 404:
+        message = 'Запрошенный ресурс не найден.';
+        break;
+      case 429:
+        message = 'Слишком много запросов. Пожалуйста, подождите.';
+        break;
+      case 500:
+        message = 'Ошибка на стороне сервера. Мы уже работаем над исправлением.';
+        break;
+      default:
+        if (error.message === 'Network Error') {
+          message = 'Отсутствует подключение к сети. Проверьте интернет.';
+        } else if (error.code === 'ECONNABORTED') {
+          message = 'Время ожидания запроса истекло. Попробуйте снова.';
+        } else {
+          message = error.message || 'Неизвестная ошибка';
+        }
+    }
+  }
+
+  console.error(`Error ${context}:`, message);
+
+  const apiError = new Error(message) as ApiError;
+  apiError.status = status;
   apiError.data = error.response?.data;
 
   throw apiError;

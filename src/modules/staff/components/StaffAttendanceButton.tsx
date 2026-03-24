@@ -1,9 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Button, CircularProgress, Snackbar, Alert } from '@mui/material';
+import { 
+  Button, 
+  CircularProgress, 
+  Snackbar, 
+  Alert, 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions, 
+  Typography,
+  Box,
+  Divider
+} from '@mui/material';
 import { useAuth } from '../../../app/context/AuthContext';
 import { getStaffShifts, checkIn, checkOut } from '../services/shifts';
 import { settingsService } from '../../settings/services/settings';
 import { collectDeviceMetadata } from '../../../shared/utils/deviceMetadata';
+import CloseIcon from '@mui/icons-material/Close';
+import GpsFixedIcon from '@mui/icons-material/GpsFixed';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 interface StaffAttendanceButtonProps {
   onStatusChange?: () => void;
@@ -47,6 +62,8 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
     'success',
   );
+  const [geoErrorOpen, setGeoErrorOpen] = useState(false);
+  const [isIOS] = useState(/iPad|iPhone|iPod/.test(navigator.userAgent));
 
   const [geolocation, setGeolocation] = useState<{
     latitude: number;
@@ -139,32 +156,42 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
       let userLng: number | undefined = undefined;
 
       if (geolocation) {
-
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-          }),
-        );
-        userLat = pos.coords.latitude;
-        userLng = pos.coords.longitude;
-        const dist = haversineDistance(
-          userLat,
-          userLng,
-          geolocation.latitude,
-          geolocation.longitude,
-        );
-        if (dist > geolocation.radius) {
-          setSnackbarMessage(
-            'Вы вне разрешённой зоны для отметки прихода.\nДопустимо ' +
-            Math.round(geolocation.radius) +
-            'м, у вас ' +
-            Math.round(dist) +
-            'м.',
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+            }),
           );
-          setSnackbarSeverity('error');
-          setSnackbarOpen(true);
-          setLoading(false);
-          return;
+          userLat = pos.coords.latitude;
+          userLng = pos.coords.longitude;
+          const dist = haversineDistance(
+            userLat,
+            userLng,
+            geolocation.latitude,
+            geolocation.longitude,
+          );
+          if (dist > geolocation.radius) {
+            setSnackbarMessage(
+              'Вы вне разрешённой зоны для отметки прихода.\nДопустимо ' +
+              Math.round(geolocation.radius) +
+              'м, у вас ' +
+              Math.round(dist) +
+              'м.',
+            );
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+            setLoading(false);
+            return;
+          }
+        } catch (geoErr: any) {
+          console.error('Geolocation error:', geoErr);
+          if (geoErr.code === 1) { // PERMISSION_DENIED
+            setGeoErrorOpen(true);
+            setLoading(false);
+            return;
+          }
+          throw new Error('Не удалось получить ваше местоположение. Убедитесь, что GPS включен.');
         }
       }
 
@@ -274,32 +301,42 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
       let userLng: number | undefined = undefined;
 
       if (geolocation) {
-
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-          }),
-        );
-        userLat = pos.coords.latitude;
-        userLng = pos.coords.longitude;
-        const dist = haversineDistance(
-          userLat,
-          userLng,
-          geolocation.latitude,
-          geolocation.longitude,
-        );
-        if (dist > geolocation.radius) {
-          setSnackbarMessage(
-            'Вы вне разрешённой зоны для отметки ухода.\nДопустимо ' +
-            Math.round(geolocation.radius) +
-            'м, у вас ' +
-            Math.round(dist) +
-            'м.',
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+            }),
           );
-          setSnackbarSeverity('error');
-          setSnackbarOpen(true);
-          setLoading(false);
-          return;
+          userLat = pos.coords.latitude;
+          userLng = pos.coords.longitude;
+          const dist = haversineDistance(
+            userLat,
+            userLng,
+            geolocation.latitude,
+            geolocation.longitude,
+          );
+          if (dist > geolocation.radius) {
+            setSnackbarMessage(
+              'Вы вне разрешённой зоны для отметки ухода.\nДопустимо ' +
+              Math.round(geolocation.radius) +
+              'м, у вас ' +
+              Math.round(dist) +
+              'м.',
+            );
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+            setLoading(false);
+            return;
+          }
+        } catch (geoErr: any) {
+          console.error('Geolocation error:', geoErr);
+          if (geoErr.code === 1) { // PERMISSION_DENIED
+            setGeoErrorOpen(true);
+            setLoading(false);
+            return;
+          }
+          throw new Error('Не удалось получить ваше местоположение. Убедитесь, что GPS включен.');
         }
       }
 
@@ -480,18 +517,77 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
       </Button>
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={3000}
+        autoHideDuration={4000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <Alert
           onClose={handleCloseSnackbar}
           severity={snackbarSeverity}
-          sx={{ width: '100%' }}
+          sx={{ width: '100%', boxShadow: 3 }}
         >
           {snackbarMessage}
         </Alert>
       </Snackbar>
+
+      <Dialog 
+        open={geoErrorOpen} 
+        onClose={() => setGeoErrorOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3, p: 1 }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
+          <GpsFixedIcon color="error" />
+          <Typography variant="h6" fontWeight={700}>Геолокация запрещена</Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Для отметки посещения необходимо разрешить доступ к вашему местоположению в браузере.
+          </Typography>
+          
+          <Divider sx={{ mb: 2 }} />
+          
+          <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 2 }}>
+            <Typography variant="subtitle2" fontWeight={700} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <SettingsIcon fontSize="small" /> Инструкция:
+            </Typography>
+            
+            {isIOS ? (
+              <Box component="ol" sx={{ pl: 2, m: 0, fontSize: '0.85rem' }}>
+                <li>Нажмите на иконку <b>«АА»</b> или <b>замок</b> слева в адресной строке.</li>
+                <li>Выберите <b>«Настройки веб-сайта»</b>.</li>
+                <li>В пункте <b>«Геопозиция»</b> выберите <b>«Разрешить»</b>.</li>
+                <li>Обновите страницу.</li>
+              </Box>
+            ) : (
+              <Box component="ol" sx={{ pl: 2, m: 0, fontSize: '0.85rem' }}>
+                <li>Нажмите на иконку <b>замка</b> слева от адреса сайта.</li>
+                <li>Нажмите <b>«Настройки сайтов»</b> (или найдите переключатель Геоданные).</li>
+                <li>Установите <b>«Разрешить»</b> для Местоположения.</li>
+                <li>Вернитесь и обновите страницу.</li>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 1 }}>
+          <Button 
+            onClick={() => window.location.reload()} 
+            variant="contained" 
+            fullWidth
+            sx={{ 
+              borderRadius: 2, 
+              textTransform: 'none', 
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+            }}
+          >
+            Я разрешил, обновить страницу
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
