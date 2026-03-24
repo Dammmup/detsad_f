@@ -46,7 +46,9 @@ const defaultForm: Partial<PerishableBrak> = {
   status: 'pending',
 };
 
+
 const PerishableBrakPage: React.FC = () => {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<PerishableBrak[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);

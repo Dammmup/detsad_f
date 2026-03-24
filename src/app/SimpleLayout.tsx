@@ -49,6 +49,7 @@ import FoodNormsControlPage from '../modules/food/pages/FoodNormsControlPage';
 import HelminthJournal from '../modules/medicine/pages/HelminthJournal';
 import MantouxJournal from '../modules/medicine/pages/MantouxJournal';
 import OrganolepticJournalPage from '../modules/food/pages/OrganolepticJournalPage';
+import VitaminizationJournalPage from '../modules/food/pages/VitaminizationJournalPage';
 import SomaticJournal from '../modules/medicine/pages/SomaticJournal';
 import PerishableBrakPage from '../modules/food/pages/PerishableBrakPage';
 import ProductCertificatePage from '../modules/food/pages/ProductCertificatePage';
@@ -306,6 +307,10 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             />
             <Route path='med/risk-group' element={hasMedAccess ? <RiskGroupChildren /> : <Navigate to="/app/dashboard" />} />
             <Route path='med/tub-positive' element={hasMedAccess ? <TubPositiveJournal /> : <Navigate to="/app/dashboard" />} />
+            <Route
+              path='med/vitaminization'
+              element={hasMedAccess ? <VitaminizationJournalPage /> : <Navigate to="/app/dashboard" />}
+            />
             <Route
               path='med/organoleptic-journal'
               element={hasMedAccess ? <OrganolepticJournalPage /> : <Navigate to="/app/dashboard" />}

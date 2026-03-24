@@ -139,6 +139,19 @@ export const medJournals: MedJournalConfig[] = [
     ],
   },
   {
+    id: 'vitaminization',
+    type: 'food',
+    title: 'Журнал витаминизации',
+    description: 'Учет витаминизации третьих блюд',
+    fields: [
+      { key: 'date', label: 'Дата', type: 'date' },
+      { key: 'dish', label: 'Блюдо', type: 'string' },
+      { key: 'vitamin', label: 'Витамин/Препарат', type: 'string' },
+      { key: 'dose', label: 'Доза', type: 'number' },
+      { key: 'responsible', label: 'Ответственный', type: 'string' },
+    ],
+  },
+  {
     id: 'food_norms_control',
     type: 'food',
     title: 'Ведомость контроля за выполнением норм пищевой продукции (Форма 4)',

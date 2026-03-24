@@ -1,4 +1,4 @@
-﻿
+
 
 import Children from '../../modules/children/services/children';
 
@@ -249,6 +249,7 @@ export const STATUS_TEXT: Record<string, string> = {
   checked_out: 'Ушел',
   late: 'Опоздание',
   late_arrival: 'Поздний приход',
+  on_work: 'На работе',
   no_clock_in: 'Нет прихода',
   no_clock_out: 'Нет ухода',
   absent: 'Отсутствует',
@@ -257,6 +258,9 @@ export const STATUS_TEXT: Record<string, string> = {
 export const SHIFT_STATUS_TEXT: Record<string, string> = {
   scheduled: 'Запланирована',
   completed: 'Завершена',
+  checked_in: 'На работе',
+  on_work: 'На работе',
+  late_arrival: 'Поздний приход',
   absent: 'Отсутствует',
   sick: 'Больничный',
   vacation: 'Отпуск',
@@ -276,6 +280,7 @@ export enum ShiftStatus {
   checked_out = 'checked_out',
   early_leave = 'early_leave',
   late_arrival = 'late_arrival',
+  on_work = 'on_work',
   sick = 'sick',
   vacation = 'vacation',
 }

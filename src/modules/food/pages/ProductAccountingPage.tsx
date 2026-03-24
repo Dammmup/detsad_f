@@ -626,6 +626,7 @@ const ProductAccountingPage: React.FC = () => {
                                 </FormControl>
                             </Box>
                             <Box sx={{ display: 'flex', gap: 1 }}>
+                                {/* 
                                 <Button
                                     variant="outlined"
                                     color="secondary"
@@ -634,6 +635,7 @@ const ProductAccountingPage: React.FC = () => {
                                 >
                                     Импорт из PDF
                                 </Button>
+                                */}
                                 <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDishDialog()}>
                                     Добавить блюдо
                                 </Button>

@@ -31,7 +31,9 @@ const defaultForm: DetergentLog = {
 };
 
 
+
 const DetergentLogPage: React.FC = () => {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<DetergentLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);

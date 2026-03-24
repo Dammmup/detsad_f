@@ -1,11 +1,12 @@
 
 
 import { StatusColor, STATUS_COLORS, STATUS_TEXT } from '../types/common';
+import { TIMEZONE } from './timezone';
 
 
 
 // Таймзона по умолчанию - Алматы (Казахстан)
-const ALMATY_TIMEZONE = 'Asia/Almaty';
+const ALMATY_TIMEZONE = TIMEZONE;
 
 // Получить текущую дату в таймзоне Алматы
 export const getAlmatyDate = (): Date => {
@@ -16,7 +17,7 @@ export const getAlmatyDate = (): Date => {
 
 // Получить строку даты в формате YYYY-MM-DD для таймзоны Алматы
 export const getAlmatyDateString = (): string => {
-  return getAlmatyDate().toISOString().split('T')[0];
+  return new Date().toLocaleDateString('sv-SE', { timeZone: ALMATY_TIMEZONE });
 };
 
 export const formatDate = (date: Date | string): string => {
@@ -90,13 +91,14 @@ export const getCurrentMonthRange = (): {
   startDate: string;
   endDate: string;
 } => {
-  const now = getAlmatyDate();
-  const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
+  const dateStr = getAlmatyDateString();
+  const [year, month] = dateStr.split('-');
+  
+  const lastDay = new Date(Date.UTC(parseInt(year), parseInt(month), 0)).getUTCDate();
+  
   return {
-    startDate: startDate.toISOString().split('T')[0],
-    endDate: endDate.toISOString().split('T')[0],
+    startDate: `${year}-${month}-01`,
+    endDate: `${year}-${month}-${lastDay.toString().padStart(2, '0')}`,
   };
 };
 

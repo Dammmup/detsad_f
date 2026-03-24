@@ -32,7 +32,9 @@ const defaultForm: FoodStockLog = {
 };
 
 
+
 const FoodStockLogPage: React.FC = () => {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<FoodStockLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);

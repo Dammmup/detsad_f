@@ -98,6 +98,8 @@ export default function MedCabinetPage() {
         return '/app/med/food-stock';
       case 'canteen_staff_health':
         return '/app/med/canteen-staff-health';
+      case 'vitaminization':
+        return '/app/med/vitaminization';
       default:
         return '/app/med';
     }

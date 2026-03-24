@@ -478,6 +478,7 @@ const Staff = () => {
                     <TableCell>Контакты</TableCell>
                     <TableCell>Пароль</TableCell>
                     <TableCell>Статус</TableCell>
+                    <TableCell>Последняя активность</TableCell>
                     <TableCell align='right'>Действия</TableCell>
                   </TableRow>
                 </TableHead>
@@ -520,6 +521,17 @@ const Staff = () => {
                           color={member.active ? 'success' : 'default'}
                           size='small'
                         />
+                      </TableCell>
+                      <TableCell>
+                        {member.lastLogin
+                          ? new Date(member.lastLogin).toLocaleString('ru-RU', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                          : '—'}
                       </TableCell>
                       <TableCell align='right'>
                         <AuditLogButton entityType="staff" entityId={member._id} entityName={member.fullName} />

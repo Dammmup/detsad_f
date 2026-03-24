@@ -41,7 +41,9 @@ interface NormRow {
   status: string;
 }
 
+
 const FoodNormsControlPage: React.FC = () => {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<NormRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));

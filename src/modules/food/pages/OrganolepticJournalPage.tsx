@@ -36,12 +36,7 @@ import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const GROUPS = [
-  'all',
-  'Ясельная',
-  'Младшая',
-  'Средняя',
-  'Старшая',
-  'Подготовительная',
+  'Все',
 ];
 
 const CATEGORY_ORDER = ['breakfast', 'lunch', 'snack', 'dinner', 'dessert', 'drink', 'other'];
@@ -64,7 +59,7 @@ export default function OrganolepticJournalPage() {
   const [editRecord, setEditRecord] =
     useState<any | null>(null);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [group, setGroup] = useState('all');
+  const [group, setGroup] = useState('Все');
   const [responsibleSignature, setResponsibleSignature] = useState('');
   const fetchRecords = React.useCallback(async () => {
     setLoading(true);
@@ -213,7 +208,7 @@ export default function OrganolepticJournalPage() {
             >
               {GROUPS.map((g) => (
                 <MenuItem key={g} value={g}>
-                  {g === 'all' ? 'Все' : g}
+                  {g}
                 </MenuItem>
               ))}
             </Select>

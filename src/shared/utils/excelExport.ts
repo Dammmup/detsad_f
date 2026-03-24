@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { getGroups } from '../../modules/children/services/groups';
 import { formatDate, getWeekday, formatDateWithWeekday, getAlmatyDate, getAlmatyDateString } from './format';
+import { TIMEZONE } from './timezone';
 
 export interface ExportConfig {
   filename: string;
@@ -399,7 +400,7 @@ export const exportChildrenAttendance = async (
     ...allDates.map((dateStr) => {
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return dateStr;
-      const weekday = date.toLocaleDateString('ru-RU', { timeZone: 'Asia/Almaty', weekday: 'short' });
+      const weekday = date.toLocaleDateString('ru-RU', { timeZone: TIMEZONE, weekday: 'short' });
       return `${date.getDate()}.${date.getMonth() + 1} (${weekday})`;
     }),
     'Явок (+)',
@@ -530,7 +531,7 @@ export const exportStaffAttendance = async (
     ...allDates.map((dateStr) => {
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return dateStr;
-      const weekday = date.toLocaleDateString('ru-RU', { timeZone: 'Asia/Almaty', weekday: 'short' });
+      const weekday = date.toLocaleDateString('ru-RU', { timeZone: TIMEZONE, weekday: 'short' });
       return `${date.getDate()}.${date.getMonth() + 1} (${weekday})`;
     }),
     'Явок',

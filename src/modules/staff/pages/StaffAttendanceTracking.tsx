@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { TIMEZONE } from '../../../shared/utils/timezone';
 import {
   Paper,
   Typography,
@@ -336,7 +337,7 @@ const StaffAttendanceTracking: React.FC = () => {
               if (attendanceRecord.actualStart && !attendanceRecord.actualEnd) {
                 // Получаем текущее время по Алматы
                 const now = new Date();
-                const almatyTimeStr = now.toLocaleTimeString('en-GB', { timeZone: 'Asia/Almaty', hour12: false });
+                const almatyTimeStr = now.toLocaleTimeString('en-GB', { timeZone: TIMEZONE, hour12: false });
                 const [curH, curM] = almatyTimeStr.split(':').map(Number);
                 const currentAlmatyMinutes = curH * 60 + curM;
 
@@ -433,7 +434,7 @@ const StaffAttendanceTracking: React.FC = () => {
                 // Если сегодня и рабочее время прошло (после 19:00) - тоже "не отметил приход"
                 const isToday = now.isSame(shiftDate, 'day');
                 if (isToday) {
-                  const almatyTimeStr = now.toDate().toLocaleTimeString('en-GB', { timeZone: 'Asia/Almaty', hour12: false });
+                  const almatyTimeStr = now.toDate().toLocaleTimeString('en-GB', { timeZone: TIMEZONE, hour12: false });
                   const [curH] = almatyTimeStr.split(':').map(Number);
                   if (curH >= 19) {
                     displayStatus = ShiftStatus.no_clock_in;
@@ -507,7 +508,7 @@ const StaffAttendanceTracking: React.FC = () => {
               if (record.actualStart && !record.actualEnd) {
                 // Получаем текущее время по Алматы
                 const now = new Date();
-                const almatyTimeStr = now.toLocaleTimeString('en-GB', { timeZone: 'Asia/Almaty', hour12: false });
+                const almatyTimeStr = now.toLocaleTimeString('en-GB', { timeZone: TIMEZONE, hour12: false });
                 const [curH, curM] = almatyTimeStr.split(':').map(Number);
                 const currentAlmatyMinutes = curH * 60 + curM;
 
@@ -984,7 +985,7 @@ const StaffAttendanceTracking: React.FC = () => {
     // Если время прихода/ухода не указано, подставляем рабочие часы для удобства
     const editRecord = { ...record };
     if (!editRecord.actualStart) editRecord.actualStart = workingHours.start;
-    if (!editRecord.actualEnd) editRecord.actualEnd = workingHours.end;
+    // if (!editRecord.actualEnd) editRecord.actualEnd = workingHours.end; // Удалено по просьбе пользователя
 
     setSelectedRecord(editRecord);
     setEditDialogOpen(true);
