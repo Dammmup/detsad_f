@@ -400,6 +400,10 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
       // Подготавливаем данные для экспорта
       const exportData = rows.map(row => ({
         'Сотрудник': row.staffName,
+        'Оклад': row.baseSalary,
+        'Тип оклада': row.baseSalaryType,
+        'Отработано (см)': row.workedShifts,
+        'Отработано (дн)': row.workedDays,
         'Начисления': row.accruals,
         'Премия': row.bonuses,
         'Аванс': row.advance,
@@ -407,9 +411,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         'Ставка за опоздание': `${globalPenaltyRate} тг/мин`,
         'Итого': row.total,
         'Статус': row.status,
-        'Оклад': row.baseSalary,
-        'Тип оклада': row.baseSalaryType,
-        'Отработано дней/смен': row.baseSalaryType === 'shift' ? row.workedShifts : row.workedDays,
       }));
       // Создаем worksheet
       const worksheet = utils.json_to_sheet(exportData);
