@@ -86,12 +86,6 @@ const Dashboard = () => {
     >
       <DateNavigator />
       {!isStaff && <ReportsWidget />}
-      {/* На мобильных список задач всегда сверху и в одну колонку */}
-      {isMobile && (
-        <Box sx={{ mb: 3 }}>
-          <TaskListColumn />
-        </Box>
-      )}
 
       <Box
         sx={{
@@ -428,27 +422,25 @@ const Dashboard = () => {
         </Box>
 
         {/* Правая колонка - шторка уведомлений */}
-        {!isStaff && (
-          <Box
-            sx={{
-              width: 350,
-              display: 'flex',
-              flexDirection: 'column',
-              backgroundColor: '#f8f9fa',
-              border: '1px solid #e9ecef',
-              borderRadius: 2,
-              boxShadow:
-                '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)',
-              overflow: 'hidden',
-              transition: 'transform 0.3s ease-in-out',
-              '&:hover': {
-                transform: 'translateX(-5px)',
-              },
-            }}
-          >
-            <TaskListColumn />
-          </Box>
-        )}
+        <Box
+          sx={{
+            width: isMobile ? '100%' : 350,
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: '#f8f9fa',
+            border: '1px solid #e9ecef',
+            borderRadius: 2,
+            boxShadow:
+              '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)',
+            overflow: 'hidden',
+            transition: 'transform 0.3s ease-in-out',
+            '&:hover': {
+              transform: isMobile ? 'none' : 'translateX(-5px)',
+            },
+          }}
+        >
+          <TaskListColumn />
+        </Box>
       </Box>
 
       {/* Модальное окно добавления ребёнка */}

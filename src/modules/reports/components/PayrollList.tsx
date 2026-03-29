@@ -99,6 +99,7 @@ interface PayrollRow {
 const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasNoAccess, setHasNoAccess] = useState(false);
   const [summary, setSummary] = useState<any>(null);
   const [rows, setRows] = useState<PayrollRow[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -145,8 +146,11 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
           const userData = getCurrentUser();
           if (userData) {
             // Проверяем, есть ли право на просмотр зарплаты
-            if (personalOnly && !userData.allowToSeePayroll) {
-              setError('У вас нет доступа к информации о зарплате');
+            // Проверка прав доступа для персонального режима
+            const hasAccess = userData.role !== 'admin' || userData.allowToSeePayroll === true;
+
+            if (personalOnly && !hasAccess) {
+              setError('У вас нет прав для просмотра своей зарплаты. Обратитесь к администратору.');
               setLoading(false);
               return;
             }
@@ -188,15 +192,24 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         if (!mounted) return;
         const data = (payrollsData || []) as any[];
 
-        // Исключаем арендаторов и логопедов - они платят нам, а не мы им
+        // Исключаем арендаторов и логопедов, а также фильтруем по пользователю в персональном режиме
         const filteredData = data.filter(p => {
           const role = p.staffId?.role as UserRole;
-          return !EXTERNAL_ROLES.includes(role);
+          const isExternal = EXTERNAL_ROLES.includes(role);
+          
+          if (isExternal) return false;
+
+          if (personalOnly && currentUserData?.id) {
+            const rowStaffId = p.staffId?._id || p.staffId?.id || p.staffId;
+            return rowStaffId === currentUserData.id;
+          }
+
+          return true;
         });
 
 
-        // Фильтруем работавших сотрудников
-        const workedEmployees = data.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
+        // Фильтруем работавших сотрудников на основе отфильтрованных данных
+        const workedEmployees = filteredData.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
 
         const summaryData = {
           totalEmployees: workedEmployees.length,
@@ -495,15 +508,25 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     const payrollsData = await getPayrolls(params);
     const data = (payrollsData || []) as any[];
 
-    // Исключаем арендаторов и логопедов - они платят нам, а не мы им
+    // Исключаем арендаторов и логопедов, а также фильтруем по пользователю в персональном режиме
     const filteredData = data.filter(p => {
       const role = p.staffId?.role as UserRole;
-      return !EXTERNAL_ROLES.includes(role);
+      const isExternal = EXTERNAL_ROLES.includes(role);
+      
+      if (isExternal) return false;
+
+      // В персональном режиме или для сотрудников (не админов) показываем только их данные
+      if ((personalOnly || (currentUserData && currentUserData.role !== 'admin')) && currentUserData?.id) {
+        const rowStaffId = p.staffId?._id || p.staffId?.id || p.staffId;
+        return rowStaffId === currentUserData.id;
+      }
+
+      return true;
     });
 
 
-    // Фильтруем работавших сотрудников
-    const workedEmployees = data.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
+    // Фильтруем работавших сотрудников на основе отфильтрованных данных
+    const workedEmployees = filteredData.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
 
     const summaryData = {
       totalEmployees: workedEmployees.length,
@@ -785,6 +808,10 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         <CircularProgress />
       </Box>
     );
+  }
+
+  if (hasNoAccess) {
+    return null;
   }
 
   if (error) {

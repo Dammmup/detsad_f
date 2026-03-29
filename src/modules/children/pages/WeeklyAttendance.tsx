@@ -41,6 +41,7 @@ import {
   EventNote as EventNoteIcon,
   FileUpload as FileUploadIcon,
   Save as SaveIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -65,6 +66,7 @@ import ExportButton from '../../../shared/components/ExportButton';
 import DateNavigator from '../../../shared/components/DateNavigator';
 import { importChildAttendance } from '../../../shared/services/importService';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
+import ChildAttendanceDetailsDialog from '../components/ChildAttendanceDetailsDialog';
 
 // Таймер автосохранения (в миллисекундах)
 const AUTO_SAVE_DELAY = 5000;
@@ -122,6 +124,10 @@ const WeeklyAttendance: React.FC = () => {
   }>>([]);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Состояние для модального окна детализации посещаемости
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedChildDetails, setSelectedChildDetails] = useState<{ id: string; name: string } | null>(null);
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
   const [isImporting, setIsImporting] = useState(false);
@@ -412,6 +418,11 @@ const WeeklyAttendance: React.FC = () => {
     }
   };
 
+  const handleOpenChildDetails = (childId: string, childName: string) => {
+    setSelectedChildDetails({ id: childId, name: childName });
+    setDetailsDialogOpen(true);
+  };
+
   // Импорт посещаемости детей из Excel
   const handleImportChildAttendance = async () => {
     try {
@@ -581,23 +592,32 @@ const WeeklyAttendance: React.FC = () => {
                     {filteredChildren.map((child) => (
                       <TableRow key={child.id}>
                         <TableCell>
-                          <Box display='flex' alignItems='center'>
-                            <PersonIcon
-                              sx={{ mr: 1, color: 'text.secondary' }}
-                            />
-                            <Box>
-                              {child.fullName}
-                              {child.parentName && (
-                                <Box
-                                  sx={{
-                                    fontSize: '0.8em',
-                                    color: 'text.secondary',
-                                  }}
-                                >
-                                  Родитель: {child.parentName}
-                                </Box>
-                              )}
+                          <Box display='flex' alignItems='center' justifyContent="space-between">
+                            <Box display='flex' alignItems='center'>
+                              <PersonIcon
+                                sx={{ mr: 1, color: 'text.secondary' }}
+                              />
+                              <Box>
+                                {child.fullName}
+                                {child.parentName && (
+                                  <Box
+                                    sx={{
+                                      fontSize: '0.8em',
+                                      color: 'text.secondary',
+                                    }}
+                                  >
+                                    Родитель: {child.parentName}
+                                  </Box>
+                                )}
+                              </Box>
                             </Box>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenChildDetails(child.id!, child.fullName)}
+                              title="История посещений"
+                            >
+                              <InfoIcon fontSize="small" />
+                            </IconButton>
                           </Box>
                         </TableCell>
                         {weekDays.map((day) => {
@@ -823,6 +843,17 @@ const WeeklyAttendance: React.FC = () => {
               });
             });
         }}
+      />
+
+      <ChildAttendanceDetailsDialog
+        open={detailsDialogOpen}
+        onClose={() => {
+          setDetailsDialogOpen(false);
+          setSelectedChildDetails(null);
+        }}
+        childId={selectedChildDetails?.id || ''}
+        childName={selectedChildDetails?.name || ''}
+        groupId={selectedGroup}
       />
     </LocalizationProvider>
   );

@@ -64,8 +64,7 @@ export const Sidebar = ({
 
     // Особая проверка для пункта "Моя зарплата"
     if (item.id === 'my-salary') {
-      // Видно только сотрудникам с разрешением allowToSeePayroll
-      return currentUser?.allowToSeePayroll === true;
+      return userRole !== 'admin' || currentUser?.allowToSeePayroll === true;
     }
 
     const isVisibleByRole = !item.visibleFor || item.visibleFor.includes(userRole);

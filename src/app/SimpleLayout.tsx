@@ -276,7 +276,16 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path='documents' element={<Documents />} />
             {/* Отчеты */}
             <Route path='reports' element={isAdminOrManager ? <ReportsWidget /> : <Navigate to="/app/dashboard" />} />
-            <Route path='reports/payroll' element={isAdminOrManager ? <ReportsSalary /> : <Navigate to="/app/dashboard" />} />
+            <Route 
+              path='salary' 
+              element={
+                userRole === 'admin' ? (
+                  <ReportsSalary />
+                ) : (
+                  <ReportsSalary personalOnly={true} />
+                )
+              } 
+            />
             <Route path='rent' element={isAdminOrManager ? <ReportsRent /> : <Navigate to="/app/dashboard" />} />
             <Route path='accounting' element={userRole === 'admin' ? <AccountingPage /> : <Navigate to="/app/dashboard" />} />
 
@@ -340,7 +349,6 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
               element={hasMedAccess ? <FoodStaffHealthPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route path='profile' element={<ProfilePage />} />
-            <Route path='my-salary' element={currentUser?.allowToSeePayroll ? <ReportsSalary personalOnly={true} /> : <Navigate to="/app/dashboard" />} />
 
             {/* Fallback */}
             <Route path='*' element={<Navigate to="/app/dashboard" replace />} />

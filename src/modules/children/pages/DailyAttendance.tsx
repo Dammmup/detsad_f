@@ -65,7 +65,6 @@ const DailyAttendance: React.FC = () => {
     const [children, setChildren] = useState<Child[]>([]);
     const [attendance, setAttendance] = useState<Record<string, ChildAttendanceRecord>>({});
 
-    // Буфер для накопления изменений перед отправкой
     const [pendingChanges, setPendingChanges] = useState<Array<{
         childId: string;
         date: string;
