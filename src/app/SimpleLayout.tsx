@@ -83,31 +83,41 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
   };
 
   // Логика свайпа для мобильных устройств
-  const [touchStart, setTouchStart] = React.useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = React.useState<number | null>(null);
+  const [touchStartX, setTouchStartX] = React.useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = React.useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = React.useState<number | null>(null);
+  const [touchEndY, setTouchEndY] = React.useState<number | null>(null);
 
   const minSwipeDistance = 50;
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+    setTouchEndX(null);
+    setTouchEndY(null);
+    setTouchStartX(e.targetTouches[0].clientX);
+    setTouchStartY(e.targetTouches[0].clientY);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    setTouchEndX(e.targetTouches[0].clientX);
+    setTouchEndY(e.targetTouches[0].clientY);
   };
 
   const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
+    if (!touchStartX || !touchEndX || !touchStartY || !touchEndY) return;
+    
+    const distanceX = touchStartX - touchEndX;
+    const distanceY = touchStartY - touchEndY;
+    
+    const isHorizontal = Math.abs(distanceX) > Math.abs(distanceY) * 2; // Жест должен быть преимущественно горизонтальным
+    const isLeftSwipe = distanceX > minSwipeDistance;
+    const isRightSwipe = distanceX < -minSwipeDistance;
 
-    // Свайп вправо открывает меню, свайп влево закрывает (если палец начал у левого края для открытия)
-    if (isRightSwipe && touchStart < 100) {
+    // Свайп вправо открывает меню (теперь зона до 180px - почти четверть экрана на iPhone)
+    if (isHorizontal && isRightSwipe && touchStartX < 180) {
       setDrawerOpen(true);
     }
-    if (isLeftSwipe && drawerOpen) {
+    // Свайп влево закрывает меню, если оно открыто
+    if (isHorizontal && isLeftSwipe && drawerOpen) {
       setDrawerOpen(false);
     }
   };
@@ -165,26 +175,38 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             >
               <MenuIcon />
             </IconButton>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden', flex: 1, minWidth: 0 }}>
               <Typography
                 variant='h6'
                 noWrap
                 component='div'
-                sx={{ fontWeight: 600, letterSpacing: 0.5, fontSize: { xs: '0.9rem', sm: '1rem' } }}
+                sx={{ 
+                  fontWeight: 600, 
+                  letterSpacing: 0.5, 
+                  fontSize: { xs: '0.85rem', sm: '1rem' },
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
               >
-                Система управления детским садом
+                Система управления
               </Typography>
               <Typography
                 variant='subtitle2'
                 noWrap
                 component='div'
-                sx={{ fontWeight: 400, letterSpacing: 0.5, opacity: 0.9, fontSize: { xs: '0.7rem', sm: '0.8rem' } }}
+                sx={{ 
+                  fontWeight: 400, 
+                  letterSpacing: 0.5, 
+                  opacity: 0.9, 
+                  fontSize: { xs: '0.65rem', sm: '0.8rem' },
+                  display: { xs: 'none', sm: 'block' } // Скрываем имя на очень маленьких экранах, чтобы не толкало кнопки
+                }}
               >
                 {currentUser?.fullName || ''}
               </Typography>
             </Box>
           </Box>
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexShrink: 0 }}>
             <Button
               variant='outlined'
               color='primary'
