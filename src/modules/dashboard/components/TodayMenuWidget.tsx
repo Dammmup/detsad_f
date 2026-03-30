@@ -103,9 +103,10 @@ const TodayMenuWidget: React.FC = React.memo(() => {
                     {getMealIcon(type)}
                   </ListItemIcon>
                   <ListItemText
+                    primaryTypographyProps={{ component: 'div' }}
                     secondaryTypographyProps={{ component: 'div' }}
                     primary={
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                      <Typography variant="subtitle2" component="div" sx={{ fontWeight: 700, color: 'text.primary' }}>
                         {getMealTypeName(type)}
                       </Typography>
                     }

@@ -82,6 +82,36 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
     setDrawerOpen(!drawerOpen);
   };
 
+  // Логика свайпа для мобильных устройств
+  const [touchStart, setTouchStart] = React.useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = React.useState<number | null>(null);
+
+  const minSwipeDistance = 50;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    // Свайп вправо открывает меню, свайп влево закрывает (если палец начал у левого края для открытия)
+    if (isRightSwipe && touchStart < 100) {
+      setDrawerOpen(true);
+    }
+    if (isLeftSwipe && drawerOpen) {
+      setDrawerOpen(false);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
@@ -111,7 +141,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
   const hasMedAccess = isAdminOrManager || ['doctor', 'nurse'].includes(userRole);
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', overflowX: 'hidden' }}>
       <CssBaseline />
       {/* Верхняя панель */}
       <AppBar
@@ -131,7 +161,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
               aria-label='open drawer'
               edge='start'
               onClick={toggleDrawer}
-              sx={{ mr: 1, display: { xs: 'block', md: 'none' } }}
+              sx={{ mr: 1, display: 'block' }}
             >
               <MenuIcon />
             </IconButton>
@@ -190,8 +220,8 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             >
               Выйти
             </Button>
-            {/* Mobile menu for profile/logout options */}
-            <Box sx={{ display: { xs: 'flex', sm: 'none' }, gap: 0.5 }}>
+            {/* Меню для профиля/выхода */}
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
               <IconButton
                 color='inherit'
                 onClick={handleMenuOpen}
@@ -242,19 +272,29 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
       <Sidebar
         location={location}
         structure={sidebarStructure}
-        variant={isMobile ? 'temporary' : 'permanent'}
-        open={isMobile ? drawerOpen : true}
-        onClose={isMobile ? toggleDrawer : undefined}
+        variant="temporary"
+        open={drawerOpen}
+        onClose={toggleDrawer}
       />
 
       {/* Основное содержимое */}
-      <Box component='main' sx={{
-        flexGrow: 1,
-        p: 3,
-        ...(isMobile && drawerOpen ? { overflow: 'hidden' } : {})
-      }}>
+      <Box 
+        component='main' 
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        sx={{
+          flexGrow: 1,
+          p: { xs: 1, sm: 3 },
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          ...(isMobile && drawerOpen ? { overflow: 'hidden' } : {})
+        }}
+      >
         <Toolbar />
-        <Container maxWidth='lg'>
+        <Container maxWidth='lg' sx={{ px: { xs: 1, sm: 2 } }}>
           <Routes>
             <Route path='dashboard' element={<Dashboard />} />
             {/* Дети */}

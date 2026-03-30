@@ -76,13 +76,14 @@ const Dashboard = () => {
   const isMobile = useMediaQuery('(max-width:900px)');
 
   return (
-    <Container
-      maxWidth='lg'
+    <Box
       sx={{
-        py: 4,
+        py: { xs: 2, sm: 4 },
+        px: { xs: 1, sm: 0 },
         background:
           'linear-gradient(135deg, rgba(245, 247, 250, 1) 0%, rgba(235, 240, 245, 1) 100%)',
         minHeight: '100vh',
+        width: '100%',
       }}
     >
       <DateNavigator />
@@ -507,7 +508,7 @@ const Dashboard = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
-    </Container>
+    </Box>
   );
 };
 
