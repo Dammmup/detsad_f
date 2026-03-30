@@ -39,6 +39,7 @@ import {
   Checkbox,
   ListItemText,
   FormControlLabel,
+  TableSortLabel,
 } from '@mui/material';
 import {
   Edit,
@@ -57,6 +58,7 @@ import { useAuth } from '../../../app/context/AuthContext';
 import ExportButton from '../../../shared/components/ExportButton';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 import { exportData } from '../../../shared/utils/exportUtils';
+import { useSort } from '../../../shared/hooks/useSort';
 
 
 const roleTranslations: Record<string, string> = {
@@ -125,16 +127,19 @@ const StaffRow = React.memo(({
   currentUser,
   translateRole,
   handleOpenModal,
-  handleDelete
+  handleDelete,
+  index
 }: {
   member: any;
   currentUser: any;
   translateRole: (role: string) => string;
   handleOpenModal: (member: StaffMember) => void;
   handleDelete: (member: StaffMember) => void;
+  index: number;
 }) => {
   return (
     <TableRow key={member.id}>
+      <TableCell style={{ fontWeight: 'bold', width: 50 }}>{index + 1}</TableCell>
       <TableCell>{member.fullName}</TableCell>
       <TableCell>{member.iin || '—'}</TableCell>
       <TableCell>{translateRole(member.role || '')}</TableCell>
@@ -293,6 +298,8 @@ const Staff = () => {
 
     return filtered;
   }, [staff, searchTerm, filterRole, activeTab]);
+
+  const { items: sortedStaff, requestSort, sortConfig } = useSort(filteredStaff);
 
   const handleOpenModal = useCallback((member?: StaffMember) => {
     setForm(member ? { ...member, allowToSeePayroll: member.allowToSeePayroll || false } : defaultForm);
@@ -535,18 +542,43 @@ const Staff = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>ФИО</TableCell>
+                    <TableCell style={{ fontWeight: 'bold', width: 50 }}>#</TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={sortConfig.key === 'fullName'}
+                        direction={sortConfig.direction || 'asc'}
+                        onClick={() => requestSort('fullName')}
+                      >
+                        ФИО
+                      </TableSortLabel>
+                    </TableCell>
                     <TableCell>ИИН</TableCell>
-                    <TableCell>Должность</TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={sortConfig.key === 'role'}
+                        direction={sortConfig.direction || 'asc'}
+                        onClick={() => requestSort('role')}
+                      >
+                        Должность
+                      </TableSortLabel>
+                    </TableCell>
                     <TableCell>Контакты</TableCell>
                     <TableCell>Пароль</TableCell>
                     <TableCell>Статус</TableCell>
-                    <TableCell>Последняя активность</TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={sortConfig.key === 'lastLogin'}
+                        direction={sortConfig.direction || 'asc'}
+                        onClick={() => requestSort('lastLogin')}
+                      >
+                        Последняя активность
+                      </TableSortLabel>
+                    </TableCell>
                     <TableCell align='right'>Действия</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredStaff.map((member) => (
+                  {sortedStaff.map((member, index) => (
                     <StaffRow
                       key={member.id || member._id}
                       member={member}
@@ -554,6 +586,7 @@ const Staff = () => {
                       translateRole={translateRole}
                       handleOpenModal={handleOpenModal}
                       handleDelete={handleDelete}
+                      index={index}
                     />
                   ))}
                 </TableBody>

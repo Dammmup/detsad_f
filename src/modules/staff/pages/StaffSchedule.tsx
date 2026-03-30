@@ -31,6 +31,7 @@ import {
   TextField,
   Typography,
   useTheme,
+  TableSortLabel,
   OutlinedInput,
   InputAdornment,
   Checkbox,
@@ -38,6 +39,7 @@ import {
   Radio,
   RadioGroup,
   FormControlLabel,
+  Avatar,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -47,6 +49,7 @@ import {
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { Search as SearchIcon } from '@mui/icons-material';
+import { useSort } from '../../../shared/hooks/useSort';
 import ExportButton from '../../../shared/components/ExportButton';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 import {
@@ -231,6 +234,7 @@ const ScheduleRow = React.memo(({
   isWeekend,
   ROLE_COLORS,
   ROLE_LABELS,
+  index,
 }: any) => {
   const staffId = staffMember.id || staffMember._id;
   if (!staffId) return null;
@@ -263,6 +267,9 @@ const ScheduleRow = React.memo(({
 
   return (
     <TableRow key={staffId} sx={{ backgroundColor: isSelected ? 'action.selected' : 'inherit' }}>
+      <TableCell align="center" sx={{ width: '50px' }}>
+        <Typography variant="body2">{index}</Typography>
+      </TableCell>
       <TableCell>
         <Box
           display='flex'
@@ -271,6 +278,9 @@ const ScheduleRow = React.memo(({
           onClick={handleToggle}
         >
           <Checkbox size='small' checked={isSelected} />
+          <Avatar src={staffMember.photo} sx={{ width: 24, height: 24, mr: 1 }}>
+            {staffMember.fullName?.charAt(0)}
+          </Avatar>
           <Box>
             <Typography variant='body2' fontWeight='bold'>{staffMember.fullName}</Typography>
             <Typography variant='caption' sx={{ color: ROLE_COLORS[staffMember.role] || '#9e9e9e' }}>
@@ -345,6 +355,18 @@ const StaffSchedule: React.FC = () => {
   const [holidays, setHolidays] = useState<string[]>([]);
   const [workingSaturdays, setWorkingSaturdays] = useState<string[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
+
+  // Перемещаем useSort и useMemo выше условий загрузки/ошибки
+  const { items: sortedStaff, requestSort, sortConfig } = useSort(staff, { key: 'fullName', direction: 'asc' });
+
+  const filteredStaff = useMemo(() => {
+    return sortedStaff.filter((s) => {
+      const matchesSearch = !nameFilter || s.fullName.toLowerCase().includes(nameFilter.toLowerCase());
+      const roleLabel = ROLE_LABELS[s.role as string] || s.role;
+      const matchesRole = filterRole.length === 0 || filterRole.includes(roleLabel);
+      return matchesSearch && matchesRole && s.active;
+    });
+  }, [sortedStaff, nameFilter, filterRole]);
 
   const shiftsByStaff = useMemo(() => {
     const map = new Map<string, any[]>();
@@ -825,15 +847,6 @@ const StaffSchedule: React.FC = () => {
     );
   }
 
-  const filteredStaff = useMemo(() => {
-    return staff.filter((s) => {
-      const matchesSearch = !nameFilter || s.fullName.toLowerCase().includes(nameFilter.toLowerCase());
-      const roleLabel = ROLE_LABELS[s.role as string] || s.role;
-      const matchesRole = filterRole.length === 0 || filterRole.includes(roleLabel);
-      return matchesSearch && matchesRole && s.active;
-    });
-  }, [staff, nameFilter, filterRole]);
-
   return (
     <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale="ru">
       <Box p={3}>
@@ -938,7 +951,16 @@ const StaffSchedule: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Сотрудник</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', width: '50px' }}>#</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>
+                      <TableSortLabel
+                        active={sortConfig.key === 'fullName'}
+                        direction={sortConfig.key === 'fullName' ? (sortConfig.direction || 'asc') : 'asc'}
+                        onClick={() => requestSort('fullName')}
+                      >
+                        Сотрудник
+                      </TableSortLabel>
+                    </TableCell>
                     {weekDays.map((day) => {
                       const dateStr = moment(day).format('YYYY-MM-DD');
                       const holiday = holidays.includes(dateStr);
@@ -963,10 +985,11 @@ const StaffSchedule: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredStaff.map((staffMember) => (
+                  {filteredStaff.map((staffMember, index) => (
                     <ScheduleRow
                       key={staffMember.id || staffMember._id}
                       staffMember={staffMember}
+                      index={index + 1}
                       weekDays={weekDays}
                       staffShifts={shiftsByStaff.get(staffMember.id || staffMember._id) || []}
                       staffAttendance={attendanceByStaff.get(staffMember.id || staffMember._id) || []}

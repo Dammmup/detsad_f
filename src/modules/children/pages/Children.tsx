@@ -22,6 +22,7 @@ import {
   Avatar,
   Snackbar,
   Tooltip,
+  TableSortLabel,
 } from '@mui/material';
 import { Add, Edit, Delete, Refresh } from '@mui/icons-material';
 import childrenApi, { Child } from '../services/children';
@@ -29,42 +30,13 @@ import { groupsApi } from '../services/groups';
 import { Group } from '../../../shared/types/common';
 import apiClient from '../../../shared/utils/api';
 import ChildrenModal from '../components/ChildrenModal';
+import { useSort } from '../../../shared/hooks/useSort';
 
 import ExportButton from '../../../shared/components/ExportButton';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 import { useAuth } from '../../../app/context/AuthContext';
 
-const handleExport = async (
-  nameFilter: string,
-  groupFilter: string,
-  _exportType: string,
-  exportFormat: 'excel',
-  setLoading: (loading: boolean) => void,
-  setError: (error: string | null) => void
-) => {
-  setLoading(true);
-  try {
-    const response = await apiClient.post(
-      '/export/children',
-      {
-        format: exportFormat,
-        filters: { name: nameFilter, group: groupFilter },
-      },
-      { responseType: 'blob' },
-    );
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `children.${exportFormat}`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  } catch (e: any) {
-    setError(e?.message || 'Ошибка экспорта');
-  } finally {
-    setLoading(false);
-  }
-};
+
 
 const ChildRow = React.memo(({ 
   child, 
@@ -239,6 +211,8 @@ const Children: React.FC = () => {
     return result;
   }, [children, nameFilter, groupFilter, activeFilter]);
 
+  const { items: sortedChildren, requestSort, sortConfig } = useSort(filteredChildren);
+
   const handleOpenModal = useCallback((child?: Child) => {
     setEditingChild(child || null);
     setModalOpen(true);
@@ -259,6 +233,31 @@ const Children: React.FC = () => {
       setError(e?.message || 'Ошибка удаления');
     }
   }, [fetchChildren]);
+
+  const handleExport = useCallback(async (_exportType: string, exportFormat: 'excel') => {
+    setLoading(true);
+    try {
+      const response = await apiClient.post(
+        '/export/children',
+        {
+          format: exportFormat,
+          filters: { name: nameFilter, group: groupFilter },
+        },
+        { responseType: 'blob' },
+      );
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `children.${exportFormat}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e: any) {
+      setError(e?.message || 'Ошибка экспорта');
+    } finally {
+      setLoading(false);
+    }
+  }, [nameFilter, groupFilter]);
 
   const handleGeneratePayments = useCallback(async () => {
     setIsGeneratingPayments(true);
@@ -403,18 +402,42 @@ const Children: React.FC = () => {
             <TableRow>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>#</TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Фото</TableCell>
-              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>ФИО</TableCell>
-              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Дата рождения</TableCell>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
+                <TableSortLabel
+                  active={sortConfig.key === 'fullName'}
+                  direction={sortConfig.direction || 'asc'}
+                  onClick={() => requestSort('fullName')}
+                >
+                  ФИО
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
+                <TableSortLabel
+                  active={sortConfig.key === 'birthday'}
+                  direction={sortConfig.direction || 'asc'}
+                  onClick={() => requestSort('birthday')}
+                >
+                  Дата рождения
+                </TableSortLabel>
+              </TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Телефон родителя</TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>ИИН</TableCell>
-              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Группа</TableCell>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
+                <TableSortLabel
+                  active={sortConfig.key === 'groupId.name'}
+                  direction={sortConfig.direction || 'asc'}
+                  onClick={() => requestSort('groupId.name')}
+                >
+                  Группа
+                </TableSortLabel>
+              </TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Заметки</TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Статус</TableCell>
               <TableCell align='right' sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Действия</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredChildren.map((child, index) => (
+            {sortedChildren.map((child, index) => (
               <ChildRow
                 key={child.id || child._id}
                 child={child}

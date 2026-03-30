@@ -89,6 +89,7 @@ import DishDialog from '../components/DishDialog';
 import TechnicalCard from '../components/TechnicalCard';
 import ProductCalculationDialog from '../components/ProductCalculationDialog';
 import PdfImportDialog from '../components/PdfImportDialog';
+import { useSort } from '../../../shared/hooks/useSort';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -141,12 +142,14 @@ const ProductRow = React.memo(({
     product,
     categoryLabel,
     onEdit,
-    onDelete
+    onDelete,
+    index
 }: {
     product: Product;
     categoryLabel: string;
     onEdit: (p: Product) => void;
     onDelete: (p: Product) => void;
+    index: number;
 }) => {
     const expired = isExpired(product);
     const expiringSoon = isExpiringSoon(product);
@@ -161,6 +164,7 @@ const ProductRow = React.memo(({
                 '&:hover': { bgcolor: '#f5f5f5' }
             }}
         >
+            <TableCell sx={{ fontWeight: 'bold', width: 40 }}>{index + 1}</TableCell>
             <TableCell>
                 {product.name}
                 {expired && <Chip size="small" label="Просрочен" color="error" sx={{ ml: 1 }} />}
@@ -290,11 +294,10 @@ const ProductAccountingPage: React.FC = () => {
 
     const [productSearch, setProductSearch] = useState('');
     const [debouncedProductSearch, setDebouncedProductSearch] = useState('');
-    const [sortConfig, setSortConfig] = useState<{ key: keyof Product; direction: 'asc' | 'desc' } | null>(null);
-    const [dishCategoryFilter, setDishCategoryFilter] = useState('all');
-    const [dishSubcategoryFilter, setDishSubcategoryFilter] = useState('all');
     const [dishSearch, setDishSearch] = useState('');
     const [debouncedDishSearch, setDebouncedDishSearch] = useState('');
+    const [dishCategoryFilter, setDishCategoryFilter] = useState('all');
+    const [dishSubcategoryFilter, setDishSubcategoryFilter] = useState('all');
     const [childCountInput, setChildCountInput] = useState(25);
     const [servingMeal, setServingMeal] = useState<MealType | null>(null);
     const [selectedMealType, setSelectedMealType] = useState<MealType>('breakfast');
@@ -362,37 +365,33 @@ const ProductAccountingPage: React.FC = () => {
         loadTodayMenu();
     }, [loadProducts, loadDishes, loadTodayMenu]);
 
-    const handleSort = useCallback((key: keyof Product) => {
-        setSortConfig(prev => {
-            const direction = (prev && prev.key === key && prev.direction === 'asc') ? 'desc' : 'asc';
-            return { key, direction } as any;
-        });
-    }, []);
-
     const categoryMap = useMemo(() => {
         const map = new Map<string, string>();
         CATEGORIES.forEach(c => map.set(c.value, c.label));
         return map;
     }, []);
 
+    const processedProducts = useMemo(() => {
+        return products.map(p => ({
+            ...p,
+            _categoryLabel: categoryMap.get(p.category as string) || (p.category as string),
+            _expirationDate: p.expirationDate ? new Date(p.expirationDate).getTime() : 0,
+            _price: p.price || 0,
+            _stockQuantity: p.stockQuantity || 0,
+            _purchaseDays: p.purchaseDays || 0
+        }));
+    }, [products, categoryMap]);
+
+    const { items: sortedProducts, requestSort, sortConfig } = useSort(processedProducts);
+
     const filteredProducts = useMemo(() => {
-        let result = products;
-        if (debouncedProductSearch) {
-            const search = debouncedProductSearch.toLowerCase();
-            result = result.filter(p => 
-                p.name.toLowerCase().includes(search) || 
-                p.code?.toLowerCase().includes(search)
-            );
-        }
-        if (!sortConfig) return result;
-        return [...result].sort((a, b) => {
-            const aVal = a[sortConfig.key];
-            const bVal = b[sortConfig.key];
-            if (aVal === bVal) return 0;
-            const res = (aVal || '') < (bVal || '') ? -1 : 1;
-            return sortConfig.direction === 'asc' ? res : -res;
-        });
-    }, [products, debouncedProductSearch, sortConfig]);
+        if (!debouncedProductSearch) return sortedProducts;
+        const search = debouncedProductSearch.toLowerCase();
+        return sortedProducts.filter(p => 
+            p.name.toLowerCase().includes(search) || 
+            p.code?.toLowerCase().includes(search)
+        );
+    }, [sortedProducts, debouncedProductSearch]);
 
     const filteredDishes = useMemo(() => {
         return dishes.filter(dish => {
@@ -627,65 +626,66 @@ const ProductAccountingPage: React.FC = () => {
                                 <Table size="small">
                                     <TableHead>
                                         <TableRow sx={{ bgcolor: '#f8f9fa' }}>
+                                            <TableCell sx={{ width: 40 }}><strong>#</strong></TableCell>
                                             <TableCell>
                                                 <TableSortLabel
-                                                    active={sortConfig?.key === 'name'}
-                                                    direction={sortConfig?.key === 'name' ? sortConfig.direction : 'asc'}
-                                                    onClick={() => handleSort('name')}
+                                                    active={sortConfig.key === 'name'}
+                                                    direction={sortConfig.direction || 'asc'}
+                                                    onClick={() => requestSort('name')}
                                                 >
                                                     <strong>Название</strong>
                                                 </TableSortLabel>
                                             </TableCell>
                                             <TableCell>
                                                 <TableSortLabel
-                                                    active={sortConfig?.key === 'code'}
-                                                    direction={sortConfig?.key === 'code' ? sortConfig.direction : 'asc'}
-                                                    onClick={() => handleSort('code')}
+                                                    active={sortConfig.key === 'code'}
+                                                    direction={sortConfig.direction || 'asc'}
+                                                    onClick={() => requestSort('code')}
                                                 >
                                                     <strong>Код</strong>
                                                 </TableSortLabel>
                                             </TableCell>
                                             <TableCell>
                                                 <TableSortLabel
-                                                    active={sortConfig?.key === 'category'}
-                                                    direction={sortConfig?.key === 'category' ? sortConfig.direction : 'asc'}
-                                                    onClick={() => handleSort('category')}
+                                                    active={sortConfig.key === '_categoryLabel'}
+                                                    direction={sortConfig.direction || 'asc'}
+                                                    onClick={() => requestSort('_categoryLabel')}
                                                 >
                                                     <strong>Категория</strong>
                                                 </TableSortLabel>
                                             </TableCell>
                                             <TableCell align="right">
                                                 <TableSortLabel
-                                                    active={sortConfig?.key === 'stockQuantity'}
-                                                    direction={sortConfig?.key === 'stockQuantity' ? sortConfig.direction : 'asc'}
-                                                    onClick={() => handleSort('stockQuantity')}
+                                                    active={sortConfig.key === '_stockQuantity'}
+                                                    direction={sortConfig.direction || 'asc'}
+                                                    onClick={() => requestSort('_stockQuantity')}
                                                 >
                                                     <strong>Запас</strong>
                                                 </TableSortLabel>
                                             </TableCell>
                                             <TableCell align="right">
                                                 <TableSortLabel
-                                                    active={sortConfig?.key === 'price'}
-                                                    direction={sortConfig?.key === 'price' ? sortConfig.direction : 'asc'}
-                                                    onClick={() => handleSort('price')}
+                                                    active={sortConfig.key === '_price'}
+                                                    direction={sortConfig.direction || 'asc'}
+                                                    onClick={() => requestSort('_price')}
                                                 >
                                                     <strong>Цена</strong>
                                                 </TableSortLabel>
                                             </TableCell>
                                             <TableCell>
                                                 <TableSortLabel
-                                                    active={sortConfig?.key === 'expirationDate'}
-                                                    direction={sortConfig?.key === 'expirationDate' ? sortConfig.direction : 'asc'}
-                                                    onClick={() => handleSort('expirationDate')}
+                                                    active={sortConfig.key === '_expirationDate'}
+                                                    direction={sortConfig.direction || 'asc'}
+                                                    onClick={() => requestSort('_expirationDate')}
                                                 >
                                                     <strong>Срок годности</strong>
                                                 </TableSortLabel>
                                             </TableCell>
                                             <TableCell>
                                                 <TableSortLabel
-                                                    active={sortConfig?.key === 'purchaseDays'}
-                                                    direction={sortConfig?.key === 'purchaseDays' ? sortConfig.direction : 'asc'}
-                                                    onClick={() => handleSort('purchaseDays')}
+                                                    active={sortConfig.key === '_purchaseDays'}
+                                                    direction={sortConfig.direction || 'asc'}
+                                                    onClick={() => requestSort('_purchaseDays')}
                                                 >
                                                     <strong>На дней</strong>
                                                 </TableSortLabel>
@@ -694,13 +694,14 @@ const ProductAccountingPage: React.FC = () => {
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {filteredProducts.map((product) => (
+                                        {filteredProducts.map((product, index) => (
                                             <ProductRow
                                                 key={product._id || product.id}
                                                 product={product}
                                                 categoryLabel={categoryMap.get(product.category as string) || product.category as string}
                                                 onEdit={handleOpenProductDialog}
                                                 onDelete={handleDeleteProduct}
+                                                index={index}
                                             />
                                         ))}
                                     </TableBody>

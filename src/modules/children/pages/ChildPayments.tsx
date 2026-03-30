@@ -28,6 +28,7 @@ import {
   Chip,
   Snackbar,
   Autocomplete,
+  TableSortLabel,
 } from '@mui/material';
 import {
   Add,
@@ -46,6 +47,7 @@ import { exportChildPayments } from '../../../shared/utils/excelExport';
 import { importChildPayments } from '../../../shared/services/importService';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 import DateNavigator from '../../../shared/components/DateNavigator';
+import { useSort } from '../../../shared/hooks/useSort';
 
 // Мемоизированная строка таблицы для предотвращения лишних рендеров
 const PaymentRow = React.memo(({ 
@@ -57,7 +59,8 @@ const PaymentRow = React.memo(({
   onCancelPayment, 
   onOpenModal, 
   onDelete,
-  getPaymentStatusColor
+  getPaymentStatusColor,
+  index
 }: any) => {
   const handlePaidClick = useCallback(() => onMarkAsPaid(payment._id), [payment._id, onMarkAsPaid]);
   const handleCancelClick = useCallback(() => onCancelPayment(payment._id), [payment._id, onCancelPayment]);
@@ -71,15 +74,16 @@ const PaymentRow = React.memo(({
 
   return (
     <TableRow hover>
+      <TableCell sx={{ p: isMobile ? 1 : 2, fontWeight: 'bold', width: 40 }}>{index + 1}</TableCell>
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-        <Avatar src={child?.photo} sx={{ width: 32, height: 32 }}>
-          {child?.fullName?.charAt(0)}
-        </Avatar>
-      </TableCell>
-      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-        <Typography variant="body2" fontWeight="bold">
-          {child?.fullName || 'Неизвестный'}
-        </Typography>
+        <Box display="flex" alignItems="center" gap={2}>
+          <Avatar src={child?.photo} sx={{ width: 32, height: 32 }}>
+            {child?.fullName?.charAt(0)}
+          </Avatar>
+          <Typography variant="body2" fontWeight="bold">
+            {child?.fullName || 'Неизвестный'}
+          </Typography>
+        </Box>
       </TableCell>
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>
         <Chip label={groupName} size="small" variant="outlined" />
@@ -268,21 +272,37 @@ const ChildPayments: React.FC = () => {
     }, 500);
   }, []);
 
-  const filteredPayments = useMemo(() => {
+  const processedPayments = useMemo(() => {
     const search = nameFilter.toLowerCase();
-    return payments.filter((payment) => {
-      const childId = typeof payment.childId === 'string' ? payment.childId : payment.childId?._id;
-      if (!childId) return false;
-      const child = childrenMap.get(childId);
-      const matchesName = !search || (child?.fullName.toLowerCase().includes(search));
-      let matchesGroup = true;
-      if (groupFilter) {
+    return payments
+      .filter((payment) => {
+        const childId = typeof payment.childId === 'string' ? payment.childId : payment.childId?._id;
+        if (!childId) return false;
+        const child = childrenMap.get(childId);
+        const matchesName = !search || (child?.fullName.toLowerCase().includes(search));
+        let matchesGroup = true;
+        if (groupFilter) {
+          const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
+          matchesGroup = gId === groupFilter;
+        }
+        return matchesName && matchesGroup;
+      })
+      .map(p => {
+        const childId = typeof p.childId === 'string' ? p.childId : p.childId?._id;
+        const child = childrenMap.get(childId || '');
         const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
-        matchesGroup = gId === groupFilter;
-      }
-      return matchesName && matchesGroup;
-    });
-  }, [payments, childrenMap, nameFilter, groupFilter]);
+        const groupName = gId ? groupsMap.get(gId)?.name || 'Нет группы' : 'Нет группы';
+        return {
+          ...p,
+          _childName: child?.fullName || '',
+          _groupName: groupName,
+          _debt: (p.total || 0) + (p.accruals || 0) - (p.paidAmount || 0),
+          _periodStart: p.period?.start ? new Date(p.period.start).getTime() : 0
+        };
+      });
+  }, [payments, childrenMap, groupsMap, nameFilter, groupFilter]);
+
+  const { items: sortedPayments, requestSort, sortConfig } = useSort(processedPayments);
 
   const handleMarkAsPaid = useCallback(async (paymentId: string) => {
     try {
@@ -384,7 +404,7 @@ const ChildPayments: React.FC = () => {
   }, [fetchPayments]);
 
   const handleExport = () => {
-    exportChildPayments(filteredPayments, children, groups);
+    exportChildPayments(sortedPayments, children, groups);
   };
 
   const handleImportChildPayments = async () => {
@@ -442,7 +462,7 @@ const ChildPayments: React.FC = () => {
           </Typography>
           {!loading && !error && (
             <Typography variant='h6' color='textSecondary' sx={{ mb: isMobile ? 1 : 0 }}>
-              ({filteredPayments.length} {filteredPayments.length === 1 ? 'оплата' : filteredPayments.length < 5 ? 'оплаты' : 'оплат'})
+              ({sortedPayments.length} {sortedPayments.length === 1 ? 'оплата' : sortedPayments.length < 5 ? 'оплаты' : 'оплат'})
             </Typography>
           )}
         </Box>
@@ -525,26 +545,74 @@ const ChildPayments: React.FC = () => {
 
       {!loading && !isGenerating && (
         <>
-          {filteredPayments.length > 0 ? (
+          {sortedPayments.length > 0 ? (
             <TableContainer component={Paper} sx={{ mt: 2, boxShadow: 3 }}>
               <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 650 }}>
                 <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                   <TableRow>
-                    <TableCell></TableCell>
-                    <TableCell>Ребенок</TableCell>
-                    <TableCell>Группа</TableCell>
-                    <TableCell>Период</TableCell>
-                    <TableCell>Оплачено</TableCell>
-                    <TableCell>Долг</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: 40 }}>#</TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={sortConfig.key === '_childName'}
+                        direction={sortConfig.direction || 'asc'}
+                        onClick={() => requestSort('_childName')}
+                      >
+                        Ребенок
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={sortConfig.key === '_groupName'}
+                        direction={sortConfig.direction || 'asc'}
+                        onClick={() => requestSort('_groupName')}
+                      >
+                        Группа
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={sortConfig.key === '_periodStart'}
+                        direction={sortConfig.direction || 'asc'}
+                        onClick={() => requestSort('_periodStart')}
+                      >
+                        Период
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={sortConfig.key === 'paidAmount'}
+                        direction={sortConfig.direction || 'asc'}
+                        onClick={() => requestSort('paidAmount')}
+                      >
+                        Оплачено
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={sortConfig.key === '_debt'}
+                        direction={sortConfig.direction || 'asc'}
+                        onClick={() => requestSort('_debt')}
+                      >
+                        Долг
+                      </TableSortLabel>
+                    </TableCell>
                     <TableCell>Надбавки</TableCell>
                     <TableCell>Вычеты</TableCell>
                     <TableCell>Комментарии</TableCell>
-                    <TableCell>Статус</TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={sortConfig.key === 'status'}
+                        direction={sortConfig.direction || 'asc'}
+                        onClick={() => requestSort('status')}
+                      >
+                        Статус
+                      </TableSortLabel>
+                    </TableCell>
                     <TableCell align='right'>Действия</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                    {filteredPayments.map((payment) => {
+                    {sortedPayments.map((payment, index) => {
                       const childId = typeof payment.childId === 'string' ? payment.childId : payment.childId?._id;
                       const child = childrenMap.get(childId || '');
                       const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
@@ -562,6 +630,7 @@ const ChildPayments: React.FC = () => {
                           onOpenModal={handleOpenModal}
                           onDelete={handleDelete}
                           getPaymentStatusColor={getPaymentStatusColor}
+                          index={index}
                         />
                       );
                     })}

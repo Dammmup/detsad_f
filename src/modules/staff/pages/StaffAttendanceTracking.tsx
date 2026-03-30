@@ -35,6 +35,7 @@ import {
   Tooltip,
   ToggleButton,
   ToggleButtonGroup,
+  TableSortLabel,
 } from '@mui/material';
 import {
   AccessTime,
@@ -73,6 +74,7 @@ import DateNavigator from '../../../shared/components/DateNavigator';
 import { useSnackbar } from 'notistack';
 import { collectDeviceMetadata } from '../../../shared/utils/deviceMetadata';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
+import { useSort } from '../../../shared/hooks/useSort';
 moment.locale('ru');
 
 interface TimeRecord {
@@ -144,6 +146,8 @@ const StaffAttendanceRow = React.memo(({
   formatCurrency, 
   STATUS_TEXT, 
   STATUS_COLORS,
+  index,
+  staffMap
 }: any) => {
   const handleSelectChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     onSelect(record.id, e.target.checked);
@@ -159,6 +163,7 @@ const StaffAttendanceRow = React.memo(({
 
   return (
     <TableRow selected={selected}>
+      <TableCell sx={{ fontWeight: 'bold', width: 40 }}>{index + 1}</TableCell>
       <TableCell padding="checkbox">
         <Checkbox
           checked={selected}
@@ -167,8 +172,8 @@ const StaffAttendanceRow = React.memo(({
       </TableCell>
       <TableCell>
         <Box display='flex' alignItems='center'>
-          <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-            <Person />
+          <Avatar src={staffMap.get(record.staffId)?.photo} sx={{ mr: 2, width: 32, height: 32 }}>
+            {record.staffName?.charAt(0) || <Person />}
           </Avatar>
           {record.staffName || getStaffName(record.staffId || '')}
         </Box>
@@ -274,6 +279,8 @@ const StaffAttendanceRow = React.memo(({
 const StaffAttendanceTracking: React.FC = () => {
   const { currentDate } = useDate();
   const { enqueueSnackbar } = useSnackbar();
+  
+  // 1. Все стейты в начале
   const [staffList, setStaffList] = useState<any[]>([]);
   const [allRawRecords, setAllRawRecords] = useState<TimeRecord[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
@@ -292,30 +299,17 @@ const StaffAttendanceTracking: React.FC = () => {
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
   const [currentStaffId, setCurrentStaffId] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-
-  const staffMap = useMemo(() => {
-    const map = new Map<string, any>();
-    staffList.forEach(s => map.set(s.id || s._id || '', s));
-    return map;
-  }, [staffList]);
-
   const [viewMode, setViewMode] = useState<'day' | 'range'>(() => {
     const saved = localStorage.getItem('sat_viewMode');
     return (saved === 'day' || saved === 'range') ? saved : 'day';
   });
   const [startDate, setStartDate] = useState(() => localStorage.getItem('sat_startDate') || moment().format('YYYY-MM-DD'));
   const [endDate, setEndDate] = useState(() => localStorage.getItem('sat_endDate') || moment().format('YYYY-MM-DD'));
-
-  // Рабочие часы из настроек
   const [workingHours, setWorkingHours] = useState({ start: '09:00', end: '18:00' });
-
-  // Массовое обновление
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkForm, setBulkForm] = useState({ actualStart: '', actualEnd: '', notes: '', status: '' });
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
-
-  // Массовая корректировка статусов за период
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
   const [bulkStatusForm, setBulkStatusForm] = useState({
     startDate: moment().startOf('month').format('YYYY-MM-DD'),
@@ -323,6 +317,99 @@ const StaffAttendanceTracking: React.FC = () => {
     status: 'completed',
     staffId: 'all'
   });
+  const [markDialogOpen, setMarkDialogOpen] = useState(false);
+  const [markForm, setMarkForm] = useState({
+    staffId: '',
+    date: new Date().toISOString().slice(0, 10),
+    actualStart: '',
+    actualEnd: '',
+    status: 'checked_in',
+    notes: '',
+  });
+
+  // 2. Refs
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => setSearchTerm(value), 500);
+  }, []);
+
+  // 3. Memos
+  const staffMap = useMemo(() => {
+    const map = new Map<string, any>();
+    staffList.forEach(s => map.set(s.id || s._id || '', s));
+    return map;
+  }, [staffList]);
+
+  const records = useMemo(() => {
+    let filteredRecords = [...allRawRecords];
+
+    if (viewMode === 'day') {
+      const selectedDayStr = moment(selectedDate).format('YYYY-MM-DD');
+      filteredRecords = filteredRecords.filter(r => {
+        const rDate = moment(r.date).format('YYYY-MM-DD');
+        return rDate === selectedDayStr;
+      });
+    }
+
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filteredRecords = filteredRecords.filter((record) =>
+        record.staffName?.toLowerCase().includes(search),
+      );
+    }
+
+    if (filterRole.length > 0) {
+      filteredRecords = filteredRecords.filter((record) => {
+        const staffIdVal = typeof record.staffId === 'object' ? (record.staffId as any)?._id : record.staffId;
+        const staff = staffMap.get(String(staffIdVal));
+        const russianRole = staff
+          ? ROLE_TRANSLATIONS[
+          staff.role as keyof typeof ROLE_TRANSLATIONS
+          ] || staff.role
+          : '';
+        return filterRole.includes(russianRole);
+      });
+    }
+
+    return filteredRecords;
+  }, [allRawRecords, viewMode, selectedDate, searchTerm, filterRole, staffMap]);
+
+  const processedRecords = useMemo(() => {
+    return records.map(r => ({
+      ...r,
+      _staffName: r.staffName || '',
+      _status: r.statuses.join(', '),
+      _date: r.date ? new Date(r.date).getTime() : 0
+    }));
+  }, [records]);
+
+  // 4. Custom hook SORT
+  const { items: sortedRecords, requestSort, sortConfig } = useSort(processedRecords);
+
+  const stats = useMemo(() => {
+    const totalRecords = records.length;
+    const completedRecords = records.filter(
+      (r) => r.statuses.includes(ShiftStatus.completed) || (r.actualStart && r.actualEnd),
+    ).length;
+    const totalPenalties = records.reduce((sum, r) => sum + (r.penalties || 0), 0);
+    const avgWorkHours =
+      records.length > 0
+        ? records.reduce((sum, r) => sum + (r.workDuration || 0), 0) /
+        records.length /
+        60
+        : 0;
+
+    return {
+      totalRecords,
+      completedRecords,
+      totalPenalties,
+      avgWorkHours,
+    };
+  }, [records]);
 
   // Сохранение состояния в localStorage
   useEffect(() => {
@@ -717,58 +804,9 @@ const StaffAttendanceTracking: React.FC = () => {
     fetchRecordsData();
   }, [fetchRecordsData]);
 
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    searchTimeoutRef.current = setTimeout(() => setSearchTerm(value), 500);
-  }, []);
-
-  const records = useMemo(() => {
-    let filteredRecords = [...allRawRecords];
-
-    if (viewMode === 'day') {
-      const selectedDayStr = moment(selectedDate).format('YYYY-MM-DD');
-      filteredRecords = filteredRecords.filter(r => {
-        const rDate = moment(r.date).format('YYYY-MM-DD');
-        return rDate === selectedDayStr;
-      });
-    }
-
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filteredRecords = filteredRecords.filter((record) =>
-        record.staffName?.toLowerCase().includes(search),
-      );
-    }
-
-    if (filterRole.length > 0) {
-      filteredRecords = filteredRecords.filter((record) => {
-        const staffIdVal = typeof record.staffId === 'object' ? (record.staffId as any)?._id : record.staffId;
-        const staff = staffMap.get(String(staffIdVal));
-        const russianRole = staff
-          ? ROLE_TRANSLATIONS[
-          staff.role as keyof typeof ROLE_TRANSLATIONS
-          ] || staff.role
-          : '';
-        return filterRole.includes(russianRole);
-      });
-    }
-
-    return filteredRecords;
-  }, [allRawRecords, viewMode, selectedDate, searchTerm, filterRole, staffMap]);
-
-  const [markDialogOpen, setMarkDialogOpen] = useState(false);
-  const [markForm, setMarkForm] = useState({
-    staffId: '',
-    date: new Date().toISOString().slice(0, 10),
-    actualStart: '',
-    actualEnd: '',
-    status: 'checked_in',
-    notes: '',
-  });
+  useEffect(() => {
+    fetchRecordsData();
+  }, [fetchRecordsData]);
 
   const handleOpenMarkDialog = () => {
     setMarkForm((prev) => ({
@@ -889,30 +927,6 @@ const StaffAttendanceTracking: React.FC = () => {
       fetchRecordsData();
     } catch { }
   };
-
-  const calculateStats = useCallback(() => {
-    const totalRecords = records.length;
-
-    const completedRecords = records.filter(
-      (r) => r.statuses.includes(ShiftStatus.completed) || (r.actualStart && r.actualEnd),
-    ).length;
-    const totalPenalties = records.reduce((sum, r) => sum + (r.penalties || 0), 0);
-    const avgWorkHours =
-      records.length > 0
-        ? records.reduce((sum, r) => sum + (r.workDuration || 0), 0) /
-        records.length /
-        60
-        : 0;
-
-    return {
-      totalRecords,
-      completedRecords,
-      totalPenalties,
-      avgWorkHours,
-    };
-  }, [records]);
-
-  const stats = useMemo(() => calculateStats(), [calculateStats]);
 
   const formatCurrency = useCallback((amount: number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -1188,20 +1202,61 @@ const StaffAttendanceTracking: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
+              <TableCell sx={{ fontWeight: 'bold', width: 40 }}>#</TableCell>
               <TableCell padding="checkbox">
                 <Checkbox
-                  indeterminate={selectedIds.length > 0 && selectedIds.length < records.filter(r => !r.id.includes('_')).length}
-                  checked={selectedIds.length > 0 && selectedIds.length === records.filter(r => !r.id.includes('_')).length}
+                  indeterminate={selectedIds.length > 0 && selectedIds.length < sortedRecords.filter(r => !r.id.includes('_')).length}
+                  checked={selectedIds.length > 0 && selectedIds.length === sortedRecords.filter(r => !r.id.includes('_')).length}
                   onChange={(e) => handleSelectAll(e.target.checked)}
                 />
               </TableCell>
-              <TableCell>Сотрудник</TableCell>
-              <TableCell>Дата</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortConfig.key === '_staffName'}
+                  direction={sortConfig.direction || 'asc'}
+                  onClick={() => requestSort('_staffName')}
+                >
+                  Сотрудник
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortConfig.key === '_date'}
+                  direction={sortConfig.direction || 'asc'}
+                  onClick={() => requestSort('_date')}
+                >
+                  Дата
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Смена</TableCell>
               <TableCell>Время работы</TableCell>
-              <TableCell>Статус</TableCell>
-              <TableCell align='right'>Начислено</TableCell>
-              <TableCell align='right'>Вычеты</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sortConfig.key === '_status'}
+                  direction={sortConfig.direction || 'asc'}
+                  onClick={() => requestSort('_status')}
+                >
+                  Статус
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align='right'>
+                <TableSortLabel
+                  active={sortConfig.key === 'amount'}
+                  direction={sortConfig.direction || 'asc'}
+                  onClick={() => requestSort('amount')}
+                >
+                  Начислено
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align='right'>
+                <TableSortLabel
+                  active={sortConfig.key === 'penalties'}
+                  direction={sortConfig.direction || 'asc'}
+                  onClick={() => requestSort('penalties')}
+                >
+                  Вычеты
+                </TableSortLabel>
+              </TableCell>
               <TableCell align='right'>Действия</TableCell>
             </TableRow>
           </TableHead>
@@ -1215,7 +1270,7 @@ const StaffAttendanceTracking: React.FC = () => {
                 </TableCell>
               </TableRow>
             )}
-            {records.map((record) => (
+            {sortedRecords.map((record, index) => (
               <StaffAttendanceRow
                 key={record.id}
                 record={record}
@@ -1228,6 +1283,8 @@ const StaffAttendanceTracking: React.FC = () => {
                 formatCurrency={formatCurrency}
                 STATUS_TEXT={STATUS_TEXT}
                 STATUS_COLORS={STATUS_COLORS}
+                index={index}
+                staffMap={staffMap}
               />
             ))}
           </TableBody>
