@@ -316,7 +316,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
         }}
       >
         <Toolbar />
-        <Container maxWidth='lg' sx={{ px: { xs: 1, sm: 2 } }}>
+        <Container maxWidth={false} sx={{ px: { xs: 1, sm: 2 }, maxWidth: '100%' }}>
           <Routes>
             <Route path='dashboard' element={<Dashboard />} />
             {/* Дети */}
