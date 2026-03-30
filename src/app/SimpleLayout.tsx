@@ -64,6 +64,7 @@ import ProductAccountingPage from '../modules/food/pages/ProductAccountingPage';
 import Statistics from '../modules/dashboard/pages/Statistics';
 import MenuCalendarPage from '../modules/food/pages/MenuCalendarPage';
 import PushNotificationPrompt from '../shared/components/PushNotificationPrompt';
+import PWAInstallPrompt from '../shared/components/PWAInstallPrompt';
 import AccountingPage from '../modules/accounting/pages/AccountingPage';
 
 interface SimpleLayoutProps {
@@ -357,6 +358,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
       </Box>
       <Qwen3Chat />
       <PushNotificationPrompt />
+      <PWAInstallPrompt />
     </Box>
   );
 };

@@ -21,6 +21,7 @@ import TaskListColumn from '../../tasks/components/TaskListColumn';
 import FinancialStatsWidget from '../components/FinancialStatsWidget';
 import StaffScheduleWidget from '../components/StaffScheduleWidget';
 import BirthdaysCalendarWidget from '../components/BirthdaysCalendarWidget';
+import TodayMenuWidget from '../components/TodayMenuWidget';
 
 import DateNavigator from '../../../shared/components/DateNavigator';
 import ReportsWidget from '../../reports/components/ReportsWidget';
@@ -292,6 +293,8 @@ const Dashboard = () => {
             )}
           </Grid>
 
+
+
           {/* Виджет календаря дней рождения */}
           <Grid item xs={12} md={6}>
             <Card
@@ -427,19 +430,57 @@ const Dashboard = () => {
             width: isMobile ? '100%' : 350,
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: '#f8f9fa',
-            border: '1px solid #e9ecef',
-            borderRadius: 2,
-            boxShadow:
-              '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)',
-            overflow: 'hidden',
-            transition: 'transform 0.3s ease-in-out',
-            '&:hover': {
-              transform: isMobile ? 'none' : 'translateX(-5px)',
-            },
+            gap: 2,
           }}
         >
-          <TaskListColumn />
+          <Box
+            sx={{
+              backgroundColor: '#f8f9fa',
+              border: '1px solid #e9ecef',
+              borderRadius: 2,
+              boxShadow:
+                '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)',
+              overflow: 'hidden',
+              transition: 'transform 0.3s ease-in-out',
+              '&:hover': {
+                transform: isMobile ? 'none' : 'translateX(-5px)',
+              },
+            }}
+          >
+            <TaskListColumn />
+          </Box>
+
+          <Box
+            sx={{
+              backgroundColor: '#f8f9fa',
+              border: '1px solid #e9ecef',
+              borderRadius: 2,
+              boxShadow:
+                '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)',
+              overflow: 'hidden',
+              transition: 'transform 0.3s ease-in-out',
+              '&:hover': {
+                transform: isMobile ? 'none' : 'translateX(-5px)',
+              },
+            }}
+          >
+            <Box
+              sx={{
+                background: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)',
+                color: 'white',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                🍴 Меню на сегодня
+              </Typography>
+            </Box>
+            <Box sx={{ p: 0, maxHeight: 320, overflowY: 'auto' }}>
+              <TodayMenuWidget />
+            </Box>
+          </Box>
         </Box>
       </Box>
 

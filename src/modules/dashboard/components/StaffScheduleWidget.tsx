@@ -34,7 +34,7 @@ interface StaffScheduleWidgetProps {
   onScheduleChange?: () => void;
 }
 
-const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = () => {
+const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = React.memo(() => {
   const { user: currentUser } = useAuth();
   const { currentDate } = useDate();
   const [shifts, setShifts] = useState<ShiftWithAttendance[]>([]);
@@ -374,6 +374,6 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = () => {
       </CardContent>
     </Card>
   );
-};
+});
 
 export default StaffScheduleWidget;

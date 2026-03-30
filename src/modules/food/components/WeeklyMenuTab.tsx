@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Box, Typography, Paper, Button, TextField, Dialog, DialogTitle,
     DialogContent, DialogActions, Table, TableBody, TableCell,
@@ -24,6 +24,56 @@ import { getMealTypeName } from '../services/dailyMenu';
 
 const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'snack', 'dinner'];
 
+// Мемоизированный компонент дня в шаблоне
+const DayAccordion = React.memo(({
+    day,
+    dayName,
+    dayData,
+    onRemoveDish,
+    onAddDishClick
+}: {
+    day: Weekday;
+    dayName: string;
+    dayData: any;
+    onRemoveDish: (day: Weekday, mealType: MealType, dishId: string) => void;
+    onAddDishClick: (day: Weekday, mealType: MealType) => void;
+}) => (
+    <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography fontWeight={500}>{dayName}</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+            <Grid container spacing={2}>
+                {MEAL_TYPES.map((mealType) => {
+                    const meals = dayData?.[mealType] || [];
+                    return (
+                        <Grid item xs={12} sm={6} md={3} key={mealType}>
+                            <Paper variant="outlined" sx={{ p: 1 }}>
+                                <Typography variant="subtitle2" color="primary">{getMealTypeName(mealType)}</Typography>
+                                <List dense>
+                                    {meals.map((dish: any) => (
+                                        <ListItem key={dish._id || dish}>
+                                            <ListItemText primary={dish.name || 'Блюдо'} />
+                                            <ListItemSecondaryAction>
+                                                <IconButton size="small" onClick={() => onRemoveDish(day, mealType, dish._id || dish)}>
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </ListItemSecondaryAction>
+                                        </ListItem>
+                                    ))}
+                                </List>
+                                <Button size="small" startIcon={<AddIcon />} onClick={() => onAddDishClick(day, mealType)}>
+                                    Добавить
+                                </Button>
+                            </Paper>
+                        </Grid>
+                    );
+                })}
+            </Grid>
+        </AccordionDetails>
+    </Accordion>
+));
+
 const WeeklyMenuTab: React.FC = () => {
     const [templates, setTemplates] = useState<WeeklyMenuTemplate[]>([]);
     const [selectedTemplate, setSelectedTemplate] = useState<WeeklyMenuTemplate | null>(null);
@@ -40,8 +90,28 @@ const WeeklyMenuTab: React.FC = () => {
     const [applyType, setApplyType] = useState<'week' | 'month'>('week');
     const [requiredProducts, setRequiredProducts] = useState<RequiredProduct[]>([]);
     const [showRequirements, setShowRequirements] = useState(false);
+    const [dishSearchTerm, setDishSearchTerm] = useState('');
+    const [debouncedDishSearch, setDebouncedDishSearch] = useState('');
+    const dishSearchRef = React.useRef<any>(null);
 
-    const loadTemplates = async () => {
+    const onDishSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setDishSearchTerm(value);
+        if (dishSearchRef.current) clearTimeout(dishSearchRef.current);
+        dishSearchRef.current = setTimeout(() => {
+            setDebouncedDishSearch(value);
+        }, 300);
+    }, []);
+
+    const filteredDishesForAdd = useMemo(() => {
+        return dishes.filter(d => {
+            const matchesCategory = d.category === selectedMealType || ['drink', 'salad', 'baking'].includes(d.subcategory || '');
+            const matchesSearch = !debouncedDishSearch || d.name.toLowerCase().includes(debouncedDishSearch.toLowerCase());
+            return matchesCategory && matchesSearch;
+        });
+    }, [dishes, selectedMealType, debouncedDishSearch]);
+
+    const loadTemplates = useCallback(async () => {
         try {
             setLoading(true);
             const data = await getWeeklyMenuTemplates();
@@ -51,32 +121,32 @@ const WeeklyMenuTab: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const loadDishes = async () => {
+    const loadDishes = useCallback(async () => {
         try {
             const data = await getDishes({ isActive: true });
             setDishes(data);
         } catch (error) {
             console.error('Error loading dishes:', error);
         }
-    };
+    }, []);
 
     useEffect(() => {
         loadTemplates();
         loadDishes();
     }, []);
 
-    const handleSelectTemplate = async (templateId: string) => {
+    const handleSelectTemplate = useCallback(async (templateId: string) => {
         try {
             const data = await getWeeklyMenuTemplateById(templateId);
             setSelectedTemplate(data);
         } catch (error) {
             toast.error('Ошибка загрузки шаблона');
         }
-    };
+    }, []);
 
-    const handleCreateTemplate = async () => {
+    const handleCreateTemplate = useCallback(async () => {
         if (!newTemplateName.trim()) return;
         try {
             await createWeeklyMenuTemplate({ name: newTemplateName, defaultChildCount: 30 });
@@ -87,21 +157,21 @@ const WeeklyMenuTab: React.FC = () => {
         } catch (error) {
             toast.error('Ошибка создания шаблона');
         }
-    };
+    }, [newTemplateName, loadTemplates]);
 
-    const handleDeleteTemplate = async (id: string) => {
+    const handleDeleteTemplate = useCallback(async (id: string) => {
         if (!window.confirm('Удалить шаблон?')) return;
         try {
             await deleteWeeklyMenuTemplate(id);
             toast.success('Шаблон удален');
-            if (selectedTemplate?._id === id) setSelectedTemplate(null);
+            setSelectedTemplate(prev => prev?._id === id ? null : prev);
             loadTemplates();
         } catch (error) {
             toast.error('Ошибка удаления');
         }
-    };
+    }, [loadTemplates]);
 
-    const handleAddDish = async (dishId: string) => {
+    const handleAddDish = useCallback(async (dishId: string) => {
         if (!selectedTemplate) return;
         try {
             await addDishToTemplateDay(selectedTemplate._id!, selectedDay, selectedMealType, dishId);
@@ -111,9 +181,9 @@ const WeeklyMenuTab: React.FC = () => {
         } catch (error) {
             toast.error('Ошибка добавления блюда');
         }
-    };
+    }, [selectedTemplate, selectedDay, selectedMealType, handleSelectTemplate]);
 
-    const handleRemoveDish = async (day: Weekday, mealType: MealType, dishId: string) => {
+    const handleRemoveDish = useCallback(async (day: Weekday, mealType: MealType, dishId: string) => {
         if (!selectedTemplate) return;
         try {
             await removeDishFromTemplateDay(selectedTemplate._id!, day, mealType, dishId);
@@ -122,9 +192,9 @@ const WeeklyMenuTab: React.FC = () => {
         } catch (error) {
             toast.error('Ошибка удаления блюда');
         }
-    };
+    }, [selectedTemplate, handleSelectTemplate]);
 
-    const handleApplyTemplate = async () => {
+    const handleApplyTemplate = useCallback(async () => {
         if (!selectedTemplate) return;
         try {
             setLoading(true);
@@ -143,9 +213,32 @@ const WeeklyMenuTab: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedTemplate, applyType, applyStartDate, applyChildCount]);
 
-    const handleCalculateRequirements = async () => {
+    const handleOpenCreateDialog = useCallback(() => setCreateDialogOpen(true), []);
+    const handleCloseCreateDialog = useCallback(() => setCreateDialogOpen(false), []);
+    const handleOpenApplyDialog = useCallback(() => setApplyDialogOpen(true), []);
+    const handleCloseApplyDialog = useCallback(() => setApplyDialogOpen(false), []);
+    const handleCloseAddDishDialog = useCallback(() => setAddDishDialogOpen(false), []);
+    const handleCloseRequirements = useCallback(() => setShowRequirements(false), []);
+
+    const handleNewTemplateNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setNewTemplateName(e.target.value);
+    }, []);
+
+    const handleApplyStartDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setApplyStartDate(e.target.value);
+    }, []);
+
+    const handleApplyChildCountChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setApplyChildCount(Number(e.target.value));
+    }, []);
+
+    const handleApplyTypeChange = useCallback((e: any) => {
+        setApplyType(e.target.value as any);
+    }, []);
+
+    const handleCalculateRequirements = useCallback(async () => {
         if (!selectedTemplate) return;
         try {
             const days = applyType === 'week' ? 7 : 30;
@@ -155,7 +248,17 @@ const WeeklyMenuTab: React.FC = () => {
         } catch (error) {
             toast.error('Ошибка расчёта');
         }
-    };
+    }, [selectedTemplate, applyType, applyChildCount]);
+
+    const handleDayAddDishClick = useCallback((day: Weekday, mealType: MealType) => {
+        setSelectedDay(day);
+        setSelectedMealType(mealType);
+        setAddDishDialogOpen(true);
+    }, []);
+
+    const handleTemplateSelectChange = useCallback((e: any) => handleSelectTemplate(e.target.value as string), [handleSelectTemplate]);
+    const handleDeleteTemplateClick = useCallback(() => selectedTemplate && handleDeleteTemplate(selectedTemplate._id!), [selectedTemplate, handleDeleteTemplate]);
+    const handleAddDishToTemplate = useCallback((dishId: string) => handleAddDish(dishId), [handleAddDish]);
 
     return (
         <Box sx={{ px: 3 }}>
@@ -165,22 +268,22 @@ const WeeklyMenuTab: React.FC = () => {
                     <Select
                         value={selectedTemplate?._id || ''}
                         label="Шаблон"
-                        onChange={(e) => handleSelectTemplate(e.target.value)}
+                        onChange={handleTemplateSelectChange}
                     >
                         {templates.map((t) => (
                             <MenuItem key={t._id} value={t._id}>{t.name}</MenuItem>
                         ))}
                     </Select>
                 </FormControl>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateDialogOpen(true)}>
+                <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreateDialog}>
                     Новый шаблон
                 </Button>
                 {selectedTemplate && (
                     <>
-                        <Button variant="outlined" startIcon={<PlayArrowIcon />} onClick={() => setApplyDialogOpen(true)}>
+                        <Button variant="outlined" startIcon={<PlayArrowIcon />} onClick={handleOpenApplyDialog}>
                             Применить
                         </Button>
-                        <IconButton color="error" onClick={() => handleDeleteTemplate(selectedTemplate._id!)}>
+                        <IconButton color="error" onClick={handleDeleteTemplateClick}>
                             <DeleteIcon />
                         </IconButton>
                     </>
@@ -188,7 +291,11 @@ const WeeklyMenuTab: React.FC = () => {
             </Box>
 
             {showRequirements && requiredProducts.length > 0 && (
-                <Alert severity={requiredProducts.some(p => !p.sufficient) ? 'warning' : 'success'} sx={{ mb: 2 }} onClose={() => setShowRequirements(false)}>
+                <Alert 
+                    severity={requiredProducts.some(p => !p.sufficient) ? 'warning' : 'success'} 
+                    sx={{ mb: 2 }} 
+                    onClose={handleCloseRequirements}
+                >
                     <Typography variant="subtitle2">Требуемые продукты:</Typography>
                     {requiredProducts.filter(p => !p.sufficient).map((p) => (
                         <Typography key={p.productId} variant="body2" color="error">
@@ -201,73 +308,45 @@ const WeeklyMenuTab: React.FC = () => {
             {selectedTemplate && (
                 <Box>
                     {WEEKDAYS.map((day) => (
-                        <Accordion key={day}>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                <Typography fontWeight={500}>{WEEKDAY_NAMES[day]}</Typography>
-                            </AccordionSummary>
-                            <AccordionDetails>
-                                <Grid container spacing={2}>
-                                    {MEAL_TYPES.map((mealType) => {
-                                        const meals = (selectedTemplate.days[day] as any)?.[mealType] || [];
-                                        return (
-                                            <Grid item xs={12} sm={6} md={3} key={mealType}>
-                                                <Paper variant="outlined" sx={{ p: 1 }}>
-                                                    <Typography variant="subtitle2" color="primary">{getMealTypeName(mealType)}</Typography>
-                                                    <List dense>
-                                                        {meals.map((dish: any) => (
-                                                            <ListItem key={dish._id || dish}>
-                                                                <ListItemText primary={dish.name || 'Блюдо'} />
-                                                                <ListItemSecondaryAction>
-                                                                    <IconButton size="small" onClick={() => handleRemoveDish(day, mealType, dish._id || dish)}>
-                                                                        <DeleteIcon fontSize="small" />
-                                                                    </IconButton>
-                                                                </ListItemSecondaryAction>
-                                                            </ListItem>
-                                                        ))}
-                                                    </List>
-                                                    <Button size="small" startIcon={<AddIcon />} onClick={() => {
-                                                        setSelectedDay(day);
-                                                        setSelectedMealType(mealType);
-                                                        setAddDishDialogOpen(true);
-                                                    }}>Добавить</Button>
-                                                </Paper>
-                                            </Grid>
-                                        );
-                                    })}
-                                </Grid>
-                            </AccordionDetails>
-                        </Accordion>
+                        <DayAccordion
+                            key={day}
+                            day={day}
+                            dayName={WEEKDAY_NAMES[day]}
+                            dayData={selectedTemplate!.days[day]}
+                            onRemoveDish={handleRemoveDish}
+                            onAddDishClick={handleDayAddDishClick}
+                        />
                     ))}
                 </Box>
             )}
 
             {/* Create Template Dialog */}
-            <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)}>
+            <Dialog open={createDialogOpen} onClose={handleCloseCreateDialog}>
                 <DialogTitle>Новый шаблон</DialogTitle>
                 <DialogContent>
-                    <TextField fullWidth label="Название" value={newTemplateName} onChange={(e) => setNewTemplateName(e.target.value)} sx={{ mt: 1 }} />
+                    <TextField fullWidth label="Название" value={newTemplateName} onChange={handleNewTemplateNameChange} sx={{ mt: 1 }} />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setCreateDialogOpen(false)}>Отмена</Button>
+                    <Button onClick={handleCloseCreateDialog}>Отмена</Button>
                     <Button variant="contained" onClick={handleCreateTemplate}>Создать</Button>
                 </DialogActions>
             </Dialog>
-
+ 
             {/* Apply Template Dialog */}
-            <Dialog open={applyDialogOpen} onClose={() => setApplyDialogOpen(false)}>
+            <Dialog open={applyDialogOpen} onClose={handleCloseApplyDialog}>
                 <DialogTitle>Применить шаблон</DialogTitle>
                 <DialogContent>
                     <Grid container spacing={2} sx={{ mt: 1 }}>
                         <Grid item xs={12}>
-                            <TextField fullWidth type="date" label="Дата начала" value={applyStartDate} onChange={(e) => setApplyStartDate(e.target.value)} InputLabelProps={{ shrink: true }} />
+                            <TextField fullWidth type="date" label="Дата начала" value={applyStartDate} onChange={handleApplyStartDateChange} InputLabelProps={{ shrink: true }} />
                         </Grid>
                         <Grid item xs={6}>
-                            <TextField fullWidth type="number" label="Кол-во детей" value={applyChildCount} onChange={(e) => setApplyChildCount(Number(e.target.value))} />
+                            <TextField fullWidth type="number" label="Кол-во детей" value={applyChildCount} onChange={handleApplyChildCountChange} />
                         </Grid>
                         <Grid item xs={6}>
                             <FormControl fullWidth>
                                 <InputLabel>Период</InputLabel>
-                                <Select value={applyType} label="Период" onChange={(e) => setApplyType(e.target.value as any)}>
+                                <Select value={applyType} label="Период" onChange={handleApplyTypeChange}>
                                     <MenuItem value="week">Неделя</MenuItem>
                                     <MenuItem value="month">Месяц</MenuItem>
                                 </Select>
@@ -277,26 +356,36 @@ const WeeklyMenuTab: React.FC = () => {
                     <Button sx={{ mt: 2 }} onClick={handleCalculateRequirements}>Рассчитать продукты</Button>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setApplyDialogOpen(false)}>Отмена</Button>
+                    <Button onClick={handleCloseApplyDialog}>Отмена</Button>
                     <Button variant="contained" onClick={handleApplyTemplate} disabled={loading}>
                         {loading ? <CircularProgress size={20} /> : 'Применить'}
                     </Button>
                 </DialogActions>
             </Dialog>
-
+ 
             {/* Add Dish Dialog */}
-            <Dialog open={addDishDialogOpen} onClose={() => setAddDishDialogOpen(false)}>
+            <Dialog open={addDishDialogOpen} onClose={handleCloseAddDishDialog} fullWidth maxWidth="sm">
                 <DialogTitle>Добавить блюдо - {WEEKDAY_NAMES[selectedDay]}, {getMealTypeName(selectedMealType)}</DialogTitle>
                 <DialogContent>
-                    <List>
-                        {dishes.filter(d =>
-                            d.category === selectedMealType ||
-                            ['drink', 'salad', 'baking'].includes(d.subcategory || '')
-                        ).map((dish) => (
-                            <ListItem key={dish._id} button onClick={() => handleAddDish(dish._id!)}>
-                                <ListItemText primary={dish.name} />
+                    <TextField
+                        fullWidth
+                        size="small"
+                        placeholder="Поиск блюда..."
+                        value={dishSearchTerm}
+                        onChange={onDishSearchChange}
+                        sx={{ my: 1 }}
+                    />
+                    <List sx={{ maxHeight: 400, overflow: 'auto' }}>
+                        {filteredDishesForAdd.map((dish) => (
+                            <ListItem key={dish._id || dish.id} button onClick={() => handleAddDish(dish._id! || dish.id!)}>
+                                <ListItemText primary={dish.name} secondary={dish.subcategory} />
                             </ListItem>
                         ))}
+                        {filteredDishesForAdd.length === 0 && (
+                            <Typography sx={{ py: 2, textAlign: 'center' }} color="text.secondary">
+                                Блюда не найдены
+                            </Typography>
+                        )}
                     </List>
                 </DialogContent>
                 <DialogActions>

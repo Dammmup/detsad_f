@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -9,37 +9,132 @@ import {
   TableHead,
   TableRow,
   Paper,
-  CircularProgress,
-  Alert,
   Button,
-  useMediaQuery,
   IconButton,
+  TextField,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
-  MenuItem,
-  Select,
-  InputLabel,
   FormControl,
-  Avatar,
+  InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
+  Alert,
   Tooltip,
+  useMediaQuery,
+  Avatar,
+  Chip,
   Snackbar,
   Autocomplete,
 } from '@mui/material';
-import { Edit, Delete, Add, FileUpload, Refresh } from '@mui/icons-material';
-import moment from 'moment';
+import {
+  Add,
+  Edit,
+  Delete,
+  Refresh,
+  FileUpload,
+} from '@mui/icons-material';
 import { useDate } from '../../../app/context/DateContext';
-import { IChildPayment, Child, Group } from '../../../shared/types/common';
 import childPaymentApi from '../services/childPayment';
 import childrenApi from '../services/children';
-import { groupsApi } from '../services/groups';
-import ExportButton from '../../../shared/components/ExportButton';
+import groupsApi from '../services/groups';
+import { IChildPayment, Child, Group } from '../../../shared/types/common';
+import moment from 'moment';
 import { exportChildPayments } from '../../../shared/utils/excelExport';
-import DateNavigator from '../../../shared/components/DateNavigator';
 import { importChildPayments } from '../../../shared/services/importService';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
+import DateNavigator from '../../../shared/components/DateNavigator';
+
+// Мемоизированная строка таблицы для предотвращения лишних рендеров
+const PaymentRow = React.memo(({ 
+  payment, 
+  child, 
+  groupName, 
+  isMobile, 
+  onMarkAsPaid, 
+  onCancelPayment, 
+  onOpenModal, 
+  onDelete,
+  getPaymentStatusColor
+}: any) => {
+  const handlePaidClick = useCallback(() => onMarkAsPaid(payment._id), [payment._id, onMarkAsPaid]);
+  const handleCancelClick = useCallback(() => onCancelPayment(payment._id), [payment._id, onCancelPayment]);
+  const handleEditClick = useCallback(() => onOpenModal(payment), [payment, onOpenModal]);
+  const handleDeleteClick = useCallback(() => onDelete(payment._id), [payment._id, onDelete]);
+
+  const debt = useMemo(() => 
+    (payment.total + (payment.accruals || 0) - (payment.paidAmount || 0)), 
+    [payment.total, payment.accruals, payment.paidAmount]
+  );
+
+  return (
+    <TableRow hover>
+      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+        <Avatar src={child?.photo} sx={{ width: 32, height: 32 }}>
+          {child?.fullName?.charAt(0)}
+        </Avatar>
+      </TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+        <Typography variant="body2" fontWeight="bold">
+          {child?.fullName || 'Неизвестный'}
+        </Typography>
+      </TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+        <Chip label={groupName} size="small" variant="outlined" />
+      </TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+        {moment(payment.period.start).format('DD.MM')} - {moment(payment.period.end).format('DD.MM.YYYY')}
+      </TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+        <Typography variant="body2" color="success.main" fontWeight="bold">
+          {payment.paidAmount?.toLocaleString()} ₸
+        </Typography>
+      </TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+        <Typography variant="body2" color="error.main">
+          {debt.toLocaleString()} ₸
+        </Typography>
+      </TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2 }}>{payment.accruals?.toLocaleString() || 0} ₸</TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2 }}>{payment.deductions?.toLocaleString() || 0} ₸</TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+        <Tooltip title={payment.comments || ''}>
+          <Typography variant="caption" noWrap sx={{ maxWidth: 100, display: 'block' }}>
+            {payment.comments}
+          </Typography>
+        </Tooltip>
+      </TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+        <Chip 
+          label={payment.status === 'paid' ? 'Оплачено' : payment.status === 'active' ? 'Активно' : 'Просрочено'} 
+          size="small" 
+          sx={{ bgcolor: getPaymentStatusColor(payment.status), color: '#fff' }}
+        />
+      </TableCell>
+      <TableCell align="right" sx={{ p: isMobile ? 1 : 2 }}>
+        <Box display="flex" justifyContent="flex-end" gap={0.5}>
+          {payment.status !== 'paid' ? (
+            <Button size="small" variant="contained" color="success" onClick={handlePaidClick}>
+              Оплатить
+            </Button>
+          ) : (
+            <Button size="small" variant="outlined" color="warning" onClick={handleCancelClick}>
+              Отмена
+            </Button>
+          )}
+          <IconButton size="small" onClick={handleEditClick} color="primary">
+            <Edit fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={handleDeleteClick} color="error">
+            <Delete fontSize="small" />
+          </IconButton>
+        </Box>
+      </TableCell>
+    </TableRow>
+  );
+});
 
 const ChildPayments: React.FC = () => {
   const { currentDate } = useDate();
@@ -49,15 +144,10 @@ const ChildPayments: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingPayment, setEditingPayment] = useState<IChildPayment | null>(
-    null,
-  );
+  const [editingPayment, setEditingPayment] = useState<IChildPayment | null>(null);
   const [newPayment, setNewPayment] = useState({
     childId: '',
-    period: {
-      start: '',
-      end: '',
-    },
+    period: { start: '', end: '' },
     amount: 0,
     total: 0,
     paidAmount: 0,
@@ -67,29 +157,51 @@ const ChildPayments: React.FC = () => {
     comments: '',
   });
 
-
   const [nameFilter, setNameFilter] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
-
-
-  const [filteredPayments, setFilteredPayments] = useState<IChildPayment[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generationAttempted, setGenerationAttempted] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
-
-  // Флаги для предотвращения повторных загрузок
   const [childrenLoaded, setChildrenLoaded] = useState(false);
   const [groupsLoaded, setGroupsLoaded] = useState(false);
-
   const isMobile = useMediaQuery('(max-width:900px)');
 
+  const childrenMap = useMemo(() => {
+    const map = new Map<string, Child>();
+    children.forEach(c => map.set(c._id || c.id || '', c));
+    return map;
+  }, [children]);
 
-  const fetchPayments = React.useCallback(async () => {
+  const groupsMap = useMemo(() => {
+    const map = new Map<string, Group>();
+    groups.forEach(g => map.set(g._id || g.id || '', g));
+    return map;
+  }, [groups]);
+
+  const getPaymentStatusColor = useCallback((status: string) => {
+    switch (status) {
+      case 'paid': return '#4CAF50';
+      case 'overdue': return '#F44336';
+      case 'active': return '#FFC107';
+      case 'draft': return '#9E9E9E';
+      default: return '#B0B0B0';
+    }
+  }, []);
+
+  const getStatusColor = useCallback((status: string) => {
+    switch (status) {
+      case 'paid': return 'success';
+      case 'overdue': return 'error';
+      case 'active': return 'warning';
+      case 'draft': return 'info';
+      default: return 'default';
+    }
+  }, []);
+
+  const fetchPayments = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Формируем monthPeriod в формате YYYY-MM для фильтрации на сервере
       const monthPeriod = moment(currentDate).format('YYYY-MM');
       const paymentsList = await childPaymentApi.getAll({ monthPeriod });
       setPayments(paymentsList);
@@ -100,7 +212,7 @@ const ChildPayments: React.FC = () => {
     }
   }, [currentDate]);
 
-  const fetchChildren = React.useCallback(async () => {
+  const fetchChildren = useCallback(async () => {
     if (childrenLoaded) return;
     try {
       const childrenList = await childrenApi.getAll();
@@ -111,7 +223,7 @@ const ChildPayments: React.FC = () => {
     }
   }, [childrenLoaded]);
 
-  const fetchGroups = React.useCallback(async () => {
+  const fetchGroups = useCallback(async () => {
     if (groupsLoaded) return;
     try {
       const groupsList = await groupsApi.getAll();
@@ -122,7 +234,7 @@ const ChildPayments: React.FC = () => {
     }
   }, [groupsLoaded]);
 
-  const handleGeneratePayments = React.useCallback(async () => {
+  const handleGeneratePayments = useCallback(async () => {
     setIsGenerating(true);
     setError(null);
     try {
@@ -135,107 +247,81 @@ const ChildPayments: React.FC = () => {
     }
   }, [currentDate, fetchPayments]);
 
-  // Загружаем связанные данные один раз
   useEffect(() => {
     fetchChildren();
     fetchGroups();
   }, [fetchChildren, fetchGroups]);
 
-  // Загружаем оплаты при изменении месяца
   useEffect(() => {
     fetchPayments();
   }, [currentDate, fetchPayments]);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    setFilteredPayments([...payments]);
-  }, [payments]);
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      setNameFilter(value);
+    }, 500);
+  }, []);
 
+  const filteredPayments = useMemo(() => {
+    const search = nameFilter.toLowerCase();
+    return payments.filter((payment) => {
+      const childId = typeof payment.childId === 'string' ? payment.childId : payment.childId?._id;
+      if (!childId) return false;
+      const child = childrenMap.get(childId);
+      const matchesName = !search || (child?.fullName.toLowerCase().includes(search));
+      let matchesGroup = true;
+      if (groupFilter) {
+        const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
+        matchesGroup = gId === groupFilter;
+      }
+      return matchesName && matchesGroup;
+    });
+  }, [payments, childrenMap, nameFilter, groupFilter]);
 
-  // Фильтрация платежей (теперь только по имени/группе, период фильтруется на сервере)
-  useEffect(() => {
-    let result = [...payments];
-
-    // Фильтр по имени ребёнка
-    if (nameFilter) {
-      result = result.filter((payment) => {
-        const child = children.find(
-          (c) =>
-            c._id ===
-            (typeof payment.childId === 'string'
-              ? payment.childId
-              : payment.childId?._id),
-        );
-        return (
-          child &&
-          child.fullName.toLowerCase().includes(nameFilter.toLowerCase())
-        );
+  const handleMarkAsPaid = useCallback(async (paymentId: string) => {
+    try {
+      const payment = payments.find(p => p._id === paymentId);
+      if (!payment) return;
+      const totalAmount = (payment.total || 0) + (payment.accruals || 0);
+      await childPaymentApi.update(paymentId, {
+        status: 'paid',
+        paidAmount: totalAmount,
+        paymentDate: new Date()
       });
+      fetchPayments();
+    } catch (e: any) {
+      setError(e?.message || 'Ошибка обновления статуса');
     }
+  }, [payments, fetchPayments]);
 
-    // Фильтр по группе
-    if (groupFilter) {
-      result = result.filter((payment) => {
-        const child = children.find(
-          (c) =>
-            c._id ===
-            (typeof payment.childId === 'string'
-              ? payment.childId
-              : payment.childId?._id),
-        );
-        return (
-          child &&
-          (typeof child.groupId === 'object'
-            ? child.groupId?._id
-            : child.groupId) === groupFilter
-        );
+  const handleCancelPayment = useCallback(async (paymentId: string) => {
+    try {
+      await childPaymentApi.update(paymentId, {
+        status: 'active',
+        paidAmount: 0,
+        paymentDate: undefined
       });
+      fetchPayments();
+    } catch (e: any) {
+      setError(e?.message || 'Ошибка отмены оплаты');
     }
+  }, [fetchPayments]);
 
-    setFilteredPayments(result);
-
-    // Автогенерация при пустом списке (опционально)
-    if (
-      result.length === 0 &&
-      !loading &&
-      !isGenerating &&
-      !generationAttempted
-    ) {
-      setGenerationAttempted(true);
-      // Автоматическая генерация отключена во избежание дублей.
-      // Пользователь должен нажать на кнопку вручную.
-      // handleGeneratePayments();
-    }
-  }, [
-    payments,
-    children,
-    nameFilter,
-    groupFilter,
-    loading,
-    generationAttempted,
-    isGenerating,
-  ]);
-
-
-
-  const handleOpenModal = (payment?: IChildPayment) => {
+  const handleOpenModal = useCallback((payment?: IChildPayment) => {
     if (payment) {
       setEditingPayment(payment);
-
-      const childIdValue =
-        typeof payment.childId === 'object'
-          ? payment.childId._id
-          : payment.childId;
-
+      const childIdValue = typeof payment.childId === 'object' ? (payment.childId as any)._id : payment.childId;
       setNewPayment({
-        childId: (childIdValue as any) || '',
+        childId: childIdValue || '',
         period: {
-          start: payment.period?.start
-            ? moment(payment.period.start).format('YYYY-MM-DD')
-            : '',
-          end: payment.period?.end
-            ? moment(payment.period.end).format('YYYY-MM-DD')
-            : '',
+          start: payment.period?.start ? moment(payment.period.start).format('YYYY-MM-DD') : '',
+          end: payment.period?.end ? moment(payment.period.end).format('YYYY-MM-DD') : '',
         },
         amount: payment.amount || 0,
         total: payment.total || 0,
@@ -249,28 +335,25 @@ const ChildPayments: React.FC = () => {
       setEditingPayment(null);
       setNewPayment({
         childId: '',
-        period: {
-          start: '',
-          end: '',
-        },
+        period: { start: '', end: '' },
         amount: 0,
         total: 0,
         paidAmount: 0,
-        status: 'active' as const,
+        status: 'active',
         accruals: 0,
         deductions: 0,
         comments: '',
       });
     }
     setModalOpen(true);
-  };
+  }, []);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setModalOpen(false);
     setEditingPayment(null);
-  };
+  }, []);
 
-  const handleSavePayment = async () => {
+  const handleSavePayment = useCallback(async () => {
     try {
       if (editingPayment) {
         await childPaymentApi.update(editingPayment._id, {
@@ -288,9 +371,9 @@ const ChildPayments: React.FC = () => {
     } catch (e: any) {
       setError(e?.message || 'Ошибка сохранения оплаты');
     }
-  };
+  }, [editingPayment, newPayment, fetchPayments, handleCloseModal]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     if (!window.confirm('Удалить запись оплаты?')) return;
     try {
       await childPaymentApi.deleteItem(id);
@@ -298,111 +381,12 @@ const ChildPayments: React.FC = () => {
     } catch (e: any) {
       setError(e?.message || 'Ошибка удаления оплаты');
     }
-  };
+  }, [fetchPayments]);
 
-  const getChildName = (childId: string) => {
-    const child = children.find((c) => c._id === childId || c.id === childId);
-    return child ? child.fullName : 'Неизвестный ребенок';
-  };
-
-  const getGroupName = (groupId: string) => {
-    const group = groups.find((g) => g._id === groupId);
-    return group ? group.name : 'Группа не указана';
-  };
-
-  const getPaymentStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return '#4CAF50';
-      case 'overdue':
-        return '#F44336';
-      case 'active':
-        return '#FFC107';
-      case 'draft':
-        return '#9E9E9E';
-      default:
-        return '#B0B0B0';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return 'success';
-      case 'overdue':
-        return 'error';
-      case 'active':
-        return 'warning';
-      case 'draft':
-        return 'info';
-      default:
-        return 'default';
-    }
-  };
-
-
-  const [showInitialTooltip, setShowInitialTooltip] = useState(false);
-
-
-  useEffect(() => {
-    setShowInitialTooltip(true);
-    const timer = setTimeout(() => {
-      setShowInitialTooltip(false);
-    }, 4000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-
-  const markAsPaid = async (paymentId: string) => {
-    try {
-      // Находим текущий платёж для получения суммы долга
-      const payment = payments.find(p => p._id === paymentId);
-      if (!payment) {
-        setError('Платёж не найден');
-        return;
-      }
-
-      // Вычисляем полную сумму к оплате (total + accruals)
-      const totalAmount = (payment.total || 0) + (payment.accruals || 0);
-
-      await childPaymentApi.update(paymentId, {
-        status: 'paid',
-        paidAmount: totalAmount,
-        paymentDate: new Date()
-      });
-
-      fetchPayments();
-    } catch (error) {
-      console.error('Ошибка при установке статуса "Оплачено"', error);
-      setError('Ошибка при изменении статуса оплаты');
-    }
-  };
-
-
-  const cancelPayment = async (paymentId: string) => {
-    try {
-      await childPaymentApi.update(paymentId, {
-        status: 'active',
-        paidAmount: 0,
-        paymentDate: undefined
-      });
-
-      fetchPayments();
-    } catch (error) {
-      console.error('Ошибка при отмене оплаты', error);
-      setError('Ошибка при отмене оплаты');
-    }
-  };
-
-  const handleExport = (
-    exportType: string,
-    exportFormat: 'excel',
-  ) => {
+  const handleExport = () => {
     exportChildPayments(filteredPayments, children, groups);
   };
 
-  // Импорт оплаты детей из Excel
   const handleImportChildPayments = async () => {
     try {
       setIsImporting(true);
@@ -419,17 +403,23 @@ const ChildPayments: React.FC = () => {
         setSnackbar({ open: true, message: result.error || 'Ошибка импорта' });
       }
     } catch (error: any) {
-      console.error('Error importing child payments:', error);
       setSnackbar({ open: true, message: error?.message || 'Ошибка импорта' });
     } finally {
       setIsImporting(false);
     }
   };
 
+  const [showInitialTooltip, setShowInitialTooltip] = useState(false);
+
+  useEffect(() => {
+    setShowInitialTooltip(true);
+    const timer = setTimeout(() => setShowInitialTooltip(false), 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <Box>
       <DateNavigator />
-      {/* Всплывающее сообщение при загрузке */}
       <Snackbar
         open={showInitialTooltip}
         message='Нажмите на кнопку для отметки оплаты'
@@ -447,69 +437,47 @@ const ChildPayments: React.FC = () => {
         gap={2}
       >
         <Box display='flex' alignItems='center' gap={2}>
-          <Typography
-            variant={isMobile ? 'h5' : 'h4'}
-            gutterBottom
-            sx={{ mb: isMobile ? 1 : 0 }}
-          >
+          <Typography variant={isMobile ? 'h5' : 'h4'} gutterBottom sx={{ mb: isMobile ? 1 : 0 }}>
             Оплаты за посещение детей
           </Typography>
           {!loading && !error && (
-            <Typography
-              variant='h6'
-              color='textSecondary'
-              sx={{ mb: isMobile ? 1 : 0 }}
-            >
-              ({filteredPayments.length}{' '}
-              {filteredPayments.length === 1
-                ? 'оплата'
-                : filteredPayments.length < 5
-                  ? 'оплаты'
-                  : 'оплат'}
-              )
+            <Typography variant='h6' color='textSecondary' sx={{ mb: isMobile ? 1 : 0 }}>
+              ({filteredPayments.length} {filteredPayments.length === 1 ? 'оплата' : filteredPayments.length < 5 ? 'оплаты' : 'оплат'})
             </Typography>
           )}
         </Box>
-        <AuditLogButton entityType="childPayment" />
-        <Button
-          variant='contained'
-          startIcon={<Add />}
-          onClick={() => handleOpenModal()}
-          sx={{ width: isMobile ? '100%' : 'auto', mt: isMobile ? 1 : 0 }}
-        >
-          Добавить оплату
-        </Button>
-        <ExportButton
-          exportTypes={[{ value: 'child-payments', label: 'Экспорт оплат' }]}
-          onExport={handleExport}
-        />
-        <Tooltip title="Импортировать оплаты из Excel (docs/ChildPayment.xlsx)">
+        <Box display="flex" gap={1} flexWrap="wrap">
+          <AuditLogButton entityType="childPayment" />
+          <Button
+            variant='contained'
+            startIcon={<Add />}
+            onClick={() => handleOpenModal()}
+            sx={{ width: isMobile ? '100%' : 'auto' }}
+          >
+            Добавить оплату
+          </Button>
           <Button
             variant='outlined'
             color='primary'
             startIcon={isImporting ? <CircularProgress size={20} /> : <FileUpload />}
             onClick={handleImportChildPayments}
             disabled={isImporting || loading}
-            sx={{ width: isMobile ? '100%' : 'auto', mt: isMobile ? 1 : 0 }}
           >
-            {isImporting ? 'Импорт...' : 'Импорт из Excel'}
+            Импорт из Excel
           </Button>
-        </Tooltip>
-        <Tooltip title="Сгенерировать/обновить записи платежей для всех активных детей">
           <Button
             variant='outlined'
             color='secondary'
             startIcon={isGenerating ? <CircularProgress size={20} /> : <Refresh />}
             onClick={handleGeneratePayments}
             disabled={isGenerating || loading}
-            sx={{ width: isMobile ? '100%' : 'auto', mt: isMobile ? 1 : 0 }}
           >
-            {isGenerating ? 'Обновление...' : 'Обновить платежи'}
+            Обновить платежи
           </Button>
-        </Tooltip>
+          <Button variant="outlined" onClick={handleExport}>Экспорт</Button>
+        </Box>
       </Box>
 
-      {/* Snackbar для сообщений импорта */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
@@ -518,7 +486,6 @@ const ChildPayments: React.FC = () => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
 
-      {/* Фильтры */}
       <Box
         display='flex'
         flexDirection={isMobile ? 'column' : 'row'}
@@ -531,524 +498,147 @@ const ChildPayments: React.FC = () => {
           label='Фильтр по имени'
           variant='outlined'
           fullWidth={isMobile}
-          value={nameFilter}
-          onChange={(e) => setNameFilter(e.target.value)}
+          value={searchQuery}
+          onChange={handleSearchChange}
           sx={{ minWidth: isMobile ? '100%' : 250 }}
         />
 
-        <FormControl
-          fullWidth={isMobile}
-          sx={{ minWidth: isMobile ? '100%' : 250 }}
-        >
+        <FormControl fullWidth={isMobile} sx={{ minWidth: isMobile ? '100%' : 250 }}>
           <InputLabel>Фильтр по группе</InputLabel>
           <Select
             value={groupFilter}
             label='Фильтр по группе'
-            onChange={(e) => setGroupFilter(e.target.value)}
+            onChange={(e) => setGroupFilter(e.target.value as string)}
           >
             <MenuItem value=''>Все группы</MenuItem>
             {groups.map((group) => (
               <MenuItem key={group._id} value={group._id}>
-                <Box display='flex' alignItems='center' gap={1}>
-                  <Avatar
-                    sx={{
-                      width: 20,
-                      height: 20,
-                      bgcolor: '#B0B0B0',
-                      fontSize: '0.7rem',
-                    }}
-                  >
-                    {group.name.charAt(0)}
-                  </Avatar>
-                  {group.name}
-                </Box>
+                {group.name}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
       </Box>
-      {(loading || isGenerating) && <CircularProgress />}
-      {error && <Alert severity='error'>{error}</Alert>}
-      {!loading && !isGenerating && payments.length === 0 && (
-        <Alert severity='info'>Нет данных об оплатах</Alert>
+
+      {(loading || isGenerating) && <CircularProgress sx={{ m: 2 }} />}
+      {error && <Alert severity='error' sx={{ m: 2 }}>{error}</Alert>}
+
+      {!loading && !isGenerating && (
+        <>
+          {filteredPayments.length > 0 ? (
+            <TableContainer component={Paper} sx={{ mt: 2, boxShadow: 3 }}>
+              <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 650 }}>
+                <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableRow>
+                    <TableCell></TableCell>
+                    <TableCell>Ребенок</TableCell>
+                    <TableCell>Группа</TableCell>
+                    <TableCell>Период</TableCell>
+                    <TableCell>Оплачено</TableCell>
+                    <TableCell>Долг</TableCell>
+                    <TableCell>Надбавки</TableCell>
+                    <TableCell>Вычеты</TableCell>
+                    <TableCell>Комментарии</TableCell>
+                    <TableCell>Статус</TableCell>
+                    <TableCell align='right'>Действия</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                    {filteredPayments.map((payment) => {
+                      const childId = typeof payment.childId === 'string' ? payment.childId : payment.childId?._id;
+                      const child = childrenMap.get(childId || '');
+                      const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
+                      const groupName = gId ? groupsMap.get(gId)?.name || 'Нет группы' : 'Нет группы';
+
+                      return (
+                        <PaymentRow
+                          key={payment._id}
+                          payment={payment}
+                          child={child}
+                          groupName={groupName}
+                          isMobile={isMobile}
+                          onMarkAsPaid={handleMarkAsPaid}
+                          onCancelPayment={handleCancelPayment}
+                          onOpenModal={handleOpenModal}
+                          onDelete={handleDelete}
+                          getPaymentStatusColor={getPaymentStatusColor}
+                        />
+                      );
+                    })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Alert severity='info' sx={{ m: 2 }}>Нет данных об оплатах</Alert>
+          )}
+        </>
       )}
 
-      {/* Статистика по оплатам */}
-
-      {/* Статистика по оплатам */}
-      {!loading && filteredPayments.length > 0 && (
-        <Box
-          display='flex'
-          flexWrap='wrap'
-          gap={2}
-          mb={2}
-          p={2}
-          sx={{
-            backgroundColor: '#f9',
-            borderRadius: 1,
-            border: '1px solid #e0e0',
-          }}
-        >
-          <Box
-            flex='1 1 200px'
-            p={2}
-            sx={{
-              backgroundColor: '#E8F5E9',
-              borderRadius: 1,
-              borderLeft: '4px solid #4CAF50',
-            }}
-          >
-            <Typography variant='h6' color='textSecondary'>
-              Оплачено
-            </Typography>
-            <Typography variant='h4' color='success.main'>
-              {filteredPayments.filter((p) => p.status === 'paid').length}
-            </Typography>
-          </Box>
-
-          <Box
-            flex='1 1 200px'
-            p={2}
-            sx={{
-              backgroundColor: '#FFF3E0',
-              borderRadius: 1,
-              borderLeft: '4px solid #FFC107',
-            }}
-          >
-            <Typography variant='h6' color='textSecondary'>
-              Активно
-            </Typography>
-            <Typography variant='h4' color='warning.main'>
-              {filteredPayments.filter((p) => p.status === 'active').length}
-            </Typography>
-          </Box>
-
-          <Box
-            flex='1 1 200px'
-            p={2}
-            sx={{
-              backgroundColor: '#FFEBEE',
-              borderRadius: 1,
-              borderLeft: '4px solid #F44336',
-            }}
-          >
-            <Typography variant='h6' color='textSecondary'>
-              Просрочено
-            </Typography>
-            <Typography variant='h4' color='error.main'>
-              {filteredPayments.filter((p) => p.status === 'overdue').length}
-            </Typography>
-          </Box>
-
-          <Box
-            flex='1 1 200px'
-            p={2}
-            sx={{
-              backgroundColor: '#E0E0E0',
-              borderRadius: 1,
-              borderLeft: '4px solid #9E9E9E',
-            }}
-          >
-            <Typography variant='h6' color='textSecondary'>
-              Всего
-            </Typography>
-            <Typography variant='h4' color='textPrimary'>
-              {filteredPayments.length}
-            </Typography>
-          </Box>
-        </Box>
-      )}
-
-      <TableContainer
-        component={Paper}
-        sx={{
-          mt: 2,
-          width: '100%',
-          overflowX: isMobile ? 'auto' : 'visible',
-          boxShadow: isMobile ? 1 : 3,
-        }}
-      >
-        <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 650 }}>
-          <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-            <TableRow>
-              <TableCell
-                sx={{
-                  fontSize: isMobile ? '0.9rem' : '1rem',
-                  p: isMobile ? 1 : 2,
-                }}
-              ></TableCell>
-              <TableCell
-                sx={{
-                  fontSize: isMobile ? '0.9rem' : '1rem',
-                  p: isMobile ? 1 : 2,
-                }}
-              >
-                Ребенок
-              </TableCell>
-              <TableCell
-                sx={{
-                  fontSize: isMobile ? '0.9rem' : '1rem',
-                  p: isMobile ? 1 : 2,
-                }}
-              >
-                Группа
-              </TableCell>
-              <TableCell
-                sx={{
-                  fontSize: isMobile ? '0.9rem' : '1rem',
-                  p: isMobile ? 1 : 2,
-                }}
-              >
-                Период
-              </TableCell>
-              <TableCell
-                sx={{
-                  fontSize: isMobile ? '0.9rem' : '1rem',
-                  p: isMobile ? 1 : 2,
-                }}
-              >
-                Оплачено
-              </TableCell>
-
-              <TableCell
-                sx={{
-                  fontSize: isMobile ? '0.9rem' : '1rem',
-                  p: isMobile ? 1 : 2,
-                }}
-              >
-                Долг
-              </TableCell>
-              <TableCell
-                sx={{
-                  fontSize: isMobile ? '0.9rem' : '1rem',
-                  p: isMobile ? 1 : 2,
-                }}
-              >
-                Надбавки
-              </TableCell>
-              <TableCell
-                sx={{
-                  fontSize: isMobile ? '0.9rem' : '1rem',
-                  p: isMobile ? 1 : 2,
-                }}
-              >
-                Вычеты
-              </TableCell>
-              <TableCell
-                sx={{
-                  fontSize: isMobile ? '0.9rem' : '1rem',
-                  p: isMobile ? 1 : 2,
-                }}
-              >
-                Комментарии
-              </TableCell>
-              <TableCell
-                sx={{
-                  fontSize: isMobile ? '0.9rem' : '1rem',
-                  p: isMobile ? 1 : 2,
-                }}
-              >
-                Статус
-              </TableCell>
-              <TableCell
-                align='right'
-                sx={{
-                  fontSize: isMobile ? '0.9rem' : '1rem',
-                  p: isMobile ? 1 : 2,
-                }}
-              >
-                Действия
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredPayments.map((payment) => {
-              const child = children.find(
-                (c) =>
-                  c._id ===
-                  (typeof payment.childId === 'string'
-                    ? payment.childId
-                    : payment.childId?._id),
-              );
-              const paymentStatusColor = getPaymentStatusColor(payment.status);
-
-              return (
-                <TableRow
-                  key={payment._id}
-                  sx={{
-                    borderLeft: `4px solid ${paymentStatusColor}`,
-                    '&:hover': { backgroundColor: '#f9f9f9' },
-                  }}
-                >
-                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-                    <Tooltip
-                      title={
-                        payment.status === 'paid'
-                          ? 'Отменить оплату'
-                          : 'Нажмите на кнопку для отметки оплаты'
-                      }
-                      placement='right'
-                    >
-                      <IconButton
-                        size={isMobile ? 'small' : 'medium'}
-                        onClick={() =>
-                          payment.status === 'paid'
-                            ? cancelPayment(payment._id)
-                            : markAsPaid(payment._id)
-                        }
-                        disabled={false}
-                        sx={{
-                          width: 44,
-                          height: 44,
-                          minWidth: 44,
-                          minHeight: 44,
-                          borderRadius: '50%',
-                          bgcolor:
-                            payment.status === 'paid'
-                              ? 'error.light'
-                              : 'primary.main',
-                          color:
-                            payment.status === 'paid' ? 'error.main' : 'white',
-                          '&:hover': {
-                            bgcolor:
-                              payment.status === 'paid'
-                                ? 'error.light'
-                                : 'primary.dark',
-                          },
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        {payment.status === 'paid' ? (
-                          <span style={{ fontSize: '22px', color: 'white' }}>
-                            ✕
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '22px' }}>₸</span>
-                        )}
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-                    {payment.childId
-                      ? typeof payment.childId === 'object'
-                        ? payment.childId.fullName
-                        : getChildName(payment.childId)
-                      : 'Не указан'}
-                  </TableCell>
-                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-                    {child
-                      ? typeof child.groupId === 'object'
-                        ? child.groupId.name
-                        : getGroupName(child.groupId as string)
-                      : 'Не указана'}
-                  </TableCell>
-                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-                    {payment.period.start && payment.period.end
-                      ? `${moment(payment.period.start).format('DD.MM.YYYY')} - ${moment(payment.period.end).format('DD.MM.YYYY')}`
-                      : 'Не указан'}
-                  </TableCell>
-                  <TableCell sx={{ p: isMobile ? 1 : 2, color: 'success.main' }}>
-                    {payment.paidAmount || 0} ₸
-                  </TableCell>
-                  <TableCell sx={{
-                    p: isMobile ? 1 : 2,
-                    color: ((payment.total + (payment.accruals || 0)) - (payment.paidAmount || 0)) > 0 ? 'error.main' : 'success.main',
-                    fontWeight: 'bold'
-                  }}>
-                    {(payment.total + (payment.accruals || 0)) - (payment.paidAmount || 0)} ₸
-                  </TableCell>
-                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-                    {payment.accruals || 0} ₸
-                  </TableCell>
-                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-                    {payment.deductions || 0} ₸
-                  </TableCell>
-                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-                    {payment.comments || ''}
-                  </TableCell>
-                  <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-                    <Typography
-                      color={getStatusColor(payment.status)}
-                      variant='body2'
-                    >
-                      {payment.status === 'paid'
-                        ? 'Оплачено'
-                        : payment.status === 'overdue'
-                          ? 'Просрочено'
-                          : payment.status === 'active'
-                            ? 'Активно'
-                            : 'Черновик'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align='right' sx={{ p: isMobile ? 1 : 2 }}>
-                    <AuditLogButton entityType="childPayment" entityId={payment._id} entityName={child?.fullName} />
-                    <IconButton
-                      size={isMobile ? 'small' : 'medium'}
-                      onClick={() => handleOpenModal(payment)}
-                    >
-                      <Edit fontSize={isMobile ? 'small' : 'medium'} />
-                    </IconButton>
-                    <IconButton
-                      size={isMobile ? 'small' : 'medium'}
-                      onClick={() => payment._id && handleDelete(payment._id)}
-                    >
-                      <Delete fontSize={isMobile ? 'small' : 'medium'} />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Модальное окно для добавления/редактирования оплаты */}
-      <Dialog
-        open={modalOpen}
-        onClose={handleCloseModal}
-        maxWidth='sm'
-        fullWidth
-      >
-        <DialogTitle>
-          {editingPayment ? 'Редактировать оплату' : 'Добавить оплату'}
-        </DialogTitle>
+      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth='sm' fullWidth>
+        <DialogTitle>{editingPayment ? 'Редактировать оплату' : 'Добавить оплату'}</DialogTitle>
         <DialogContent>
           <Box mt={2} display='flex' flexDirection='column' gap={2}>
             <Autocomplete
               options={children}
               getOptionLabel={(option) => {
-                const group = groups.find(
-                  (g) =>
-                    g._id ===
-                    (typeof option.groupId === 'object'
-                      ? option.groupId?._id
-                      : option.groupId),
-                );
+                const gId = typeof option.groupId === 'object' ? (option.groupId as any)?._id : option.groupId;
+                const group = groupsMap.get(gId || '');
                 return `${option.fullName} (${group ? group.name : 'Без группы'})`;
               }}
-              value={children.find((c) => c._id === newPayment.childId) || null}
-              onChange={(_, newValue) => {
-                setNewPayment({ ...newPayment, childId: newValue?._id || '' });
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label='Ребенок'
-                  variant='outlined'
-                />
-              )}
-              noOptionsText='Ребенок не найден'
+              value={childrenMap.get(newPayment.childId) || null}
+              onChange={(_, newValue) => setNewPayment({ ...newPayment, childId: newValue?._id || '' })}
+              renderInput={(params) => <TextField {...params} label='Ребенок' variant='outlined' />}
             />
             <TextField
-              label='Период начала (например, 2025-10-01)'
+              label='Начало периода'
               type='date'
               value={newPayment.period.start}
-              onChange={(e) =>
-                setNewPayment({
-                  ...newPayment,
-                  period: {
-                    ...newPayment.period,
-                    start: e.target.value,
-                  },
-                })
-              }
+              onChange={(e) => setNewPayment({ ...newPayment, period: { ...newPayment.period, start: e.target.value } })}
               InputLabelProps={{ shrink: true }}
             />
             <TextField
-              label='Период окончания (например, 2025-10-31)'
+              label='Конец периода'
               type='date'
               value={newPayment.period.end}
-              onChange={(e) =>
-                setNewPayment({
-                  ...newPayment,
-                  period: {
-                    ...newPayment.period,
-                    end: e.target.value,
-                  },
-                })
-              }
+              onChange={(e) => setNewPayment({ ...newPayment, period: { ...newPayment.period, end: e.target.value } })}
               InputLabelProps={{ shrink: true }}
             />
-
             <TextField
-              label='Всего'
+              label='Сумма (Всего)'
               type='number'
               value={newPayment.total}
-              onChange={(e) =>
-                setNewPayment({ ...newPayment, total: Number(e.target.value) })
-              }
+              onChange={(e) => setNewPayment({ ...newPayment, total: Number(e.target.value) })}
             />
             <TextField
               label='Оплачено'
               type='number'
               value={newPayment.paidAmount}
-              onChange={(e) =>
-                setNewPayment({ ...newPayment, paidAmount: Number(e.target.value) })
-              }
+              onChange={(e) => setNewPayment({ ...newPayment, paidAmount: Number(e.target.value) })}
             />
             <TextField
               label='Надбавки'
               type='number'
               value={newPayment.accruals}
-              onChange={(e) =>
-                setNewPayment({
-                  ...newPayment,
-                  accruals: Number(e.target.value),
-                })
-              }
+              onChange={(e) => setNewPayment({ ...newPayment, accruals: Number(e.target.value) })}
             />
             <TextField
               label='Вычеты'
               type='number'
               value={newPayment.deductions}
-              onChange={(e) =>
-                setNewPayment({
-                  ...newPayment,
-                  deductions: Number(e.target.value),
-                })
-              }
+              onChange={(e) => setNewPayment({ ...newPayment, deductions: Number(e.target.value) })}
             />
             <TextField
               label='Комментарии'
               value={newPayment.comments}
-              onChange={(e) =>
-                setNewPayment({ ...newPayment, comments: e.target.value })
-              }
+              onChange={(e) => setNewPayment({ ...newPayment, comments: e.target.value })}
               multiline
-              rows={3}
+              rows={2}
             />
-            <TextField
-              select
-              label='Статус'
-              value={newPayment.status}
-              onChange={(e) =>
-                setNewPayment({
-                  ...newPayment,
-                  status: e.target.value as
-                    | 'active'
-                    | 'overdue'
-                    | 'paid'
-                    | 'draft',
-                })
-              }
-              SelectProps={{
-                native: true,
-              }}
-            >
-              <option value='active'>Активно</option>
-              <option value='paid'>Оплачено</option>
-              <option value='overdue'>Просрочено</option>
-              <option value='draft'>Черновик</option>
-            </TextField>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseModal}>Отмена</Button>
-          <Button onClick={handleSavePayment} variant='contained'>
-            Сохранить
-          </Button>
+          <Button onClick={handleSavePayment} variant='contained' color="primary">Сохранить</Button>
         </DialogActions>
       </Dialog>
     </Box>

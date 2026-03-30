@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import moment from 'moment';
 import 'moment/locale/ru';
 import { useSnackbar } from 'notistack';
@@ -110,7 +110,200 @@ const ROLE_LABELS: Record<string, string> = {
   intern: 'Стажер',
 };
 
+const isWeekend = (date: Date): boolean => {
+  const dayOfWeek = date.getDay();
+  return dayOfWeek === 0 || dayOfWeek === 6;
+};
+
 const DAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+// Вспомогательный компонент для чипа смены, чтобы избежать инлайновых функций
+const ShiftChip = React.memo(({ shift, displayStatus, onEdit }: any) => {
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit(shift);
+  }, [shift, onEdit]);
+
+  return (
+    <Chip
+      label={STATUS_TEXT[displayStatus] || displayStatus}
+      size='small'
+      color={STATUS_COLORS[displayStatus] || 'default'}
+      sx={{ fontSize: '0.65rem' }}
+      onClick={handleClick}
+    />
+  );
+});
+
+// Мемоизированный компонент ячейки расписания
+const ScheduleCell = React.memo(({
+  staffId,
+  date,
+  dayShifts,
+  recordsForDay,
+  isHoliday,
+  weekend,
+  onCellClick,
+  onEditShift,
+}: any) => {
+  const dateStr = moment(date).format('YYYY-MM-DD');
+
+  const handleClick = useCallback(() => {
+    onCellClick(staffId, dateStr);
+  }, [onCellClick, staffId, dateStr]);
+
+  return (
+    <TableCell
+      align='center'
+      sx={{
+        p: 1,
+        backgroundColor: isHoliday ? '#ffebee' : (weekend ? '#f5f5f5' : 'inherit'),
+        border: '1px solid #e0e0e0',
+        width: '120px',
+        minHeight: '80px',
+        cursor: 'pointer',
+        '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' }
+      }}
+      onClick={handleClick}
+    >
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+        {dayShifts.map((shift: any) => {
+          // Находим соответствующую запись посещаемости для этой смены
+          const attendanceRecord = recordsForDay.find((r: any) => {
+            const rId = r.staffId?._id || r.staffId;
+            return rId === staffId;
+          });
+
+          // Логика определения статуса (взята из оригинального кода)
+          let displayStatus = shift.status;
+          if (attendanceRecord) {
+            if (attendanceRecord.actualStart && attendanceRecord.actualEnd) {
+              const lateMin = attendanceRecord.lateMinutes || 0;
+              displayStatus = lateMin >= 15 ? 'late' : 'completed';
+            } else if (attendanceRecord.actualStart && !attendanceRecord.actualEnd) {
+              const lateMin = attendanceRecord.lateMinutes || 0;
+              displayStatus = lateMin >= 15 ? 'late' : 'in_progress';
+            }
+          }
+
+          return (
+            <ShiftChip
+              key={shift.id || shift._id}
+              shift={shift}
+              displayStatus={displayStatus}
+              onEdit={onEditShift}
+            />
+          );
+        })}
+        {recordsForDay.map((record: any) => (
+          <Box key={record._id} sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3 }}>
+            {(record.lateMinutes ?? 0) > 0 && (
+              <Chip label={`Оп: ${record.lateMinutes}м`} size='small' color='error' variant='outlined' sx={{ fontSize: '0.6rem' }} />
+            )}
+            {(record.earlyLeaveMinutes ?? 0) > 0 && (
+              <Chip label={`Ух: ${record.earlyLeaveMinutes}м`} size='small' color='warning' variant='outlined' sx={{ fontSize: '0.6rem' }} />
+            )}
+            {record.actualStart && record.actualEnd && (
+              <Chip label="✓" size='small' color='success' variant='outlined' sx={{ fontSize: '0.6rem', minWidth: 'auto' }} />
+            )}
+            {record.actualStart && !record.actualEnd && (
+              <Chip label="На работе" size='small' color='success' variant='outlined' sx={{ fontSize: '0.6rem' }} />
+            )}
+          </Box>
+        ))}
+      </Box>
+    </TableCell>
+  );
+});
+
+// Мемоизированная строка расписания
+const ScheduleRow = React.memo(({
+  staffMember,
+  weekDays,
+  staffShifts,
+  staffAttendance,
+  holidays,
+  workingSaturdays,
+  selectedStaff,
+  onStaffToggle,
+  onCellClick,
+  onEditShift,
+  isWeekend,
+  ROLE_COLORS,
+  ROLE_LABELS,
+}: any) => {
+  const staffId = staffMember.id || staffMember._id;
+  if (!staffId) return null;
+  const isSelected = selectedStaff.includes(staffId);
+
+  const handleToggle = useCallback(() => {
+    onStaffToggle(staffId);
+  }, [onStaffToggle, staffId]);
+
+  // Группируем данные сотрудника по датам для быстрого доступа внутри строки
+  const shiftsByDate = useMemo(() => {
+    const map = new Map<string, any[]>();
+    staffShifts.forEach((s: any) => {
+      const dStr = moment(s.date).format('YYYY-MM-DD');
+      if (!map.has(dStr)) map.set(dStr, []);
+      map.get(dStr)!.push(s);
+    });
+    return map;
+  }, [staffShifts]);
+
+  const attendanceByDate = useMemo(() => {
+    const map = new Map<string, any[]>();
+    staffAttendance.forEach((r: any) => {
+      const dStr = moment(r.date).format('YYYY-MM-DD');
+      if (!map.has(dStr)) map.set(dStr, []);
+      map.get(dStr)!.push(r);
+    });
+    return map;
+  }, [staffAttendance]);
+
+  return (
+    <TableRow key={staffId} sx={{ backgroundColor: isSelected ? 'action.selected' : 'inherit' }}>
+      <TableCell>
+        <Box
+          display='flex'
+          alignItems='center'
+          sx={{ cursor: 'pointer' }}
+          onClick={handleToggle}
+        >
+          <Checkbox size='small' checked={isSelected} />
+          <Box>
+            <Typography variant='body2' fontWeight='bold'>{staffMember.fullName}</Typography>
+            <Typography variant='caption' sx={{ color: ROLE_COLORS[staffMember.role] || '#9e9e9e' }}>
+              {ROLE_LABELS[staffMember.role] || staffMember.role}
+            </Typography>
+          </Box>
+        </Box>
+      </TableCell>
+      {weekDays.map((date: Date) => {
+        const dateStr = moment(date).format('YYYY-MM-DD');
+        const dayShifts = shiftsByDate.get(dateStr) || [];
+        const recordsForDay = attendanceByDate.get(dateStr) || [];
+        const isHoliday = holidays.includes(dateStr);
+        const isWorkingSat = workingSaturdays.includes(dateStr);
+        const weekend = isWeekend(date) && !isWorkingSat;
+
+        return (
+          <ScheduleCell
+            key={date.toString()}
+            staffId={staffId}
+            date={date}
+            dayShifts={dayShifts}
+            recordsForDay={recordsForDay}
+            isHoliday={isHoliday}
+            weekend={weekend}
+            onCellClick={onCellClick}
+            onEditShift={onEditShift}
+          />
+        );
+      })}
+    </TableRow>
+  );
+});
 
 
 
@@ -131,6 +324,18 @@ const StaffSchedule: React.FC = () => {
   const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [nameFilter, setNameFilter] = useState('');
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      setNameFilter(value);
+    }, 500);
+  }, []);
 
 
   const [staff, setStaff] = useState<any[]>([]);
@@ -140,6 +345,26 @@ const StaffSchedule: React.FC = () => {
   const [holidays, setHolidays] = useState<string[]>([]);
   const [workingSaturdays, setWorkingSaturdays] = useState<string[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
+
+  const shiftsByStaff = useMemo(() => {
+    const map = new Map<string, any[]>();
+    shifts.forEach(shift => {
+      const sId = typeof shift.staffId === 'string' ? shift.staffId : (shift.staffId as any)?._id;
+      if (!map.has(sId)) map.set(sId, []);
+      map.get(sId)!.push(shift);
+    });
+    return map;
+  }, [shifts]);
+
+  const attendanceByStaff = useMemo(() => {
+    const map = new Map<string, any[]>();
+    attendanceRecords.forEach(record => {
+      const sId = typeof record.staffId === 'object' ? (record.staffId as any)?._id : record.staffId;
+      if (!map.has(sId)) map.set(sId, []);
+      map.get(sId)!.push(record);
+    });
+    return map;
+  }, [attendanceRecords]);
 
 
 
@@ -231,10 +456,6 @@ const StaffSchedule: React.FC = () => {
     setFilterRole(typeof value === 'string' ? value.split(',') : value);
   };
 
-  const isWeekend = (date: Date): boolean => {
-    const dayOfWeek = date.getDay();
-    return dayOfWeek === 0 || dayOfWeek === 6;
-  };
 
   const assignFiveTwoSchedule = async () => {
     try {
@@ -311,23 +532,23 @@ const StaffSchedule: React.FC = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev: any) => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
+  const handleSelectChange = useCallback((e: SelectChangeEvent<string>) => {
     const { name, value } = e.target;
     setFormData((prev: any) => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handleDateChange = (date: Date | null) => {
+  const handleDateChange = useCallback((date: Date | null) => {
     if (date) {
       setFormData((prev: any) => ({ ...prev, date: moment(date).format('YYYY-MM-DD') }));
     }
-  };
+  }, []);
 
-  const handleStaffSelect = (e: SelectChangeEvent<string>) => {
+  const handleStaffSelect = useCallback((e: SelectChangeEvent<string>) => {
     const staffId = e.target.value;
     const selectedS = staff.find((s) => (s.id || s._id) === staffId);
     setFormData((prev: any) => ({
@@ -335,7 +556,7 @@ const StaffSchedule: React.FC = () => {
       staffId,
       staffName: selectedS?.fullName || '',
     }));
-  };
+  }, [staff]);
 
   const validateForm = (): boolean => {
     const hasStaff = formData.staffId || selectedStaff.length > 0;
@@ -349,8 +570,26 @@ const StaffSchedule: React.FC = () => {
     }
     return true;
   };
+  const handleCloseModal = useCallback(() => {
+    setModalOpen(false);
+    setEditingShift(null);
+    setAssignmentType('single');
+    setAssignmentAction('create');
+    setFormData({
+      userId: '',
+      staffId: '',
+      staffName: '',
+      date: moment().format('YYYY-MM-DD'),
+      startDate: moment().format('YYYY-MM-DD'),
+      endDate: moment().format('YYYY-MM-DD'),
+      selectedDays: [1, 2, 3, 4, 5],
+      notes: '',
+      status: ShiftStatus.scheduled,
+      alternativeStaffId: '',
+    });
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (assignmentType === 'single' && !validateForm()) return;
     if (assignmentType === 'period' && (!formData.startDate || !formData.endDate)) {
@@ -459,9 +698,6 @@ const StaffSchedule: React.FC = () => {
           enqueueSnackbar(`Создано смен: ${shiftsToCreate.length}`, { variant: 'success' });
         } else {
           // УДАЛЕНИЕ в периоде
-          const weekStart = moment(currentDate).startOf('month').subtract(1, 'month');
-          const weekEnd = moment(currentDate).endOf('month').add(1, 'month');
-          // Проще всего получить смены за период и отфильтровать
           const currentShifts = await getShifts(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD'));
           const idsToDelete = currentShifts
             .filter(s => {
@@ -491,9 +727,9 @@ const StaffSchedule: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [assignmentType, validateForm, formData, selectedStaff, staff, editingShift, assignmentAction, shifts, currentDate, enqueueSnackbar, handleCloseModal]);
 
-  const handleEditShift = (shift: Shift) => {
+  const handleEditShift = useCallback((shift: Shift) => {
     const sId = typeof shift.staffId === 'string' ? shift.staffId : (shift.staffId as any)?._id;
     setFormData({
       userId: sId || '',
@@ -506,26 +742,8 @@ const StaffSchedule: React.FC = () => {
     });
     setEditingShift(shift);
     setModalOpen(true);
-  };
+  }, []);
 
-  const handleCloseModal = () => {
-    setModalOpen(false);
-    setEditingShift(null);
-    setAssignmentType('single');
-    setAssignmentAction('create');
-    setFormData({
-      userId: '',
-      staffId: '',
-      staffName: '',
-      date: moment().format('YYYY-MM-DD'),
-      startDate: moment().format('YYYY-MM-DD'),
-      endDate: moment().format('YYYY-MM-DD'),
-      selectedDays: [1, 2, 3, 4, 5],
-      notes: '',
-      status: ShiftStatus.scheduled,
-      alternativeStaffId: '',
-    });
-  };
 
   const weekStart = moment(currentDate).startOf('isoWeek');
   const weekEnd = moment(currentDate).endOf('isoWeek');
@@ -536,14 +754,35 @@ const StaffSchedule: React.FC = () => {
     day.add(1, 'day');
   }
 
-  const getShiftsForDay = (staffId: string, date: Date) => {
+  const handleCellClick = useCallback((staffId: string, dateStr: string) => {
+    const staffMember = staff.find((s) => (s.id || s._id) === staffId);
+    setFormData((prev: any) => ({
+      ...prev,
+      staffId,
+      staffName: staffMember?.fullName || '',
+      date: dateStr,
+    }));
+    setModalOpen(true);
+  }, [staff]);
+
+  const handleStaffToggle = useCallback((staffId: string) => {
+    setSelectedStaff(prev =>
+      prev.includes(staffId) ? prev.filter(id => id !== staffId) : [...prev, staffId]
+    );
+  }, []);
+
+  const handleEditShiftCallback = useCallback((shift: any) => {
+    handleEditShift(shift);
+  }, [handleEditShift]);
+
+  const getShiftsForDay = useCallback((staffId: string, date: Date) => {
     const compareDate = moment(date).format('YYYY-MM-DD');
     return shifts.filter((shift) => {
       const sId = typeof shift.staffId === 'string' ? shift.staffId : (shift.staffId as any)?._id;
       const sDate = moment(shift.date).format('YYYY-MM-DD');
       return sId === staffId && sDate === compareDate;
     });
-  };
+  }, [shifts]);
 
   // Функция для вычисления "отображаемого" статуса на основе данных посещаемости
   const getDisplayStatus = (shift: any, attendanceRecord: any): ShiftStatus => {
@@ -586,12 +825,14 @@ const StaffSchedule: React.FC = () => {
     );
   }
 
-  const filteredStaff = staff.filter((s) => {
-    const matchesSearch = !searchTerm || s.fullName.toLowerCase().includes(searchTerm.toLowerCase());
-    const roleLabel = ROLE_LABELS[s.role as string] || s.role;
-    const matchesRole = filterRole.length === 0 || filterRole.includes(roleLabel);
-    return matchesSearch && matchesRole && s.active;
-  });
+  const filteredStaff = useMemo(() => {
+    return staff.filter((s) => {
+      const matchesSearch = !nameFilter || s.fullName.toLowerCase().includes(nameFilter.toLowerCase());
+      const roleLabel = ROLE_LABELS[s.role as string] || s.role;
+      const matchesRole = filterRole.length === 0 || filterRole.includes(roleLabel);
+      return matchesSearch && matchesRole && s.active;
+    });
+  }, [staff, nameFilter, filterRole]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale="ru">
@@ -656,7 +897,7 @@ const StaffSchedule: React.FC = () => {
                 variant='outlined'
                 size='small'
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange}
                 sx={{ flexGrow: 1, minWidth: '200px' }}
                 InputProps={{
                   startAdornment: (
@@ -722,111 +963,25 @@ const StaffSchedule: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredStaff.map((staffMember) => {
-                    const staffId = staffMember.id || staffMember._id;
-                    if (!staffId) return null;
-                    const isSelected = selectedStaff.includes(staffId);
-                    return (
-                      <TableRow key={staffId} sx={{ backgroundColor: isSelected ? 'action.selected' : 'inherit' }}>
-                        <TableCell>
-                          <Box
-                            display='flex'
-                            alignItems='center'
-                            sx={{ cursor: 'pointer' }}
-                            onClick={() => {
-                              setSelectedStaff(prev =>
-                                prev.includes(staffId) ? prev.filter(id => id !== staffId) : [...prev, staffId]
-                              );
-                            }}
-                          >
-                            <Checkbox size='small' checked={isSelected} />
-                            <Box>
-                              <Typography variant='body2' fontWeight='bold'>{staffMember.fullName}</Typography>
-                              <Typography variant='caption' sx={{ color: ROLE_COLORS[staffMember.role as string] || '#9e9e9e' }}>
-                                {ROLE_LABELS[staffMember.role as string] || staffMember.role}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </TableCell>
-                        {weekDays.map((date) => {
-                          const dayShifts = getShiftsForDay(staffId, date);
-                          const dateStr = moment(date).format('YYYY-MM-DD');
-                          const recordsForDay = attendanceRecords.filter(r => {
-                            const rId = r.staffId?._id || r.staffId;
-                            return rId === staffId && moment(r.date).format('YYYY-MM-DD') === dateStr;
-                          });
-                          const isHoliday = holidays.includes(dateStr);
-                          const isWorkingSat = workingSaturdays.includes(dateStr);
-                          const weekend = isWeekend(date) && !isWorkingSat;
+                  {filteredStaff.map((staffMember) => (
+                    <ScheduleRow
+                      key={staffMember.id || staffMember._id}
+                      staffMember={staffMember}
+                      weekDays={weekDays}
+                      staffShifts={shiftsByStaff.get(staffMember.id || staffMember._id) || []}
+                      staffAttendance={attendanceByStaff.get(staffMember.id || staffMember._id) || []}
+                      holidays={holidays}
+                      workingSaturdays={workingSaturdays}
+                      selectedStaff={selectedStaff}
+                      onStaffToggle={handleStaffToggle}
+                      onCellClick={handleCellClick}
+                      onEditShift={handleEditShiftCallback}
+                      isWeekend={isWeekend}
+                      ROLE_COLORS={ROLE_COLORS}
+                      ROLE_LABELS={ROLE_LABELS}
+                    />
+                  ))}
 
-                          return (
-                            <TableCell
-                              key={date.toString()}
-                              align='center'
-                              sx={{
-                                p: 1,
-                                backgroundColor: isHoliday ? '#ffebee' : (weekend ? '#f5f5f5' : 'inherit'),
-                                border: '1px solid #e0e0e0',
-                                width: '120px',
-                                minHeight: '80px',
-                                cursor: 'pointer',
-                                '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' }
-                              }}
-                              onClick={() => {
-                                setFormData({
-                                  ...formData,
-                                  staffId,
-                                  staffName: staffMember.fullName,
-                                  date: dateStr,
-                                });
-                                setModalOpen(true);
-                              }}
-                            >
-                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                {dayShifts.map((shift) => {
-                                  // Находим соответствующую запись посещаемости для этой смены
-                                  const attendanceRecord = recordsForDay.find(r => {
-                                    const rId = r.staffId?._id || r.staffId;
-                                    return rId === staffId;
-                                  });
-                                  const displayStatus = getDisplayStatus(shift, attendanceRecord);
-                                  return (
-                                    <Chip
-                                      key={shift.id || shift._id}
-                                      label={STATUS_TEXT[displayStatus] || displayStatus}
-                                      size='small'
-                                      color={STATUS_COLORS[displayStatus] || 'default'}
-                                      sx={{ fontSize: '0.65rem' }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleEditShift(shift);
-                                      }}
-                                    />
-                                  );
-                                })}
-                                {recordsForDay.map((record) => (
-                                  <Box key={record._id} sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3 }}>
-                                    {(record.lateMinutes ?? 0) > 0 && (
-                                      <Chip label={`Оп: ${record.lateMinutes}м`} size='small' color='error' variant='outlined' sx={{ fontSize: '0.6rem' }} />
-                                    )}
-                                    {(record.earlyLeaveMinutes ?? 0) > 0 && (
-                                      <Chip label={`Ух: ${record.earlyLeaveMinutes}м`} size='small' color='warning' variant='outlined' sx={{ fontSize: '0.6rem' }} />
-                                    )}
-                                    {record.actualStart && record.actualEnd && (
-                                      <Chip label="✓" size='small' color='success' variant='outlined' sx={{ fontSize: '0.6rem', minWidth: 'auto' }} />
-                                    )}
-                                    {record.actualStart && !record.actualEnd && (
-                                      <Chip label="На работе" size='small' color='success' variant='outlined' sx={{ fontSize: '0.6rem' }} />
-                                    )}
-                                  </Box>
-                                ))}
-                              </Box>
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    );
-                  })}
                 </TableBody>
               </Table>
             </TableContainer>

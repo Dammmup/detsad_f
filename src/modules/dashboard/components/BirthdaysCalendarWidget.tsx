@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -10,12 +10,19 @@ import {
   ClickAwayListener,
   Chip,
   Paper,
+  IconButton,
 } from '@mui/material';
+import { Add as AddIcon, Event as EventIcon } from '@mui/icons-material';
 import moment from 'moment';
 import 'moment/locale/ru';
 import { useDate } from '../../../app/context/DateContext';
+import { useAuth } from '../../../app/context/AuthContext';
 import { Child } from '../../../shared/types/common';
+import { CalendarEvent, CalendarEventCreate } from '../../../shared/types/calendar';
 import childrenApi from '../../children/services/children';
+import calendarEventsApi from '../services/calendarEvents';
+import { getKindergartenSettings, KindergartenSettings } from '../../settings/services/settings';
+import EventDialog from './EventDialog';
 
 moment.locale('ru');
 
@@ -24,7 +31,7 @@ interface BirthdayAvatarProps {
   currentYear: number;
 }
 
-const BirthdayAvatar: React.FC<BirthdayAvatarProps> = ({
+const BirthdayAvatar: React.FC<BirthdayAvatarProps> = React.memo(({
   child,
   currentYear,
 }) => {
@@ -52,7 +59,7 @@ const BirthdayAvatar: React.FC<BirthdayAvatarProps> = ({
 
   return (
     <ClickAwayListener onClickAway={handleTooltipClose}>
-      <div>
+      <div style={{ display: 'inline-block' }}>
         <Tooltip
           PopperProps={{
             disablePortal: true,
@@ -65,10 +72,11 @@ const BirthdayAvatar: React.FC<BirthdayAvatarProps> = ({
           title={
             <Box>
               <Typography variant='body2'>{child.fullName}</Typography>
-              <Typography variant='caption' color='textSecondary'>
+              <Typography variant='caption'>
                 Группа: {getGroupName(child.groupId)}
               </Typography>
-              <Typography variant='caption' color='textSecondary'>
+              <br />
+              <Typography variant='caption' >
                 Исполнится: {calculateAge(child.birthday as any, currentYear)}{' '}
                 лет
               </Typography>
@@ -77,7 +85,10 @@ const BirthdayAvatar: React.FC<BirthdayAvatarProps> = ({
           arrow
         >
           <Avatar
-            onClick={handleTooltipOpen}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleTooltipOpen();
+            }}
             src={child.photo || undefined}
             alt={child.fullName}
             sx={{
@@ -95,69 +106,144 @@ const BirthdayAvatar: React.FC<BirthdayAvatarProps> = ({
       </div>
     </ClickAwayListener>
   );
-};
+});
 
 interface BirthdaysCalendarWidgetProps {
   onBirthdaysChange?: () => void;
 }
 
-const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = () => {
+const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = React.memo(() => {
   const { currentDate } = useDate();
+  const { user } = useAuth();
   const [children, setChildren] = useState<Child[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [settings, setSettings] = useState<KindergartenSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Состояние для диалога
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  const canManageEvents = user?.role === 'admin' || user?.role === 'manager';
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const startOfMonth = moment(currentDate).startOf('month').toISOString();
+      const endOfMonth = moment(currentDate).endOf('month').toISOString();
+
+      const [childrenList, eventsList, settingsData] = await Promise.all([
+        childrenApi.getAll(),
+        calendarEventsApi.getAll({ startDate: startOfMonth, endDate: endOfMonth }),
+        getKindergartenSettings()
+      ]);
+
+      setChildren(childrenList);
+      setCalendarEvents(eventsList);
+      setSettings(settingsData);
+    } catch (err: any) {
+      setError(err.message || 'Ошибка загрузки данных');
+      console.error('Error fetching calendar data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentDate]);
 
   useEffect(() => {
-    const fetchChildren = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const childrenList = await childrenApi.getAll();
-        setChildren(childrenList);
-      } catch (err: any) {
-        setError(err.message || 'Ошибка загрузки данных');
-        console.error('Error fetching children:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchData();
+  }, [fetchData]);
 
-    fetchChildren();
-  }, []);
-
-
-  const getChildrenWithBirthdays = (date: Date) => {
-    const start = moment(date).startOf('month');
-    const end = moment(date).endOf('month');
+  const daysData = useMemo(() => {
+    const start = moment(currentDate).startOf('month');
+    const end = moment(currentDate).endOf('month');
     const daysInMonth: Date[] = [];
 
-    let day = start.clone();
-    while (day.isSameOrBefore(end)) {
-      daysInMonth.push(day.toDate());
-      day.add(1, 'day');
+    let dayTemp = start.clone();
+    while (dayTemp.isSameOrBefore(end)) {
+      daysInMonth.push(dayTemp.toDate());
+      dayTemp.add(1, 'day');
     }
 
     return daysInMonth.map((dayDate) => {
+      const currentDayMoment = moment(dayDate);
+      const dayStr = currentDayMoment.format('YYYY-MM-DD');
+
+      // Дети с днем рождения
       const childrenWithBirthday = children.filter((child) => {
         if (!child.birthday) return false;
         const birth = moment(child.birthday);
-        const currentDayMoment = moment(dayDate);
         return (
           birth.date() === currentDayMoment.date() &&
           birth.month() === currentDayMoment.month()
         );
       });
 
-      return { day: dayDate, children: childrenWithBirthday };
+      // События этого дня
+      const dayEvents = calendarEvents.filter(e => 
+        moment(e.date).isSame(currentDayMoment, 'day')
+      );
+
+      // Проверка на выходной/праздник
+      // 0 - Пн, 1 - Вт... 5 - Сб, 6 - Вс в ISO. Moment.js: 1 - Пн... 7 - Вс (isoWeekday)
+      const dayOfWeek = currentDayMoment.isoWeekday().toString(); // "1" - "7"
+      
+      // Если настройки еще не загружены или список рабочих дней пуст, используем стандарт Пн-Пт (1-5)
+      const workingDays = settings?.workingDays?.length ? settings.workingDays : ['1', '2', '3', '4', '5'];
+      const isWeekend = !workingDays.includes(dayOfWeek);
+      
+      const isHolidayInSettings = settings?.holidays?.includes(dayStr);
+      const isManualHoliday = dayEvents.some(e => e.type === 'holiday');
+
+      return { 
+        day: dayDate, 
+        children: childrenWithBirthday,
+        events: dayEvents,
+        isNonWorkingDay: isWeekend || isHolidayInSettings || isManualHoliday
+      };
     });
+  }, [children, calendarEvents, settings, currentDate]);
+
+  const startWeekDay = useMemo(() => (moment(currentDate).startOf('month').day() + 6) % 7, [currentDate]);
+
+  const handleDayClick = (dayDate: Date, existingEvent?: CalendarEvent) => {
+    if (!canManageEvents) return;
+    
+    if (existingEvent) {
+      setSelectedEvent(existingEvent);
+      setSelectedDate(null);
+    } else {
+      setSelectedEvent(null);
+      setSelectedDate(dayDate);
+    }
+    setDialogOpen(true);
   };
 
-  const daysWithBirthdays = getChildrenWithBirthdays(currentDate);
-  // Moment.js day(): 0=Sun, 1=Mon, ..., 6=Sat
-  // We want Mon=0, ..., Sun=6 for grid offset if we start week on Mon
-  // actually standard formula (day + 6) % 7 converts Sun(0)->6, Mon(1)->0
-  const startWeekDay = (moment(currentDate).startOf('month').day() + 6) % 7;
+  const handleSaveEvent = async (eventData: CalendarEventCreate) => {
+    try {
+      if (selectedEvent) {
+        await calendarEventsApi.update(selectedEvent._id || selectedEvent.id!, eventData);
+      } else {
+        await calendarEventsApi.create(eventData);
+      }
+      fetchData();
+    } catch (error) {
+      console.error('Failed to save event:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    try {
+      await calendarEventsApi.delete(id);
+      fetchData();
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+      throw error;
+    }
+  };
 
   return (
     <Card
@@ -178,7 +264,6 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = () => {
       <CardContent
         sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2 }}
       >
-        {/* === Заголовок === */}
         <Box
           sx={{
             display: 'flex',
@@ -189,154 +274,140 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = () => {
             borderBottom: '1px solid #dee2e6',
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}></Box>
+          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+            Календарь событий
+          </Typography>
         </Box>
 
-        {/* === Ошибка / загрузка === */}
         {error && (
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              flexGrow: 1,
-            }}
-          >
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
             <Typography color='error'>{error}</Typography>
           </Box>
         )}
 
         {loading ? (
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              flexGrow: 1,
-            }}
-          >
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
             <Typography>Загрузка...</Typography>
           </Box>
         ) : (
           <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-            {/* === Заголовки дней недели === */}
             <Grid container spacing={0.5} sx={{ mb: 1 }}>
               {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((day, index) => (
                 <Grid item xs={12 / 7} key={index} sx={{ textAlign: 'center' }}>
-                  <Typography
-                    variant='caption'
-                    color='textSecondary'
-                    sx={{ fontWeight: 'bold' }}
-                  >
+                  <Typography variant='caption' color='textSecondary' sx={{ fontWeight: 'bold' }}>
                     {day}
                   </Typography>
                 </Grid>
               ))}
             </Grid>
 
-            {/* === Календарь === */}
             <Box sx={{ flexGrow: 1 }}>
               <Grid container spacing={0.5}>
-                {/* Пустые ячейки в начале месяца */}
                 {Array.from({ length: startWeekDay }).map((_, idx) => (
                   <Grid item xs={12 / 7} key={`empty-${idx}`} />
                 ))}
 
-                {daysWithBirthdays.map((dayData, index) => {
+                {daysData.map((dayData, index) => {
                   const day = dayData.day;
                   const isCurrentMonth = moment(day).isSame(currentDate, 'month');
                   const hasBirthdays = dayData.children.length > 0;
                   const isToday = moment(day).isSame(new Date(), 'day');
+                  const isNonWorking = dayData.isNonWorkingDay;
+                  const dayEvents = dayData.events;
 
                   return (
                     <Grid item xs={12 / 7} key={index}>
                       <Paper
                         elevation={0}
+                        onClick={() => handleDayClick(day)}
                         sx={{
-                          height: 110,
+                          height: 120,
                           display: 'flex',
                           flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'flex-start',
                           p: 0.5,
-                          backgroundColor: hasBirthdays ? '#e8f5e9' : 'inherit',
-                          border: hasBirthdays
-                            ? '2px solid #4caf50'
-                            : '1px solid #e0e0e0',
+                          backgroundColor: isNonWorking ? '#ffebee' : (hasBirthdays ? '#e8f5e9' : 'inherit'),
+                          border: isToday ? '2px solid #1976d2' : '1px solid #f0f0f0',
                           borderRadius: 1,
-                          opacity: isCurrentMonth ? 1 : 0.5,
+                          opacity: isCurrentMonth ? 1 : 0.4,
                           position: 'relative',
+                          cursor: canManageEvents ? 'pointer' : 'default',
+                          '&:hover': canManageEvents ? {
+                            backgroundColor: isNonWorking ? '#ffcdd2' : '#f5f5f5',
+                            borderColor: 'primary.main'
+                          } : {}
                         }}
                       >
-                        <Typography
-                          variant='caption'
-                          sx={{
-                            fontWeight: isToday
-                              ? 'bold'
-                              : 'normal',
-                            color: isToday
-                              ? 'primary.main'
-                              : 'inherit',
-                            alignSelf: 'flex-start',
-                            mb: 0.5,
-                          }}
-                        >
-                          {moment(day).format('D')}
-                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <Typography
+                            variant='caption'
+                            sx={{
+                              fontWeight: isToday ? 'bold' : 'normal',
+                              color: isNonWorking ? '#d32f2f' : (isToday ? 'primary.main' : 'inherit'),
+                            }}
+                          >
+                            {moment(day).format('D')}
+                          </Typography>
+                          
+                          {canManageEvents && !dayEvents.length && (
+                            <AddIcon sx={{ fontSize: 14, opacity: 0, '.MuiPaper-root:hover &': { opacity: 0.5 } }} />
+                          )}
+                        </Box>
 
-                        {/* Фото детей */}
+                        {/* Праздники и события */}
+                        <Box sx={{ mt: 0.5, mb: 0.5, width: '100%', overflow: 'hidden' }}>
+                          {dayEvents.map((evt) => (
+                            <Tooltip key={evt._id || evt.id} title={evt.title}>
+                              <Box
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDayClick(day, evt);
+                                }}
+                                sx={{
+                                  backgroundColor: evt.type === 'holiday' ? '#ef5350' : '#42a5f5',
+                                  color: 'white',
+                                  padding: '1px 4px',
+                                  borderRadius: '2px',
+                                  fontSize: '0.65rem',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  mb: 0.2,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {evt.title}
+                              </Box>
+                            </Tooltip>
+                          ))}
+                        </Box>
+
+                        {/* Фото именинников */}
                         <Box
                           sx={{
                             display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            width: '100%',
+                            flexWrap: 'wrap',
+                            gap: 0.2,
+                            justifyContent: 'center'
                           }}
                         >
-                          {dayData.children.slice(0, 3).map((child) => (
+                          {dayData.children.slice(0, 4).map((child) => (
                             <BirthdayAvatar
                               key={child._id || child.id}
                               child={child}
                               currentYear={currentDate.getFullYear()}
                             />
                           ))}
-
-                          {dayData.children.length > 3 && (
-                            <Chip
-                              label={`+${dayData.children.length - 3}`}
-                              size='small'
-                              sx={{
-                                height: 16,
-                                fontSize: '0.5rem',
-                                minWidth: 16,
-                                mt: 0.5,
-                              }}
-                            />
+                          {dayData.children.length > 4 && (
+                            <Typography sx={{ fontSize: '0.6rem' }}>
+                              +{dayData.children.length - 4}
+                            </Typography>
                           )}
                         </Box>
 
-                        {/* Индикатор 🎂 */}
+                        {/* Индикатор торта */}
                         {hasBirthdays && (
-                          <Box
-                            sx={{
-                              position: 'absolute',
-                              bottom: 2,
-                              left: 0,
-                              right: 0,
-                              display: 'flex',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            <Typography
-                              variant='caption'
-                              sx={{
-                                fontSize: '0.6rem',
-                                color: '#4caf50',
-                                fontWeight: 'bold',
-                              }}
-                            >
-                              🎂
-                            </Typography>
+                          <Box sx={{ position: 'absolute', bottom: 1, right: 2 }}>
+                            <Typography variant='caption' sx={{ fontSize: '0.7rem' }}>🎂</Typography>
                           </Box>
                         )}
                       </Paper>
@@ -348,8 +419,17 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = () => {
           </Box>
         )}
       </CardContent>
+
+      <EventDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSave={handleSaveEvent}
+        onDelete={handleDeleteEvent}
+        event={selectedEvent}
+        selectedDate={selectedDate}
+      />
     </Card>
   );
-};
+});
 
 export default BirthdaysCalendarWidget;

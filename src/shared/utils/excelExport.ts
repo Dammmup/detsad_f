@@ -420,7 +420,7 @@ export const exportChildrenAttendance = async (
     const childId = child._id || child.id;
     const row: (string | null)[] = [
       child.fullName || '',
-      child.groupName || '',
+      child.groupName || (typeof child.groupId === 'object' ? child.groupId?.name : groupName),
     ];
     let plus = 0,
       minus = 0,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   getUsers,
   updateUser,
@@ -118,16 +118,95 @@ const defaultForm: StaffMember = {
   allowToSeePayroll: false,
 };
 
+
+
+const StaffRow = React.memo(({
+  member,
+  currentUser,
+  translateRole,
+  handleOpenModal,
+  handleDelete
+}: {
+  member: any;
+  currentUser: any;
+  translateRole: (role: string) => string;
+  handleOpenModal: (member: StaffMember) => void;
+  handleDelete: (member: StaffMember) => void;
+}) => {
+  return (
+    <TableRow key={member.id}>
+      <TableCell>{member.fullName}</TableCell>
+      <TableCell>{member.iin || '—'}</TableCell>
+      <TableCell>{translateRole(member.role || '')}</TableCell>
+      <TableCell>
+        <Box display='flex' flexDirection='column'>
+          {member.phone && (
+            <Box display='flex' alignItems='center'>
+              <Phone fontSize='small' style={{ marginRight: 4, opacity: 0.6 }} />
+              {member.phone}
+            </Box>
+          )}
+          {member.email && (
+            <Box display='flex' alignItems='center'>
+              <Email fontSize='small' style={{ marginRight: 4, opacity: 0.6 }} />
+              {member.email}
+            </Box>
+          )}
+        </Box>
+      </TableCell>
+      {currentUser?.role === 'admin' ? (
+        <TableCell>{member.initialPassword || '—'}</TableCell>
+      ) : (
+        <TableCell>—</TableCell>
+      )}
+      <TableCell>
+        <Chip
+          label={member.active ? 'Активен' : 'Неактивен'}
+          color={member.active ? 'success' : 'default'}
+          size='small'
+        />
+      </TableCell>
+      <TableCell>
+        {member.lastLogin
+          ? new Date(member.lastLogin).toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+          : '—'}
+      </TableCell>
+      <TableCell align='right'>
+        <AuditLogButton entityType="staff" entityId={member._id} entityName={member.fullName} />
+        <Tooltip title='Редактировать'>
+          <IconButton onClick={() => handleOpenModal(member)}>
+            <Edit />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title='Удалить'>
+          <IconButton onClick={() => handleDelete(member)}>
+            <Delete color='error' />
+          </IconButton>
+        </Tooltip>
+      </TableCell>
+    </TableRow>
+  );
+});
+
 const Staff = () => {
   const [staff, setStaff] = useState<any[]>([]);
-  const [filteredStaff, setFilteredStaff] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<StaffMember>(defaultForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [localSearchTerm, setLocalSearchTerm] = useState('');
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [activeTab, setActiveTab] = useState<'active' | 'inactive' | 'external'>('active');
@@ -135,6 +214,13 @@ const Staff = () => {
 
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
+  const handleSearchChange = (val: string) => {
+    setLocalSearchTerm(val);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      setSearchTerm(val);
+    }, 500);
+  };
 
   useEffect(() => {
     let roles: string[] = [];
@@ -153,12 +239,10 @@ const Staff = () => {
     getUsers(includePasswords)
       .then((data) => {
         setStaff(data);
-        setFilteredStaff(data);
       })
       .catch((err) => setError(err?.message || 'Ошибка загрузки'))
       .finally(() => setLoading(false));
   }, [currentUser?.role]);
-
 
   const fetchGroups = async () => {
     try {
@@ -173,12 +257,10 @@ const Staff = () => {
     fetchGroups();
   }, [fetchStaff]);
 
-
-  useEffect(() => {
-    if (!staff.length) return;
+  const filteredStaff = useMemo(() => {
+    if (!staff.length) return [];
 
     let filtered = staff;
-
     const externalRoles = EXTERNAL_ROLES;
 
     if (activeTab === 'external') {
@@ -186,7 +268,6 @@ const Staff = () => {
     } else if (activeTab === 'inactive') {
       filtered = staff.filter((member) => member.active === false && !externalRoles.includes(member.role as any));
     } else {
-      // active
       filtered = staff.filter((member) => member.active !== false && !externalRoles.includes(member.role as any));
     }
 
@@ -210,26 +291,24 @@ const Staff = () => {
       });
     }
 
-    setFilteredStaff(filtered);
+    return filtered;
   }, [staff, searchTerm, filterRole, activeTab]);
 
-  const handleOpenModal = (member?: StaffMember) => {
+  const handleOpenModal = useCallback((member?: StaffMember) => {
     setForm(member ? { ...member, allowToSeePayroll: member.allowToSeePayroll || false } : defaultForm);
     setEditId(member?.id || null);
     setModalOpen(true);
-  };
+  }, []);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setModalOpen(false);
     setForm(defaultForm);
     setEditId(null);
-  };
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
-
-
     if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -246,32 +325,24 @@ const Staff = () => {
     }));
   };
 
-
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
     const { value } = event.target;
     setFilterRole(typeof value === 'string' ? value.split(',') : value);
   };
 
-
   const validateForm = () => {
     const errors: { [key: string]: string } = {};
-
     if (!form.fullName) errors.fullName = 'ФИО обязательно';
     if (!form.role) errors.role = 'Должность обязательна';
     if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) {
       errors.email = 'Неверный формат email';
     }
-
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSave = async () => {
-
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validateForm()) return;
     setSaving(true);
     try {
       if (editId) {
@@ -280,11 +351,9 @@ const Staff = () => {
           salary: form.salary,
           salaryType: form.salaryType,
         });
-        // Обновляем поле allowToSeePayroll отдельно
         await usersApi.updateAllowToSeePayroll(editId, !!form.allowToSeePayroll);
         handleCloseModal();
       } else {
-
         await createUser(form);
         handleCloseModal();
       }
@@ -296,30 +365,24 @@ const Staff = () => {
     }
   };
 
-  const handleDelete = async (member: StaffMember) => {
-    if (!member.id) {
-      console.error('ID is undefined for deletion');
-      return;
-    }
+  const handleDelete = useCallback(async (member: StaffMember) => {
+    if (!member.id) return;
     if (!window.confirm('Удалить сотрудника?')) return;
     setSaving(true);
     try {
-      console.log('Attempting to delete user with ID:', member.id);
       await deleteUser(member.id);
       fetchStaff();
     } catch (e: any) {
-      console.error('Error during deletion:', e);
       alert(e?.response?.data?.message || 'Ошибка удаления');
     } finally {
       setSaving(false);
     }
-  };
+  }, [fetchStaff]);
 
   const handleExport = async (
     exportType: string,
     exportFormat: 'excel',
   ) => {
-
     const params = activeTab === 'external'
       ? { name: searchTerm, type: 'external' }
       : {
@@ -372,11 +435,11 @@ const Staff = () => {
         {/* Поиск и фильтры */}
         <Box mb={3} display='flex' flexWrap='wrap' gap={2} alignItems='center'>
           <TextField
-            placeholder='Поиск сотрудников...'
+            placeholder='Поиск сотрудников (быстрый поиск)...'
             variant='outlined'
             size='small'
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={localSearchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
             sx={{ flexGrow: 1, minWidth: '200px' }}
             InputProps={{
               startAdornment: (
@@ -484,69 +547,14 @@ const Staff = () => {
                 </TableHead>
                 <TableBody>
                   {filteredStaff.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell>{member.fullName}</TableCell>
-                      <TableCell>{member.iin || '—'}</TableCell>
-                      <TableCell>{translateRole(member.role || '')}</TableCell>
-                      <TableCell>
-                        <Box display='flex' flexDirection='column'>
-                          {member.phone && (
-                            <Box display='flex' alignItems='center'>
-                              <Phone
-                                fontSize='small'
-                                style={{ marginRight: 4, opacity: 0.6 }}
-                              />
-                              {member.phone}
-                            </Box>
-                          )}
-                          {member.email && (
-                            <Box display='flex' alignItems='center'>
-                              <Email
-                                fontSize='small'
-                                style={{ marginRight: 4, opacity: 0.6 }}
-                              />
-                              {member.email}
-                            </Box>
-                          )}
-                        </Box>
-                      </TableCell>
-                      {currentUser?.role === 'admin' ? (
-                        <TableCell>{member.initialPassword || '—'}</TableCell>
-                      ) : (
-                        <TableCell>—</TableCell>
-                      )}
-                      <TableCell>
-                        <Chip
-                          label={member.active ? 'Активен' : 'Неактивен'}
-                          color={member.active ? 'success' : 'default'}
-                          size='small'
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {member.lastLogin
-                          ? new Date(member.lastLogin).toLocaleString('ru-RU', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                          : '—'}
-                      </TableCell>
-                      <TableCell align='right'>
-                        <AuditLogButton entityType="staff" entityId={member._id} entityName={member.fullName} />
-                        <Tooltip title='Редактировать'>
-                          <IconButton onClick={() => handleOpenModal(member)}>
-                            <Edit />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title='Удалить'>
-                          <IconButton onClick={() => handleDelete(member)}>
-                            <Delete color='error' />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
+                    <StaffRow
+                      key={member.id || member._id}
+                      member={member}
+                      currentUser={currentUser}
+                      translateRole={translateRole}
+                      handleOpenModal={handleOpenModal}
+                      handleDelete={handleDelete}
+                    />
                   ))}
                 </TableBody>
               </Table>

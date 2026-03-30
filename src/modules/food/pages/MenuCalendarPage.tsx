@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Box, Paper, Typography, Grid, Dialog, DialogTitle, DialogContent,
     DialogActions, Button, Alert, Chip, Divider, IconButton,
@@ -31,6 +31,63 @@ interface IMenuItem {
         unit: string;
     }>;
 }
+
+// Мемоизированный компонент ячейки календаря
+const CalendarDayCell = React.memo(({
+    date,
+    isCurrentMonth,
+    dateMenu,
+    isSelected,
+    onClick
+}: {
+    date: Date;
+    isCurrentMonth: boolean;
+    dateMenu?: DailyMenuType;
+    isSelected: boolean;
+    onClick: (date: Date) => void;
+}) => {
+    const hasMenu = !!dateMenu;
+
+    return (
+        <Grid item xs={12 / 7}>
+            <Box
+                sx={{
+                    minHeight: 100, p: 1, borderRight: '1px solid #e0e0e0',
+                    borderBottom: '1px solid #e0e0e0',
+                    backgroundColor: isCurrentMonth ? (isSelected ? '#e3f2fd' : hasMenu ? '#f0f8ff' : 'inherit') : '#fafafa',
+                    cursor: isCurrentMonth ? 'pointer' : 'default',
+                    '&:hover': { backgroundColor: isCurrentMonth && !isSelected ? '#f0f8ff' : 'inherit' }
+                }}
+                onClick={() => isCurrentMonth && onClick(date)}
+            >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                    <Typography variant="body2" sx={{
+                        fontWeight: isCurrentMonth ? 'normal' : 'light',
+                        color: isCurrentMonth ? 'inherit' : 'text.disabled'
+                    }}>{date.getDate()}</Typography>
+                    {hasMenu && <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'primary.main', ml: 0.5 }} />}
+                </Box>
+
+                {isCurrentMonth && hasMenu && dateMenu && (
+                    <>
+                        {dateMenu.meals?.breakfast?.dishes?.length > 0 && (
+                            <Typography variant="caption" noWrap sx={{ display: 'block' }}>🥣 {dateMenu.meals.breakfast.dishes[0]?.name}</Typography>
+                        )}
+                        {dateMenu.meals?.lunch?.dishes?.length > 0 && (
+                            <Typography variant="caption" noWrap sx={{ display: 'block' }}>🍲 {dateMenu.meals.lunch.dishes[0]?.name}</Typography>
+                        )}
+                        {dateMenu.meals?.snack?.dishes?.length > 0 && (
+                            <Typography variant="caption" noWrap sx={{ display: 'block' }}>🍰 {dateMenu.meals.snack.dishes[0]?.name}</Typography>
+                        )}
+                        {dateMenu.meals?.dinner?.dishes?.length > 0 && (
+                            <Typography variant="caption" noWrap sx={{ display: 'block' }}>🥗 {dateMenu.meals.dinner.dishes[0]?.name}</Typography>
+                        )}
+                    </>
+                )}
+            </Box>
+        </Grid>
+    );
+});
 
 const MenuCalendarPage: React.FC = () => {
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -82,26 +139,47 @@ const MenuCalendarPage: React.FC = () => {
         fetchTemplates();
     }, [currentDate]);
 
-    // Get menu for selected date
-    const getMenuForDate = (date: Date): DailyMenuType | undefined => {
-        const dateString = format(date, 'yyyy-MM-dd');
-        return dailyMenus.find(menu => {
+    const handlePrevMonth = useCallback(() => {
+        setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1));
+    }, []);
+
+    const handleNextMonth = useCallback(() => {
+        setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1));
+    }, []);
+
+    // Index menus by date for O(1) lookup
+    const indexedMenus = useMemo(() => {
+        const index: Record<string, DailyMenuType> = {};
+        dailyMenus.forEach(menu => {
             try {
-                return format(new Date(menu.date), 'yyyy-MM-dd') === dateString;
+                const dateKey = format(new Date(menu.date), 'yyyy-MM-dd');
+                index[dateKey] = menu;
             } catch (e) {
-                return menu.date.startsWith(dateString);
+                const dateKey = menu.date.split('T')[0];
+                index[dateKey] = menu;
             }
         });
-    };
+        return index;
+    }, [dailyMenus]);
+
+    // Get menu for selected date
+    const getMenuForDate = useCallback((date: Date): DailyMenuType | undefined => {
+        const dateString = format(date, 'yyyy-MM-dd');
+        return indexedMenus[dateString];
+    }, [indexedMenus]);
 
     // Close dialog
-    const handleCloseDialog = () => {
+    const handleCloseDialog = useCallback(() => {
         setSelectedDate(null);
         setSelectedTemplateId('');
-    };
+    }, []);
+
+    const selectedMenu = useMemo(() => 
+        selectedDate ? getMenuForDate(selectedDate) : null
+    , [selectedDate, getMenuForDate]);
 
     // Handle delete menu
-    const handleDeleteMenu = async () => {
+    const handleDeleteMenu = useCallback(async () => {
         if (!selectedMenu || !selectedMenu._id) return;
 
         if (!window.confirm('Вы уверены, что хотите удалить меню на этот день?')) {
@@ -116,10 +194,10 @@ const MenuCalendarPage: React.FC = () => {
         } catch (err) {
             toast.error('Ошибка при удалении меню: ' + (err as Error).message);
         }
-    };
+    }, [selectedMenu, handleCloseDialog, fetchMenus]);
 
     // Handle apply template
-    const handleApplyTemplate = async () => {
+    const handleApplyTemplate = useCallback(async () => {
         if (!selectedTemplateId || !selectedDate) return;
 
         setApplying(true);
@@ -137,10 +215,14 @@ const MenuCalendarPage: React.FC = () => {
         } finally {
             setApplying(false);
         }
-    };
+    }, [selectedTemplateId, selectedDate, applyType, applyChildCount, handleCloseDialog, fetchMenus]);
+
+    const handleTemplateChange = useCallback((e: any) => setSelectedTemplateId(e.target.value), []);
+    const handleChildCountChange = useCallback((e: any) => setApplyChildCount(Number(e.target.value)), []);
+    const handleApplyTypeChange = useCallback((e: any) => setApplyType(e.target.value as any), []);
 
     // Print menu
-    const handlePrintMenu = () => {
+    const handlePrintMenu = useCallback(() => {
         if (!selectedMenu || !selectedDate) return;
 
         const printWindow = window.open('', '_blank');
@@ -205,10 +287,10 @@ const MenuCalendarPage: React.FC = () => {
 
         printWindow.document.write(html);
         printWindow.document.close();
-    };
+    }, [selectedMenu, selectedDate]);
 
     // Generate calendar days
-    const generateCalendarDays = (): Date[] => {
+    const calendarDays = useMemo((): Date[] => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
         const firstDay = new Date(year, month, 1);
@@ -229,16 +311,14 @@ const MenuCalendarPage: React.FC = () => {
             days.push(new Date(year, month + 1, i));
         }
         return days;
-    };
+    }, [currentDate]);
 
-    const handleDateClick = (date: Date) => {
+    const handleDateClick = useCallback((date: Date) => {
         if (date.getMonth() === currentDate.getMonth()) {
             setSelectedDate(date);
         }
-    };
+    }, [currentDate.getMonth()]);
 
-    const calendarDays = generateCalendarDays();
-    const selectedMenu = selectedDate ? getMenuForDate(selectedDate) : null;
 
     return (
         <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -250,17 +330,13 @@ const MenuCalendarPage: React.FC = () => {
                         </Grid>
                         <Grid item>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Button
-                                    onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
-                                >
+                                <Button onClick={handlePrevMonth}>
                                     {'<'} Пред.
                                 </Button>
                                 <Typography variant="h6">
                                     {currentDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
                                 </Typography>
-                                <Button
-                                    onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
-                                >
+                                <Button onClick={handleNextMonth}>
                                     След. {'>'}
                                 </Button>
                             </Box>
@@ -287,48 +363,19 @@ const MenuCalendarPage: React.FC = () => {
 
                             {calendarDays.map((date, index) => {
                                 const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-                                const dateMenu = getMenuForDate(date);
-                                const hasMenu = !!dateMenu;
+                                const dateStr = format(date, 'yyyy-MM-dd');
+                                const dateMenu = indexedMenus[dateStr];
                                 const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
 
                                 return (
-                                    <Grid item xs={12 / 7} key={`day-${index}`}>
-                                        <Box
-                                            sx={{
-                                                minHeight: 100, p: 1, borderRight: index % 7 !== 6 ? '1px solid #e0e0e0' : 'none',
-                                                borderBottom: '1px solid #e0e0e0',
-                                                backgroundColor: isCurrentMonth ? (isSelected ? '#e3f2fd' : hasMenu ? '#f0f8ff' : 'inherit') : '#fafafa',
-                                                cursor: isCurrentMonth ? 'pointer' : 'default',
-                                                '&:hover': { backgroundColor: isCurrentMonth && !isSelected ? '#f0f8ff' : 'inherit' }
-                                            }}
-                                            onClick={() => isCurrentMonth && handleDateClick(date)}
-                                        >
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                                                <Typography variant="body2" sx={{
-                                                    fontWeight: isCurrentMonth ? 'normal' : 'light',
-                                                    color: isCurrentMonth ? 'inherit' : 'text.disabled'
-                                                }}>{date.getDate()}</Typography>
-                                                {hasMenu && <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'primary.main', ml: 0.5 }} />}
-                                            </Box>
-
-                                            {isCurrentMonth && hasMenu && dateMenu && (
-                                                <>
-                                                    {dateMenu.meals?.breakfast?.dishes?.length > 0 && (
-                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>🥣 {dateMenu.meals.breakfast.dishes[0]?.name}</Typography>
-                                                    )}
-                                                    {dateMenu.meals?.lunch?.dishes?.length > 0 && (
-                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>🍲 {dateMenu.meals.lunch.dishes[0]?.name}</Typography>
-                                                    )}
-                                                    {dateMenu.meals?.snack?.dishes?.length > 0 && (
-                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>🍰 {dateMenu.meals.snack.dishes[0]?.name}</Typography>
-                                                    )}
-                                                    {dateMenu.meals?.dinner?.dishes?.length > 0 && (
-                                                        <Typography variant="caption" noWrap sx={{ display: 'block' }}>🥗 {dateMenu.meals.dinner.dishes[0]?.name}</Typography>
-                                                    )}
-                                                </>
-                                            )}
-                                        </Box>
-                                    </Grid>
+                                    <CalendarDayCell
+                                        key={dateStr}
+                                        date={date}
+                                        isCurrentMonth={isCurrentMonth}
+                                        dateMenu={dateMenu}
+                                        isSelected={!!isSelected}
+                                        onClick={handleDateClick}
+                                    />
                                 );
                             })}
                         </Grid>
@@ -358,8 +405,8 @@ const MenuCalendarPage: React.FC = () => {
                                         <Box key={mealType} sx={{ mb: 3 }}>
                                             <Typography variant="h6" color="primary">{icons[mealType]}</Typography>
                                             {meal?.dishes?.length > 0 ? (
-                                                meal.dishes.map((dish: any, idx: number) => (
-                                                    <Box key={idx} sx={{ mb: 2, pl: 2 }}>
+                                                meal.dishes.map((dish: any) => (
+                                                    <Box key={dish._id || dish.id} sx={{ mb: 2, pl: 2 }}>
                                                         <Typography variant="subtitle1"><strong>{dish.name}</strong></Typography>
                                                         <Typography variant="body2" color="text.secondary">
                                                             {dish.ingredients.map((ing: any) => `${ing.productId?.name || 'Продукт'} - ${ing.quantity}${ing.unit}`).join(', ')}
@@ -383,18 +430,32 @@ const MenuCalendarPage: React.FC = () => {
                                     <Grid item xs={12}>
                                         <FormControl fullWidth>
                                             <InputLabel>Выберите шаблон</InputLabel>
-                                            <Select value={selectedTemplateId} label="Выберите шаблон" onChange={(e: any) => setSelectedTemplateId(e.target.value)}>
+                                            <Select 
+                                                value={selectedTemplateId} 
+                                                label="Выберите шаблон" 
+                                                onChange={handleTemplateChange}
+                                            >
                                                 {templates.map(t => <MuiMenuItem key={t._id} value={t._id}>{t.name}</MuiMenuItem>)}
                                             </Select>
                                         </FormControl>
                                     </Grid>
                                     <Grid item xs={12} sm={6}>
-                                        <TextField fullWidth type="number" label="Количество детей" value={applyChildCount} onChange={(e: any) => setApplyChildCount(Number(e.target.value))} />
+                                        <TextField 
+                                            fullWidth 
+                                            type="number" 
+                                            label="Количество детей" 
+                                            value={applyChildCount} 
+                                            onChange={handleChildCountChange} 
+                                        />
                                     </Grid>
                                     <Grid item xs={12} sm={6}>
                                         <FormControl fullWidth>
                                             <InputLabel>Период</InputLabel>
-                                            <Select value={applyType} label="Период" onChange={(e: any) => setApplyType(e.target.value as any)}>
+                                            <Select 
+                                                value={applyType} 
+                                                label="Период" 
+                                                onChange={handleApplyTypeChange}
+                                            >
                                                 <MuiMenuItem value="week">Неделя</MuiMenuItem>
                                                 <MuiMenuItem value="month">Месяц</MuiMenuItem>
                                             </Select>

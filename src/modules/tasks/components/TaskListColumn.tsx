@@ -88,6 +88,22 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
     fetchUsers();
   }, [currentUser]);
 
+  useEffect(() => {
+    // Обновляем бейдж при изменении списка задач
+    if (tasks && 'setAppBadge' in navigator) {
+      const activeCount = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
+      if (activeCount > 0) {
+        (navigator as any).setAppBadge(activeCount).catch((err: any) => {
+          console.error('Error setting app badge:', err);
+        });
+      } else {
+        (navigator as any).clearAppBadge().catch((err: any) => {
+          console.error('Error clearing app badge:', err);
+        });
+      }
+    }
+  }, [tasks]);
+
   const handleAddTask = async () => {
     if (!newTaskTitle.trim() || !currentUser || !currentUser.id) return;
 
@@ -181,7 +197,6 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
   return (
     <Card
       sx={{
-        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: 'transparent',
@@ -257,7 +272,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              flexGrow: 1,
+              py: 4,
             }}
           >
             <Typography>Загрузка уведомлений...</Typography>
@@ -268,7 +283,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              flexGrow: 1,
+              py: 4,
               textAlign: 'center',
             }}
           >
@@ -277,9 +292,9 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
         ) : (
           <Box
             sx={{
-              flexGrow: 1,
               overflowY: 'auto',
-              maxHeight: 400,
+              maxHeight: 320,
+              flexShrink: 1,
             }}
           >
             {tasks.map((task) => (

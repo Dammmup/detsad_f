@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -29,7 +29,7 @@ interface FinancialStatsWidgetProps {
   onStatsChange?: () => void;
 }
 
-const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
+const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = React.memo(({
   onStatsChange,
 }) => {
   const { user: currentUser } = useAuth();
@@ -37,7 +37,6 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
-  const [chartData, setChartData] = useState<any[]>([]);
 
 
   useEffect(() => {
@@ -77,32 +76,6 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
         const statsData = response.data;
 
         setStats(statsData);
-
-
-        const chartDataArray = [
-          {
-            name: 'Начисления',
-            value: statsData.totalAccruals || 0,
-            color: '#4caf50',
-          },
-          {
-            name: 'Авансы',
-            value: statsData.totalAdvance || 0,
-            color: '#2196f3',
-          },
-          {
-            name: 'Вычеты',
-            value: statsData.totalPenalties || 0,
-            color: '#f44336',
-          },
-          {
-            name: 'К выплате',
-            value: statsData.totalPayout || 0,
-            color: '#ff9800',
-          },
-        ];
-
-        setChartData(chartDataArray);
       } catch (err: any) {
         let friendlyError = err.message;
         if (
@@ -122,6 +95,32 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
 
     fetchFinancialStats();
   }, [currentUser, currentDate]);
+
+  const chartData = useMemo(() => {
+    if (!stats) return [];
+    return [
+      {
+        name: 'Начисления',
+        value: stats.totalAccruals || 0,
+        color: '#4caf50',
+      },
+      {
+        name: 'Авансы',
+        value: stats.totalAdvance || 0,
+        color: '#2196f3',
+      },
+      {
+        name: 'Вычеты',
+        value: stats.totalPenalties || 0,
+        color: '#f44336',
+      },
+      {
+        name: 'К выплате',
+        value: stats.totalPayout || 0,
+        color: '#ff9800',
+      },
+    ];
+  }, [stats]);
 
 
 
@@ -178,9 +177,7 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
               textAlign: 'center',
             }}
           >
-            <Typography color='text.secondary'>
-              Финансовая статистика доступна только администраторам
-            </Typography>
+            Финансовая статистика доступна только администраторам
           </Box>
         ) : loading ? (
           <Box
@@ -404,6 +401,6 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = ({
       </CardContent>
     </Card>
   );
-};
+});
 
 export default FinancialStatsWidget;

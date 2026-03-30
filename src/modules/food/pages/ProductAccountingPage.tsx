@@ -119,104 +119,219 @@ const UNITS = ['кг', 'г', 'л', 'мл', 'шт', 'упак'];
 
 const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
+const formatDate = (dateStr?: string | Date) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('ru-RU');
+};
+
+const isExpiringSoon = (product: Product) => {
+    if (!product.expirationDate) return false;
+    const expDate = new Date(product.expirationDate);
+    const daysUntilExpiry = Math.ceil((expDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return daysUntilExpiry <= 7 && daysUntilExpiry > 0;
+};
+
+const isExpired = (product: Product) => {
+    if (!product.expirationDate) return false;
+    return new Date(product.expirationDate) < new Date();
+};
+
+// Мемоизированная строка продукта
+const ProductRow = React.memo(({
+    product,
+    categoryLabel,
+    onEdit,
+    onDelete
+}: {
+    product: Product;
+    categoryLabel: string;
+    onEdit: (p: Product) => void;
+    onDelete: (p: Product) => void;
+}) => {
+    const expired = isExpired(product);
+    const expiringSoon = isExpiringSoon(product);
+
+    const handleEdit = useCallback(() => onEdit(product), [onEdit, product]);
+    const handleDelete = useCallback(() => onDelete(product), [onDelete, product]);
+
+    return (
+        <TableRow
+            sx={{
+                bgcolor: expired ? '#ffebee' : expiringSoon ? '#fff8e1' : 'inherit',
+                '&:hover': { bgcolor: '#f5f5f5' }
+            }}
+        >
+            <TableCell>
+                {product.name}
+                {expired && <Chip size="small" label="Просрочен" color="error" sx={{ ml: 1 }} />}
+                {expiringSoon && <Chip size="small" label="Скоро" color="warning" sx={{ ml: 1 }} />}
+            </TableCell>
+            <TableCell>{product.code || '-'}</TableCell>
+            <TableCell>{categoryLabel}</TableCell>
+            <TableCell align="right">{product.stockQuantity} {product.unit}</TableCell>
+            <TableCell align="right">{product.price?.toLocaleString()} ₸</TableCell>
+            <TableCell>{formatDate(product.expirationDate)}</TableCell>
+            <TableCell>{product.purchaseDays || '-'}</TableCell>
+            <TableCell align="center">
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                    <IconButton size="small" onClick={handleEdit}>
+                        <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={handleDelete}>
+                        <DeleteIcon fontSize="small" />
+                    </IconButton>
+                </Box>
+            </TableCell>
+        </TableRow>
+    );
+});
+
+// Мемоизированная карточка блюда
+const DishCard = React.memo(({
+    dish,
+    onEdit,
+    onDelete,
+    onViewTechnical,
+    onViewCalc
+}: {
+    dish: Dish;
+    onEdit: (d: Dish) => void;
+    onDelete: (d: Dish) => void;
+    onViewTechnical: (d: Dish) => void;
+    onViewCalc: (d: Dish) => void;
+}) => {
+    const handleEdit = useCallback(() => onEdit(dish), [onEdit, dish]);
+    const handleDelete = useCallback(() => onDelete(dish), [onDelete, dish]);
+    const handleViewTechnical = useCallback(() => onViewTechnical(dish), [onViewTechnical, dish]);
+    const handleViewCalc = useCallback(() => onViewCalc(dish), [onViewCalc, dish]);
+
+    return (
+        <Grid item xs={12} sm={6} md={4} lg={3}>
+            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="h6" component="div" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                            {dish.name}
+                        </Typography>
+                        <Chip
+                            label={dish.category === 'breakfast' ? 'Завтрак' : dish.category === 'lunch' ? 'Обед' : dish.category === 'snack' ? 'Полдник' : 'Ужин'}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                        />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                        {dish.subcategory && (
+                            <Chip label={dish.subcategory} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
+                        )}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                        Выход: {(dish as any).yield || (dish as any).outputWeight || 0}г
+                    </Typography>
+                    <Divider sx={{ my: 1 }} />
+                    <Typography variant="caption" sx={{ display: 'block', mb: 1 }}>
+                        Ингредиенты: {dish.ingredients?.length || 0} шт.
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
+                        <Tooltip title="Техзадание">
+                            <IconButton size="small" onClick={handleViewTechnical}>
+                                <DescriptionIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Расчёт">
+                            <IconButton size="small" onClick={handleViewCalc}>
+                                <RestaurantIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Редактировать">
+                            <IconButton size="small" onClick={handleEdit}>
+                                <EditIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Удалить">
+                            <IconButton size="small" color="error" onClick={handleDelete}>
+                                <DeleteIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                </CardContent>
+            </Card>
+        </Grid>
+    );
+});
+
 const ProductAccountingPage: React.FC = () => {
     const [tabValue, setTabValue] = useState(0);
     const [loading, setLoading] = useState(false);
-
-    // Products state
     const [products, setProducts] = useState<Product[]>([]);
+    const [dishes, setDishes] = useState<Dish[]>([]);
+    const [todayMenu, setTodayMenu] = useState<DailyMenu | null>(null);
     const [alerts, setAlerts] = useState<ProductAlerts | null>(null);
+
     const [productDialogOpen, setProductDialogOpen] = useState(false);
+    const [dishDialogOpen, setDishDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const [editingDish, setEditingDish] = useState<Dish | null>(null);
     const [productForm, setProductForm] = useState<Partial<Product>>({
         name: '',
         code: '',
         category: '',
         unit: 'кг',
-        supplier: '',
         price: 0,
         stockQuantity: 0,
         minStockLevel: 0,
         maxStockLevel: 1000,
+        expirationDate: '',
+        supplier: '',
         storageConditions: '',
         purchaseDays: 0,
         status: 'active'
     });
 
+    const [productSearch, setProductSearch] = useState('');
+    const [debouncedProductSearch, setDebouncedProductSearch] = useState('');
     const [sortConfig, setSortConfig] = useState<{ key: keyof Product; direction: 'asc' | 'desc' } | null>(null);
-
-    const handleSort = (key: keyof Product) => {
-        let direction: 'asc' | 'desc' = 'asc';
-        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
-        }
-        setSortConfig({ key, direction });
-    };
-
-    const sortedProducts = useMemo(() => {
-        if (!sortConfig) return products;
-
-        return [...products].sort((a, b) => {
-            const aValue = a[sortConfig.key];
-            const bValue = b[sortConfig.key];
-
-            if (aValue === undefined || aValue === null) return 1;
-            if (bValue === undefined || bValue === null) return -1;
-
-            if (aValue < bValue) {
-                return sortConfig.direction === 'asc' ? -1 : 1;
-            }
-            if (aValue > bValue) {
-                return sortConfig.direction === 'asc' ? 1 : -1;
-            }
-            return 0;
-        });
-    }, [products, sortConfig]);
-
-    // Dishes state
-    const [dishes, setDishes] = useState<Dish[]>([]);
-    const [dishDialogOpen, setDishDialogOpen] = useState(false);
-    const [editingDish, setEditingDish] = useState<Dish | null>(null);
-    const [dishCategoryFilter, setDishCategoryFilter] = useState<string>('all');
-    const [dishSubcategoryFilter, setDishSubcategoryFilter] = useState<string>('all');
-
-    const [dishForm, setDishForm] = useState<Partial<Dish>>({
-        name: '',
-        category: 'breakfast',
-        subcategory: 'other',
-        ingredients: [],
-        servingsCount: 1,
-        isActive: true
-    });
-
-    // Menu state
-    const [todayMenu, setTodayMenu] = useState<DailyMenu | null>(null);
+    const [dishCategoryFilter, setDishCategoryFilter] = useState('all');
+    const [dishSubcategoryFilter, setDishSubcategoryFilter] = useState('all');
+    const [dishSearch, setDishSearch] = useState('');
+    const [debouncedDishSearch, setDebouncedDishSearch] = useState('');
+    const [childCountInput, setChildCountInput] = useState(25);
     const [servingMeal, setServingMeal] = useState<MealType | null>(null);
-    const [childCountInput, setChildCountInput] = useState<number>(30);
-    const [addDishDialogOpen, setAddDishDialogOpen] = useState(false);
     const [selectedMealType, setSelectedMealType] = useState<MealType>('breakfast');
-
+    const [addDishDialogOpen, setAddDishDialogOpen] = useState(false);
     const [calculationDialogOpen, setCalculationDialogOpen] = useState(false);
     const [selectedDishForCalculation, setSelectedDishForCalculation] = useState<Dish | null>(null);
-    
-    // Tech card state
     const [techCardDialogOpen, setTechCardDialogOpen] = useState(false);
     const [selectedDishForTechCard, setSelectedDishForTechCard] = useState<Dish | null>(null);
     const [tempDishForTechCard, setTempDishForTechCard] = useState<Dish | null>(null);
     const [pdfImportDialogOpen, setPdfImportDialogOpen] = useState(false);
 
-    // Load data
+    const productSearchRef = React.useRef<any>(null);
+    const dishSearchRef = React.useRef<any>(null);
+
+    const onProductSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setProductSearch(e.target.value);
+        if (productSearchRef.current) clearTimeout(productSearchRef.current);
+        productSearchRef.current = setTimeout(() => {
+            setDebouncedProductSearch(e.target.value);
+        }, 300);
+    }, []);
+
+    const onDishSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setDishSearch(e.target.value);
+        if (dishSearchRef.current) clearTimeout(dishSearchRef.current);
+        dishSearchRef.current = setTimeout(() => {
+            setDebouncedDishSearch(e.target.value);
+        }, 300);
+    }, []);
+
     const loadProducts = useCallback(async () => {
         try {
             setLoading(true);
-            const [productsData, alertsData] = await Promise.all([
-                getProducts(),
-                getProductAlerts()
-            ]);
+            const [productsData, alertsData] = await Promise.all([getProducts(), getProductAlerts()]);
             setProducts(productsData);
             setAlerts(alertsData);
         } catch (error) {
-            console.error('Error loading products:', error);
             toast.error('Ошибка загрузки продуктов');
         } finally {
             setLoading(false);
@@ -225,24 +340,19 @@ const ProductAccountingPage: React.FC = () => {
 
     const loadDishes = useCallback(async () => {
         try {
-            const filters: any = {};
-            if (dishCategoryFilter !== 'all') filters.category = dishCategoryFilter;
-            if (dishSubcategoryFilter !== 'all') filters.subcategory = dishSubcategoryFilter;
-
-            const data = await getDishes(filters);
+            const data = await getDishes({});
             setDishes(data);
         } catch (error) {
-            console.error('Error loading dishes:', error);
             toast.error('Ошибка загрузки блюд');
         }
-    }, [dishCategoryFilter, dishSubcategoryFilter]);
+    }, []);
 
     const loadTodayMenu = useCallback(async () => {
         try {
             const data = await getTodayMenu();
             setTodayMenu(data);
         } catch (error) {
-            console.error('Error loading today menu:', error);
+            console.error('Error menu:', error);
         }
     }, []);
 
@@ -252,9 +362,49 @@ const ProductAccountingPage: React.FC = () => {
         loadTodayMenu();
     }, [loadProducts, loadDishes, loadTodayMenu]);
 
-    // Product handlers
-    const handleOpenProductDialog = (product?: Product) => {
-        if (product) {
+    const handleSort = useCallback((key: keyof Product) => {
+        setSortConfig(prev => {
+            const direction = (prev && prev.key === key && prev.direction === 'asc') ? 'desc' : 'asc';
+            return { key, direction } as any;
+        });
+    }, []);
+
+    const categoryMap = useMemo(() => {
+        const map = new Map<string, string>();
+        CATEGORIES.forEach(c => map.set(c.value, c.label));
+        return map;
+    }, []);
+
+    const filteredProducts = useMemo(() => {
+        let result = products;
+        if (debouncedProductSearch) {
+            const search = debouncedProductSearch.toLowerCase();
+            result = result.filter(p => 
+                p.name.toLowerCase().includes(search) || 
+                p.code?.toLowerCase().includes(search)
+            );
+        }
+        if (!sortConfig) return result;
+        return [...result].sort((a, b) => {
+            const aVal = a[sortConfig.key];
+            const bVal = b[sortConfig.key];
+            if (aVal === bVal) return 0;
+            const res = (aVal || '') < (bVal || '') ? -1 : 1;
+            return sortConfig.direction === 'asc' ? res : -res;
+        });
+    }, [products, debouncedProductSearch, sortConfig]);
+
+    const filteredDishes = useMemo(() => {
+        return dishes.filter(dish => {
+            const matchCategory = dishCategoryFilter === 'all' || dish.category === dishCategoryFilter;
+            const matchSubcategory = dishSubcategoryFilter === 'all' || dish.subcategory === dishSubcategoryFilter;
+            const matchSearch = !debouncedDishSearch || dish.name.toLowerCase().includes(debouncedDishSearch.toLowerCase());
+            return matchCategory && matchSubcategory && matchSearch;
+        });
+    }, [dishes, dishCategoryFilter, dishSubcategoryFilter, debouncedDishSearch]);
+
+    const handleOpenProductDialog = useCallback((product?: Product) => {
+        if (product && !(product as any).target) {
             setEditingProduct(product);
             setProductForm(product);
         } else {
@@ -264,20 +414,21 @@ const ProductAccountingPage: React.FC = () => {
                 code: '',
                 category: '',
                 unit: 'кг',
-                supplier: '',
                 price: 0,
                 stockQuantity: 0,
                 minStockLevel: 0,
                 maxStockLevel: 1000,
+                expirationDate: '',
+                supplier: '',
                 storageConditions: '',
                 purchaseDays: 0,
                 status: 'active'
             });
         }
         setProductDialogOpen(true);
-    };
+    }, []);
 
-    const handleSaveProduct = async () => {
+    const handleSaveProduct = useCallback(async () => {
         try {
             if (editingProduct) {
                 await updateProduct(editingProduct._id || editingProduct.id || '', productForm);
@@ -289,40 +440,31 @@ const ProductAccountingPage: React.FC = () => {
             setProductDialogOpen(false);
             loadProducts();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка сохранения продукта');
+            toast.error(error.message || 'Ошибка сохранения');
         }
-    };
+    }, [editingProduct, productForm, loadProducts]);
 
-    const handleDeleteProduct = async (product: Product) => {
-        if (!window.confirm(`Удалить продукт "${product.name}"?`)) return;
+    const handleDeleteProduct = useCallback(async (product: Product) => {
+        if (!window.confirm(`Удалить "${product.name}"?`)) return;
         try {
             await deleteProduct(product._id || product.id || '');
             toast.success('Продукт удален');
             loadProducts();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка удаления продукта');
+            toast.error(error.message || 'Ошибка удаления');
         }
-    };
+    }, [loadProducts]);
 
-    // Dish handlers
-    const handleOpenDishDialog = (dish?: Dish) => {
-        if (dish) {
+    const handleOpenDishDialog = useCallback((dish?: Dish) => {
+        if (dish && !(dish as any).target) {
             setEditingDish(dish);
-            setDishForm(dish);
         } else {
             setEditingDish(null);
-            setDishForm({
-                name: '',
-                category: 'breakfast',
-                ingredients: [],
-                servingsCount: 1,
-                isActive: true
-            });
         }
         setDishDialogOpen(true);
-    };
+    }, []);
 
-    const handleSaveDish = async (dishData: Partial<Dish>) => {
+    const handleSaveDish = useCallback(async (dishData: Partial<Dish>) => {
         try {
             if (editingDish) {
                 await updateDish(editingDish._id || editingDish.id || '', dishData);
@@ -334,32 +476,28 @@ const ProductAccountingPage: React.FC = () => {
             setDishDialogOpen(false);
             loadDishes();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка сохранения блюда');
+            toast.error(error.message || 'Ошибка сохранения');
         }
-    };
+    }, [editingDish, loadDishes]);
 
-    const handleDeleteDish = async (dish: Dish) => {
-        if (!window.confirm(`Удалить блюдо "${dish.name}"?`)) return;
+    const handleDeleteDish = useCallback(async (dish: Dish) => {
+        if (!window.confirm(`Удалить "${dish.name}"?`)) return;
         try {
             await deleteDish(dish._id || dish.id || '');
             toast.success('Блюдо удалено');
             loadDishes();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка удаления блюда');
+            toast.error(error.message || 'Ошибка удаления');
         }
-    };
+    }, [loadDishes]);
 
-    // Menu handlers
     const handleCreateTodayMenu = async () => {
         try {
-            await createDailyMenu({
-                date: new Date().toISOString(),
-                totalChildCount: childCountInput
-            });
-            toast.success('Меню на сегодня создано');
+            await createDailyMenu({ date: new Date().toISOString(), totalChildCount: childCountInput });
+            toast.success('Меню создано');
             loadTodayMenu();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка создания меню');
+            toast.error(error.message || 'Ошибка создания');
         }
     };
 
@@ -368,11 +506,11 @@ const ProductAccountingPage: React.FC = () => {
         try {
             setServingMeal(mealType);
             await serveMeal(todayMenu._id || todayMenu.id || '', mealType, childCountInput);
-            toast.success(`${getMealTypeName(mealType)} подан! Продукты списаны.`);
+            toast.success('Приём пищи подан!');
             loadTodayMenu();
             loadProducts();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка подачи приёма пищи');
+            toast.error(error.message || 'Ошибка подачи');
         } finally {
             setServingMeal(null);
         }
@@ -386,7 +524,7 @@ const ProductAccountingPage: React.FC = () => {
             setAddDishDialogOpen(false);
             loadTodayMenu();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка добавления блюда');
+            toast.error(error.message || 'Ошибка добавления');
         }
     };
 
@@ -401,22 +539,20 @@ const ProductAccountingPage: React.FC = () => {
         }
     };
 
-    const formatDate = (dateStr?: string) => {
-        if (!dateStr) return '-';
-        return new Date(dateStr).toLocaleDateString('ru-RU');
-    };
+    const handleViewTechnical = useCallback((d: Dish) => {
+        setSelectedDishForTechCard(d);
+        setTempDishForTechCard(d);
+        setTechCardDialogOpen(true);
+    }, []);
 
-    const isExpiringSoon = (product: Product) => {
-        if (!product.expirationDate) return false;
-        const expDate = new Date(product.expirationDate);
-        const daysUntilExpiry = Math.ceil((expDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-        return daysUntilExpiry <= 7 && daysUntilExpiry > 0;
-    };
+    const handleViewCalc = useCallback((d: Dish) => {
+        setSelectedDishForCalculation(d);
+        setCalculationDialogOpen(true);
+    }, []);
 
-    const isExpired = (product: Product) => {
-        if (!product.expirationDate) return false;
-        return new Date(product.expirationDate) < new Date();
-    };
+    const handleUpdateProductForm = useCallback((fields: Partial<Product>) => {
+        setProductForm(prev => ({ ...prev, ...fields }));
+    }, []);
 
     return (
         <Box>
@@ -424,7 +560,7 @@ const ProductAccountingPage: React.FC = () => {
                 <Typography variant="h4" sx={{ fontWeight: 600, color: '#1a1a2e' }}>
                     🍎 Учет продуктов
                 </Typography>
-                <Button startIcon={<RefreshIcon />} onClick={() => { loadProducts(); loadDishes(); loadTodayMenu(); }}>
+                <Button startIcon={<RefreshIcon />} onClick={loadProducts}>
                     Обновить
                 </Button>
             </Box>
@@ -469,7 +605,14 @@ const ProductAccountingPage: React.FC = () => {
                 {/* Products Tab */}
                 <TabPanel value={tabValue} index={0}>
                     <Box sx={{ px: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2 }}>
+                            <TextField
+                                size="small"
+                                placeholder="Поиск продуктов..."
+                                value={productSearch}
+                                onChange={onProductSearchChange}
+                                sx={{ flexGrow: 1, maxWidth: 400 }}
+                            />
                             <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenProductDialog()}>
                                 Добавить продукт
                             </Button>
@@ -551,34 +694,14 @@ const ProductAccountingPage: React.FC = () => {
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {sortedProducts.map((product) => (
-                                            <TableRow
+                                        {filteredProducts.map((product) => (
+                                            <ProductRow
                                                 key={product._id || product.id}
-                                                sx={{
-                                                    bgcolor: isExpired(product) ? '#ffebee' : isExpiringSoon(product) ? '#fff8e1' : 'inherit',
-                                                    '&:hover': { bgcolor: '#f5f5f5' }
-                                                }}
-                                            >
-                                                <TableCell>
-                                                    {product.name}
-                                                    {isExpired(product) && <Chip size="small" label="Просрочен" color="error" sx={{ ml: 1 }} />}
-                                                    {isExpiringSoon(product) && <Chip size="small" label="Скоро" color="warning" sx={{ ml: 1 }} />}
-                                                </TableCell>
-                                                <TableCell>{product.code || '-'}</TableCell>
-                                                <TableCell>{CATEGORIES.find(c => c.value === product.category)?.label || product.category}</TableCell>
-                                                <TableCell align="right">{product.stockQuantity} {product.unit}</TableCell>
-                                                <TableCell align="right">{product.price?.toLocaleString()} ₸</TableCell>
-                                                <TableCell>{formatDate(product.expirationDate)}</TableCell>
-                                                <TableCell>{product.purchaseDays || '-'}</TableCell>
-                                                <TableCell align="center">
-                                                    <IconButton size="small" onClick={() => handleOpenProductDialog(product)}>
-                                                        <EditIcon fontSize="small" />
-                                                    </IconButton>
-                                                    <IconButton size="small" color="error" onClick={() => handleDeleteProduct(product)}>
-                                                        <DeleteIcon fontSize="small" />
-                                                    </IconButton>
-                                                </TableCell>
-                                            </TableRow>
+                                                product={product}
+                                                categoryLabel={categoryMap.get(product.category as string) || product.category as string}
+                                                onEdit={handleOpenProductDialog}
+                                                onDelete={handleDeleteProduct}
+                                            />
                                         ))}
                                     </TableBody>
                                 </Table>
@@ -591,7 +714,14 @@ const ProductAccountingPage: React.FC = () => {
                 <TabPanel value={tabValue} index={1}>
                     <Box sx={{ px: 3 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
-                            <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Box sx={{ display: 'flex', gap: 2, flexGrow: 1 }}>
+                                <TextField
+                                    size="small"
+                                    placeholder="Поиск блюд..."
+                                    value={dishSearch}
+                                    onChange={onDishSearchChange}
+                                    sx={{ minWidth: 200, flexGrow: 1, maxWidth: 300 }}
+                                />
                                 <FormControl size="small" sx={{ minWidth: 150 }}>
                                     <InputLabel>Приём пищи</InputLabel>
                                     <Select
@@ -643,48 +773,15 @@ const ProductAccountingPage: React.FC = () => {
                         </Box>
 
                         <Grid container spacing={2}>
-                            {dishes.map((dish) => (
-                                <Grid item xs={12} sm={6} md={4} key={dish._id || dish.id}>
-                                    <Card sx={{ height: '100%' }}>
-                                        <CardContent>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                <Typography variant="h6" sx={{ fontSize: '1rem' }}>{dish.name}</Typography>
-                                                <Chip size="small" label={getMealTypeName(dish.category as MealType)} color="primary" variant="outlined" />
-                                            </Box>
-                                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                                Порций: {dish.servingsCount}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Ингредиентов: {dish.ingredients?.length || 0}
-                                            </Typography>
-                                            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                                                <IconButton size="small" onClick={() => handleOpenDishDialog(dish)}>
-                                                    <EditIcon fontSize="small" />
-                                                </IconButton>
-                                                <IconButton size="small" color="error" onClick={() => handleDeleteDish(dish)}>
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                                <Tooltip title="Технологическая карта (печать)">
-                                                    <IconButton size="small" color="primary" onClick={() => {
-                                                        setSelectedDishForTechCard(dish);
-                                                        setTempDishForTechCard(dish);
-                                                        setTechCardDialogOpen(true);
-                                                    }}>
-                                                        <DescriptionIcon fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Показать расчет на количество детей">
-                                                    <IconButton size="small" onClick={() => {
-                                                        setSelectedDishForCalculation(dish);
-                                                        setCalculationDialogOpen(true);
-                                                    }}>
-                                                        <RestaurantIcon fontSize="small" /> {/* Using RestaurantIcon for now */}
-                                                    </IconButton>
-                                                </Tooltip>
-                                            </Box>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
+                            {filteredDishes.map((dish) => (
+                                <DishCard
+                                    key={dish._id || dish.id}
+                                    dish={dish}
+                                    onEdit={handleOpenDishDialog}
+                                    onDelete={handleDeleteDish}
+                                    onViewTechnical={handleViewTechnical}
+                                    onViewCalc={handleViewCalc}
+                                />
                             ))}
                         </Grid>
                     </Box>
@@ -750,8 +847,8 @@ const ProductAccountingPage: React.FC = () => {
                                             </AccordionSummary>
                                             <AccordionDetails>
                                                 <List dense>
-                                                    {meal?.dishes?.map((dish: any, idx: number) => (
-                                                        <ListItem key={idx}>
+                                                    {meal?.dishes?.map((dish: any) => (
+                                                        <ListItem key={dish._id || dish.id}>
                                                             <ListItemText primary={dish.name || 'Блюдо'} />
                                                             {!isServed && (
                                                                 <ListItemSecondaryAction>
@@ -864,10 +961,19 @@ const ProductAccountingPage: React.FC = () => {
                         <Grid item xs={6}>
                             <TextField
                                 fullWidth
-                                label="Количество на складе"
+                                label="Мин. запас"
                                 type="number"
-                                value={productForm.stockQuantity || 0}
-                                onChange={(e) => setProductForm({ ...productForm, stockQuantity: parseFloat(e.target.value) || 0 })}
+                                value={productForm.minStockLevel || 0}
+                                onChange={(e) => setProductForm({ ...productForm, minStockLevel: parseFloat(e.target.value) || 0 })}
+                            />
+                        </Grid>
+                        <Grid item xs={6}>
+                            <TextField
+                                fullWidth
+                                label="Макс. запас"
+                                type="number"
+                                value={productForm.maxStockLevel || 1000}
+                                onChange={(e) => setProductForm({ ...productForm, maxStockLevel: parseFloat(e.target.value) || 1000 })}
                             />
                         </Grid>
                         <Grid item xs={6}>

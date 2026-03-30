@@ -23,6 +23,11 @@ self.addEventListener('push', function (event) {
         vibrate: [100, 50, 100]
     };
 
+    // Обновляем бейдж иконки приложения, если он передан
+    if (data.badge !== undefined && 'setAppBadge' in navigator) {
+        event.waitUntil(navigator.setAppBadge(data.badge));
+    }
+
     event.waitUntil(
         self.registration.showNotification(data.title || 'Детский сад', options)
     );

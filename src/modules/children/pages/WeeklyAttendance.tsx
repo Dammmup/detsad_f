@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import moment from 'moment';
 import 'moment/locale/ru';
 import { useSnackbar } from 'notistack';
@@ -99,328 +99,391 @@ interface AttendanceData {
   };
 }
 
+const AttendanceCell = React.memo(({ 
+  child, 
+  day, 
+  attendance, 
+  isWeekend, 
+  onClick
+}: any) => {
+  const theme = useTheme();
+  
+  const handleClick = useCallback(() => {
+    if (!isWeekend) {
+      onClick(child, day);
+    }
+  }, [child, day, isWeekend, onClick]);
+
+  if (isWeekend) {
+    return (
+      <TableCell
+        align='center'
+        sx={{
+          minHeight: '80px',
+          border: '1px solid',
+          borderColor: 'divider',
+          backgroundColor: 'action.hover',
+          cursor: 'not-allowed',
+        }}
+      >
+        <Typography variant='body2' color='text.disabled' align='center'>
+          Выходной
+        </Typography>
+      </TableCell>
+    );
+  }
+
+  return (
+    <TableCell
+      align='center'
+      sx={{
+        minHeight: '80px',
+        border: '1px solid',
+        borderColor: 'divider',
+        cursor: 'pointer',
+        '&:hover': {
+          backgroundColor: 'action.selected',
+        },
+      }}
+    >
+      {attendance ? (
+        <Tooltip
+          title={
+            <Box>
+              <Typography variant='body2'>{child.fullName}</Typography>
+              <Typography variant='body2'>{moment(day).format('D MMMM YYYY')}</Typography>
+              <Typography variant='body2'>Статус: {ATTENDANCE_STATUSES[attendance.status as AttendanceStatus]}</Typography>
+              {attendance.notes && (
+                <Typography variant='body2'>Примечание: {attendance.notes}</Typography>
+              )}
+              <Typography variant='caption' sx={{ mt: 1, display: 'block' }}>
+                Нажмите для изменения статуса
+              </Typography>
+            </Box>
+          }
+          arrow
+        >
+          <Box
+            onClick={handleClick}
+            sx={{
+              p: 1,
+              borderRadius: 1,
+              bgcolor: 'background.paper',
+              borderLeft: `4px solid ${attendance.status === 'present'
+                ? theme.palette.success.main
+                : attendance.status === 'sick'
+                  ? theme.palette.warning.main
+                  : attendance.status === 'vacation'
+                    ? theme.palette.info.main
+                    : attendance.status === 'late'
+                      ? theme.palette.warning.main
+                      : theme.palette.error.main
+                }`,
+              cursor: 'pointer',
+              '&:hover': { bgcolor: 'action.selected' },
+            }}
+          >
+            <Chip
+              label={ATTENDANCE_STATUSES[attendance.status as AttendanceStatus]}
+              size='small'
+              color={STATUS_COLORS[attendance.status as AttendanceStatus] as any}
+              icon={React.createElement(STATUS_ICONS[attendance.status as AttendanceStatus], { fontSize: 'small' })}
+            />
+          </Box>
+        </Tooltip>
+      ) : (
+        <Tooltip
+          title={
+            <Box>
+              <Typography variant='body2'>{child.fullName}</Typography>
+              <Typography variant='body2'>{moment(day).format('D MMMM YYYY')}</Typography>
+              <Typography variant='caption'>Нажмите для отметки посещаемости</Typography>
+            </Box>
+          }
+          arrow
+        >
+          <Box
+            onClick={handleClick}
+            sx={{
+              p: 1,
+              borderRadius: 1,
+              border: '1px dashed',
+              borderColor: 'divider',
+              textAlign: 'center',
+              cursor: 'pointer',
+              '&:hover': {
+                bgcolor: 'action.selected',
+                borderColor: 'primary.main',
+              },
+            }}
+          >
+            <Typography variant='caption' color='text.secondary'>
+              Нажмите для отметки
+            </Typography>
+          </Box>
+        </Tooltip>
+      )}
+    </TableCell>
+  );
+});
+
+const AttendanceRow = React.memo(({ 
+  child, 
+  weekDays, 
+  attendanceData, 
+  onCellClick, 
+  onOpenDetails
+}: any) => {
+  const handleDetailsClick = useCallback(() => {
+    onOpenDetails(child.id!, child.fullName);
+  }, [child.id, child.fullName, onOpenDetails]);
+
+  return (
+    <TableRow key={child.id}>
+      <TableCell>
+        <Box display='flex' alignItems='center' justifyContent="space-between">
+          <Box display='flex' alignItems='center'>
+            <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />
+            <Box>
+              {child.fullName}
+              {child.parentName && (
+                <Box sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
+                  Родитель: {child.parentName}
+                </Box>
+              )}
+            </Box>
+          </Box>
+          <IconButton
+            size="small"
+            onClick={handleDetailsClick}
+            title="История посещений"
+          >
+            <InfoIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      </TableCell>
+      {weekDays.map((day: Date) => {
+        const dateString = moment(day).format('YYYY-MM-DD');
+        const attendance = attendanceData[child.id!]?.[dateString];
+        const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+
+        return (
+          <AttendanceCell
+            key={dateString}
+            child={child}
+            day={day}
+            attendance={attendance}
+            isWeekend={isWeekend}
+            onClick={onCellClick}
+          />
+        );
+      })}
+    </TableRow>
+  );
+});
+
 const WeeklyAttendance: React.FC = () => {
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
-  const { currentDate, setCurrentDate } = useDate();
-
+  const { currentDate } = useDate();
 
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
 
-
   const [groups, setGroups] = useState<any[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [attendanceData, setAttendanceData] = useState<AttendanceData>({});
 
-  // Буфер для накопления изменений перед отправкой
   const [pendingChanges, setPendingChanges] = useState<Array<{
     childId: string;
     date: string;
-    status: 'present' | 'absent' | 'late' | 'sick' | 'vacation';
+    status: AttendanceStatus;
     notes?: string;
   }>>([]);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Состояние для модального окна детализации посещаемости
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedChildDetails, setSelectedChildDetails] = useState<{ id: string; name: string } | null>(null);
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
   const [isImporting, setIsImporting] = useState(false);
 
-  const handleExport = async (
-    exportType: string,
-    exportFormat: 'excel',
-  ) => {
+  const filteredChildren = useMemo(() => {
+    if (!selectedGroup) return [];
+    return children.filter((child) => {
+      const gId = typeof child.groupId === 'object' && child.groupId !== null
+        ? (child.groupId as any)._id || (child.groupId as any).id
+        : child.groupId;
+      return gId === selectedGroup;
+    });
+  }, [children, selectedGroup]);
+
+  const weekDays = useMemo(() => {
+    const start = moment(currentDate).startOf('isoWeek');
+    const days: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      days.push(start.clone().add(i, 'day').toDate());
+    }
+    return days;
+  }, [currentDate]);
+
+  const fetchAttendanceData = useCallback(async () => {
     if (!selectedGroup) {
-      enqueueSnackbar('Выберите группу для экспорта', { variant: 'error' });
+      setAttendanceData({});
       return;
     }
 
     setLoading(true);
     try {
-      const group = groups.find((g) => (g.id || g._id) === selectedGroup);
-      const groupName = group ? group.name : 'Unknown Group';
+      const weekStart = moment(currentDate).startOf('isoWeek');
+      const weekEnd = moment(currentDate).endOf('isoWeek');
 
-      const monthStart = moment(currentDate).startOf('month');
-      const monthEnd = moment(currentDate).endOf('month');
-      const period = `${monthStart.format('DD.MM.YYYY')} - ${monthEnd.format('DD.MM.YYYY')}`;
-
-      const attendanceRecordsForExport = await getChildAttendance({
+      const records = await getChildAttendance({
         groupId: selectedGroup,
-        startDate: monthStart.format('YYYY-MM-DD'),
-        endDate: monthEnd.format('YYYY-MM-DD'),
+        startDate: weekStart.format('YYYY-MM-DD'),
+        endDate: weekEnd.format('YYYY-MM-DD'),
       });
 
-      await exportChildrenAttendance(
-        attendanceRecordsForExport,
-        groupName,
-        period,
-        filteredChildren,
-      );
-
-      enqueueSnackbar('Отчет экспортирован', { variant: 'success' });
-    } catch (e: any) {
-      setError(e?.message || 'Ошибка экспорта');
-      enqueueSnackbar('Ошибка при экспорте', { variant: 'error' });
+      const attendanceMap: AttendanceData = {};
+      records.forEach((record: ChildAttendanceRecord) => {
+        const childId = record.childId;
+        const date = record.date.split('T')[0];
+        if (!attendanceMap[childId]) attendanceMap[childId] = {};
+        attendanceMap[childId][date] = { status: record.status, notes: record.notes };
+      });
+      setAttendanceData(attendanceMap);
+    } catch (err: any) {
+      setError('Не удалось загрузить данные посещаемости');
     } finally {
       setLoading(false);
     }
-  };
-
-
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      if (!isLoggedIn || !currentUser || authLoading) return;
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const [groupsData, childrenList] = await Promise.all([
-          getGroups(),
-          childrenApi.getAll(),
-        ]);
-        setGroups(groupsData || []);
-        setChildren(childrenList);
-
-
-        if (
-          currentUser.role === 'teacher' ||
-          currentUser.role === 'assistant'
-        ) {
-          // Бэкенд уже фильтрует группы, оставляя только те, где пользователь учитель или помощник
-          // Просто выбираем первую группу из отфильтрованного списка
-          if (groupsData.length > 0 && (groupsData[0].id || groupsData[0]._id)) {
-            setSelectedGroup(groupsData[0].id || groupsData[0]._id || '');
-          }
-        }
-      } catch (err: any) {
-        console.error('Error loading initial data:', err);
-        setError('Не удалось загрузить данные');
-        enqueueSnackbar('Ошибка при загрузке данных', { variant: 'error' });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInitialData();
-  }, [isLoggedIn, currentUser, authLoading, enqueueSnackbar]);
-
+  }, [currentDate, selectedGroup]);
 
   useEffect(() => {
-    const fetchAttendanceData = async () => {
-      if (!selectedGroup) {
-        setAttendanceData({});
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const weekStart = moment(currentDate).startOf('isoWeek');
-        const weekEnd = moment(currentDate).endOf('isoWeek');
-
-        const records = await getChildAttendance({
-          groupId: selectedGroup,
-          startDate: weekStart.format('YYYY-MM-DD'),
-          endDate: weekEnd.format('YYYY-MM-DD'),
-        });
-
-
-        const attendanceMap: AttendanceData = {};
-        records.forEach((record: ChildAttendanceRecord) => {
-          const childId = record.childId;
-          const date = record.date.split('T')[0];
-
-          if (!attendanceMap[childId]) {
-            attendanceMap[childId] = {};
-          }
-
-          attendanceMap[childId][date] = {
-            status: record.status,
-            notes: record.notes,
-          };
-        });
-
-        setAttendanceData(attendanceMap);
-      } catch (err: any) {
-        console.error('Error loading attendance data:', err);
-        setError('Не удалось загрузить данные посещаемости');
-        enqueueSnackbar('Ошибка при загрузке данных посещаемости', {
-          variant: 'error',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchAttendanceData();
-  }, [currentDate, selectedGroup, enqueueSnackbar]);
+  }, [fetchAttendanceData]);
 
+  const handleAttendanceClick = useCallback((child: Child, date: Date) => {
+    const dateString = moment(date).format('YYYY-MM-DD');
+    const existing = attendanceData[child.id!]?.[dateString];
+    
+    const statusCycle: AttendanceStatus[] = ['present', 'absent', 'sick', 'vacation'];
+    const currentIndex = existing ? statusCycle.indexOf(existing.status) : -1;
+    const nextStatus = statusCycle[(currentIndex + 1) % statusCycle.length];
 
-  // Функция автосохранения накопленных изменений
-  const flushPendingChanges = async () => {
-    if (!selectedGroup || pendingChanges.length === 0) return;
+    const record = {
+      childId: child.id!,
+      date: dateString,
+      status: nextStatus as AttendanceStatus,
+      notes: existing?.notes || '',
+    };
+
+    setPendingChanges(prev => {
+      const filtered = prev.filter(c => !(c.childId === child.id && c.date === dateString));
+      return [...filtered, record];
+    });
+
+    setAttendanceData(prev => ({
+      ...prev,
+      [child.id!]: {
+        ...prev[child.id!],
+        [dateString]: { status: nextStatus, notes: existing?.notes || '' },
+      },
+    }));
+  }, [attendanceData]);
+
+  const handleOpenChildDetails = useCallback((childId: string, childName: string) => {
+    setSelectedChildDetails({ id: childId, name: childName });
+    setDetailsDialogOpen(true);
+  }, []);
+
+  const flushPendingChanges = useCallback(async () => {
+    if (pendingChanges.length === 0) return;
 
     setIsAutoSaving(true);
-    const changesToSave = [...pendingChanges];
-
     try {
-      await bulkSaveChildAttendance(changesToSave as Array<{
-        childId: string;
-        date: string;
-        status: 'present' | 'absent' | 'late' | 'sick' | 'vacation';
-        notes?: string;
-      }>, selectedGroup);
-
-      // Очищаем буфер
+      await bulkSaveChildAttendance(pendingChanges, selectedGroup);
       setPendingChanges([]);
-
-      enqueueSnackbar(`Сохранено изменений: ${changesToSave.length}`, { variant: 'success', autoHideDuration: 2000 });
-    } catch (err: any) {
-      console.error('Error auto-saving attendance:', err);
-      enqueueSnackbar('Ошибка при автосохранении', { variant: 'error' });
+      enqueueSnackbar('Изменения сохранены', { variant: 'success' });
+    } catch (err) {
+      enqueueSnackbar('Ошибка при сохранении', { variant: 'error' });
     } finally {
       setIsAutoSaving(false);
     }
-  };
+  }, [pendingChanges, enqueueSnackbar]);
 
-  // Таймер автосохранения
+  // Auto-save logic
   useEffect(() => {
-    if (pendingChanges.length > 0 && !isAutoSaving) {
-      // Очищаем предыдущий таймер
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-
-      // Устанавливаем новый таймер
+    if (pendingChanges.length > 0) {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = setTimeout(() => {
         flushPendingChanges();
       }, AUTO_SAVE_DELAY);
     }
-
     return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [pendingChanges, flushPendingChanges]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [groupsData, childrenData] = await Promise.all([
+          getGroups(),
+          childrenApi.getAll()
+        ]);
+        setGroups(groupsData);
+        setChildren(childrenData);
+        
+        // Автоматически выбираем первую группу, если она есть
+        if (groupsData.length > 0 && !selectedGroup) {
+          setSelectedGroup(groupsData[0].id || groupsData[0]._id);
+        }
+      } catch (err) {
+        setError('Не удалось загрузить данные');
+      } finally {
+        setLoading(false);
       }
     };
-  }, [pendingChanges, isAutoSaving, selectedGroup]);
-
-  // Сохранение при смене группы
-  useEffect(() => {
-    if (pendingChanges.length > 0) {
-      flushPendingChanges();
-    }
+    fetchData();
   }, [selectedGroup]);
 
-  // Сохранение при изменении недели (через currentDate)
-  useEffect(() => {
-    if (pendingChanges.length > 0) {
-      flushPendingChanges();
-    }
-  }, [currentDate]);
-
-
-  const handleGroupChange = (e: SelectChangeEvent<string>) => {
-    setSelectedGroup(e.target.value);
+  const handleGroupChange = (event: SelectChangeEvent) => {
+    setSelectedGroup(event.target.value as string);
   };
 
-
-  const filteredChildren = selectedGroup
-    ? children.filter((child) => {
-
-      if (typeof child.groupId === 'object' && child.groupId !== null) {
-        return (
-          (child.groupId as any)._id === selectedGroup ||
-          (child.groupId as any).id === selectedGroup
-        );
-      } else {
-        return child.groupId === selectedGroup;
-      }
-    })
-    : [];
-
-
-  const weekStart = moment(currentDate).startOf('isoWeek');
-  const weekEnd = moment(currentDate).endOf('isoWeek');
-  const weekDays: Date[] = [];
-  const day = weekStart.clone();
-  while (day.isSameOrBefore(weekEnd)) {
-    weekDays.push(day.toDate());
-    day.add(1, 'day');
-  }
-
-
-  const getAttendanceForDay = (childId: string, date: Date) => {
-    const dateString = moment(date).format('YYYY-MM-DD');
-    return attendanceData[childId]?.[dateString];
-  };
-
-
-  const handleAttendanceClick = async (child: Child, date: Date) => {
-    const dateString = moment(date).format('YYYY-MM-DD');
-    const existingAttendance = getAttendanceForDay(child.id!, date);
-
-
-    const statusCycle: AttendanceStatus[] = [
-      'present',
-      'absent',
-      'sick',
-      'vacation',
-    ];
-    const currentIndex = existingAttendance
-      ? statusCycle.indexOf(existingAttendance.status)
-      : -1;
-    const nextStatus = statusCycle[(currentIndex + 1) % statusCycle.length];
-
-    try {
-      const record: {
-        childId: string;
-        date: string;
-        status: 'present' | 'absent' | 'late' | 'sick' | 'vacation';
-        notes?: string;
-      } = {
-        childId: child.id!,
-        date: dateString,
-        status: nextStatus,
-        notes: existingAttendance?.notes || '',
-      };
-
-      // Добавляем изменение в буфер вместо немедленной отправки
-      setPendingChanges(prev => {
-        // Удаляем предыдущее изменение для того же ребёнка и даты
-        const filtered = prev.filter(c => !(c.childId === child.id && c.date === dateString));
-        return [...filtered, record];
+  const handleExport = (type: string) => {
+    if (type === 'children-attendance') {
+      const weekStart = moment(currentDate).startOf('isoWeek');
+      const weekEnd = moment(currentDate).endOf('isoWeek');
+      const period = `${weekStart.format('DD.MM')} - ${weekEnd.format('DD.MM')}`;
+      
+      const groupName = groups.find(g => (g.id || g._id) === selectedGroup)?.name || 'Группа';
+      
+      // Преобразуем объект attendanceData в массив для экспорта
+      const attendanceArray: any[] = [];
+      Object.entries(attendanceData).forEach(([childId, dates]) => {
+        Object.entries(dates).forEach(([date, data]) => {
+          attendanceArray.push({
+            childId,
+            date,
+            status: data.status,
+            notes: data.notes
+          });
+        });
       });
 
-      // Сразу обновляем локальное состояние
-      setAttendanceData((prev) => ({
-        ...prev,
-        [child.id!]: {
-          ...prev[child.id!],
-          [dateString]: {
-            status: nextStatus,
-            notes: existingAttendance?.notes || '',
-          },
-        },
-      }));
-
-      enqueueSnackbar(`${child.fullName}: ${ATTENDANCE_STATUSES[nextStatus]} (в очереди на сохранение)`, {
-        variant: 'info',
-      });
-    } catch (err: any) {
-      console.error('Error queuing attendance change:', err);
-      enqueueSnackbar('Ошибка при постановке в очередь', { variant: 'error' });
+      exportChildrenAttendance(
+        attendanceArray,
+        groupName,
+        period,
+        filteredChildren
+      );
     }
-  };
-
-  const handleOpenChildDetails = (childId: string, childName: string) => {
-    setSelectedChildDetails({ id: childId, name: childName });
-    setDetailsDialogOpen(true);
   };
 
   // Импорт посещаемости детей из Excel
@@ -575,7 +638,7 @@ const WeeklyAttendance: React.FC = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell>Ребенок</TableCell>
-                      {weekDays.map((day) => (
+                      {weekDays.map((day: Date) => (
                         <TableCell key={day.toString()} align='center'>
                           <Box sx={{
                             backgroundColor: moment(day).isSame(moment(), 'day') ? 'primary.light' : 'inherit',
@@ -589,201 +652,15 @@ const WeeklyAttendance: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredChildren.map((child) => (
-                      <TableRow key={child.id}>
-                        <TableCell>
-                          <Box display='flex' alignItems='center' justifyContent="space-between">
-                            <Box display='flex' alignItems='center'>
-                              <PersonIcon
-                                sx={{ mr: 1, color: 'text.secondary' }}
-                              />
-                              <Box>
-                                {child.fullName}
-                                {child.parentName && (
-                                  <Box
-                                    sx={{
-                                      fontSize: '0.8em',
-                                      color: 'text.secondary',
-                                    }}
-                                  >
-                                    Родитель: {child.parentName}
-                                  </Box>
-                                )}
-                              </Box>
-                            </Box>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenChildDetails(child.id!, child.fullName)}
-                              title="История посещений"
-                            >
-                              <InfoIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                        {weekDays.map((day) => {
-                          const attendance = getAttendanceForDay(
-                            child.id!,
-                            day,
-                          );
-                          const isWeekend =
-                            day.getDay() === 0 || day.getDay() === 6;
-
-                          return (
-                            <TableCell
-                              key={day.toString()}
-                              align='center'
-                              sx={{
-                                minHeight: '80px',
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                backgroundColor: isWeekend
-                                  ? 'action.hover'
-                                  : 'inherit',
-                                cursor: isWeekend ? 'not-allowed' : 'pointer',
-                                '&:hover': {
-                                  backgroundColor: isWeekend
-                                    ? 'action.hover'
-                                    : 'action.selected',
-                                },
-                              }}
-                            >
-                              {isWeekend ? (
-                                <Typography
-                                  variant='body2'
-                                  color='text.disabled'
-                                  align='center'
-                                >
-                                  Выходной
-                                </Typography>
-                              ) : attendance ? (
-                                <Tooltip
-                                  title={
-                                    <Box>
-                                      <Typography variant='body2'>
-                                        {child.fullName}
-                                      </Typography>
-                                      <Typography variant='body2'>
-                                        {moment(day).format('D MMMM YYYY')}
-                                      </Typography>
-                                      <Typography variant='body2'>
-                                        Статус:{' '}
-                                        {ATTENDANCE_STATUSES[attendance.status]}
-                                      </Typography>
-                                      {attendance.notes && (
-                                        <Typography variant='body2'>
-                                          Примечание: {attendance.notes}
-                                        </Typography>
-                                      )}
-                                      <Typography
-                                        variant='caption'
-                                        sx={{ mt: 1, display: 'block' }}
-                                      >
-                                        Нажмите для изменения статуса
-                                      </Typography>
-                                    </Box>
-                                  }
-                                  arrow
-                                >
-                                  <Box
-                                    onClick={() =>
-                                      handleAttendanceClick(child, day)
-                                    }
-                                    sx={{
-                                      p: 1,
-                                      borderRadius: 1,
-                                      bgcolor: 'background.paper',
-                                      borderLeft: `4px solid ${attendance.status === 'present'
-                                        ? theme.palette.success.main
-                                        : attendance.status === 'sick'
-                                          ? theme.palette.warning.main
-                                          : attendance.status === 'vacation'
-                                            ? theme.palette.info.main
-                                            : attendance.status === 'late'
-                                              ? theme.palette.warning.main
-                                              : theme.palette.error.main
-                                        }`,
-                                      cursor: 'pointer',
-                                      '&:hover': {
-                                        bgcolor: 'action.selected',
-                                      },
-                                    }}
-                                  >
-                                    <Chip
-                                      label={
-                                        ATTENDANCE_STATUSES[attendance.status]
-                                      }
-                                      size='small'
-                                      color={
-                                        STATUS_COLORS[attendance.status] as any
-                                      }
-                                      icon={React.createElement(
-                                        STATUS_ICONS[attendance.status],
-                                        { fontSize: 'small' },
-                                      )}
-                                    />
-                                  </Box>
-                                </Tooltip>
-                              ) : (
-                                <Tooltip
-                                  title={
-                                    <Box>
-                                      <Typography variant='body2'>
-                                        {child.fullName}
-                                      </Typography>
-                                      <Typography variant='body2'>
-                                        {moment(day).format('D MMMM YYYY')}
-                                      </Typography>
-                                      <Typography variant='caption'>
-                                        Нажмите для отметки посещаемости
-                                      </Typography>
-                                      {/* Показываем информацию о возможности отметки альтернативным сотрудником */}
-                                      {selectedGroup && (
-                                        <Typography
-                                          variant='caption'
-                                          sx={{
-                                            mt: 1,
-                                            display: 'block',
-                                            color: 'warning.main',
-                                          }}
-                                        >
-                                          Может быть отмечено альтернативным
-                                          сотрудником
-                                        </Typography>
-                                      )}
-                                    </Box>
-                                  }
-                                  arrow
-                                >
-                                  <Box
-                                    onClick={() =>
-                                      handleAttendanceClick(child, day)
-                                    }
-                                    sx={{
-                                      p: 1,
-                                      borderRadius: 1,
-                                      border: '1px dashed',
-                                      borderColor: 'divider',
-                                      textAlign: 'center',
-                                      cursor: 'pointer',
-                                      '&:hover': {
-                                        bgcolor: 'action.selected',
-                                        borderColor: 'primary.main',
-                                      },
-                                    }}
-                                  >
-                                    <Typography
-                                      variant='caption'
-                                      color='text.secondary'
-                                    >
-                                      Нажмите для отметки
-                                    </Typography>
-                                  </Box>
-                                </Tooltip>
-                              )}
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
+                    {filteredChildren.map((child: Child) => (
+                      <AttendanceRow
+                        key={child.id || (child as any)._id}
+                        child={child}
+                        weekDays={weekDays}
+                        attendanceData={attendanceData}
+                        onCellClick={handleAttendanceClick}
+                        onOpenDetails={handleOpenChildDetails}
+                      />
                     ))}
                   </TableBody>
                 </Table>

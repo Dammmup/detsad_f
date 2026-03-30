@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import '../global-responsive.css';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { SnackbarProvider } from '../shared/components/Snackbar';
@@ -11,6 +11,27 @@ import ErrorBoundary from '../shared/components/ErrorBoundary';
 import SimpleLayout from './SimpleLayout';
 
 export const App = () => {
+  useEffect(() => {
+    // Сбрасываем бейдж при входе в приложение или когда оно становится активным
+    const clearBadge = () => {
+      if ('clearAppBadge' in navigator) {
+        (navigator as any).clearAppBadge().catch((err: any) => {
+          console.error('Error clearing app badge:', err);
+        });
+      }
+    };
+
+    // Сбрасываем при загрузке
+    clearBadge();
+
+    // Сбрасываем при возвращении в приложение (focus)
+    window.addEventListener('focus', clearBadge);
+    
+    return () => {
+      window.removeEventListener('focus', clearBadge);
+    };
+  }, []);
+
   return (
     <ErrorBoundary>
       <AuthProvider>

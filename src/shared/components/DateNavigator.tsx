@@ -3,6 +3,8 @@ import { useDate } from '../../app/context/DateContext';
 import { Button, Typography, Box } from '@mui/material';
 import moment from 'moment';
 import 'moment/locale/ru';
+import { useAuth } from '../../app/context/AuthContext';
+import { UserRole } from '../types/common';
 
 moment.locale('ru');
 
@@ -12,6 +14,12 @@ interface DateNavigatorProps {
 
 const DateNavigator: React.FC<DateNavigatorProps> = ({ viewType = 'month' }) => {
   const { currentDate, setCurrentDate } = useDate();
+  const { user } = useAuth();
+
+  // Показывать навигатор только администраторам
+  if (user?.role !== UserRole.admin) {
+    return null;
+  }
 
   const handlePrevMonth = () => {
     setCurrentDate(moment(currentDate).subtract(1, 'month').startOf('month').toDate());

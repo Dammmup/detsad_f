@@ -24,6 +24,12 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleLogin();
+    }
+  };
+
   const handleLogin = async () => {
     if (!phone || !password) {
       setError('Введите номер телефона и пароль');
@@ -89,6 +95,7 @@ const Login: React.FC = () => {
             label='Номер телефона'
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
+            onKeyDown={handleKeyDown}
             sx={{ mb: 2 }}
             InputProps={{
               startAdornment: (
@@ -104,6 +111,7 @@ const Login: React.FC = () => {
             label='Пароль'
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={handleKeyDown}
             sx={{ mb: 3 }}
             InputProps={{
               startAdornment: (
