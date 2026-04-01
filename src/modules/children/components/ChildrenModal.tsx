@@ -39,7 +39,7 @@ const defaultForm: Omit<Partial<User>, 'role'> & { paymentAmount?: number } = {
   active: true,
   phone: '',
   photo: '',
-  paymentAmount: 40000,
+  paymentAmount: 0,
 };
 
 const ChildrenModal: React.FC<ChildrenModalProps> = ({
@@ -73,7 +73,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
           parentPhone: child.parentPhone || '',
           birthday: child.birthday || '',
           notes: child.notes || '',
-          paymentAmount: (child as any).paymentAmount || 40000,
+          paymentAmount: (child as any).paymentAmount || 0,
         });
       } else {
         setForm(defaultForm);
@@ -327,7 +327,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
             name='paymentAmount'
             label='Сумма оплаты (тенге)'
             type='number'
-            value={form.paymentAmount || 40000}
+            value={form.paymentAmount || 0}
             onChange={(e) => setForm({ ...form, paymentAmount: Number(e.target.value) })}
             fullWidth
             sx={{ mb: 2 }}

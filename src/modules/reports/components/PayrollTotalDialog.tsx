@@ -32,6 +32,11 @@ interface Props {
         normShifts?: number;
         normType?: 'production' | 'shifts';
         _id?: string;
+        deductions?: number;
+        latePenalties?: number;
+        absencePenalties?: number;
+        userFines?: number;
+        carryOverDebt?: number;
     } | null;
     onUpdate?: (id: string, updates: any) => Promise<void>;
 }
@@ -177,14 +182,19 @@ const PayrollTotalDialog: React.FC<Props> = ({ open, onClose, data, onUpdate }) 
 
                                         <Divider sx={{ my: 0.5, borderStyle: 'dashed' }} />
 
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <Typography variant="body1">
-                                                Расчет: {Math.round(data.baseSalary / data.normDays).toLocaleString()} * {data.workedDays}
+                                                Расчет: {Math.round(data.baseSalary / (data.normDays || 1)).toLocaleString()} * {data.workedDays}
                                             </Typography>
                                             <Typography variant="body1" fontWeight="bold" color="primary">
                                                 {data.accruals.toLocaleString()} тг
                                             </Typography>
                                         </Box>
+                                        {data.accruals !== Math.round((data.baseSalary / (data.normDays || 1)) * data.workedDays) && data.workedDays === 0 && (
+                                            <Typography variant="caption" color="error" sx={{ textAlign: 'right', display: 'block' }}>
+                                                * Внимание: начислен полный оклад при 0 дней
+                                            </Typography>
+                                        )}
                                     </>
                                 ) : (
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -234,9 +244,47 @@ const PayrollTotalDialog: React.FC<Props> = ({ open, onClose, data, onUpdate }) 
                             <Typography variant="body2">Аванс</Typography>
                             <Typography variant="body2">-{data.advance.toLocaleString()} тг</Typography>
                         </Box>
+                        
+                        <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, bgcolor: 'rgba(211, 47, 47, 0.05)' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                <Typography variant="body2" fontWeight="bold">Вычеты / Штрафы (автоматические)</Typography>
+                                <Typography variant="body2" fontWeight="bold" color="error.main">-{data.penalties.toLocaleString()} тг</Typography>
+                            </Box>
+                            
+                            {data.latePenalties ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', pl: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">• Опоздания</Typography>
+                                    <Typography variant="caption">-{data.latePenalties.toLocaleString()} тг</Typography>
+                                </Box>
+                            ) : null}
+
+                            {data.absencePenalties ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', pl: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">• Пропуски</Typography>
+                                    <Typography variant="caption">-{data.absencePenalties.toLocaleString()} тг</Typography>
+                                </Box>
+                            ) : null}
+
+                            {data.userFines ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', pl: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">• Админ. штрафы</Typography>
+                                    <Typography variant="caption">-{data.userFines.toLocaleString()} тг</Typography>
+                                </Box>
+                            ) : null}
+                        </Box>
+
+                        {data.deductions ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <Typography variant="body2">Корректировки (ручные вычеты)</Typography>
+                                <Typography variant="body2">-{data.deductions.toLocaleString()} тг</Typography>
+                            </Box>
+                        ) : null}
+                        
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <Typography variant="body2">Вычеты/Штрафы</Typography>
-                            <Typography variant="body2">-{data.penalties.toLocaleString()} тг</Typography>
+                            <Typography variant="body2">Долг с прошлого месяца</Typography>
+                            <Typography variant="body2" color={data.carryOverDebt ? "error.main" : "text.secondary"}>
+                                {data.carryOverDebt ? `-${data.carryOverDebt.toLocaleString()}` : "0"} тг
+                            </Typography>
                         </Box>
                     </Box>
 

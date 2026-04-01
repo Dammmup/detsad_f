@@ -97,6 +97,7 @@ interface PayrollRow {
   normShifts?: number;
   normType?: 'production' | 'shifts';
   deductions?: number;
+  carryOverDebt?: number;
 }
 
 const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
@@ -127,8 +128,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [calculatingDebt, setCalculatingDebt] = useState(false);
-
   const [totalDialogOpen, setTotalDialogOpen] = useState(false);
   const [currentTotalRow, setCurrentTotalRow] = useState<PayrollRow | null>(null);
 
@@ -199,7 +198,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         const filteredData = data.filter(p => {
           const role = p.staffId?.role as UserRole;
           const isExternal = EXTERNAL_ROLES.includes(role);
-          
+
           if (isExternal) return false;
 
           if (personalOnly && currentUserData?.id) {
@@ -222,7 +221,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
           ),
           totalAdvance: workedEmployees.reduce((sum, p) => sum + (p.advance || 0), 0),
           totalPenalties: workedEmployees.reduce((sum, p) => {
-            const rowPenalties = (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0) + (p.deductions || 0);
+            const rowPenalties = (p.penalties || 0) + (p.deductions || 0);
             return sum + rowPenalties;
           }, 0),
           totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total || 0), 0),
@@ -236,13 +235,13 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             accruals: p.accruals || (p.baseSalaryType === 'shift' ? ((p.workedShifts || 0) * (p.shiftRate || p.baseSalary || 0)) : 0),
             bonuses: p.bonuses || 0,
             deductions: p.deductions || 0,
-            penalties: (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0) + (p.deductions || 0),
+            penalties: p.penalties || 0,
             latePenalties: p.latePenalties || 0,
             absencePenalties: p.absencePenalties || 0,
             latePenaltyRate: globalLatePenaltyRate,
             advance: p.advance || 0,
             total: p.total || 0,  // Используем уже вычисленное значение из backend
-            status: p.status && p.status !== 'draft' ? p.status : 'calculated',
+            status: p.status || 'draft',
             staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
             _id: p._id || undefined,
             baseSalary: p.baseSalary || 0,
@@ -257,6 +256,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             normType: p.normType || 'production',
             shiftRate: p.shiftRate || 0,
             bonusDetails: p.bonusDetails,
+            carryOverDebt: p.carryOverDebt || 0,
           })),
         );
         setGlobalPenaltyRate(globalLatePenaltyRate);
@@ -282,7 +282,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
       bonuses: row.bonuses || undefined,
       bonusDetails: row.bonusDetails,
       baseSalary: row.baseSalary || undefined,
-      status: row.status && row.status !== 'draft' ? row.status : 'calculated',
+      status: row.status || 'draft',
     });
   };
 
@@ -317,7 +317,8 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         const apiStatus = status;
 
         const deductions = originalRow.deductions || 0; // Используем вычеты из оригинальной строки
-        const total = accruals + bonuses - penalties - advance - deductions;
+        const carryOverDebt = originalRow.carryOverDebt || 0;
+        const total = accruals + bonuses - penalties - advance - deductions - carryOverDebt;
 
         const updatedData = {
           ...editData,
@@ -518,7 +519,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     const filteredData = data.filter(p => {
       const role = p.staffId?.role as UserRole;
       const isExternal = EXTERNAL_ROLES.includes(role);
-      
+
       if (isExternal) return false;
 
       // В персональном режиме или для сотрудников (не админов) показываем только их данные
@@ -541,39 +542,39 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         0,
       ),
       totalAdvance: workedEmployees.reduce((sum, p) => sum + (p.advance || 0), 0),
-      totalPenalties: workedEmployees.reduce((sum, p) => sum + (p.penalties || 0) + (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0), 0),
+      totalPenalties: workedEmployees.reduce((sum, p) => sum + (p.penalties || 0) + (p.deductions || 0), 0),
       totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total || 0), 0),
     };
 
     setSummary(summaryData);
     const mappedRows = filteredData.map((p: any) => ({
-        staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
-        accruals: p.accruals || p.baseSalary || 0,
-        penalties:
-          p.penalties || (p.latePenalties || 0) + (p.absencePenalties || 0) + (p.userFines || 0),
-        latePenalties: p.latePenalties || 0,
-        absencePenalties: p.absencePenalties || 0,
-        latePenaltyRate: p.latePenaltyRate || 13,
-        advance: p.advance || 0,
-        bonuses: p.bonuses || 0,
-        total: p.total || 0,  // Используем уже вычисленное значение из backend
-        status: p.status || 'draft',
-        staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
-        _id: p._id || undefined,
-        baseSalary: p.baseSalary || 0,
-        baseSalaryType: p.baseSalaryType || 'month',
-        fines: p.fines || [],
-        deductions: p.deductions || 0, // Добавляем маппинг удержаний
-        userFines: p.userFines || 0,
-        workedShifts: p.workedShifts || 0,
-        workedDays: p.workedDays || 0,
-        shiftRate: p.shiftRate || 0,
-        bonusDetails: p.bonusDetails,
-        normDays: p.normDays || 0,
-        normProduction: p.normProduction || 0,
-        normShifts: p.normShifts || 0,
-        normType: p.normType || 'production',
-      }));
+      staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
+      accruals: p.accruals ?? p.baseSalary ?? 0,
+      penalties: p.penalties || 0,
+      latePenalties: p.latePenalties ?? 0,
+      absencePenalties: p.absencePenalties ?? 0,
+      latePenaltyRate: p.latePenaltyRate || 13,
+      advance: p.advance || 0,
+      bonuses: p.bonuses || 0,
+      total: p.total || 0,  // Используем уже вычисленное значение из backend
+      status: p.status || 'draft',
+      staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
+      _id: p._id || undefined,
+      baseSalary: p.baseSalary || 0,
+      baseSalaryType: p.baseSalaryType || 'month',
+      fines: p.fines || [],
+      deductions: p.deductions ?? 0,
+      userFines: p.userFines ?? 0,
+      carryOverDebt: p.carryOverDebt ?? 0,
+      workedShifts: p.workedShifts || 0,
+      workedDays: p.workedDays || 0,
+      shiftRate: p.shiftRate || 0,
+      bonusDetails: p.bonusDetails,
+      normDays: p.normDays || 0,
+      normProduction: p.normProduction || 0,
+      normShifts: p.normShifts || 0,
+      normType: p.normType || 'production',
+    }));
 
     setRows(mappedRows);
     return mappedRows;
@@ -781,26 +782,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     }
   };
 
-  // Расчёт долга по авансу за период
-  const handleCalculateDebt = async () => {
-    setCalculatingDebt(true);
-    try {
-      const result = await calculateDebt(selectedMonth);
-      setSnackbarMessage(
-        result.totalDebt > 0
-          ? `Долг рассчитан! Обработано ${result.processed} листов. Общий долг: ${result.totalDebt.toLocaleString()} тг`
-          : `Долгов не обнаружено. Обработано ${result.processed} листов.`
-      );
-      setSnackbarOpen(true);
-      // Перезагружаем данные для отображения изменений
-      window.location.reload();
-    } catch (e: any) {
-      setSnackbarMessage('Ошибка расчёта долга: ' + (e.message || 'Неизвестная ошибка'));
-      setSnackbarOpen(true);
-    } finally {
-      setCalculatingDebt(false);
-    }
-  };
 
   const selectedMonthLabel = new Date(`${selectedMonth}-01`).toLocaleString(
     'ru-RU',
@@ -1132,9 +1113,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                     <Tooltip title="Импортировать данные из Excel файла">
                       <Button variant='outlined' color='secondary' startIcon={<FileUploadIcon />} onClick={handleImportPayrolls} disabled={importing}>Импорт</Button>
                     </Tooltip>
-                    <Tooltip title="Рассчитать долг по авансам">
-                      <Button variant='outlined' color='info' startIcon={<DebtIcon />} onClick={handleCalculateDebt} disabled={calculatingDebt}>Расчитать долг</Button>
-                    </Tooltip>
+
                     <Tooltip title={`Настроить ставку штрафа за опоздания (${globalPenaltyRate} тг)`}>
                       <Button variant='outlined' onClick={handleOpenRateDialog}>Ставка: {globalPenaltyRate} ₸</Button>
                     </Tooltip>
@@ -1337,16 +1316,16 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             )}
 
             <FinesDetailsDialog open={fineDialogOpen} onClose={() => setFineDialogOpen(false)} fines={currentFines} onAddFine={handleAddFine} onDeleteFine={handleDeleteFine} staffName={currentFineStaffName} />
-            <PayrollTotalDialog 
-                open={totalDialogOpen} 
-                onClose={() => setTotalDialogOpen(false)} 
-                data={currentTotalRow} 
-                onUpdate={async (id, updates) => {
-                    await updatePayroll(id, updates);
-                    const updatedRows = await reloadPayrolls();
-                    const updatedRow = updatedRows.find(r => r._id === id);
-                    if (updatedRow) setCurrentTotalRow(updatedRow);
-                }}
+            <PayrollTotalDialog
+              open={totalDialogOpen}
+              onClose={() => setTotalDialogOpen(false)}
+              data={currentTotalRow}
+              onUpdate={async (id, updates) => {
+                await updatePayroll(id, updates);
+                const updatedRows = await reloadPayrolls();
+                const updatedRow = updatedRows.find(r => r._id === id);
+                if (updatedRow) setCurrentTotalRow(updatedRow);
+              }}
             />
 
             <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
