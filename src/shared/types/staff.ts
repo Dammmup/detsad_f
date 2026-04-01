@@ -164,6 +164,9 @@ export interface PayrollRecord extends BaseRecord {
     workedDays?: number;
     workedShifts?: number;
     normDays?: number;
+    normProduction?: number;
+    normShifts?: number;
+    normType?: 'production' | 'shifts';
     notes?: string;
     fio?: string;
 }

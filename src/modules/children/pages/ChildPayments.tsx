@@ -182,7 +182,7 @@ const ChildPayments: React.FC = () => {
   });
 
   const [nameFilter, setNameFilter] = useState('');
-  const [groupFilter, setGroupFilter] = useState('');
+  const [groupFilter, setGroupFilter] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
@@ -301,9 +301,9 @@ const ChildPayments: React.FC = () => {
         const child = childrenMap.get(childId);
         const matchesName = !search || (child?.fullName.toLowerCase().includes(search));
         let matchesGroup = true;
-        if (groupFilter) {
+        if (groupFilter.length > 0) {
           const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
-          matchesGroup = gId === groupFilter;
+          matchesGroup = groupFilter.includes(gId || '');
         }
         return matchesName && matchesGroup;
       })
@@ -544,13 +544,23 @@ const ChildPayments: React.FC = () => {
         />
 
         <FormControl fullWidth={isMobile} sx={{ minWidth: isMobile ? '100%' : 250 }}>
-          <InputLabel>Фильтр по группе</InputLabel>
+          <InputLabel>Фильтр по группам</InputLabel>
           <Select
+            multiple
             value={groupFilter}
-            label='Фильтр по группе'
-            onChange={(e) => setGroupFilter(e.target.value as string)}
+            label='Фильтр по группам'
+            onChange={(e) => setGroupFilter(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+            renderValue={(selected) => (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {selected.length === 0 ? 'Все группы' : selected.map((value) => (
+                  <Chip key={value} label={groupsMap.get(value)?.name || value} size="small" />
+                ))}
+              </Box>
+            )}
           >
-            <MenuItem value=''>Все группы</MenuItem>
+            <MenuItem value="">
+              <em>Все группы</em>
+            </MenuItem>
             {groups.map((group) => (
               <MenuItem key={group._id} value={group._id}>
                 {group.name}

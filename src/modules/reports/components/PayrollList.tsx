@@ -93,6 +93,9 @@ interface PayrollRow {
   workedDays: number;
   shiftRate: number;
   normDays?: number;
+  normProduction?: number;
+  normShifts?: number;
+  normType?: 'production' | 'shifts';
   deductions?: number;
 }
 
@@ -248,9 +251,12 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             userFines: p.userFines || 0,
             workedShifts: p.workedShifts || 0,
             workedDays: p.workedDays || 0,
+            normDays: p.normDays || 0,
+            normProduction: p.normProduction || 0,
+            normShifts: p.normShifts || 0,
+            normType: p.normType || 'production',
             shiftRate: p.shiftRate || 0,
             bonusDetails: p.bonusDetails,
-            normDays: p.normDays || 0,
           })),
         );
         setGlobalPenaltyRate(globalLatePenaltyRate);
@@ -540,8 +546,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     };
 
     setSummary(summaryData);
-    setRows(
-      filteredData.map((p: any) => ({
+    const mappedRows = filteredData.map((p: any) => ({
         staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
         accruals: p.accruals || p.baseSalary || 0,
         penalties:
@@ -565,8 +570,13 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         shiftRate: p.shiftRate || 0,
         bonusDetails: p.bonusDetails,
         normDays: p.normDays || 0,
-      })),
-    );
+        normProduction: p.normProduction || 0,
+        normShifts: p.normShifts || 0,
+        normType: p.normType || 'production',
+      }));
+
+    setRows(mappedRows);
+    return mappedRows;
   };
 
   // Confirmed generate
@@ -1327,7 +1337,17 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             )}
 
             <FinesDetailsDialog open={fineDialogOpen} onClose={() => setFineDialogOpen(false)} fines={currentFines} onAddFine={handleAddFine} onDeleteFine={handleDeleteFine} staffName={currentFineStaffName} />
-            <PayrollTotalDialog open={totalDialogOpen} onClose={() => setTotalDialogOpen(false)} data={currentTotalRow} />
+            <PayrollTotalDialog 
+                open={totalDialogOpen} 
+                onClose={() => setTotalDialogOpen(false)} 
+                data={currentTotalRow} 
+                onUpdate={async (id, updates) => {
+                    await updatePayroll(id, updates);
+                    const updatedRows = await reloadPayrolls();
+                    const updatedRow = updatedRows.find(r => r._id === id);
+                    if (updatedRow) setCurrentTotalRow(updatedRow);
+                }}
+            />
 
             <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
               <DialogTitle>Генерация листов</DialogTitle>

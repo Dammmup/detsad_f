@@ -20,6 +20,7 @@ import {
   MenuItem,
   useMediaQuery,
   Avatar,
+  Chip,
   Snackbar,
   Tooltip,
   TableSortLabel,
@@ -138,7 +139,7 @@ const Children: React.FC = () => {
   const [localSearchName, setLocalSearchName] = useState('');
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [groupFilter, setGroupFilter] = useState('');
+  const [groupFilter, setGroupFilter] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<'active' | 'inactive'>('active');
 
   const [isGeneratingPayments, setIsGeneratingPayments] = useState(false);
@@ -222,10 +223,10 @@ const Children: React.FC = () => {
           child.fullName.toLowerCase().includes(nameFilter.toLowerCase()),
       );
     }
-    if (groupFilter) {
+    if (groupFilter.length > 0) {
       result = result.filter((child) => {
         const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
-        return childGroupId && childGroupId === groupFilter;
+        return childGroupId && groupFilter.includes(childGroupId);
       });
     }
     return result;
@@ -377,9 +378,35 @@ const Children: React.FC = () => {
         />
 
         <FormControl fullWidth={isMobile} sx={{ minWidth: isMobile ? '100%' : 250 }}>
-          <InputLabel>Фильтр по группе</InputLabel>
-          <Select value={groupFilter} label='Фильтр по группе' onChange={(e) => setGroupFilter(e.target.value as string)}>
-            <MenuItem value=''>Все группы</MenuItem>
+          <InputLabel>Фильтр по группам</InputLabel>
+          <Select
+            multiple
+            value={groupFilter}
+            label='Фильтр по группам'
+            onChange={(e) => {
+              const value = typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value;
+              setGroupFilter(value.includes('') ? [] : value);
+            }}
+            renderValue={(selected) => (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {selected.length === 0 ? 'Все группы' : selected.map((value) => (
+                  <Chip 
+                    key={value} 
+                    label={groups.find(g => g._id === value)?.name || value} 
+                    size="small"
+                    avatar={
+                      <Avatar sx={{ bgcolor: getGroupColor(value) }}>
+                        {groups.find(g => g._id === value)?.name?.charAt(0)}
+                      </Avatar>
+                    }
+                  />
+                ))}
+              </Box>
+            )}
+          >
+            <MenuItem value="">
+              <em>Все группы</em>
+            </MenuItem>
             {groups.map((group) => (
               <MenuItem key={group._id} value={group._id}>
                 <Box display='flex' alignItems='center' gap={1}>
