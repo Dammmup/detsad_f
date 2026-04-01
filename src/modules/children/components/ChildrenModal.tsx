@@ -19,6 +19,7 @@ import childrenApi from '../services/children';
 import { getGroups } from '../services/groups';
 import { Avatar, Box } from '@mui/material';
 import { Group, User } from '../../../shared/types/common';
+import { useAuth } from '../../../app/context/AuthContext';
 
 interface ChildrenModalProps {
   open: boolean;
@@ -47,6 +48,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
   onSaved,
   child,
 }) => {
+  const { user: currentUser } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [form, setForm] = useState<Partial<User> & { paymentAmount?: number }>(defaultForm);
   const [saving, setSaving] = useState(false);
@@ -319,20 +321,22 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
           variant='outlined'
         />
 
-        <TextField
-          margin='dense'
-          name='paymentAmount'
-          label='Сумма оплаты (тенге)'
-          type='number'
-          value={form.paymentAmount || 40000}
-          onChange={(e) => setForm({ ...form, paymentAmount: Number(e.target.value) })}
-          fullWidth
-          sx={{ mb: 2 }}
-          variant='outlined'
-          InputProps={{
-            inputProps: { min: 0 }
-          }}
-        />
+        {currentUser?.role === 'admin' && (
+          <TextField
+            margin='dense'
+            name='paymentAmount'
+            label='Сумма оплаты (тенге)'
+            type='number'
+            value={form.paymentAmount || 40000}
+            onChange={(e) => setForm({ ...form, paymentAmount: Number(e.target.value) })}
+            fullWidth
+            sx={{ mb: 2 }}
+            variant='outlined'
+            InputProps={{
+              inputProps: { min: 0 }
+            }}
+          />
+        )}
 
         <TextField
           margin='dense'

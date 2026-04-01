@@ -813,6 +813,22 @@ export const exportChildPayments = async (
     'Комментарии',
   ];
 
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${day}.${month}.${year} ${hours}:${minutes}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
   const data = payments.map((payment) => {
     const child = children.find(
       (c) =>
@@ -834,7 +850,7 @@ export const exportChildPayments = async (
     return [
       child ? child.fullName : 'Неизвестный ребенок',
       group ? group.name : 'Группа не указана',
-      `${payment.period.start} - ${payment.period.end}`,
+      `${formatDateTime(payment.period.start)} - ${formatDateTime(payment.period.end)}`,
       payment.amount,
       payment.total,
       payment.accruals || 0,
@@ -898,6 +914,114 @@ export const exportSalaryReport = async (payrolls: any[]): Promise<void> => {
     filename: 'Отчет_по_зарплатам',
     sheetName: 'Зарплаты',
     title: 'Отчет по зарплатам',
+    headers,
+    data,
+    includeDate: true,
+  });
+};
+
+export const exportProducts = async (products: any[]): Promise<void> => {
+  const headers = [
+    'Штрихкод',
+    'Название',
+    'Категория',
+    'Текущий Запас',
+    'Единица',
+    'Поставщик',
+    'Цена',
+    'Белки',
+    'Жиры',
+    'Углеводы',
+    'Калории',
+    'Срок годности (дней)',
+  ];
+
+  const data = products.map((product) => [
+    product.barcode || '',
+    product.name,
+    product.category || '',
+    product.currentStock || 0,
+    product.unit || 'кг',
+    product.supplier || '',
+    product.price || 0,
+    product.nutrients?.proteins || 0,
+    product.nutrients?.fats || 0,
+    product.nutrients?.carbs || 0,
+    product.nutrients?.calories || 0,
+    product.shelfLifeDays || 0,
+  ]);
+
+  exportToExcel({
+    filename: 'Список_продуктов',
+    sheetName: 'Продукты',
+    title: 'Справочник продуктов на складе',
+    headers,
+    data,
+    includeDate: true,
+  });
+};
+
+export const exportDishes = async (dishes: any[], products: any[]): Promise<void> => {
+  const headers = [
+    'ID Блюда (скрипт)',
+    'Название блюда',
+    'Категория',
+    'Выход (г)',
+    'Белки',
+    'Жиры',
+    'Углеводы',
+    'Калории',
+    'Технология приготовления',
+    'Органолептика (Внеш.вид / Вкус / Конс. / Цвет)',
+    'Состав (Ингредиенты)',
+    'Технический состав (скрипт: ID:Брутто:Нетто|...)',
+  ];
+
+  const data = dishes.map((dish) => {
+    const proteins = dish.nutritionalInfo?.proteins?.toFixed(2) || 0;
+    const fats = dish.nutritionalInfo?.fats?.toFixed(2) || 0;
+    const carbs = dish.nutritionalInfo?.carbs?.toFixed(2) || 0;
+    const calories = dish.nutritionalInfo?.calories?.toFixed(2) || 0;
+    
+    const process = dish.technologicalProcess || '-';
+    const organoleptic = [
+      dish.organoleptic?.appearance || '-',
+      dish.organoleptic?.tasteAndSmell || '-',
+      dish.organoleptic?.consistency || '-',
+      dish.organoleptic?.color || '-'
+    ].join(' / ');
+
+    const ingredientsReadable = (dish.ingredients || []).map((ing: any) => {
+      const product = products.find(p => p._id === (typeof ing.productId === 'string' ? ing.productId : ing.productId?._id));
+      const productName = product ? product.name : 'Неизвестный продукт';
+      return `${productName}: ${ing.grossQuantity || ing.quantityBrutto || 0}г / ${ing.quantity || ing.quantityNetto || 0}г`;
+    }).join('\n');
+
+    const ingredientsScript = (dish.ingredients || []).map((ing: any) => {
+      const pid = typeof ing.productId === 'string' ? ing.productId : ing.productId?._id;
+      return `${pid}:${ing.grossQuantity || ing.quantityBrutto || 0}:${ing.quantity || ing.quantityNetto || 0}`;
+    }).join('|');
+
+    return [
+      dish._id,
+      dish.name,
+      dish.category || '',
+      dish.yield || 0,
+      proteins,
+      fats,
+      carbs,
+      calories,
+      process,
+      organoleptic,
+      ingredientsReadable || '-',
+      ingredientsScript || '-',
+    ];
+  });
+
+  exportToExcel({
+    filename: 'Справочник_блюд',
+    sheetName: 'Технологические карты',
+    title: 'Технологические карты блюд',
     headers,
     data,
     includeDate: true,

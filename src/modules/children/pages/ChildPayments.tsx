@@ -48,6 +48,7 @@ import { importChildPayments } from '../../../shared/services/importService';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 import DateNavigator from '../../../shared/components/DateNavigator';
 import { useSort } from '../../../shared/hooks/useSort';
+import { useAuth } from '../../../app/context/AuthContext';
 
 // Мемоизированная строка таблицы для предотвращения лишних рендеров
 const PaymentRow = React.memo(({
@@ -159,6 +160,7 @@ const PaymentRow = React.memo(({
 });
 
 const ChildPayments: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const { currentDate } = useDate();
   const [payments, setPayments] = useState<IChildPayment[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
@@ -696,24 +698,28 @@ const ChildPayments: React.FC = () => {
               type='number'
               value={newPayment.total}
               onChange={(e) => setNewPayment({ ...newPayment, total: Number(e.target.value) })}
+              disabled={currentUser?.role !== 'admin'}
             />
             <TextField
               label='Оплачено'
               type='number'
               value={newPayment.paidAmount}
               onChange={(e) => setNewPayment({ ...newPayment, paidAmount: Number(e.target.value) })}
+              disabled={currentUser?.role !== 'admin'}
             />
             <TextField
               label='Надбавки'
               type='number'
               value={newPayment.accruals}
               onChange={(e) => setNewPayment({ ...newPayment, accruals: Number(e.target.value) })}
+              disabled={currentUser?.role !== 'admin'}
             />
             <TextField
               label='Вычеты'
               type='number'
               value={newPayment.deductions}
               onChange={(e) => setNewPayment({ ...newPayment, deductions: Number(e.target.value) })}
+              disabled={currentUser?.role !== 'admin'}
             />
             <TextField
               label='Комментарии'

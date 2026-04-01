@@ -12,6 +12,10 @@ import {
   People,
   ChildCare,
   BarChart,
+  Badge,
+  Payment,
+  Restaurant,
+  LocalGroceryStore,
 } from '@mui/icons-material';
 import moment from 'moment';
 import { useDate } from '../../../app/context/DateContext';
@@ -24,11 +28,20 @@ import {
   exportChildrenAttendance,
   exportStaffAttendance,
   exportSalaryReport,
+  exportStaffList,
+  exportChildPayments,
+  exportProducts,
+  exportDishes,
 } from '../../../shared/utils/excelExport';
 import {
   getPayrollsByUsers,
   generatePayrollSheets,
 } from '../../staff/services/payroll';
+import { usersApi } from '../../staff/services/users';
+import childPaymentApi from '../../children/services/childPayment';
+import groupsApi from '../../children/services/groups';
+import { getProducts } from '../../food/services/products';
+import { getDishes } from '../../food/services/dishes';
 
 const ReportsWidget: React.FC = () => {
   const { currentDate } = useDate();
@@ -112,6 +125,71 @@ const ReportsWidget: React.FC = () => {
       setTimeout(() => setSuccess(null), 3000);
     }
   };
+
+  const handleExportStaff = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const staffList = await usersApi.getAll();
+      await exportStaffList(staffList);
+      setSuccess('Список сотрудников успешно экспортирован!');
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка экспорта списка сотрудников');
+    } finally {
+      setLoading(false);
+      setTimeout(() => setSuccess(null), 3000);
+    }
+  };
+
+  const handleExportChildPayments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const monthPeriod = moment(currentDate).format('YYYY-MM');
+      const payments = await childPaymentApi.getAll({ monthPeriod });
+      const children = await childrenApi.getAll();
+      const groups = await groupsApi.getAll();
+      await exportChildPayments(payments, children, groups);
+      setSuccess('Оплаты посещений детей успешно экспортированы!');
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка экспорта оплат детей');
+    } finally {
+      setLoading(false);
+      setTimeout(() => setSuccess(null), 3000);
+    }
+  };
+
+  const handleExportProducts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const products = await getProducts();
+      await exportProducts(products);
+      setSuccess('Список продуктов успешно экспортирован!');
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка экспорта продуктов');
+    } finally {
+      setLoading(false);
+      setTimeout(() => setSuccess(null), 3000);
+    }
+  };
+
+  const handleExportDishes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const dishes = await getDishes();
+      const products = await getProducts();
+      await exportDishes(dishes, products);
+      setSuccess('Справочник блюд успешно экспортирован!');
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка экспорта блюд');
+    } finally {
+      setLoading(false);
+      setTimeout(() => setSuccess(null), 3000);
+    }
+  };
+
 
   const isAdminOrManager = authUser?.role === 'admin' || authUser?.role === 'manager';
 
@@ -207,6 +285,78 @@ const ReportsWidget: React.FC = () => {
             }}
           >
             График
+          </Button>
+        )}
+
+        {isAdminOrManager && (
+          <Button
+            variant='contained'
+            color='inherit'
+            size="small"
+            startIcon={<Badge />}
+            onClick={handleExportStaff}
+            disabled={loading}
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.2)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+              fontSize: '0.75rem',
+            }}
+          >
+            Сотрудники
+          </Button>
+        )}
+
+        {isAdminOrManager && (
+          <Button
+            variant='contained'
+            color='inherit'
+            size="small"
+            startIcon={<Payment />}
+            onClick={handleExportChildPayments}
+            disabled={loading}
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.2)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+              fontSize: '0.75rem',
+            }}
+          >
+            Оплаты
+          </Button>
+        )}
+
+        {isAdminOrManager && (
+          <Button
+            variant='contained'
+            color='inherit'
+            size="small"
+            startIcon={<LocalGroceryStore />}
+            onClick={handleExportProducts}
+            disabled={loading}
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.2)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+              fontSize: '0.75rem',
+            }}
+          >
+            Продукты
+          </Button>
+        )}
+
+        {isAdminOrManager && (
+          <Button
+            variant='contained'
+            color='inherit'
+            size="small"
+            startIcon={<Restaurant />}
+            onClick={handleExportDishes}
+            disabled={loading}
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.2)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+              fontSize: '0.75rem',
+            }}
+          >
+            Блюда
           </Button>
         )}
       </Box>
