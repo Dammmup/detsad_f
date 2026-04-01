@@ -108,7 +108,7 @@ const Groups = () => {
 
   const handleExport = async (
     _exportType: string,
-    exportFormat: 'excel',
+    exportFormat: 'xlsx',
   ) => {
     setLoading(true);
     try {

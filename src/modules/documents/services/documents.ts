@@ -172,7 +172,7 @@ export const downloadDocument = async (id: string) => {
 
 
 export const exportDocuments = async (
-  format: | 'excel',
+  format: | 'xlsx',
   params?: GetDocumentsParams,
 ) => {
   try {
@@ -193,7 +193,7 @@ export const exportDocuments = async (
     link.href = url;
     link.setAttribute(
       'download',
-      `documents_export.${format === 'excel' ? 'xlsx' : format}`,
+      `documents_export.${format === 'xlsx'}`,
     );
     document.body.appendChild(link);
     link.click();

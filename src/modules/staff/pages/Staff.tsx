@@ -388,7 +388,7 @@ const Staff = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'excel',
+    exportFormat: 'xlsx',
   ) => {
     const params = activeTab === 'external'
       ? { name: searchTerm, type: 'external' }

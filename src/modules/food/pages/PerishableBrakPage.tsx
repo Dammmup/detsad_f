@@ -163,15 +163,15 @@ const PerishableBrakPage: React.FC = () => {
 
   const handleExport = async (
     _exportType: string,
-    _exportFormat: 'excel',
+    exportFormat: 'xlsx',
   ) => {
-    await exportData('perishable-brak', _exportFormat, { rows });
+    await exportData('perishable-brak', exportFormat, { rows });
   };
 
   return (
     <Box p={3}>
-      <Button 
-        startIcon={<ArrowBackIcon />} 
+      <Button
+        startIcon={<ArrowBackIcon />}
         onClick={() => navigate('/app/med')}
         variant="outlined"
         sx={{ mb: 2 }}

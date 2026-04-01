@@ -115,7 +115,7 @@ const FoodNormsControlPage: React.FC = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'excel',
+    exportFormat: 'xlsx',
   ) => {
     await exportData('food-norms-control', exportFormat, {
       rows: filteredRows,
@@ -144,8 +144,8 @@ const FoodNormsControlPage: React.FC = () => {
 
   return (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
-      <Button 
-        startIcon={<ArrowBackIcon />} 
+      <Button
+        startIcon={<ArrowBackIcon />}
         onClick={() => navigate('/app/med')}
         variant="outlined"
         sx={{ mb: 2 }}

@@ -26,6 +26,8 @@ import {
   createTubPositiveRecord,
   deleteTubPositiveRecord,
 } from '../services/tubPositiveJournal';
+import ExportButton from '../../../shared/components/ExportButton';
+import { exportData } from '../../../shared/utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
@@ -135,6 +137,12 @@ export default function TubPositiveJournal() {
         <Button variant='contained' onClick={() => setModalOpen(true)}>
           Новая запись
         </Button>
+        <ExportButton
+          exportTypes={[{ value: 'tub-positive-journal', label: 'Журнал туберкулино-положительных' }]}
+          onExport={async (_type, fmt) => {
+            await exportData('tub-positive-journal', fmt, { records: filteredRecords });
+          }}
+        />
         <TextField
           label='Поиск по ФИО'
           value={search}

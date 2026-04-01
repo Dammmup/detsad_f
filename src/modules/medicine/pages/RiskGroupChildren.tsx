@@ -25,6 +25,8 @@ import {
   createRiskGroupChild,
   deleteRiskGroupChild,
 } from '../services/riskGroupChildren';
+import ExportButton from '../../../shared/components/ExportButton';
+import { exportData } from '../../../shared/utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
@@ -135,6 +137,12 @@ export default function RiskGroupChildren() {
         <Button variant='contained' onClick={() => setModalOpen(true)}>
           Новая запись
         </Button>
+        <ExportButton
+          exportTypes={[{ value: 'risk-group-children', label: 'Дети группы риска' }]}
+          onExport={async (_type, fmt) => {
+            await exportData('risk-group-children', fmt, { records: filteredRecords });
+          }}
+        />
         <TextField
           label='Поиск по ФИО'
           value={search}

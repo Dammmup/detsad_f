@@ -137,15 +137,15 @@ const FoodStaffHealthPage: React.FC = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'excel',
+    exportFormat: 'xlsx',
   ) => {
     await exportData('food-staff-daily-log', exportFormat, { rows });
   };
 
   return (
     <Box p={3}>
-      <Button 
-        startIcon={<ArrowBackIcon />} 
+      <Button
+        startIcon={<ArrowBackIcon />}
         onClick={() => navigate('/app/med')}
         variant="outlined"
         sx={{ mb: 2 }}

@@ -182,7 +182,7 @@ const Rent = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'excel',
+    exportFormat: 'xlsx',
   ) => {
     await exportData('tenant', exportFormat, {
       name: searchTerm,

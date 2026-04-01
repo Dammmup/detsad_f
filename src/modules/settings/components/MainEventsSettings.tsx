@@ -55,7 +55,7 @@ interface ExportEntity {
   exportDayOfMonth: number;
   emailRecipients: string[];
   scheduleFrequency: 'daily' | 'weekly' | 'monthly' | 'none';
-  format: 'excel';
+  format: 'xlsx';
 }
 
 const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
@@ -80,7 +80,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           exportDayOfMonth: 30,
           emailRecipients: [] as string[],
           scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel',
+          format: 'xlsx',
         },
         {
           id: 'childPayment',
@@ -90,7 +90,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           exportDayOfMonth: 30,
           emailRecipients: [] as string[],
           scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel',
+          format: 'xlsx',
         },
         {
           id: 'staffShifts',
@@ -100,7 +100,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           exportDayOfMonth: 30,
           emailRecipients: [] as string[],
           scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel',
+          format: 'xlsx',
         },
         {
           id: 'payroll',
@@ -110,7 +110,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           exportDayOfMonth: 30,
           emailRecipients: [] as string[],
           scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel',
+          format: 'xlsx',
         },
         {
           id: 'rent',
@@ -120,7 +120,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           exportDayOfMonth: 30,
           emailRecipients: [] as string[],
           scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel',
+          format: 'xlsx',
         },
         {
           id: 'schedule',
@@ -130,7 +130,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           exportDayOfMonth: 30,
           emailRecipients: [] as string[],
           scheduleFrequency: 'none' as 'daily' | 'weekly' | 'monthly' | 'none',
-          format: 'excel',
+          format: 'xlsx',
         },
       ];
 
@@ -145,7 +145,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
             count,
             nextExportDate,
             daysUntilExport,
-            format: 'excel',
+            format: 'xlsx',
           };
           return result;
         }),
@@ -256,7 +256,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           );
           const attendanceLink = document.createElement('a');
           attendanceLink.href = attendanceUrl;
-          attendanceLink.download = `attendance_report_${new Date().toISOString().split('T')[0]}.${entity.format === 'excel' ? 'xlsx' : entity.format}`;
+          attendanceLink.download = `attendance_report_${new Date().toISOString().split('T')[0]}.${entity.format === 'xlsx' ? 'xlsx' : entity.format}`;
           document.body.appendChild(attendanceLink);
           attendanceLink.click();
           document.body.removeChild(attendanceLink);
@@ -287,7 +287,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           const childrenUrl = window.URL.createObjectURL(childrenBlob as Blob);
           const childrenLink = document.createElement('a');
           childrenLink.href = childrenUrl;
-          childrenLink.download = `children_report_${new Date().toISOString().split('T')[0]}.${entity.format === 'excel' ? 'xlsx' : entity.format}`;
+          childrenLink.download = `children_report_${new Date().toISOString().split('T')[0]}.${entity.format === 'xlsx' ? 'xlsx' : entity.format}`;
           document.body.appendChild(childrenLink);
           childrenLink.click();
           document.body.removeChild(childrenLink);
@@ -305,7 +305,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
           const payrollUrl = window.URL.createObjectURL(payrollBlob as Blob);
           const payrollLink = document.createElement('a');
           payrollLink.href = payrollUrl;
-          payrollLink.download = `salary_report_${new Date().toISOString().split('T')[0]}.${entity.format === 'excel' ? 'xlsx' : entity.format}`;
+          payrollLink.download = `salary_report_${new Date().toISOString().split('T')[0]}.${entity.format === 'xlsx' ? 'xlsx' : entity.format}`;
           document.body.appendChild(payrollLink);
           payrollLink.click();
           document.body.removeChild(payrollLink);
@@ -383,7 +383,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
 
 
       alert(
-        'Досрочный экспорт всех сущностей запущен (создание детализированных Excel-файлов)',
+        'Досрочный экспорт всех сущностей запущен (создание детализированных xlsx-файлов)',
       );
 
 
@@ -448,7 +448,7 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
 
       await Promise.all(exportPromises);
 
-      alert('Все сущности успешно экспортированы в Excel-файлы');
+      alert('Все сущности успешно экспортированы в xlsx-файлы');
     } catch (err) {
       setError('Ошибка досрочного экспорта: ' + (err as Error).message);
     }
@@ -626,11 +626,11 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
                             handleUpdateExportSetting(
                               entity.id,
                               'format',
-                              e.target.value as 'excel',
+                              e.target.value as 'xlsx',
                             )
                           }
                         >
-                          <MenuItem value='excel'>Excel</MenuItem>
+                          <MenuItem value='xlsx'>xlsx</MenuItem>
                         </Select>
                       </FormControl>
                       <FormControl size='small' sx={{ minWidth: 120, mb: 1 }}>

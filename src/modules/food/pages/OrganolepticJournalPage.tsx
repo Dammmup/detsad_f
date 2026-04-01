@@ -129,7 +129,7 @@ export default function OrganolepticJournalPage() {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'excel',
+    exportFormat: 'xlsx',
   ) => {
     await exportData('organoleptic-journal', exportFormat, {
       date,
@@ -154,8 +154,8 @@ export default function OrganolepticJournalPage() {
 
   return (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
-      <Button 
-        startIcon={<ArrowBackIcon />} 
+      <Button
+        startIcon={<ArrowBackIcon />}
         onClick={() => navigate('/app/med')}
         variant="outlined"
         sx={{ mb: 2 }}

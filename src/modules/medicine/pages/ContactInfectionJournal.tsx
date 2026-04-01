@@ -26,6 +26,8 @@ import {
   createContactInfectionRecord,
   deleteContactInfectionRecord,
 } from '../services/contactInfectionJournal';
+import ExportButton from '../../../shared/components/ExportButton';
+import { exportData } from '../../../shared/utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
@@ -125,6 +127,12 @@ export default function ContactInfectionJournal() {
         <Button variant='contained' onClick={() => setModalOpen(true)}>
           Новая запись
         </Button>
+        <ExportButton
+          exportTypes={[{ value: 'contact-infection-journal', label: 'Журнал контактов с инфекциями' }]}
+          onExport={async (_type, fmt) => {
+            await exportData('contact-infection-journal', fmt, { records: filteredRecords });
+          }}
+        />
         <TextField
           label='Поиск по ФИО'
           value={search}

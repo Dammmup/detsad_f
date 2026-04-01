@@ -2,7 +2,7 @@ import { apiClient } from './api';
 
 export const exportData = async (
   endpoint: string,
-  format: 'excel',
+  format: 'xlsx',
   filters?: any,
 ) => {
   try {

@@ -26,6 +26,8 @@ import {
   createInfectiousDiseaseRecord,
   deleteInfectiousDiseaseRecord,
 } from '../services/infectiousDiseasesJournal';
+import ExportButton from '../../../shared/components/ExportButton';
+import { exportData } from '../../../shared/utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
@@ -137,6 +139,12 @@ export default function InfectiousDiseasesJournal() {
         <Button variant='contained' onClick={() => setModalOpen(true)}>
           Новая запись
         </Button>
+        <ExportButton
+          exportTypes={[{ value: 'infectious-diseases-journal', label: 'Журнал инфекционных заболеваний' }]}
+          onExport={async (_type, fmt) => {
+            await exportData('infectious-diseases-journal', fmt, { records: filteredRecords });
+          }}
+        />
         <TextField
           label='Поиск по ФИО'
           value={search}

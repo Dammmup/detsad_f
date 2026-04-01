@@ -340,7 +340,7 @@ const StaffSchedule: React.FC = () => {
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    
+
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
       setNameFilter(value);
@@ -411,7 +411,7 @@ const StaffSchedule: React.FC = () => {
     }
   };
 
-  const handleExport = async (exportType: string, exportFormat: 'excel') => {
+  const handleExport = async (exportType: string, exportFormat: 'xlsx') => {
     handleExportFullMonth();
   };
 

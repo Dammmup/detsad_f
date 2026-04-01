@@ -103,15 +103,15 @@ const DetergentLogPage: React.FC = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'excel',
+    exportFormat: 'xlsx',
   ) => {
     await exportData('detergent-log', exportFormat, { rows });
   };
 
   return (
     <Box p={3}>
-      <Button 
-        startIcon={<ArrowBackIcon />} 
+      <Button
+        startIcon={<ArrowBackIcon />}
         onClick={() => navigate('/app/med')}
         variant="outlined"
         sx={{ mb: 2 }}

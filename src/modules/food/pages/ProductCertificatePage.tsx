@@ -105,7 +105,7 @@ const ProductCertificatePage: React.FC = () => {
 
   const handleExport = async (
     exportType: string,
-    exportFormat: 'excel',
+    exportFormat: 'xlsx',
   ) => {
     await exportData('product-certificate', exportFormat, { rows });
   };

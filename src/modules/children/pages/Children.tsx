@@ -39,24 +39,24 @@ import { useAuth } from '../../../app/context/AuthContext';
 
 
 
-const ChildRow = React.memo(({ 
-  child, 
-  index, 
-  isMobile, 
-  currentUser, 
-  getGroupColor, 
-  handleOpenModal, 
+const ChildRow = React.memo(({
+  child,
+  index,
+  isMobile,
+  currentUser,
+  getGroupColor,
+  handleOpenModal,
   handleDelete,
   groups,
   onGroupChange,
-}: { 
-  child: Child; 
-  index: number; 
-  isMobile: boolean; 
-  currentUser: any; 
-  getGroupColor: (id: string) => string; 
-  handleOpenModal: (child: Child) => void; 
-  handleDelete: (id: string) => void; 
+}: {
+  child: Child;
+  index: number;
+  isMobile: boolean;
+  currentUser: any;
+  getGroupColor: (id: string) => string;
+  handleOpenModal: (child: Child) => void;
+  handleDelete: (id: string) => void;
   groups: Group[];
   onGroupChange: (childId: string, groupId: string) => void;
 }) => {
@@ -271,7 +271,7 @@ const Children: React.FC = () => {
     }
   }, []);
 
-  const handleExport = useCallback(async (_exportType: string, exportFormat: 'excel') => {
+  const handleExport = useCallback(async (_exportType: string, exportFormat: 'xlsx') => {
     setLoading(true);
     try {
       const response = await apiClient.post(
@@ -390,9 +390,9 @@ const Children: React.FC = () => {
             renderValue={(selected) => (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                 {selected.length === 0 ? 'Все группы' : selected.map((value) => (
-                  <Chip 
-                    key={value} 
-                    label={groups.find(g => g._id === value)?.name || value} 
+                  <Chip
+                    key={value}
+                    label={groups.find(g => g._id === value)?.name || value}
                     size="small"
                     avatar={
                       <Avatar sx={{ bgcolor: getGroupColor(value) }}>

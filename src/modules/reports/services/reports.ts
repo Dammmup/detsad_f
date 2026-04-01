@@ -17,7 +17,7 @@ export interface Report {
     status?: string;
   };
   data?: any;
-  format?: 'excel';
+  format?: 'xlsx';
   status?: 'generating' | 'completed' | 'failed' | 'scheduled';
   filePath?: string;
   fileSize?: number;
@@ -243,7 +243,7 @@ export const getScheduleStatistics = async (
 
 export const exportReport = async (
   reportId: string,
-  format: 'excel',
+  format: 'xlsx',
 ) => {
   try {
     const response = await apiClient.get(`/reports/${reportId}/export`, {
@@ -255,7 +255,7 @@ export const exportReport = async (
 
     const blob = new Blob([response.data], {
       type:
-        format === 'excel'
+        format === 'xlsx'
           ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
           : 'application/octet-stream',
     });
@@ -272,7 +272,7 @@ export const exportSalaryReport = async (params: {
   startDate: string;
   endDate: string;
   userId?: string;
-  format: 'excel';
+  format: 'xlsx';
   includeDeductions?: boolean;
   includeBonus?: boolean;
 }) => {
@@ -287,7 +287,7 @@ export const exportSalaryReport = async (params: {
     });
     const blob = new Blob([response.data], {
       type:
-        params.format === 'excel'
+        params.format === 'xlsx'
           ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
           : 'application/octet-stream',
     });
@@ -327,7 +327,7 @@ export const getSalarySummary = async (month: string) => {
 export const exportChildrenReport = async (params: {
   groupId?: string;
   ageGroup?: string;
-  format: 'excel';
+  format: 'xlsx';
   includeParentInfo?: boolean;
   includeHealthInfo?: boolean;
 }) => {
@@ -339,7 +339,7 @@ export const exportChildrenReport = async (params: {
 
     const blob = new Blob([response.data], {
       type:
-        params.format === 'excel'
+        params.format === 'xlsx'
           ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
           : 'application/octet-stream',
     });
@@ -355,7 +355,7 @@ export const exportAttendanceReport = async (params: {
   endDate: string;
   userId?: string;
   groupId?: string;
-  format: 'excel';
+  format: 'xlsx';
   includeStatistics?: boolean;
   includeCharts?: boolean;
 }) => {
@@ -384,7 +384,7 @@ export const sendReportByEmail = async (params: {
   recipients: string[];
   subject?: string;
   message?: string;
-  format: 'excel';
+  format: 'xlsx';
   reportParams?: any;
 }) => {
   try {
@@ -401,7 +401,7 @@ export const scheduleReport = async (params: {
   reportType: 'salary' | 'children' | 'attendance' | 'schedule';
   frequency: 'daily' | 'weekly' | 'monthly';
   recipients: string[];
-  format: 'excel';
+  format: 'xlsx';
   reportParams?: any;
   startDate?: string;
 }) => {
@@ -417,7 +417,7 @@ export const scheduleReport = async (params: {
 
 export const downloadReport = async (
   reportId: string,
-  format: 'excel',
+  format: 'xlsx',
 ) => {
   try {
     const response = await apiClient.get(`/reports/${reportId}/download`, {
@@ -433,7 +433,7 @@ export const downloadReport = async (
     link.href = url;
 
 
-    const fileExtension = format === 'excel' ? 'xlsx' : format;
+    const fileExtension = format === 'xlsx' ? 'xlsx' : format;
     link.download = `report_${reportId}.${fileExtension}`;
 
 
@@ -454,7 +454,7 @@ export const generateCustomReport = async (params: {
   endDate: string;
   userId?: string;
   groupId?: string;
-  format?: 'excel';
+  format?: 'xlsx';
 }) => {
   try {
     const response = await apiClient.post('/reports/generate', params, {
