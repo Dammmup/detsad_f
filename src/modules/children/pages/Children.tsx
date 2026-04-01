@@ -45,7 +45,9 @@ const ChildRow = React.memo(({
   currentUser, 
   getGroupColor, 
   handleOpenModal, 
-  handleDelete 
+  handleDelete,
+  groups,
+  onGroupChange,
 }: { 
   child: Child; 
   index: number; 
@@ -54,6 +56,8 @@ const ChildRow = React.memo(({
   getGroupColor: (id: string) => string; 
   handleOpenModal: (child: Child) => void; 
   handleDelete: (id: string) => void; 
+  groups: Group[];
+  onGroupChange: (childId: string, groupId: string) => void;
 }) => {
   const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
   const groupColor = childGroupId ? getGroupColor(childGroupId) : '#B0B0B0';
@@ -82,9 +86,25 @@ const ChildRow = React.memo(({
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.parentPhone}</TableCell>
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.iin}</TableCell>
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>
-        {typeof child.groupId === 'object' && child.groupId
-          ? (child.groupId as Group).name
-          : child.groupId ? child.groupId : 'Не указана'}
+        <Select
+          size='small'
+          value={childGroupId || ''}
+          onChange={(e) => onGroupChange(child.id || (child._id as string), e.target.value as string)}
+          displayEmpty
+          sx={{ minWidth: 140, fontSize: '0.85rem' }}
+        >
+          <MenuItem value=''><em>Не указана</em></MenuItem>
+          {groups.filter(g => g.name !== 'Все группы' && g.name !== 'Default Group').map((g) => (
+            <MenuItem key={g._id} value={g._id}>
+              <Box display='flex' alignItems='center' gap={1}>
+                <Avatar sx={{ width: 18, height: 18, bgcolor: getGroupColor(g._id as string), fontSize: '0.6rem' }}>
+                  {g.name.charAt(0)}
+                </Avatar>
+                {g.name}
+              </Box>
+            </MenuItem>
+          ))}
+        </Select>
       </TableCell>
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.notes}</TableCell>
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.active ? 'Активен' : 'Неактивен'}</TableCell>
@@ -233,6 +253,22 @@ const Children: React.FC = () => {
       setError(e?.message || 'Ошибка удаления');
     }
   }, [fetchChildren]);
+
+  const handleGroupChange = useCallback(async (childId: string, groupId: string) => {
+    try {
+      await childrenApi.update(childId, { groupId } as any);
+      setChildren(prev => prev.map(c => {
+        const cId = c.id || (c._id as string);
+        if (cId === childId) {
+          return { ...c, groupId: groupId || undefined } as Child;
+        }
+        return c;
+      }));
+      setSnackbar({ open: true, message: 'Группа обновлена', severity: 'success' });
+    } catch (e: any) {
+      setSnackbar({ open: true, message: e?.message || 'Ошибка обновления группы', severity: 'error' });
+    }
+  }, []);
 
   const handleExport = useCallback(async (_exportType: string, exportFormat: 'excel') => {
     setLoading(true);
@@ -447,6 +483,8 @@ const Children: React.FC = () => {
                 getGroupColor={getGroupColor}
                 handleOpenModal={handleOpenModal}
                 handleDelete={handleDelete}
+                groups={groups}
+                onGroupChange={handleGroupChange}
               />
             ))}
           </TableBody>
