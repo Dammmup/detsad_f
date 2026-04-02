@@ -72,7 +72,7 @@ export interface Child {
 }
 
 export interface User {
-  _id: ID;
+  _id?: ID;
   id?: ID;
   phone: string;
   fullName: string;

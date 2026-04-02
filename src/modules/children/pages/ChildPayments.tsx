@@ -38,9 +38,9 @@ import {
   FileUpload,
 } from '@mui/icons-material';
 import { useDate } from '../../../app/context/DateContext';
+import { useChildren } from '../../../app/context/ChildrenContext';
+import { useGroups } from '../../../app/context/GroupsContext';
 import childPaymentApi from '../services/childPayment';
-import childrenApi from '../services/children';
-import groupsApi from '../services/groups';
 import { IChildPayment, Child, Group } from '../../../shared/types/common';
 import moment from 'moment';
 import { exportChildPayments } from '../../../shared/utils/excelExport';
@@ -162,9 +162,9 @@ const PaymentRow = React.memo(({
 const ChildPayments: React.FC = () => {
   const { user: currentUser } = useAuth();
   const { currentDate } = useDate();
+  const { children, fetchChildren } = useChildren();
+  const { groups, fetchGroups } = useGroups();
   const [payments, setPayments] = useState<IChildPayment[]>([]);
-  const [children, setChildren] = useState<Child[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -186,8 +186,6 @@ const ChildPayments: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
-  const [childrenLoaded, setChildrenLoaded] = useState(false);
-  const [groupsLoaded, setGroupsLoaded] = useState(false);
   const isMobile = useMediaQuery('(max-width:900px)');
 
   const childrenMap = useMemo(() => {
@@ -235,28 +233,6 @@ const ChildPayments: React.FC = () => {
       setLoading(false);
     }
   }, [currentDate]);
-
-  const fetchChildren = useCallback(async () => {
-    if (childrenLoaded) return;
-    try {
-      const childrenList = await childrenApi.getAll();
-      setChildren(childrenList);
-      setChildrenLoaded(true);
-    } catch {
-      setChildren([]);
-    }
-  }, [childrenLoaded]);
-
-  const fetchGroups = useCallback(async () => {
-    if (groupsLoaded) return;
-    try {
-      const groupsList = await groupsApi.getAll();
-      setGroups(groupsList);
-      setGroupsLoaded(true);
-    } catch {
-      setGroups([]);
-    }
-  }, [groupsLoaded]);
 
   const handleGeneratePayments = useCallback(async () => {
     setIsGenerating(true);

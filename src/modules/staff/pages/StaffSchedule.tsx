@@ -72,7 +72,7 @@ import {
   deleteShift,
   shiftsApi,
 } from '../services/shifts';
-import { getUsers } from '../services/users';
+import { useStaff } from '../../../app/context/StaffContext';
 import { getHolidays } from '../../../shared/services/common';
 import { staffAttendanceTrackingService } from '../services/staffAttendanceTracking';
 
@@ -348,8 +348,12 @@ const StaffSchedule: React.FC = () => {
   }, []);
 
 
-  const [staff, setStaff] = useState<any[]>([]);
+  const { staff: allStaff, fetchStaff } = useStaff();
   const [shifts, setShifts] = useState<any[]>([]);
+
+  const staff = useMemo(() => {
+    return allStaff.filter((u: any) => STAFF_ROLES.includes(u.role));
+  }, [allStaff]);
 
 
   const [holidays, setHolidays] = useState<string[]>([]);
@@ -441,13 +445,14 @@ const StaffSchedule: React.FC = () => {
         const startDate = weekStart.format('YYYY-MM-DD');
         const endDate = weekEnd.format('YYYY-MM-DD');
 
-        const [staffData, shiftsData, attendanceData] = await Promise.all([
-          getUsers(),
+        const [shiftsData, attendanceData] = await Promise.all([
           getShifts(startDate, endDate),
           staffAttendanceTrackingService.getAllRecords({ startDate, endDate })
         ]);
 
-        setStaff(staffData.filter((u: any) => STAFF_ROLES.includes(u.role)));
+        // Fetch staff in parallel but using context
+        fetchStaff();
+
         setShifts(shiftsData);
         const rawAttendance = attendanceData?.data || attendanceData || [];
         setAttendanceRecords(Array.isArray(rawAttendance) ? rawAttendance : (rawAttendance?.items || rawAttendance?.data || []));

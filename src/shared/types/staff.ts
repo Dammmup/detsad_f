@@ -26,6 +26,14 @@ export interface User extends BaseRecord {
     staffId?: string;
     staffName?: string;
     tenant?: boolean;
+    allowToSeePayroll?: boolean;
+    accessControls?: {
+        canSeeChildren?: boolean;
+        canSeeFood?: boolean;
+        canSeeRent?: boolean;
+        canSeeStaff?: boolean;
+        canSeeSettings?: boolean;
+    };
 }
 
 export enum ShiftStatus {

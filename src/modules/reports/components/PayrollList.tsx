@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -49,10 +49,14 @@ import {
   calculateDebt,
   addFine,
   removeFine,
+  getPayrolls,
 } from '../../staff/services/payroll';
 import { importPayrolls } from '../../../shared/services/importService';
 import { UserRole, EXTERNAL_ROLES } from '../../../shared/types/common';
 import { PayrollRecord as Payroll } from '../../../shared/types/staff';
+import { useAuth } from '../../../app/context/AuthContext';
+import { useStaff } from '../../../app/context/StaffContext';
+import { getKindergartenSettings, updateKindergartenSettings } from '../../settings/services/settings';
 import FinesDetailsDialog from './FinesDetailsDialog';
 import PayrollTotalDialog from './PayrollTotalDialog';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
@@ -101,14 +105,27 @@ interface PayrollRow {
 }
 
 const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
+  const { user } = useAuth();
+  const { staff } = useStaff();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasNoAccess, setHasNoAccess] = useState(false);
   const [summary, setSummary] = useState<any>(null);
   const [rows, setRows] = useState<PayrollRow[]>([]);
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [globalPenaltyRate, setGlobalPenaltyRate] = useState<number>(50);
   const [penaltyType, setPenaltyType] = useState<string>('per_minute');
+  const staffMap = useMemo(() => {
+    const map = new Map<string, any>();
+    staff.forEach((s) => {
+      const id = s.id || s._id;
+      if (id) map.set(id, s);
+    });
+    return map;
+  }, [staff]);
+
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [rateDialogOpen, setRateDialogOpen] = useState(false);
   const [newRate, setNewRate] = useState<number>(50);
   const [newPenaltyType, setNewPenaltyType] = useState<string>('per_minute');
@@ -125,113 +142,77 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   const [currentFineStaffName, setCurrentFineStaffName] = useState('');
   const [currentFines, setCurrentFines] = useState<any[]>([]);
   const [newFine, setNewFine] = useState({ amount: '', reason: '' });
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [totalDialogOpen, setTotalDialogOpen] = useState(false);
   const [currentTotalRow, setCurrentTotalRow] = useState<PayrollRow | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (personalOnly && user && user.role !== 'admin' && user.allowToSeePayroll === false) {
+        setError('У вас нет прав для просмотра своей зарплаты. Обратитесь к администратору.');
+        setLoading(false);
+        return;
+      }
 
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
+      const params: any = {
+        period: selectedMonth,
+      };
 
-        const { getCurrentUser } = await import('../../staff/services/auth');
-        const { getPayrolls } = await import('../../staff/services/payroll');
+      if ((personalOnly || (user && user.role !== UserRole.admin && user.role !== UserRole.manager)) && user?.id) {
+        params.userId = user.id;
+      } else if (userId) {
+        params.userId = userId;
+      }
 
+      const settings = await getKindergartenSettings();
+      const globalLatePenaltyRate = settings?.payroll?.latePenaltyRate || 50;
+      const globalLatePenaltyType = settings?.payroll?.latePenaltyType || 'per_minute';
+      setGlobalPenaltyRate(globalLatePenaltyRate);
+      setPenaltyType(globalLatePenaltyType);
 
-        let currentUserData = null;
-        try {
-          const userData = getCurrentUser();
-          if (userData) {
-            // Проверяем, есть ли право на просмотр зарплаты
-            // Проверка прав доступа для персонального режима
-            const hasAccess = userData.role !== 'admin' || userData.allowToSeePayroll === true;
+      const payrollsData = await getPayrolls(params);
 
-            if (personalOnly && !hasAccess) {
-              setError('У вас нет прав для просмотра своей зарплаты. Обратитесь к администратору.');
-              setLoading(false);
-              return;
-            }
+      const data = (payrollsData || []) as any[];
 
-            currentUserData = {
-              id: userData.id || userData._id,
-              role: userData.role || 'staff',
-            };
-            setCurrentUser(currentUserData);
-          }
-        } catch (userError) {
-          console.error('Ошибка получения данных пользователя:', userError);
+      const filteredData = data.filter(p => {
+        const sId = p.staffId?._id || p.staffId?.id || p.staffId;
+        const staffInfo = staffMap.get(sId);
+        const role = staffInfo?.role || p.staffId?.role as UserRole;
+        const isExternal = EXTERNAL_ROLES.includes(role);
+
+        if (isExternal) return false;
+
+        if (personalOnly && user?.id) {
+          return sId === user.id;
         }
 
+        return true;
+      });
 
-        const params: any = {
-          period: selectedMonth,
-        };
+      const workedEmployees = filteredData.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
 
+      const summaryData = {
+        totalEmployees: workedEmployees.length,
+        totalAccruals: workedEmployees.reduce(
+          (sum, p) => sum + (p.accruals || 0) + (p.bonuses || 0),
+          0,
+        ),
+        totalAdvance: workedEmployees.reduce((sum, p) => sum + (p.advance || 0), 0),
+        totalPenalties: workedEmployees.reduce((sum, p) => {
+          const rowPenalties = (p.penalties || 0) + (p.deductions || 0);
+          return sum + rowPenalties;
+        }, 0),
+        totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total || 0), 0),
+      };
 
-        if (
-          (personalOnly || (currentUserData && currentUserData.role !== UserRole.admin && currentUserData.role !== UserRole.manager)) &&
-          currentUserData?.id
-        ) {
-          params.userId = currentUserData.id;
-        } else if (userId) {
-          params.userId = userId;
-        }
-
-        const { getKindergartenSettings } = await import('../../settings/services/settings');
-        const settings = await getKindergartenSettings();
-        const globalLatePenaltyRate = settings?.payroll?.latePenaltyRate || 50;
-        const globalLatePenaltyType = settings?.payroll?.latePenaltyType || 'per_minute';
-        setGlobalPenaltyRate(globalLatePenaltyRate);
-        setPenaltyType(globalLatePenaltyType);
-
-        const payrollsData = await getPayrolls(params);
-
-        if (!mounted) return;
-        const data = (payrollsData || []) as any[];
-
-        // Исключаем арендаторов и логопедов, а также фильтруем по пользователю в персональном режиме
-        const filteredData = data.filter(p => {
-          const role = p.staffId?.role as UserRole;
-          const isExternal = EXTERNAL_ROLES.includes(role);
-
-          if (isExternal) return false;
-
-          if (personalOnly && currentUserData?.id) {
-            const rowStaffId = p.staffId?._id || p.staffId?.id || p.staffId;
-            return rowStaffId === currentUserData.id;
-          }
-
-          return true;
-        });
-
-
-        // Фильтруем работавших сотрудников на основе отфильтрованных данных
-        const workedEmployees = filteredData.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
-
-        const summaryData = {
-          totalEmployees: workedEmployees.length,
-          totalAccruals: workedEmployees.reduce(
-            (sum, p) => sum + (p.accruals || 0) + (p.bonuses || 0),
-            0,
-          ),
-          totalAdvance: workedEmployees.reduce((sum, p) => sum + (p.advance || 0), 0),
-          totalPenalties: workedEmployees.reduce((sum, p) => {
-            const rowPenalties = (p.penalties || 0) + (p.deductions || 0);
-            return sum + rowPenalties;
-          }, 0),
-          totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total || 0), 0),
-        };
-
-
-        setSummary(summaryData);
-        setRows(
-          filteredData.map((p: any) => ({
-            staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
+      setSummary(summaryData);
+      setRows(
+        filteredData.map((p: any) => {
+          const sId = p.staffId?._id || p.staffId?.id || p.staffId || '';
+          const staffInfo = staffMap.get(sId);
+          return {
+            staffName: staffInfo?.fullName || p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
             accruals: p.accruals || (p.baseSalaryType === 'shift' ? ((p.workedShifts || 0) * (p.shiftRate || p.baseSalary || 0)) : 0),
             bonuses: p.bonuses || 0,
             deductions: p.deductions || 0,
@@ -240,9 +221,9 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             absencePenalties: p.absencePenalties || 0,
             latePenaltyRate: globalLatePenaltyRate,
             advance: p.advance || 0,
-            total: p.total || 0,  // Используем уже вычисленное значение из backend
+            total: p.total || 0,
             status: p.status || 'draft',
-            staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
+            staffId: sId,
             _id: p._id || undefined,
             baseSalary: p.baseSalary || 0,
             baseSalaryType: p.baseSalaryType || 'month',
@@ -257,21 +238,21 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             shiftRate: p.shiftRate || 0,
             bonusDetails: p.bonusDetails,
             carryOverDebt: p.carryOverDebt || 0,
-          })),
-        );
-        setGlobalPenaltyRate(globalLatePenaltyRate);
-        setNewRate(globalLatePenaltyRate);
-      } catch (e: any) {
-        if (mounted) setError(e?.message || 'Ошибка загрузки зарплат');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [userId, selectedMonth]);
+          };
+        }),
+      );
+      setGlobalPenaltyRate(globalLatePenaltyRate);
+      setNewRate(globalLatePenaltyRate);
+    } catch (e: any) {
+      setError(e?.message || 'Ошибка загрузки зарплат');
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, selectedMonth, personalOnly, user, staffMap]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleEditClick = (row: PayrollRow) => {
     setEditingId(row.staffId);
@@ -376,7 +357,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   };
 
   const handleDeleteClick = async (rowId: string) => {
-    if (!currentUser || !currentUser.id || currentUser.role !== 'admin') {
+    if (!user || user.role !== 'admin') {
       setSnackbarMessage('Только администратор может удалять расчетные листы');
       setSnackbarOpen(true);
       return;
@@ -469,7 +450,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   }
   // Open confirmation dialog for generate
   const handleOpenConfirmDialog = () => {
-    if (!currentUser || !currentUser.id || currentUser.role !== 'admin') {
+    if (!user || user.role !== 'admin') {
       setSnackbarMessage(
         'Только администратор может генерировать расчетные листы',
       );
@@ -479,106 +460,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     setConfirmDialogOpen(true);
   };
 
-  // Helper to reload payrolls
-  const reloadPayrolls = async () => {
-    const { getCurrentUser } = await import('../../staff/services/auth');
-    const { getPayrolls } = await import('../../staff/services/payroll');
-
-    let currentUserData = null;
-    try {
-      const userData = getCurrentUser();
-      if (userData) {
-        currentUserData = {
-          id: userData.id || userData._id,
-          role: userData.role || 'staff',
-        };
-        setCurrentUser(currentUserData);
-      }
-    } catch (userError) {
-      console.error('Ошибка получения данных пользователя:', userError);
-    }
-
-    const params: any = {
-      period: selectedMonth,
-    };
-
-    if (
-      currentUserData &&
-      currentUserData.role !== 'admin' &&
-      currentUserData.id
-    ) {
-      params.userId = currentUserData.id;
-    } else if (userId) {
-      params.userId = userId;
-    }
-
-    const payrollsData = await getPayrolls(params);
-    const data = (payrollsData || []) as any[];
-
-    // Исключаем арендаторов и логопедов, а также фильтруем по пользователю в персональном режиме
-    const filteredData = data.filter(p => {
-      const role = p.staffId?.role as UserRole;
-      const isExternal = EXTERNAL_ROLES.includes(role);
-
-      if (isExternal) return false;
-
-      // В персональном режиме или для сотрудников (не админов) показываем только их данные
-      if ((personalOnly || (currentUserData && currentUserData.role !== 'admin')) && currentUserData?.id) {
-        const rowStaffId = p.staffId?._id || p.staffId?.id || p.staffId;
-        return rowStaffId === currentUserData.id;
-      }
-
-      return true;
-    });
-
-
-    // Фильтруем работавших сотрудников на основе отфильтрованных данных
-    const workedEmployees = filteredData.filter(p => (p.workedShifts || 0) > 0 || (p.workedDays || 0) > 0);
-
-    const summaryData = {
-      totalEmployees: workedEmployees.length,
-      totalAccruals: workedEmployees.reduce(
-        (sum, p) => sum + (p.accruals || 0) + (p.bonuses || 0),
-        0,
-      ),
-      totalAdvance: workedEmployees.reduce((sum, p) => sum + (p.advance || 0), 0),
-      totalPenalties: workedEmployees.reduce((sum, p) => sum + (p.penalties || 0) + (p.deductions || 0), 0),
-      totalPayout: workedEmployees.reduce((sum, p) => sum + (p.total || 0), 0),
-    };
-
-    setSummary(summaryData);
-    const mappedRows = filteredData.map((p: any) => ({
-      staffName: p.staffId?.fullName || p.staffId?.name || 'Неизвестно',
-      accruals: p.accruals ?? p.baseSalary ?? 0,
-      penalties: p.penalties || 0,
-      latePenalties: p.latePenalties ?? 0,
-      absencePenalties: p.absencePenalties ?? 0,
-      latePenaltyRate: p.latePenaltyRate || 13,
-      advance: p.advance || 0,
-      bonuses: p.bonuses || 0,
-      total: p.total || 0,  // Используем уже вычисленное значение из backend
-      status: p.status || 'draft',
-      staffId: p.staffId?._id || p.staffId?.id || p.staffId || '',
-      _id: p._id || undefined,
-      baseSalary: p.baseSalary || 0,
-      baseSalaryType: p.baseSalaryType || 'month',
-      fines: p.fines || [],
-      deductions: p.deductions ?? 0,
-      userFines: p.userFines ?? 0,
-      carryOverDebt: p.carryOverDebt ?? 0,
-      workedShifts: p.workedShifts || 0,
-      workedDays: p.workedDays || 0,
-      shiftRate: p.shiftRate || 0,
-      bonusDetails: p.bonusDetails,
-      normDays: p.normDays || 0,
-      normProduction: p.normProduction || 0,
-      normShifts: p.normShifts || 0,
-      normType: p.normType || 'production',
-    }));
-
-    setRows(mappedRows);
-    return mappedRows;
-  };
 
   // Confirmed generate
   const handleConfirmGenerate = async () => {
@@ -590,7 +471,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
       await generatePayrollSheets(monthToGenerate);
       setSnackbarMessage('Расчетные листы успешно сгенерированы');
       setSnackbarOpen(true);
-      await reloadPayrolls();
+      await loadData();
     } catch (error: any) {
       console.error('Error generating payroll sheets:', error);
       setSnackbarMessage(
@@ -604,7 +485,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
 
   // Refresh all payrolls (recalculate based on current attendance)
   const handleRefreshPayrolls = async () => {
-    if (!currentUser || !currentUser.id || currentUser.role !== 'admin') {
+    if (!user || user.role !== 'admin') {
       setSnackbarMessage(
         'Только администратор может обновлять расчетные листы',
       );
@@ -619,7 +500,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
       await generatePayrollSheets(monthToRefresh, true); // Передаем force: true
       setSnackbarMessage('Все расчетные листы успешно обновлены');
       setSnackbarOpen(true);
-      await reloadPayrolls();
+      await loadData();
     } catch (error: any) {
       console.error('Error refreshing payroll sheets:', error);
       setSnackbarMessage(
@@ -633,7 +514,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
 
   // Импорт зарплат из Excel
   const handleImportPayrolls = async () => {
-    if (!currentUser || !currentUser.id || currentUser.role !== 'admin') {
+    if (!user || user.role !== 'admin') {
       setSnackbarMessage('Только администратор может импортировать зарплаты');
       setSnackbarOpen(true);
       return;
@@ -644,7 +525,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
       const result = await importPayrolls(selectedMonth);
       if (result.success) {
         setSnackbarMessage(`Импорт завершён: создано ${result.stats.created || 0}, обновлено ${result.stats.updated || 0}`);
-        await reloadPayrolls();
+        await loadData();
       } else {
         setSnackbarMessage(result.error || 'Ошибка импорта');
       }
@@ -675,7 +556,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
 
       if (!payrollId && row) {
 
-        const { createPayroll } = await import('../../staff/services/payroll');
         const newPayroll = await createPayroll({
           staffId: { _id: row.staffId } as any,
           period: selectedMonth,
@@ -687,11 +567,11 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
 
       if (!payrollId) throw new Error('Could not determine payroll ID');
 
-      const updatedPayroll = await import('../../staff/services/payroll').then(m => m.addFine(payrollId!, {
+      const updatedPayroll = await addFine(payrollId!, {
         amount: fineData.amount,
         reason: fineData.reason,
         type: 'manual'
-      }));
+      });
 
       setSnackbarMessage('Вычет добавлен');
       setSnackbarOpen(true);
@@ -699,9 +579,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
 
       setCurrentFines(updatedPayroll.fines || []);
 
-
-
-      window.location.reload();
+      await loadData();
 
     } catch (e: any) {
       setSnackbarMessage('Ошибка добавления Вычета: ' + (e.message || 'Unknown'));
@@ -732,7 +610,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
       }
 
       console.log('📤 [ReportsSalary] Calling removeFine API with payrollId:', payrollId, 'fineIndex:', fineIndex);
-      const { removeFine } = await import('../../staff/services/payroll');
       const updatedPayroll = await removeFine(payrollId, Number(fineIndex));
       console.log('✅ [ReportsSalary] removeFine response:', updatedPayroll);
 
@@ -742,8 +619,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
       // Обновляем список вычетов в диалоге
       setCurrentFines(updatedPayroll.fines || []);
 
-      // Перезагружаем страницу для обновления всех данных
-      window.location.reload();
+      await loadData();
 
     } catch (e: any) {
       console.error('❌ [ReportsSalary] Error in handleDeleteFine:', e);
@@ -760,7 +636,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
 
   const handleSaveRate = async () => {
     try {
-      const { getKindergartenSettings, updateKindergartenSettings } = await import('../../settings/services/settings');
       const settings = await getKindergartenSettings();
       if (settings) {
         await updateKindergartenSettings({
@@ -1102,7 +977,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                   </Box>
                 </Card>
 
-                {currentUser?.id && (currentUser?.role === 'admin' || currentUser?.role === 'manager') && (
+                {user?.id && (user?.role === 'admin' || user?.role === 'manager') && (
                   <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
                     <Tooltip title="Сгенерировать расчетные листы за выбранный период">
                       <Button variant='contained' startIcon={<EditIcon />} onClick={handleOpenConfirmDialog} disabled={generating}>Сгенерировать</Button>
@@ -1211,7 +1086,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                                         {r.penalties ? r.penalties?.toLocaleString() : '0'}
                                       </span>
                                     </Tooltip>
-                                    {currentUser?.role === 'admin' && (
+                                    {user?.role === 'admin' && (
                                       <IconButton
                                         size="small"
                                         onClick={() => handleOpenFineDialog(r)}
@@ -1322,8 +1197,8 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
               data={currentTotalRow}
               onUpdate={async (id, updates) => {
                 await updatePayroll(id, updates);
-                const updatedRows = await reloadPayrolls();
-                const updatedRow = updatedRows.find(r => r._id === id);
+                await loadData();
+                const updatedRow = rows.find(r => r._id === id);
                 if (updatedRow) setCurrentTotalRow(updatedRow);
               }}
             />

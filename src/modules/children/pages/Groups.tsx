@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Paper,
   Button,
@@ -37,16 +37,15 @@ import {
   Person,
   Groups as GroupsIcon,
 } from '@mui/icons-material';
-import { useGroups } from '../../../app/context/GroupsContext';
-import { Child } from '../../../shared/types/common';
-
 import { useAuth } from '../../../app/context/AuthContext';
+import { useStaff } from '../../../app/context/StaffContext';
+import { useGroups } from '../../../app/context/GroupsContext';
 import { SelectChangeEvent } from '@mui/material/Select';
 import apiClient from '../../../shared/utils/api';
 import ExportButton from '../../../shared/components/ExportButton';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 
-
+import { Child } from '../../../shared/types/common';
 
 interface GroupInternal {
   id: string;
@@ -99,12 +98,12 @@ const Groups = () => {
     getGroup: contextGetGroup
   } = groupsContext;
 
-  const [teacherList, setTeacherList] = useState<TeacherOption[]>([]);
+  const { staff, fetchStaff } = useStaff();
+
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<GroupFormData>(defaultForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [teachersLoaded, setTeachersLoaded] = useState(false);
 
   const [expandedGroups, setExpandedGroups] = useState<{
     [groupId: string]: {
@@ -141,21 +140,21 @@ const Groups = () => {
     }
   };
 
+  const teacherList = useMemo(() => {
+    return staff
+      .filter((u) => ['teacher', 'assistant'].includes(u.role))
+      .map((u) => ({
+        id: u.id || (u as any)._id,
+        fullName: u.fullName,
+      }));
+  }, [staff]);
+
+  const teacherMap = useMemo(() => {
+    return new Map(teacherList.map((t) => [t.id, t.fullName]));
+  }, [teacherList]);
+
   const fetchTeachers = async () => {
-    if (teachersLoaded) return;
-    try {
-      const { getUsers } = await import('../../staff/services/userService');
-      const users = await getUsers();
-      const filtered = users.filter((u: any) =>
-        ['teacher', 'assistant'].includes(u.role as any),
-      );
-      setTeacherList(
-        filtered.map((u: any) => ({ id: u.id || u._id, fullName: u.fullName })),
-      );
-      setTeachersLoaded(true);
-    } catch (e) {
-      setTeacherList([]);
-    }
+    await fetchStaff();
   };
 
   const fetchGroupsInternal = useCallback(async (force = false) => {
@@ -178,7 +177,6 @@ const Groups = () => {
 
 
 
-  const teacherMap = new Map(teacherList.map((t) => [t.id, t.fullName]));
 
 
   const handleOpenModal = (group?: GroupInternal) => {

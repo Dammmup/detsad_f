@@ -47,9 +47,10 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 
 
-import childrenApi, { Child } from '../services/children';
+import { Child } from '../services/children';
+import { useChildren } from '../../../app/context/ChildrenContext';
+import { useGroups } from '../../../app/context/GroupsContext';
 import { STATUS_COLORS } from '../../../shared/types/common';
-import { getGroups } from '../services/groups';
 import {
   getChildAttendance,
   bulkSaveChildAttendance,
@@ -59,7 +60,6 @@ import { useAuth } from '../../../app/context/AuthContext';
 import { useDate } from '../../../app/context/DateContext';
 import {
   exportChildrenAttendance,
-
 } from '../../../shared/utils/excelExport';
 import AttendanceBulkModal from '../components/AttendanceBulkModal';
 import ExportButton from '../../../shared/components/ExportButton';
@@ -234,12 +234,14 @@ const AttendanceRow = React.memo(({
   onCellClick, 
   onOpenDetails
 }: any) => {
+  const childId = child.id || child._id;
+  
   const handleDetailsClick = useCallback(() => {
-    onOpenDetails(child.id!, child.fullName);
-  }, [child.id, child.fullName, onOpenDetails]);
+    onOpenDetails(childId, child.fullName);
+  }, [childId, child.fullName, onOpenDetails]);
 
   return (
-    <TableRow key={child.id}>
+    <TableRow key={childId}>
       <TableCell>
         <Box display='flex' alignItems='center' justifyContent="space-between">
           <Box display='flex' alignItems='center'>
@@ -264,7 +266,7 @@ const AttendanceRow = React.memo(({
       </TableCell>
       {weekDays.map((day: Date) => {
         const dateString = moment(day).format('YYYY-MM-DD');
-        const attendance = attendanceData[child.id!]?.[dateString];
+        const attendance = attendanceData[childId]?.[dateString];
         const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
         return (
@@ -287,13 +289,14 @@ const WeeklyAttendance: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   const { currentDate } = useDate();
 
+  const { groups, loading: groupsLoading, fetchGroups } = useGroups();
+  const { children, loading: childrenLoading, fetchChildren } = useChildren();
+
   const [selectedGroup, setSelectedGroup] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingAttendance, setLoadingAttendance] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
 
-  const [groups, setGroups] = useState<any[]>([]);
-  const [children, setChildren] = useState<Child[]>([]);
   const [attendanceData, setAttendanceData] = useState<AttendanceData>({});
 
   const [pendingChanges, setPendingChanges] = useState<Array<{
@@ -308,7 +311,7 @@ const WeeklyAttendance: React.FC = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedChildDetails, setSelectedChildDetails] = useState<{ id: string; name: string } | null>(null);
 
-  const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
+  const loading = groupsLoading || childrenLoading || loadingAttendance;
   const [isImporting, setIsImporting] = useState(false);
 
   const filteredChildren = useMemo(() => {
@@ -336,7 +339,7 @@ const WeeklyAttendance: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    setLoadingAttendance(true);
     try {
       const weekStart = moment(currentDate).startOf('isoWeek');
       const weekEnd = moment(currentDate).endOf('isoWeek');
@@ -358,7 +361,7 @@ const WeeklyAttendance: React.FC = () => {
     } catch (err: any) {
       setError('Не удалось загрузить данные посещаемости');
     } finally {
-      setLoading(false);
+      setLoadingAttendance(false);
     }
   }, [currentDate, selectedGroup]);
 
@@ -366,30 +369,31 @@ const WeeklyAttendance: React.FC = () => {
     fetchAttendanceData();
   }, [fetchAttendanceData]);
 
-  const handleAttendanceClick = useCallback((child: Child, date: Date) => {
+  const handleAttendanceClick = useCallback((child: any, date: Date) => {
+    const childId = child.id || child._id;
     const dateString = moment(date).format('YYYY-MM-DD');
-    const existing = attendanceData[child.id!]?.[dateString];
+    const existing = attendanceData[childId]?.[dateString];
     
     const statusCycle: AttendanceStatus[] = ['present', 'absent', 'sick', 'vacation'];
     const currentIndex = existing ? statusCycle.indexOf(existing.status) : -1;
     const nextStatus = statusCycle[(currentIndex + 1) % statusCycle.length];
 
     const record = {
-      childId: child.id!,
+      childId: childId,
       date: dateString,
       status: nextStatus as AttendanceStatus,
       notes: existing?.notes || '',
     };
 
     setPendingChanges(prev => {
-      const filtered = prev.filter(c => !(c.childId === child.id && c.date === dateString));
+      const filtered = prev.filter(c => !(c.childId === childId && c.date === dateString));
       return [...filtered, record];
     });
 
     setAttendanceData(prev => ({
       ...prev,
-      [child.id!]: {
-        ...prev[child.id!],
+      [childId]: {
+        ...prev[childId],
         [dateString]: { status: nextStatus, notes: existing?.notes || '' },
       },
     }));
@@ -429,28 +433,15 @@ const WeeklyAttendance: React.FC = () => {
   }, [pendingChanges, flushPendingChanges]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [groupsData, childrenData] = await Promise.all([
-          getGroups(),
-          childrenApi.getAll()
-        ]);
-        setGroups(groupsData);
-        setChildren(childrenData);
-        
-        // Автоматически выбираем первую группу, если она есть
-        if (groupsData.length > 0 && !selectedGroup) {
-          setSelectedGroup(groupsData[0].id || groupsData[0]._id);
-        }
-      } catch (err) {
-        setError('Не удалось загрузить данные');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [selectedGroup]);
+    fetchGroups();
+    fetchChildren();
+  }, [fetchGroups, fetchChildren]);
+
+  useEffect(() => {
+    if (groups.length > 0 && !selectedGroup) {
+      setSelectedGroup(groups[0].id || groups[0]._id);
+    }
+  }, [groups, selectedGroup]);
 
   const handleGroupChange = (event: SelectChangeEvent) => {
     setSelectedGroup(event.target.value as string);
@@ -495,25 +486,7 @@ const WeeklyAttendance: React.FC = () => {
       if (result.success) {
         enqueueSnackbar(`Импорт завершён: создано ${result.stats.created || 0}, обновлено ${result.stats.updated || 0}`, { variant: 'success' });
         // Перезагружаем данные
-        if (selectedGroup) {
-          setLoading(true);
-          const weekStart = moment(currentDate).startOf('isoWeek');
-          const weekEnd = moment(currentDate).endOf('isoWeek');
-          const records = await getChildAttendance({
-            groupId: selectedGroup,
-            startDate: weekStart.format('YYYY-MM-DD'),
-            endDate: weekEnd.format('YYYY-MM-DD'),
-          });
-          const attendanceMap: AttendanceData = {};
-          records.forEach((record: ChildAttendanceRecord) => {
-            const childId = record.childId;
-            const date = record.date.split('T')[0];
-            if (!attendanceMap[childId]) attendanceMap[childId] = {};
-            attendanceMap[childId][date] = { status: record.status, notes: record.notes };
-          });
-          setAttendanceData(attendanceMap);
-          setLoading(false);
-        }
+        fetchAttendanceData();
       } else {
         enqueueSnackbar(result.error || 'Ошибка импорта', { variant: 'error' });
       }

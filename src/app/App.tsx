@@ -5,6 +5,8 @@ import { SnackbarProvider } from '../shared/components/Snackbar';
 import Login from '../pages/LoginSimple';
 import { AuthProvider, ProtectedRoute } from './context/AuthContext';
 import { GroupsProvider } from './context/GroupsContext';
+import { ChildrenProvider } from './context/ChildrenContext';
+import { StaffProvider } from './context/StaffContext';
 import { DateProvider } from './context/DateContext';
 import ErrorBoundary from '../shared/components/ErrorBoundary';
 
@@ -38,27 +40,31 @@ export const App = () => {
         <SnackbarProvider>
           <DateProvider>
             <GroupsProvider>
-              <Routes>
-                {/* Публичные маршруты */}
-                <Route path='/login' element={<Login />} />
+              <ChildrenProvider>
+                <StaffProvider>
+                  <Routes>
+                    {/* Публичные маршруты */}
+                    <Route path='/login' element={<Login />} />
 
-                {/* Защищенные маршруты */}
-                <Route
-                  path='/'
-                  element={<Navigate to='/app/dashboard' replace />}
-                />
-                <Route
-                  path='/app/*'
-                  element={
-                    <ProtectedRoute>
-                      <SimpleLayout />
-                    </ProtectedRoute>
-                  }
-                />
+                    {/* Защищенные маршруты */}
+                    <Route
+                      path='/'
+                      element={<Navigate to='/app/dashboard' replace />}
+                    />
+                    <Route
+                      path='/app/*'
+                      element={
+                        <ProtectedRoute>
+                          <SimpleLayout />
+                        </ProtectedRoute>
+                      }
+                    />
 
-                {/* Fallback для неизвестных маршрутов */}
-                <Route path='*' element={<Navigate to='/login' replace />} />
-              </Routes>
+                    {/* Fallback для неизвестных маршрутов */}
+                    <Route path='*' element={<Navigate to='/login' replace />} />
+                  </Routes>
+                </StaffProvider>
+              </ChildrenProvider>
             </GroupsProvider>
           </DateProvider>
         </SnackbarProvider>

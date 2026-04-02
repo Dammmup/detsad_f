@@ -56,7 +56,7 @@ import {
 import moment from 'moment';
 import 'moment/locale/ru';
 import { useDate } from '../../../app/context/DateContext';
-import { getUsers } from '../services/users';
+import { useStaff } from '../../../app/context/StaffContext';
 import shiftsApi from '../services/shifts';
 import { staffAttendanceTrackingService } from '../services/staffAttendanceTracking';
 import {
@@ -281,7 +281,7 @@ const StaffAttendanceTracking: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   
   // 1. Все стейты в начале
-  const [staffList, setStaffList] = useState<any[]>([]);
+  const { staff: allStaff, fetchStaff } = useStaff();
   const [allRawRecords, setAllRawRecords] = useState<TimeRecord[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     const saved = localStorage.getItem('sat_selectedDate');
@@ -338,6 +338,10 @@ const StaffAttendanceTracking: React.FC = () => {
   }, []);
 
   // 3. Memos
+  const staffList = useMemo(() => {
+    return allStaff.filter((user: any) => user.active === true && STAFF_ROLES.includes(user.role));
+  }, [allStaff]);
+
   const staffMap = useMemo(() => {
     const map = new Map<string, any>();
     staffList.forEach(s => map.set(s.id || s._id || '', s));
@@ -428,16 +432,8 @@ const StaffAttendanceTracking: React.FC = () => {
 
 
   useEffect(() => {
-    const fetchStaff = async () => {
-      try {
-        const users = await getUsers();
-        setStaffList(users.filter((user: any) => user.active === true && STAFF_ROLES.includes(user.role)));
-      } catch {
-        setStaffList([]);
-      }
-    };
     fetchStaff();
-  }, []);
+  }, [fetchStaff]);
 
 
   const availableRoles = Object.values(ROLE_TRANSLATIONS).sort();

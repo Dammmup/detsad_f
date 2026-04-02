@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import moment from 'moment';
 import 'moment/locale/ru';
 import {
@@ -19,6 +19,7 @@ import {
     Select,
     MenuItem,
     SelectChangeEvent,
+    Alert,
 } from '@mui/material';
 import {
     CheckCircle as CheckCircleIcon,
@@ -33,8 +34,8 @@ import {
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 import { useAuth } from '../../../app/context/AuthContext';
-import childrenApi, { Child } from '../services/children';
-import { getGroups } from '../services/groups';
+import { useChildren } from '../../../app/context/ChildrenContext';
+import { useGroups } from '../../../app/context/GroupsContext';
 import {
     getChildAttendance,
     bulkSaveChildAttendance,
@@ -56,13 +57,13 @@ const ATTENDANCE_STATUSES = [
 const DailyAttendance: React.FC = () => {
     const { user: currentUser } = useAuth();
     const { enqueueSnackbar } = useSnackbar();
-    const [loading, setLoading] = useState(true);
+    
+    const { groups: groupsList, loading: groupsLoading, fetchGroups } = useGroups();
+    const { children: allChildren, loading: childrenLoading, fetchChildren } = useChildren();
+    
     const [saving, setSaving] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState(moment());
-    const [group, setGroup] = useState<any>(null);
     const [selectedGroupId, setSelectedGroupId] = useState<string>('');
-    const [groupsList, setGroupsList] = useState<any[]>([]);
-    const [children, setChildren] = useState<Child[]>([]);
     const [attendance, setAttendance] = useState<Record<string, ChildAttendanceRecord>>({});
 
     const [pendingChanges, setPendingChanges] = useState<Array<{
@@ -73,21 +74,32 @@ const DailyAttendance: React.FC = () => {
     const [isAutoSaving, setIsAutoSaving] = useState(false);
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+    const loading = groupsLoading || childrenLoading;
     const isToday = selectedDate.isSame(moment(), 'day');
 
+    const group = useMemo(() => 
+        groupsList.find(g => (g.id || g._id) === selectedGroupId), 
+    [groupsList, selectedGroupId]);
+
+    const children = useMemo(() => {
+        if (!selectedGroupId) return [];
+        return allChildren.filter((child) => {
+            const childGroupId = typeof child.groupId === 'object' && child.groupId !== null 
+                ? (child.groupId as any)._id || (child.groupId as any).id 
+                : child.groupId;
+            return childGroupId === selectedGroupId;
+        });
+    }, [allChildren, selectedGroupId]);
+
     // Функция автосохранения накопленных изменений
-    const flushPendingChanges = async () => {
-        if (!group || pendingChanges.length === 0) return;
+    const flushPendingChanges = useCallback(async () => {
+        if (!selectedGroupId || pendingChanges.length === 0) return;
 
         setIsAutoSaving(true);
         const changesToSave = [...pendingChanges];
 
         try {
-            await bulkSaveChildAttendance(changesToSave as Array<{
-                childId: string;
-                date: string;
-                status: 'present' | 'absent' | 'late' | 'sick' | 'vacation';
-            }>, group.id || group._id);
+            await bulkSaveChildAttendance(changesToSave as any, selectedGroupId);
 
             // Обновляем локальное состояние
             const newAttendance = { ...attendance };
@@ -109,17 +121,15 @@ const DailyAttendance: React.FC = () => {
         } finally {
             setIsAutoSaving(false);
         }
-    };
+    }, [selectedGroupId, pendingChanges, attendance, enqueueSnackbar]);
 
     // Таймер автосохранения
     useEffect(() => {
         if (pendingChanges.length > 0 && !isAutoSaving) {
-            // Очищаем предыдущий таймер
             if (autoSaveTimerRef.current) {
                 clearTimeout(autoSaveTimerRef.current);
             }
 
-            // Устанавливаем новый таймер
             autoSaveTimerRef.current = setTimeout(() => {
                 flushPendingChanges();
             }, AUTO_SAVE_DELAY);
@@ -130,7 +140,7 @@ const DailyAttendance: React.FC = () => {
                 clearTimeout(autoSaveTimerRef.current);
             }
         };
-    }, [pendingChanges, isAutoSaving, group]);
+    }, [pendingChanges, isAutoSaving, flushPendingChanges]);
 
     // Сохранение при смене даты
     useEffect(() => {
@@ -140,132 +150,68 @@ const DailyAttendance: React.FC = () => {
     }, [selectedDate]);
 
     useEffect(() => {
-        const fetchData = async () => {
-            if (!currentUser) return;
-            setLoading(true);
-            try {
-                const groupsData = await getGroups();
-                setGroupsList(groupsData || []);
-
-                // Бэкенд уже фильтрует группы, оставляя только те, где пользователь учитель или помощник
-                // Просто выбираем первую группу из отфильтрованного списка
-                if (groupsData.length > 0) {
-                    const firstGroup = groupsData[0];
-                    const groupId = firstGroup.id || firstGroup._id;
-                    setSelectedGroupId(groupId);
-                    setGroup(firstGroup);
-
-                    const [childrenList, attendanceRecords] = await Promise.all([
-                        childrenApi.getAll(),
-                        getChildAttendance({
-                            groupId,
-                            date: selectedDate.format('YYYY-MM-DD'),
-                        }),
-                    ]);
-
-                    const filteredChildren = childrenList.filter((child: Child) => {
-                        if (typeof child.groupId === 'object' && child.groupId !== null) {
-                            return (child.groupId as any)._id === groupId || (child.groupId as any).id === groupId;
-                        }
-                        return child.groupId === groupId;
-                    });
-
-                    setChildren(filteredChildren);
-
-                    const attendanceMap: Record<string, ChildAttendanceRecord> = {};
-                    attendanceRecords.forEach((record) => {
-                        attendanceMap[record.childId] = record;
-                    });
-                    setAttendance(attendanceMap);
-                }
-            } catch (error) {
-                console.error('Error fetching daily attendance data:', error);
-                enqueueSnackbar('Ошибка при загрузке данных', { variant: 'error' });
-            } finally {
-                setLoading(false);
-            }
+        const initData = async () => {
+            await Promise.all([fetchGroups(), fetchChildren()]);
         };
+        initData();
+    }, [fetchGroups, fetchChildren]);
 
-        fetchData();
-    }, [currentUser, selectedDate, enqueueSnackbar]);
-
-    const handleGroupChange = async (e: SelectChangeEvent<string>) => {
-        // Сохраняем все несохранённые изменения перед сменой группы
-        if (pendingChanges.length > 0) {
-            await flushPendingChanges();
+    useEffect(() => {
+        if (groupsList.length > 0 && !selectedGroupId) {
+            setSelectedGroupId(groupsList[0].id || groupsList[0]._id);
         }
+    }, [groupsList, selectedGroupId]);
 
-        const newGroupId = e.target.value;
-        setSelectedGroupId(newGroupId);
-        const newGroup = groupsList.find((g: any) => (g.id || g._id) === newGroupId);
-        if (newGroup) {
-            setGroup(newGroup);
-            setLoading(true);
+    useEffect(() => {
+        const fetchAttendance = async () => {
+            if (!selectedGroupId) return;
             try {
-                const [childrenList, attendanceRecords] = await Promise.all([
-                    childrenApi.getAll(),
-                    getChildAttendance({
-                        groupId: newGroupId,
-                        date: selectedDate.format('YYYY-MM-DD'),
-                    }),
-                ]);
-
-                const filteredChildren = childrenList.filter((child: Child) => {
-                    if (typeof child.groupId === 'object' && child.groupId !== null) {
-                        return (child.groupId as any)._id === newGroupId || (child.groupId as any).id === newGroupId;
-                    }
-                    return child.groupId === newGroupId;
+                const records = await getChildAttendance({
+                    groupId: selectedGroupId,
+                    date: selectedDate.format('YYYY-MM-DD'),
                 });
-
-                setChildren(filteredChildren);
-
                 const attendanceMap: Record<string, ChildAttendanceRecord> = {};
-                attendanceRecords.forEach((record) => {
+                records.forEach((record) => {
                     attendanceMap[record.childId] = record;
                 });
                 setAttendance(attendanceMap);
             } catch (error) {
-                console.error('Error fetching group data:', error);
-                enqueueSnackbar('Ошибка при загрузке данных группы', { variant: 'error' });
-            } finally {
-                setLoading(false);
+                console.error('Error fetching attendance:', error);
             }
+        };
+        fetchAttendance();
+    }, [selectedGroupId, selectedDate]);
+
+    const handleGroupChange = async (e: SelectChangeEvent<string>) => {
+        if (pendingChanges.length > 0) {
+            await flushPendingChanges();
         }
+        setSelectedGroupId(e.target.value);
     };
 
     const handleStatusChange = async (childId: string, status: any) => {
-        if (!group) return;
-        setSaving(childId);
+        if (!selectedGroupId) return;
         const dateStr = selectedDate.format('YYYY-MM-DD');
 
-        try {
-            // Добавляем изменение в буфер вместо немедленной отправки
-            setPendingChanges(prev => {
-                // Удаляем предыдущее изменение для того же ребёнка и даты
-                const filtered = prev.filter(c => !(c.childId === childId && c.date === dateStr));
-                return [...filtered, { childId, date: dateStr, status }];
-            });
+        // Добавляем изменение в буфер вместо немедленной отправки
+        setPendingChanges(prev => {
+            const filtered = prev.filter(c => !(c.childId === childId && c.date === dateStr));
+            return [...filtered, { childId, date: dateStr, status }];
+        });
 
-            // Сразу обновляем локальное состояние для мгновенного отклика UI
-            setAttendance((prev) => ({
-                ...prev,
-                [childId]: { ...prev[childId], childId, date: dateStr, status } as ChildAttendanceRecord,
-            }));
+        // Сразу обновляем локальное состояние для мгновенного отклика UI
+        setAttendance((prev) => ({
+            ...prev,
+            [childId]: { ...prev[childId], childId, date: dateStr, status } as ChildAttendanceRecord,
+        }));
 
-            const childName = children.find(c => c.id === childId || (c as any)._id === childId)?.fullName || 'Ребенок';
-            const statusLabel = ATTENDANCE_STATUSES.find(s => s.id === status)?.label || status;
-            enqueueSnackbar(`${childName}: ${statusLabel} (в очереди на сохранение)`, { variant: 'info', autoHideDuration: 1500 });
-        } catch (error) {
-            console.error('Error queuing attendance change:', error);
-            enqueueSnackbar('Ошибка при постановке в очередь', { variant: 'error' });
-        } finally {
-            setSaving(null);
-        }
+        const childName = children.find(c => (c.id || (c as any)._id) === childId)?.fullName || 'Ребенок';
+        const statusLabel = ATTENDANCE_STATUSES.find(s => s.id === status)?.label || status;
+        enqueueSnackbar(`${childName}: ${statusLabel} (в очереди на сохранение)`, { variant: 'info', autoHideDuration: 1500 });
     };
 
     const handleMarkAllPresent = async () => {
-        if (!group || children.length === 0) return;
-        setLoading(true);
+        if (!selectedGroupId || children.length === 0) return;
         const dateStr = selectedDate.format('YYYY-MM-DD');
         const records = children.map(child => ({
             childId: (child.id || (child as any)._id),
@@ -273,30 +219,21 @@ const DailyAttendance: React.FC = () => {
             status: 'present' as const
         }));
 
-        try {
-            // Используем буфер для накопления
-            setPendingChanges(prev => {
-                const filtered = prev.filter(c => c.date !== dateStr);
-                return [...filtered, ...records];
-            });
+        setPendingChanges(prev => {
+            const filtered = prev.filter(c => c.date !== dateStr);
+            return [...filtered, ...records];
+        });
 
-            // Сразу обновляем локальное состояние
-            const newAttendance = { ...attendance };
-            records.forEach(record => {
-                newAttendance[record.childId] = {
-                    ...newAttendance[record.childId],
-                    ...record
-                } as ChildAttendanceRecord;
-            });
-            setAttendance(newAttendance);
+        const newAttendance = { ...attendance };
+        records.forEach(record => {
+            newAttendance[record.childId] = {
+                ...newAttendance[record.childId],
+                ...record
+            } as ChildAttendanceRecord;
+        });
+        setAttendance(newAttendance);
 
-            enqueueSnackbar(`Все дети отмечены как присутствующие (в очереди на сохранение)`, { variant: 'info' });
-        } catch (error) {
-            console.error('Error queueing bulk attendance:', error);
-            enqueueSnackbar('Ошибка при постановке в очередь', { variant: 'error' });
-        } finally {
-            setLoading(false);
-        }
+        enqueueSnackbar(`Все дети отмечены как присутствующие (в очереди на сохранение)`, { variant: 'info' });
     };
 
     const changeDate = (amount: number) => {
@@ -305,7 +242,7 @@ const DailyAttendance: React.FC = () => {
         setSelectedDate(newDate);
     };
 
-    if (loading) {
+    if (loading && groupsList.length === 0) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
                 <CircularProgress />
@@ -313,7 +250,7 @@ const DailyAttendance: React.FC = () => {
         );
     }
 
-    if (!group && groupsList.length === 0) {
+    if (!loading && groupsList.length === 0) {
         return (
             <Box p={3} textAlign="center">
                 <Typography variant="h6" color="textSecondary">
@@ -346,7 +283,7 @@ const DailyAttendance: React.FC = () => {
                                 </FormControl>
                             ) : (
                                 <Typography variant="h5" fontWeight="bold">
-                                    {group.name}
+                                    {group?.name || 'Загрузка...'}
                                 </Typography>
                             )}
                             <AuditLogButton entityType="childAttendance" />
@@ -515,7 +452,7 @@ const DailyAttendance: React.FC = () => {
                 })}
             </Grid>
 
-            {children.length === 0 && (
+            {children.length === 0 && !loading && (
                 <Box textAlign="center" py={10}>
                     <Typography variant="h6" color="textSecondary">
                         В этой группе пока нет детей.

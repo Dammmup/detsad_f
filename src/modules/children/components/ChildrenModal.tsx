@@ -13,13 +13,13 @@ import {
   Select,
   MenuItem,
   SelectChangeEvent,
-
+  Avatar,
+  Box,
 } from '@mui/material';
-import childrenApi from '../services/children';
-import { getGroups } from '../services/groups';
-import { Avatar, Box } from '@mui/material';
 import { Group, User } from '../../../shared/types/common';
 import { useAuth } from '../../../app/context/AuthContext';
+import { useChildren } from '../../../app/context/ChildrenContext';
+import { useGroups } from '../../../app/context/GroupsContext';
 
 interface ChildrenModalProps {
   open: boolean;
@@ -49,14 +49,15 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
   child,
 }) => {
   const { user: currentUser } = useAuth();
-  const [groups, setGroups] = useState<Group[]>([]);
+  const { createChild, updateChild } = useChildren();
+  const { groups, fetchGroups } = useGroups();
   const [form, setForm] = useState<Partial<User> & { paymentAmount?: number }>(defaultForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
-      fetchGroupsList();
+      fetchGroups();
       if (child) {
         setForm({
           ...defaultForm,
@@ -81,14 +82,6 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
     }
   }, [open, child]);
 
-  const fetchGroupsList = async () => {
-    try {
-      const groupList = await getGroups();
-      setGroups(groupList);
-    } catch {
-      setGroups([]);
-    }
-  };
 
   const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target;
@@ -118,39 +111,24 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
     setSaving(true);
     setError(null);
     try {
+      const childData: any = {
+        fullName: form.fullName || '',
+        phone: form.parentPhone || '',
+        parentPhone: form.parentPhone || '',
+        birthday: form.birthday || '',
+        iin: form.iin || '',
+        photo: form.photo || '',
+        groupId: form.groupId || '',
+        parentName: form.parentName || '',
+        notes: form.notes || '',
+        active: form.active !== false,
+        paymentAmount: form.paymentAmount || 40000,
+      };
+
       if (child && child.id) {
-
-        const childData: Partial<User> & { paymentAmount?: number } = {
-          id: child.id,
-          fullName: form.fullName || '',
-          phone: form.phone || '',
-          parentPhone: form.parentPhone || '',
-          birthday: form.birthday || '',
-          iin: form.iin || '',
-          photo: form.photo || '',
-          groupId: form.groupId || '',
-          parentName: form.parentName || '',
-          notes: form.notes || '',
-          active: form.active !== false,
-          paymentAmount: form.paymentAmount || 40000,
-        };
-        await childrenApi.update(child.id, childData as any);
+        await updateChild(child.id, childData);
       } else {
-
-        const userData = {
-          fullName: form.fullName || '',
-          phone: form.parentPhone || '',
-          parentPhone: form.parentPhone || '',
-          birthday: form.birthday || '',
-          iin: form.iin || '',
-          photo: form.photo || '',
-          groupId: form.groupId || '',
-          parentName: form.parentName || '',
-          notes: form.notes || '',
-          active: form.active !== false,
-          paymentAmount: form.paymentAmount || 40000,
-        };
-        await childrenApi.create(userData as any);
+        await createChild(childData);
       }
 
       onSaved();

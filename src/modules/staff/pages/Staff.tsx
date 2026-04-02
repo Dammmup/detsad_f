@@ -52,13 +52,17 @@ import {
   Person,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
-import { User as StaffMember, UserRole, STAFF_ROLES, EXTERNAL_ROLES } from '../../../shared/types/common';
+import { User as StaffMember } from '../../../shared/types/staff';
+import { UserRole, STAFF_ROLES, EXTERNAL_ROLES } from '../../../shared/types/common';
+import { UserRole as CommonUserRole } from '../../../shared/types/common';
 import { getGroups } from '../../children/services/groups';
 import { useAuth } from '../../../app/context/AuthContext';
 import ExportButton from '../../../shared/components/ExportButton';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 import { exportData } from '../../../shared/utils/exportUtils';
 import { useSort } from '../../../shared/hooks/useSort';
+import { useStaff } from '../../../app/context/StaffContext';
+import { useGroups } from '../../../app/context/GroupsContext';
 
 
 const roleTranslations: Record<string, string> = {
@@ -200,9 +204,27 @@ const StaffRow = React.memo(({
 });
 
 const Staff = () => {
-  const [staff, setStaff] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { 
+    staff: allStaff, 
+    loading: staffLoading, 
+    error: staffError, 
+    fetchStaff, 
+    createUser, 
+    updateUser, 
+    deleteUser,
+    updatePayrollSettings,
+    updateAllowToSeePayroll
+  } = useStaff();
+  
+  const { 
+    groups, 
+    loading: groupsLoading, 
+    fetchGroups 
+  } = useGroups();
+
+  const loading = staffLoading || groupsLoading;
+  const error = staffError;
+
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<StaffMember>(defaultForm);
   const [editId, setEditId] = useState<string | null>(null);
@@ -237,43 +259,23 @@ const Staff = () => {
     setAvailableRoles(roles);
   }, [activeTab]);
 
-  const fetchStaff = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    const includePasswords = currentUser?.role === 'admin';
-    getUsers(includePasswords)
-      .then((data) => {
-        setStaff(data);
-      })
-      .catch((err) => setError(err?.message || 'Ошибка загрузки'))
-      .finally(() => setLoading(false));
-  }, [currentUser?.role]);
-
-  const fetchGroups = async () => {
-    try {
-      await getGroups();
-    } catch (err) {
-      console.error('Ошибка при загрузке групп:', err);
-    }
-  };
-
   useEffect(() => {
-    fetchStaff();
+    fetchStaff({ includePasswords: currentUser?.role === 'admin' });
     fetchGroups();
-  }, [fetchStaff]);
+  }, [fetchStaff, fetchGroups, currentUser?.role]);
 
   const filteredStaff = useMemo(() => {
-    if (!staff.length) return [];
+    if (!allStaff.length) return [];
 
-    let filtered = staff;
+    let filtered = allStaff;
     const externalRoles = EXTERNAL_ROLES;
 
     if (activeTab === 'external') {
-      filtered = staff.filter((member) => externalRoles.includes(member.role as any));
+      filtered = allStaff.filter((member) => externalRoles.includes(member.role as any));
     } else if (activeTab === 'inactive') {
-      filtered = staff.filter((member) => member.active === false && !externalRoles.includes(member.role as any));
+      filtered = allStaff.filter((member) => member.active === false && !externalRoles.includes(member.role as any));
     } else {
-      filtered = staff.filter((member) => member.active !== false && !externalRoles.includes(member.role as any));
+      filtered = allStaff.filter((member) => member.active !== false && !externalRoles.includes(member.role as any));
     }
 
     if (searchTerm) {
@@ -297,7 +299,7 @@ const Staff = () => {
     }
 
     return filtered;
-  }, [staff, searchTerm, filterRole, activeTab]);
+  }, [allStaff, searchTerm, filterRole, activeTab]);
 
   const { items: sortedStaff, requestSort, sortConfig } = useSort(filteredStaff);
 
@@ -354,17 +356,16 @@ const Staff = () => {
     try {
       if (editId) {
         await updateUser(editId, form);
-        await usersApi.updatePayrollSettings(editId, {
+        await updatePayrollSettings(editId, {
           salary: form.salary,
           salaryType: form.salaryType,
         });
-        await usersApi.updateAllowToSeePayroll(editId, !!form.allowToSeePayroll);
+        await updateAllowToSeePayroll(editId, !!form.allowToSeePayroll);
         handleCloseModal();
       } else {
         await createUser(form);
         handleCloseModal();
       }
-      fetchStaff();
     } catch (e: any) {
       alert(e?.response?.data?.message || 'Ошибка сохранения');
     } finally {
@@ -378,13 +379,12 @@ const Staff = () => {
     setSaving(true);
     try {
       await deleteUser(member.id);
-      fetchStaff();
     } catch (e: any) {
       alert(e?.response?.data?.message || 'Ошибка удаления');
     } finally {
       setSaving(false);
     }
-  }, [fetchStaff]);
+  }, [deleteUser]);
 
   const handleExport = async (
     exportType: string,
@@ -534,7 +534,7 @@ const Staff = () => {
           <>
             {filteredStaff.length === 0 ? (
               <Alert severity='info' style={{ marginTop: 16 }}>
-                {staff.length === 0
+                {allStaff.length === 0
                   ? 'Нет сотрудников. Добавьте первого сотрудника!'
                   : 'Нет сотрудников, соответствующих критериям поиска.'}
               </Alert>

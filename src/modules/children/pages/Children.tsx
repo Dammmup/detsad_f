@@ -26,8 +26,7 @@ import {
   TableSortLabel,
 } from '@mui/material';
 import { Add, Edit, Delete, Refresh } from '@mui/icons-material';
-import childrenApi, { Child } from '../services/children';
-import { groupsApi } from '../services/groups';
+import { Child } from '../services/children';
 import { Group } from '../../../shared/types/common';
 import apiClient from '../../../shared/utils/api';
 import ChildrenModal from '../components/ChildrenModal';
@@ -36,6 +35,8 @@ import { useSort } from '../../../shared/hooks/useSort';
 import ExportButton from '../../../shared/components/ExportButton';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 import { useAuth } from '../../../app/context/AuthContext';
+import { useChildren } from '../../../app/context/ChildrenContext';
+import { useGroups } from '../../../app/context/GroupsContext';
 
 
 
@@ -128,10 +129,25 @@ const ChildRow = React.memo(({
 
 const Children: React.FC = () => {
   const { user: currentUser } = useAuth();
-  const [children, setChildren] = useState<Child[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { 
+    children: allChildren, 
+    loading: childrenLoading, 
+    error: childrenError, 
+    fetchChildren,
+    deleteChild,
+    updateChild,
+    generatePayments
+  } = useChildren();
+  
+  const { 
+    groups, 
+    loading: groupsLoading, 
+    fetchGroups 
+  } = useGroups();
+
+  const loading = childrenLoading || groupsLoading;
+  const error = childrenError;
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editingChild, setEditingChild] = useState<Child | null>(null);
 
@@ -143,6 +159,8 @@ const Children: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'active' | 'inactive'>('active');
 
   const [isGeneratingPayments, setIsGeneratingPayments] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>({
     open: false,
     message: '',
@@ -163,54 +181,33 @@ const Children: React.FC = () => {
     return groupIndex !== -1 ? colors[groupIndex % colors.length] : '#B0B0B0';
   }, [groups]);
 
-  const fetchGroupsList = useCallback(async () => {
-    try {
-      const groupList = await groupsApi.getAll();
-      setGroups(groupList);
-    } catch {
-      setGroups([]);
-    }
-  }, []);
-
-  const fetchChildren = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const childrenList = await childrenApi.getAll();
-      if (currentUser && ['teacher', 'substitute', 'assistant'].includes(currentUser.role)) {
-        const allGroups = await groupsApi.getAll();
-        const userGroups = allGroups.filter(
-          (group) =>
-            group.teacher === currentUser.id ||
-            group.teacherId === currentUser.id ||
-            group.teacher === currentUser._id ||
-            group.teacherId === currentUser._id ||
-            (group as any).assistantId === currentUser.id ||
-            (group as any).assistantId === currentUser._id
-        );
-        const userGroupIds = userGroups.map(group => group._id || group.id).filter(id => id !== undefined) as string[];
-        const filtered = childrenList.filter(child => {
-          const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
-          return childGroupId && userGroupIds.includes(childGroupId);
-        });
-        setChildren(filtered);
-      } else {
-        setChildren(childrenList);
-      }
-    } catch (e: any) {
-      setError(e?.message || 'Ошибка загрузки');
-    } finally {
-      setLoading(false);
-    }
-  }, [currentUser]);
-
   useEffect(() => {
-    fetchGroupsList();
+    fetchGroups();
     fetchChildren();
-  }, [fetchGroupsList, fetchChildren]);
+  }, [fetchGroups, fetchChildren]);
+
+  const childrenForUser = useMemo(() => {
+    if (currentUser && ['teacher', 'substitute', 'assistant'].includes(currentUser.role)) {
+      const userGroups = groups.filter(
+        (group) =>
+          group.teacher === currentUser.id ||
+          group.teacherId === currentUser.id ||
+          group.teacher === currentUser._id ||
+          group.teacherId === currentUser._id ||
+          (group as any).assistantId === currentUser.id ||
+          (group as any).assistantId === currentUser._id
+      );
+      const userGroupIds = userGroups.map(group => group._id || group.id).filter(id => id !== undefined) as string[];
+      return allChildren.filter(child => {
+        const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
+        return childGroupId && userGroupIds.includes(childGroupId);
+      });
+    }
+    return allChildren;
+  }, [allChildren, groups, currentUser]);
 
   const filteredChildren = useMemo(() => {
-    let result = [...children];
+    let result = [...childrenForUser];
     if (activeFilter === 'active') {
       result = result.filter((child) => child.active !== false);
     } else {
@@ -230,7 +227,7 @@ const Children: React.FC = () => {
       });
     }
     return result;
-  }, [children, nameFilter, groupFilter, activeFilter]);
+  }, [childrenForUser, nameFilter, groupFilter, activeFilter]);
 
   const { items: sortedChildren, requestSort, sortConfig } = useSort(filteredChildren);
 
@@ -248,31 +245,24 @@ const Children: React.FC = () => {
     if (!id) return;
     if (!window.confirm('Удалить ребёнка?')) return;
     try {
-      await childrenApi.deleteItem(id);
-      await fetchChildren();
+      await deleteChild(id);
     } catch (e: any) {
-      setError(e?.message || 'Ошибка удаления');
+      // Error is already set in context, but we can add local handling if needed
     }
-  }, [fetchChildren]);
+  }, [deleteChild]);
 
   const handleGroupChange = useCallback(async (childId: string, groupId: string) => {
     try {
-      await childrenApi.update(childId, { groupId } as any);
-      setChildren(prev => prev.map(c => {
-        const cId = c.id || (c._id as string);
-        if (cId === childId) {
-          return { ...c, groupId: groupId || undefined } as Child;
-        }
-        return c;
-      }));
+      await updateChild(childId, { groupId } as any);
       setSnackbar({ open: true, message: 'Группа обновлена', severity: 'success' });
     } catch (e: any) {
       setSnackbar({ open: true, message: e?.message || 'Ошибка обновления группы', severity: 'error' });
     }
-  }, []);
+  }, [updateChild]);
 
   const handleExport = useCallback(async (_exportType: string, exportFormat: 'xlsx') => {
-    setLoading(true);
+    setIsExporting(true);
+    setExportError(null);
     try {
       const response = await apiClient.post(
         '/export/children',
@@ -290,16 +280,16 @@ const Children: React.FC = () => {
       link.click();
       link.remove();
     } catch (e: any) {
-      setError(e?.message || 'Ошибка экспорта');
+      setExportError(e?.message || 'Ошибка экспорта');
     } finally {
-      setLoading(false);
+      setIsExporting(false);
     }
   }, [nameFilter, groupFilter]);
 
   const handleGeneratePayments = useCallback(async () => {
     setIsGeneratingPayments(true);
     try {
-      const result = await childrenApi.generatePayments(new Date());
+      const result = await generatePayments(new Date());
       setSnackbar({
         open: true,
         message: `${result.message}. Создано: ${result.stats.created}, пропущено: ${result.stats.skipped}`,
@@ -314,7 +304,7 @@ const Children: React.FC = () => {
     } finally {
       setIsGeneratingPayments(false);
     }
-  }, []);
+  }, [generatePayments]);
 
   const isMobile = useMediaQuery('(max-width:900px)');
 
@@ -436,7 +426,8 @@ const Children: React.FC = () => {
         </Box>
       )}
       {error && <Alert severity='error'>{error}</Alert>}
-      {!loading && children.length === 0 && <Alert severity='info'>Нет данных о детях</Alert>}
+      {exportError && <Alert severity='error' onClose={() => setExportError(null)}>{exportError}</Alert>}
+      {!loading && allChildren.length === 0 && <Alert severity='info'>Нет данных о детях</Alert>}
 
       {!loading && filteredChildren.length > 0 && (
         <Box display='flex' flexWrap='wrap' gap={2} mb={2} p={2} sx={{ backgroundColor: '#f9f9f9', borderRadius: 1, border: '1px solid #e0e0e0' }}>

@@ -18,14 +18,14 @@ class UserApiClient extends BaseCrudApiClient<User> {
 }
 
 export const userApi = new UserApiClient();
-export const getUsers = (includePasswords?: boolean) => userApi.getAll({ includePasswords });
+export const getUsers = (params?: any) => userApi.getAll(params);
 export const createUser = (data: Partial<User>) => userApi.create(data as any);
 export const updateUser = (id: string, data: Partial<User>) => userApi.update(id, data as any);
 export const deleteUser = (id: string) => userApi.deleteItem(id);
 
 export const usersApi = {
   ...userApi,
-  getAll: getUsers,
+  getAll: (params?: any) => userApi.getAll(params),
   getById: (id: string) => userApi.getById(id),
   create: createUser,
   update: updateUser,
