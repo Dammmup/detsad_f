@@ -5,7 +5,7 @@ export const setupAxios = () => {
     // If neither is set, we use '/' in development to leverage the proxy.
     const apiUrl = import.meta.env.VITE_API_URL || process.env.REACT_APP_API_URL;
 
-    axios.defaults.baseURL = apiUrl || (import.meta.env.DEV ? '/' : 'http://localhost:8080');
+    axios.defaults.baseURL = apiUrl || '';
     axios.defaults.headers.common['Content-Type'] = 'application/json';
 
     axios.interceptors.request.use(

@@ -4,7 +4,7 @@ import { ApiError, DelayFunction, ErrorHandler } from '../types/common';
 
 
 export const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:8080';
+  import.meta.env.VITE_API_URL || '';
 export const API_TIMEOUT = 120000;
 export const RETRY_DELAY = 2000;
 export const MAX_RETRIES = 3;
