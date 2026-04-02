@@ -50,6 +50,7 @@ const ChildRow = React.memo(({
   handleDelete,
   groups,
   onGroupChange,
+  isAdmin,
 }: {
   child: Child;
   index: number;
@@ -60,6 +61,7 @@ const ChildRow = React.memo(({
   handleDelete: (id: string) => void;
   groups: Group[];
   onGroupChange: (childId: string, groupId: string) => void;
+  isAdmin: boolean;
 }) => {
   const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
   const groupColor = childGroupId ? getGroupColor(childGroupId) : '#B0B0B0';
@@ -108,9 +110,11 @@ const ChildRow = React.memo(({
           ))}
         </Select>
       </TableCell>
-      <TableCell sx={{ p: isMobile ? 1 : 2, fontWeight: 'bold', color: '#1890ff' }}>
-        {child.paymentAmount?.toLocaleString() || 0} ₸
-      </TableCell>
+      {isAdmin && (
+        <TableCell sx={{ p: isMobile ? 1 : 2, fontWeight: 'bold', color: '#1890ff' }}>
+          {child.paymentAmount?.toLocaleString() || 0} ₸
+        </TableCell>
+      )}
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.notes}</TableCell>
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.active ? 'Активен' : 'Неактивен'}</TableCell>
       <TableCell align='right' sx={{ p: isMobile ? 1 : 2 }}>
@@ -488,15 +492,17 @@ const Children: React.FC = () => {
                   Группа
                 </TableSortLabel>
               </TableCell>
-              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
-                <TableSortLabel
-                  active={sortConfig.key === 'paymentAmount'}
-                  direction={sortConfig.direction || 'asc'}
-                  onClick={() => requestSort('paymentAmount')}
-                >
-                  Сумма оплаты
-                </TableSortLabel>
-              </TableCell>
+              {currentUser?.role === 'admin' && (
+                <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
+                  <TableSortLabel
+                    active={sortConfig.key === 'paymentAmount'}
+                    direction={sortConfig.direction || 'asc'}
+                    onClick={() => requestSort('paymentAmount')}
+                  >
+                    Сумма оплаты
+                  </TableSortLabel>
+                </TableCell>
+              )}
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Заметки</TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Статус</TableCell>
               <TableCell align='right' sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Действия</TableCell>
@@ -515,6 +521,7 @@ const Children: React.FC = () => {
                 handleDelete={handleDelete}
                 groups={groups}
                 onGroupChange={handleGroupChange}
+                isAdmin={currentUser?.role === 'admin'}
               />
             ))}
           </TableBody>
