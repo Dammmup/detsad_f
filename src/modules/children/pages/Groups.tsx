@@ -21,14 +21,21 @@ import {
   CircularProgress,
   Typography,
   Box,
+  useMediaQuery,
+  Card,
+  CardContent,
+  Grid,
+  Divider,
 } from '@mui/material';
 import {
   Add,
   Edit,
   Delete,
-  Group,
+  Group as SingleGroupIcon,
   Visibility,
   ExpandLess,
+  Person,
+  Groups as GroupsIcon,
 } from '@mui/icons-material';
 import { useGroups } from '../../../app/context/GroupsContext';
 import { Child } from '../../../shared/types/common';
@@ -41,7 +48,7 @@ import AuditLogButton from '../../../shared/components/AuditLogButton';
 
 
 
-interface Group {
+interface GroupInternal {
   id: string;
   _id?: string;
   name: string;
@@ -79,18 +86,25 @@ const defaultForm: GroupFormData = {
 };
 
 const Groups = () => {
+  const isMobile = useMediaQuery('(max-width:900px)');
   const groupsContext = useGroups();
-  const [groups, setGroups] = useState<Group[]>([]);
+  const {
+    groups: contextGroups,
+    loading: contextLoading,
+    error: contextError,
+    fetchGroups: contextFetchGroups,
+    updateGroup: contextUpdateGroup,
+    createGroup: contextCreateGroup,
+    deleteGroup: contextDeleteGroup,
+    getGroup: contextGetGroup
+  } = groupsContext;
+
   const [teacherList, setTeacherList] = useState<TeacherOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<GroupFormData>(defaultForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [teachersLoaded, setTeachersLoaded] = useState(false);
-  const [groupsLoaded, setGroupsLoaded] = useState(false);
 
   const [expandedGroups, setExpandedGroups] = useState<{
     [groupId: string]: {
@@ -103,14 +117,12 @@ const Groups = () => {
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
   const isAdminOrManager = currentUser?.role === 'admin' || currentUser?.role === 'manager';
 
-  // Стабильные ссылки на функции контекста
-  const { fetchGroups: contextFetchGroups, updateGroup: contextUpdateGroup, createGroup: contextCreateGroup, deleteGroup: contextDeleteGroup, getGroup: contextGetGroup } = groupsContext;
+  // Стабильные ссылки на функции контекста - удалено дублирование
 
   const handleExport = async (
     _exportType: string,
     exportFormat: 'xlsx',
   ) => {
-    setLoading(true);
     try {
       const response = await apiClient.post(
         '/export/groups',
@@ -125,9 +137,7 @@ const Groups = () => {
       link.click();
       link.remove();
     } catch (e: any) {
-      setError(e?.message || 'Ошибка экспорта');
-    } finally {
-      setLoading(false);
+      alert(e?.message || 'Ошибка экспорта');
     }
   };
 
@@ -148,44 +158,14 @@ const Groups = () => {
     }
   };
 
-  const fetchGroupsInternal = useCallback(async () => {
-    if (!isLoggedIn || !currentUser || authLoading || groupsLoaded) return;
-
-    setLoading(true);
-    setError(null);
+  const fetchGroupsInternal = useCallback(async (force = false) => {
+    if (!isLoggedIn || !currentUser || authLoading) return;
     try {
-      const data = await contextFetchGroups(true);
-
-      const formattedData = Array.isArray(data)
-        ? data.map((group) => ({
-          id: group.id || group._id,
-          name: group.name,
-          description: group.description || '',
-
-          ageGroup: Array.isArray(group.ageGroup)
-            ? [String(group.ageGroup)]
-            : [],
-          isActive: group.isActive ?? true,
-
-          teacher: group.teacher || (group.teacherId ? String(group.teacherId) : ''),
-
-
-          createdAt: group.createdAt,
-          updatedAt: group.updatedAt,
-          maxStudents: group.maxStudents,
-
-          children: group.children || [],
-        }))
-        : [];
-
-      setGroups(formattedData);
-      setGroupsLoaded(true);
+      await contextFetchGroups(force);
     } catch (err: any) {
-      setError(err?.message || 'Ошибка загрузки групп');
-    } finally {
-      setLoading(false);
+      console.error('Ошибка загрузки групп:', err);
     }
-  }, [isLoggedIn, currentUser, authLoading, groupsLoaded, contextFetchGroups]);
+  }, [isLoggedIn, currentUser, authLoading, contextFetchGroups]);
 
   // Загрузка данных при первом рендере
   useEffect(() => {
@@ -193,15 +173,7 @@ const Groups = () => {
       fetchGroupsInternal();
       fetchTeachers();
     }
-  }, [isLoggedIn, currentUser, authLoading]);
-
-
-  useEffect(() => {
-
-    if (!loading && !initialLoadComplete) {
-      setInitialLoadComplete(true);
-    }
-  }, [loading, initialLoadComplete]);
+  }, [isLoggedIn, currentUser, authLoading, fetchGroupsInternal]);
 
 
 
@@ -209,7 +181,7 @@ const Groups = () => {
   const teacherMap = new Map(teacherList.map((t) => [t.id, t.fullName]));
 
 
-  const handleOpenModal = (group?: Group) => {
+  const handleOpenModal = (group?: GroupInternal) => {
     if (group) {
       setForm({
         id: group.id,
@@ -289,7 +261,8 @@ const Groups = () => {
       }
 
       handleCloseModal();
-      await fetchGroupsInternal();
+      // Либо доверяем обновлению в контексте, либо форсируем перезагрузку
+      await contextFetchGroups(true);
     } catch (e: any) {
       alert(e?.message || 'Ошибка сохранения');
     } finally {
@@ -304,7 +277,7 @@ const Groups = () => {
     setSaving(true);
     try {
       await contextDeleteGroup(id);
-      await fetchGroupsInternal();
+      await contextFetchGroups(true);
     } catch (e: any) {
       alert(e?.message || 'Ошибка удаления');
     } finally {
@@ -346,7 +319,7 @@ const Groups = () => {
       if (!currentState?.children?.length) {
         try {
 
-          const group = groups.find((g) => g.id === groupId);
+          const group = contextGroups.find((g) => g.id === groupId);
           let children: Child[] = (group && (group as any).children) || [];
           if (!children.length) {
 
@@ -376,198 +349,208 @@ const Groups = () => {
     }
   };
 
-  return (
-    <Paper style={{ margin: 24, padding: 24 }}>
-      <h1 style={{ color: '#1890ff', marginBottom: '16px' }}>
-        <Group style={{ marginRight: 8, verticalAlign: 'middle' }} />
-        Группы
-      </h1>
-      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-        <AuditLogButton entityType="group" />
-        <ExportButton
-          exportTypes={[{ value: 'groups', label: 'Список групп' }]}
-          onExport={handleExport}
-        />
-        {isAdminOrManager && (
-          <Button
-            variant='contained'
-            color='primary'
-            startIcon={<Add />}
-            onClick={() => handleOpenModal()}
-          >
-            Добавить группу
-          </Button>
+  const renderGroupChildren = (groupId: string, groupName: string) => {
+    const groupState = expandedGroups[groupId];
+    if (!groupState?.expanded) return null;
+
+    return (
+      <Box sx={{ mt: 2, mb: 1, px: isMobile ? 1 : 2 }}>
+        <Typography
+          variant='h6'
+          gutterBottom
+          component='div'
+          sx={{ color: '#1890ff', fontSize: isMobile ? '1rem' : '1.25rem' }}
+        >
+          {isMobile ? `Дети: ${groupName}` : `Дети группы "${groupName}"`}
+        </Typography>
+        
+        {groupState.loading ? (
+          <Box display="flex" justifyContent="center" alignItems='center' py={2}>
+            <CircularProgress size={24} />
+            <Typography variant='body2' sx={{ ml: 2 }}>Загрузка...</Typography>
+          </Box>
+        ) : !groupState.children?.length ? (
+          <Typography variant="body2" color='text.secondary' sx={{ py: 1 }}>
+            В группе нет детей
+          </Typography>
+        ) : isMobile ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {groupState.children.map((child: Child, index: number) => (
+              <Box key={child.id || index} sx={{ p: 1, bgcolor: '#f8f9fa', borderRadius: 1, border: '1px solid #eee' }}>
+                <Typography variant="subtitle2">{child.fullName}</Typography>
+                <Typography variant="caption" display="block">Родитель: {child.parentName || '—'}</Typography>
+                <Typography variant="caption" display="block">Тел: {child.parentPhone || '—'}</Typography>
+              </Box>
+            ))}
+          </Box>
+        ) : (
+          <Table size='small' sx={{ backgroundColor: '#f8f9fa' }}>
+            <TableHead>
+              <TableRow>
+                <TableCell><strong>Имя ребенка</strong></TableCell>
+                <TableCell><strong>Родитель</strong></TableCell>
+                <TableCell><strong>Телефон</strong></TableCell>
+                <TableCell><strong>Дата рождения</strong></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {groupState.children.map((child: Child, index: number) => (
+                <TableRow key={child.id || index}>
+                  <TableCell>{child.fullName}</TableCell>
+                  <TableCell>{child.parentName || '—'}</TableCell>
+                  <TableCell>{child.parentPhone || '—'}</TableCell>
+                  <TableCell>
+                    {child.birthday ? new Date(child.birthday).toLocaleDateString('ru-RU') : '—'}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </Box>
+    );
+  };
 
-      {/* Улучшенная обработка загрузки: показываем данные даже при загрузке, если они уже есть */}
-      {loading && !initialLoadComplete && (
-        <Box
-          display='flex'
-          justifyContent='center'
-          alignItems='center'
-          minHeight='200px'
-          width='100%'
-        >
-          <CircularProgress size={60} />
+  return (
+    <Box sx={{ p: isMobile ? 1 : 3 }}>
+      <Paper elevation={isMobile ? 1 : 3} sx={{ p: isMobile ? 2 : 3, borderRadius: 2 }}>
+        <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} justifyContent="space-between" alignItems={isMobile ? 'flex-start' : 'center'} mb={3} gap={2}>
+          <h1 style={{ color: '#1890ff', marginBottom: '16px' }}>
+            <GroupsIcon style={{ marginRight: 8, verticalAlign: 'middle' }} />
+            Группы
+          </h1>
+          <Box sx={{ display: 'flex', gap: 1, width: isMobile ? '100%' : 'auto', flexWrap: 'wrap' }}>
+            <AuditLogButton entityType="group" />
+            <ExportButton
+              exportTypes={[{ value: 'groups', label: 'Список групп' }]}
+              onExport={handleExport}
+            />
+            {isAdminOrManager && (
+              <Button
+                variant='contained'
+                color='primary'
+                startIcon={<Add />}
+                onClick={() => handleOpenModal()}
+                fullWidth={isMobile}
+                sx={{ ml: isMobile ? 0 : 1 }}
+              >
+                Добавить
+              </Button>
+            )}
+          </Box>
         </Box>
-      )}
-      {error && <Alert severity='error'>{error}</Alert>}
 
-      {/* Показываем данные сразу, если они уже загружены или есть в кэше */}
-      {(!loading || initialLoadComplete) && !error && (
-        <>
-          {groups.length === 0 ? (
-            <Alert severity='info' style={{ marginTop: 16 }}>
-              Группы не найдены. Добавьте первую группу!
-            </Alert>
-          ) : (
-            <Table>
-              <TableHead>
-                <TableRow hover>
-                  <TableCell>Название</TableCell>
-                  <TableCell>Описание</TableCell>
-                  <TableCell>Возрастная группа</TableCell>
-                  <TableCell>Вместимость</TableCell>
-                  <TableCell>Воспитатель</TableCell>
-                  <TableCell align='right'>Действия</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {groups.map((group) => (
-                  <React.Fragment key={group.id}>
-                    <TableRow hover>
-                      <TableCell>{group.name}</TableCell>
-                      <TableCell>{group.description}</TableCell>
-                      <TableCell>
-                        {group.ageGroup && Array.isArray(group.ageGroup)
-                          ? group.ageGroup.join(', ')
-                          : group.ageGroup
-                            ? String(group.ageGroup)
-                            : ''}
-                      </TableCell>
-                      <TableCell>{group.maxStudents}</TableCell>
-                      <TableCell>
-                        {group.teacher ? teacherMap.get(group.teacher) || '—' : '—'}
-                      </TableCell>
-                      <TableCell align='right'>
-                        <IconButton
-                          onClick={(e) =>
-                            handleToggleGroupChildren(e, group.id!)
-                          }
-                          title='Просмотреть детей группы'
-                        >
-                          {group.id && expandedGroups[group.id]?.expanded ? (
-                            <ExpandLess color="primary" />
-                          ) : (
-                            <Visibility color="primary" />
-                          )}
-                        </IconButton>
-                        <AuditLogButton entityType="group" entityId={group._id || group.id} entityName={group.name} />
-                        {isAdminOrManager && (
-                          <>
-                            <IconButton onClick={() => handleOpenModal(group)}>
-                              <Edit />
+        {contextLoading && (
+          <Box display='flex' justifyContent='center' alignItems='center' minHeight='200px' width='100%'>
+            <CircularProgress size={60} />
+          </Box>
+        )}
+        
+        {contextError && <Alert severity='error' sx={{ mb: 2 }}>{contextError}</Alert>}
+
+        {!contextLoading && !contextError && (
+          <>
+            {contextGroups.length === 0 ? (
+              <Alert severity='info'>Группы не найдены. Добавьте первую группу!</Alert>
+            ) : isMobile ? (
+              <Grid container spacing={2}>
+                {contextGroups.map((group) => (
+                  <Grid item xs={12} key={group.id}>
+                    <Card variant="outlined" sx={{ borderRadius: 2, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                      <CardContent sx={{ pb: 1 }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                          <Typography variant="h6" color="primary">{group.name}</Typography>
+                          <Box>
+                            <IconButton size="small" onClick={(e) => handleToggleGroupChildren(e, group.id || "")}>
+                              {(group.id && expandedGroups[group.id]?.expanded) ? <ExpandLess color="primary" /> : <Visibility color="primary" />}
                             </IconButton>
-                            <IconButton onClick={() => handleDelete(group.id!)}>
-                              <Delete color='error' />
-                            </IconButton>
-                          </>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                    {/* Разворачивающаяся строка с детьми */}
-                    {group.id && expandedGroups[group.id]?.expanded && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={6}
-                          sx={{ paddingTop: 0, paddingBottom: 0 }}
-                        >
-                          <Box sx={{ margin: 1 }}>
-                            <Typography
-                              variant='h6'
-                              gutterBottom
-                              component='div'
-                              sx={{ color: '#1890ff' }}
-                            >
-                              Дети группы "{group.name}"
-                            </Typography>
-                            {group.id && expandedGroups[group.id]?.loading ? (
-                              <Box
-                                display="flex"
-                                justifyContent="center"
-                                alignItems='center'
-                                py={2}
-                              >
-                                <CircularProgress size={24} />
-                                <Typography variant='body2' sx={{ ml: 2 }}>
-                                  Загрузка детей...
-                                </Typography>
-                              </Box>
-                            ) : !(group.id && expandedGroups[group.id]?.children?.length) ? (
-                              <Typography
-                                variant="body2"
-                                color='text.secondary'
-                                sx={{ py: 2 }}
-                              >
-                                В группе нет детей
-                              </Typography>
-                            ) : (
-                              <Table
-                                size='small'
-                                sx={{ backgroundColor: '#f8f9fa' }}
-                              >
-                                <TableHead>
-                                  <TableRow>
-                                    <TableCell>
-                                      <strong>Имя ребенка</strong>
-                                    </TableCell>
-                                    <TableCell>
-                                      <strong>Родитель</strong>
-                                    </TableCell>
-                                    <TableCell>
-                                      <strong>Телефон</strong>
-                                    </TableCell>
-                                    <TableCell>
-                                      <strong>Дата рождения</strong>
-                                    </TableCell>
-                                  </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                  {group.id && expandedGroups[group.id]?.children?.map(
-                                    (child: Child, index: number) => (
-                                      <TableRow key={child.id || index}>
-                                        <TableCell>{child.fullName}</TableCell>
-                                        <TableCell>
-                                          {child.parentName || '—'}
-                                        </TableCell>
-                                        <TableCell>
-                                          {child.parentPhone || '—'}
-                                        </TableCell>
-                                        <TableCell>
-                                          {child.birthday
-                                            ? new Date(
-                                              child.birthday,
-                                            ).toLocaleDateString('ru-RU')
-                                            : '—'}
-                                        </TableCell>
-                                      </TableRow>
-                                    ),
-                                  )}
-                                </TableBody>
-                              </Table>
+                            {isAdminOrManager && (
+                              <>
+                                <IconButton size="small" onClick={() => handleOpenModal(group as any)}><Edit fontSize="small" /></IconButton>
+                                <IconButton size="small" onClick={() => handleDelete(group.id!)}><Delete fontSize="small" color='error' /></IconButton>
+                              </>
                             )}
                           </Box>
+                        </Box>
+                        <Divider sx={{ my: 1 }} />
+                        <Box display="flex" flexDirection="column" gap={0.5}>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Person sx={{ fontSize: 18, color: 'text.secondary' }} />
+                            <Typography variant="body2">
+                              Воспитатель: <strong>{group.teacher ? teacherMap.get(group.teacher) || '—' : '—'}</strong>
+                            </Typography>
+                          </Box>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <SingleGroupIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                            <Typography variant="body2">
+                              Мест: <strong>{group.maxStudents || 0}</strong>
+                            </Typography>
+                          </Box>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{group.description}</Typography>
+                        </Box>
+                        {group.id && renderGroupChildren(group.id, group.name)}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Table>
+                <TableHead>
+                  <TableRow hover>
+                    <TableCell>Название</TableCell>
+                    <TableCell>Описание</TableCell>
+                    <TableCell>Возраст</TableCell>
+                    <TableCell>Мест</TableCell>
+                    <TableCell>Воспитатель</TableCell>
+                    <TableCell align='right'>Действия</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {contextGroups.map((group) => (
+                    <React.Fragment key={group.id}>
+                      <TableRow hover>
+                        <TableCell><strong>{group.name}</strong></TableCell>
+                        <TableCell>{group.description}</TableCell>
+                        <TableCell>
+                          {group.ageGroup && Array.isArray(group.ageGroup)
+                            ? group.ageGroup.join(', ')
+                            : group.ageGroup
+                              ? String(group.ageGroup)
+                              : ''}
+                        </TableCell>
+                        <TableCell>{group.maxStudents}</TableCell>
+                        <TableCell>
+                          {group.teacher ? teacherMap.get(group.teacher) || '—' : '—'}
+                        </TableCell>
+                        <TableCell align='right'>
+                          <IconButton onClick={(e) => handleToggleGroupChildren(e, group.id || "")}>
+                            {(group.id && expandedGroups[group.id]?.expanded) ? <ExpandLess color="primary" /> : <Visibility color="primary" />}
+                          </IconButton>
+                          <AuditLogButton entityType="group" entityId={group._id || group.id} entityName={group.name} />
+                          {isAdminOrManager && (
+                            <>
+                              <IconButton onClick={() => handleOpenModal(group as any)}><Edit /></IconButton>
+                              <IconButton onClick={() => handleDelete(group.id || "")}><Delete color='error' /></IconButton>
+                            </>
+                          )}
                         </TableCell>
                       </TableRow>
-                    )}
-                  </React.Fragment>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </>
-      )}
+                      {group.id && expandedGroups[group.id]?.expanded && (
+                        <TableRow>
+                          <TableCell colSpan={6} sx={{ p: 0, bgcolor: '#fcfcfc' }}>
+                            {renderGroupChildren(group.id, group.name)}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </>
+        )}
+      </Paper>
 
       {/* Модальное окно для добавления/редактирования группы */}
       <Dialog
@@ -654,7 +637,7 @@ const Groups = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Paper>
+    </Box>
   );
 };
 
