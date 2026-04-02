@@ -108,6 +108,9 @@ const ChildRow = React.memo(({
           ))}
         </Select>
       </TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2, fontWeight: 'bold', color: '#1890ff' }}>
+        {child.paymentAmount?.toLocaleString() || 0} ₸
+      </TableCell>
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.notes}</TableCell>
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.active ? 'Активен' : 'Неактивен'}</TableCell>
       <TableCell align='right' sx={{ p: isMobile ? 1 : 2 }}>
@@ -483,6 +486,15 @@ const Children: React.FC = () => {
                   onClick={() => requestSort('groupId.name')}
                 >
                   Группа
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
+                <TableSortLabel
+                  active={sortConfig.key === 'paymentAmount'}
+                  direction={sortConfig.direction || 'asc'}
+                  onClick={() => requestSort('paymentAmount')}
+                >
+                  Сумма оплаты
                 </TableSortLabel>
               </TableCell>
               <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Заметки</TableCell>

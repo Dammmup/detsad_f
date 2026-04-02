@@ -20,6 +20,8 @@ import { Group, User } from '../../../shared/types/common';
 import { useAuth } from '../../../app/context/AuthContext';
 import { useChildren } from '../../../app/context/ChildrenContext';
 import { useGroups } from '../../../app/context/GroupsContext';
+import childPaymentApi from '../services/childPayment';
+import moment from 'moment';
 
 interface ChildrenModalProps {
   open: boolean;
@@ -127,6 +129,26 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
 
       if (child && child.id) {
         await updateChild(child.id, childData);
+        
+        // Синхронизация с платежами за текущий месяц
+        try {
+          const currentMonth = moment().format('YYYY-MM');
+          const payments = await childPaymentApi.getAll({ 
+            childId: child.id,
+            monthPeriod: currentMonth 
+          });
+          
+          const activePayment = payments.find(p => p.status !== 'paid');
+          if (activePayment && activePayment.amount !== childData.paymentAmount) {
+            await childPaymentApi.update(activePayment._id, {
+              amount: childData.paymentAmount,
+              total: childData.paymentAmount + (activePayment.accruals || 0) - (activePayment.deductions || 0)
+            });
+          }
+        } catch (paymentErr) {
+          console.error('Ошибка синхронизации платежа:', paymentErr);
+          // Не прерываем сохранение профиля из-за ошибки в платежах
+        }
       } else {
         await createChild(childData);
       }
