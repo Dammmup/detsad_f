@@ -96,7 +96,7 @@ export class Qwen3ApiService {
             ...msg,
             timestamp: msg.timestamp.toISOString(),
           })),
-          model: 'qwen-plus',
+          model: 'qwen-',
         };
 
         if (currentPage) {
