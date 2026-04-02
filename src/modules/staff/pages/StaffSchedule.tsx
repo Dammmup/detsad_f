@@ -996,8 +996,8 @@ const StaffSchedule: React.FC = () => {
                       staffMember={staffMember}
                       index={index + 1}
                       weekDays={weekDays}
-                      staffShifts={shiftsByStaff.get(staffMember.id || staffMember._id) || []}
-                      staffAttendance={attendanceByStaff.get(staffMember.id || staffMember._id) || []}
+                      staffShifts={shiftsByStaff.get(staffMember.id || staffMember._id || '') || []}
+                      staffAttendance={attendanceByStaff.get(staffMember.id || staffMember._id || '') || []}
                       holidays={holidays}
                       workingSaturdays={workingSaturdays}
                       selectedStaff={selectedStaff}
