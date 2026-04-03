@@ -69,8 +69,8 @@ const PaymentRow = React.memo(({
   const handleDeleteClick = useCallback(() => onDelete(payment._id), [payment._id, onDelete]);
 
   const debt = useMemo(() =>
-    (payment.total + (payment.accruals || 0) - (payment.paidAmount || 0)),
-    [payment.total, payment.accruals, payment.paidAmount]
+    (payment.total + (payment.accruals || 0) - (payment.paidAmount || 0) - (payment.deductions || 0)),
+    [payment.total, payment.accruals, payment.paidAmount, payment.deductions]
   );
 
   return (
@@ -292,7 +292,7 @@ const ChildPayments: React.FC = () => {
           ...p,
           _childName: child?.fullName || '',
           _groupName: groupName,
-          _debt: (p.total || 0) + (p.accruals || 0) - (p.paidAmount || 0),
+          _debt: (p.total || 0) + (p.accruals || 0) - (p.paidAmount || 0) - (p.deductions || 0),
           _periodStart: p.period?.start ? new Date(p.period.start).getTime() : 0
         };
       });
@@ -304,7 +304,7 @@ const ChildPayments: React.FC = () => {
     try {
       const payment = payments.find(p => p._id === paymentId);
       if (!payment) return;
-      const totalAmount = (payment.total || 0) + (payment.accruals || 0);
+      const totalAmount = (payment.total || 0) + (payment.accruals || 0) - (payment.deductions || 0);
       await childPaymentApi.update(paymentId, {
         status: 'paid',
         paidAmount: totalAmount,
@@ -362,7 +362,20 @@ const ChildPayments: React.FC = () => {
       });
     }
     setModalOpen(true);
-  }, []);
+  }, [childrenMap]);
+
+  // Автоматический перенос переплаты в надбавки
+  useEffect(() => {
+    if (modalOpen) {
+      const netTotal = (newPayment.total || 0) - (newPayment.deductions || 0);
+      if (newPayment.paidAmount > netTotal) {
+        const diff = newPayment.paidAmount - netTotal;
+        if (newPayment.accruals !== diff) {
+          setNewPayment(prev => ({ ...prev, accruals: diff }));
+        }
+      }
+    }
+  }, [newPayment.paidAmount, newPayment.total, newPayment.deductions, modalOpen]);
 
   const handleCloseModal = useCallback(() => {
     setModalOpen(false);
@@ -682,29 +695,29 @@ const ChildPayments: React.FC = () => {
             <TextField
               label='Сумма (Всего)'
               type='number'
-              value={newPayment.total}
-              onChange={(e) => setNewPayment({ ...newPayment, total: Number(e.target.value) })}
+              value={newPayment.total === 0 && !editingPayment ? '' : newPayment.total}
+              onChange={(e) => setNewPayment({ ...newPayment, total: e.target.value === '' ? 0 : Number(e.target.value) })}
               disabled={currentUser?.role !== 'admin'}
             />
             <TextField
               label='Оплачено'
               type='number'
-              value={newPayment.paidAmount}
-              onChange={(e) => setNewPayment({ ...newPayment, paidAmount: Number(e.target.value) })}
+              value={newPayment.paidAmount === 0 ? '' : newPayment.paidAmount}
+              onChange={(e) => setNewPayment({ ...newPayment, paidAmount: e.target.value === '' ? 0 : Number(e.target.value) })}
               disabled={currentUser?.role !== 'admin'}
             />
             <TextField
               label='Надбавки'
               type='number'
-              value={newPayment.accruals}
-              onChange={(e) => setNewPayment({ ...newPayment, accruals: Number(e.target.value) })}
+              value={newPayment.accruals === 0 ? '' : newPayment.accruals}
+              onChange={(e) => setNewPayment({ ...newPayment, accruals: e.target.value === '' ? 0 : Number(e.target.value) })}
               disabled={currentUser?.role !== 'admin'}
             />
             <TextField
               label='Вычеты'
               type='number'
-              value={newPayment.deductions}
-              onChange={(e) => setNewPayment({ ...newPayment, deductions: Number(e.target.value) })}
+              value={newPayment.deductions === 0 ? '' : newPayment.deductions}
+              onChange={(e) => setNewPayment({ ...newPayment, deductions: e.target.value === '' ? 0 : Number(e.target.value) })}
               disabled={currentUser?.role !== 'admin'}
             />
             <TextField
@@ -714,6 +727,24 @@ const ChildPayments: React.FC = () => {
               multiline
               rows={2}
             />
+            <Box sx={{ p: 2, bgcolor: '#f0f7ff', borderRadius: 1, border: '1px solid #cce3ff' }}>
+              <Box display='flex' justifyContent='space-between' mb={1}>
+                <Typography variant='body2'>Итого к оплате (с учетом корректировок):</Typography>
+                <Typography variant='body2' fontWeight='bold'>
+                  {(newPayment.total + (newPayment.accruals || 0) - (newPayment.deductions || 0)).toLocaleString()} ₸
+                </Typography>
+              </Box>
+              <Box display='flex' justifyContent='space-between'>
+                <Typography variant='body2'>Баланс (Долг / Переплата):</Typography>
+                <Typography 
+                  variant='body2' 
+                  fontWeight='bold' 
+                  color={(newPayment.total + (newPayment.accruals || 0) - (newPayment.deductions || 0) - newPayment.paidAmount) > 0 ? 'error.main' : 'success.main'}
+                >
+                  {(newPayment.total + (newPayment.accruals || 0) - (newPayment.deductions || 0) - newPayment.paidAmount).toLocaleString()} ₸
+                </Typography>
+              </Box>
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions>

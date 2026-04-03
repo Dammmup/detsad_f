@@ -1,10 +1,10 @@
-import api from '../../../shared/utils/api';
+import api, { normalizeMongoArray } from '../../../shared/utils/api';
 import { CalendarEvent, CalendarEventCreate } from '../../../shared/types/calendar';
 
 const calendarEventsApi = {
   getAll: async (filters: { startDate?: string; endDate?: string; type?: string } = {}) => {
     const response = await api.get<CalendarEvent[]>('/calendar-events', { params: filters });
-    return response.data;
+    return normalizeMongoArray(response.data || response) as CalendarEvent[];
   },
 
   create: async (data: CalendarEventCreate) => {

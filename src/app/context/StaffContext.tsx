@@ -7,7 +7,9 @@ import React, {
   ReactNode,
 } from 'react';
 import { usersApi } from '../../modules/staff/services/users';
+import { externalSpecialistsApi } from '../../modules/staff/services/externalSpecialists';
 import { User } from '../../shared/types/staff';
+import { IExternalSpecialist } from '../../shared/types/common';
 
 interface StaffContextType {
   staff: User[];
@@ -22,6 +24,13 @@ interface StaffContextType {
   updatePayrollSettings: (id: string, data: { salary?: number; salaryType?: string }) => Promise<any>;
   updateAllowToSeePayroll: (id: string, allowToSeePayroll: boolean) => Promise<any>;
   generateTelegramLinkCode: (id: string) => Promise<{ telegramLinkCode: string }>;
+  
+  // External Specialists
+  externalSpecialists: IExternalSpecialist[];
+  fetchExternalSpecialists: () => Promise<IExternalSpecialist[]>;
+  createExternalSpecialist: (data: any) => Promise<IExternalSpecialist>;
+  updateExternalSpecialist: (id: string, data: any) => Promise<IExternalSpecialist>;
+  deleteExternalSpecialist: (id: string) => Promise<void>;
 }
 
 interface StaffProviderProps {
@@ -43,6 +52,7 @@ export const clearStaffCache = () => {
 
 export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
   const [staffList, setStaffList] = useState<User[]>(staffCache || []);
+  const [externalSpecialists, setExternalSpecialists] = useState<IExternalSpecialist[]>([]);
   const [loading, setLoading] = useState(!staffCache);
   const [error, setError] = useState<string | null>(null);
 
@@ -155,8 +165,66 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
     }
   };
 
+  // External Specialists Methods
+  const fetchExternalSpecialists = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await externalSpecialistsApi.getAll();
+      setExternalSpecialists(data);
+      return data;
+    } catch (err) {
+      setError('Не удалось загрузить внешних специалистов.');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const createExternalSpecialist = async (data: any) => {
+    try {
+      setLoading(true);
+      const newItem = await externalSpecialistsApi.create(data);
+      setExternalSpecialists((prev) => [...prev, newItem]);
+      return newItem;
+    } catch (err) {
+      setError('Не удалось добавить внешнего специалиста.');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateExternalSpecialist = async (id: string, data: any) => {
+    try {
+      setLoading(true);
+      const updatedItem = await externalSpecialistsApi.update(id, data);
+      setExternalSpecialists((prev) =>
+        prev.map((item) => (item._id === id ? updatedItem : item))
+      );
+      return updatedItem;
+    } catch (err) {
+      setError('Не удалось обновить данные внешнего специалиста.');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteExternalSpecialist = async (id: string) => {
+    try {
+      setLoading(true);
+      await externalSpecialistsApi.delete(id);
+      setExternalSpecialists((prev) => prev.filter((item) => item._id !== id));
+    } catch (err) {
+      setError('Не удалось удалить внешнего специалиста.');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const refreshStaff = async () => {
-    await fetchStaff(true);
+    await Promise.all([fetchStaff(true), fetchExternalSpecialists()]);
   };
 
   const value = useMemo(
@@ -173,8 +241,13 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
       updatePayrollSettings,
       updateAllowToSeePayroll,
       generateTelegramLinkCode,
+      externalSpecialists,
+      fetchExternalSpecialists,
+      createExternalSpecialist,
+      updateExternalSpecialist,
+      deleteExternalSpecialist,
     }),
-    [staffList, loading, error, fetchStaff],
+    [staffList, externalSpecialists, loading, error, fetchStaff, fetchExternalSpecialists],
   );
 
   return (

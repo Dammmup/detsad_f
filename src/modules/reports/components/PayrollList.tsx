@@ -1024,8 +1024,8 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                                     <TextField
                                       size='small'
                                       type='number'
-                                      value={editData.baseSalary ?? r.baseSalary ?? ''}
-                                      onChange={(e) => handleInputChange('baseSalary', Number(e.target.value))}
+                                      value={editData.baseSalary === 0 ? '' : (editData.baseSalary ?? r.baseSalary ?? '')}
+                                      onChange={(e) => handleInputChange('baseSalary', e.target.value === '' ? 0 : Number(e.target.value))}
                                       inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
                                       sx={{ width: '80px' }}
                                       variant='standard'
@@ -1052,21 +1052,42 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                               </TableCell>
                               <TableCell>
                                 {editingId === r.staffId ? (
-                                  <TextField type='number' size='small' value={editData.bonuses ?? r.bonuses} onChange={(e) => handleInputChange('bonuses', Number(e.target.value))} sx={{ width: '100px' }} inputProps={{ style: { textAlign: 'right' }, min: 0 }} />
+                                  <TextField 
+                                    type='number' 
+                                    size='small' 
+                                    value={editData.bonuses === 0 ? '' : (editData.bonuses ?? r.bonuses)} 
+                                    onChange={(e) => handleInputChange('bonuses', e.target.value === '' ? 0 : Number(e.target.value))} 
+                                    sx={{ width: '100px' }} 
+                                    inputProps={{ style: { textAlign: 'right' }, min: 0 }} 
+                                  />
                                 ) : (
                                   <Typography variant='body2' color='success.main'>+{r.bonuses?.toLocaleString() || '0'}</Typography>
                                 )}
                               </TableCell>
                               <TableCell>
                                 {editingId === r.staffId ? (
-                                  <TextField type='number' size='small' value={editData.advance ?? r.advance} onChange={(e) => handleInputChange('advance', Number(e.target.value))} sx={{ width: '100px' }} inputProps={{ style: { textAlign: 'right' }, min: 0 }} />
+                                  <TextField 
+                                    type='number' 
+                                    size='small' 
+                                    value={editData.advance === 0 ? '' : (editData.advance ?? r.advance)} 
+                                    onChange={(e) => handleInputChange('advance', e.target.value === '' ? 0 : Number(e.target.value))} 
+                                    sx={{ width: '100px' }} 
+                                    inputProps={{ style: { textAlign: 'right' }, min: 0 }} 
+                                  />
                                 ) : (
                                   <Typography variant='body2' sx={{ color: '#e65100' }}>-{r.advance?.toLocaleString() || '0'}</Typography>
                                 )}
                               </TableCell>
                               <TableCell>
                                 {editingId === r.staffId ? (
-                                  <TextField type='number' size='small' value={editData.penalties ?? r.penalties} onChange={(e) => handleInputChange('penalties', Number(e.target.value))} sx={{ width: '100px' }} inputProps={{ style: { textAlign: 'right' }, min: 0 }} />
+                                  <TextField 
+                                    type='number' 
+                                    size='small' 
+                                    value={editData.penalties === 0 ? '' : (editData.penalties ?? r.penalties)} 
+                                    onChange={(e) => handleInputChange('penalties', e.target.value === '' ? 0 : Number(e.target.value))} 
+                                    sx={{ width: '100px' }} 
+                                    inputProps={{ style: { textAlign: 'right' }, min: 0 }} 
+                                  />
                                 ) : (
                                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
                                     <Tooltip
@@ -1239,8 +1260,8 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                   label={newPenaltyType === 'fixed' ? 'Сумма штрафа (тг)' : `Ставка (тг/${newPenaltyType === 'per_minute' ? 'мин' : newPenaltyType === 'per_5_minutes' ? '5 мин' : '10 мин'})`}
                   type="number"
                   fullWidth
-                  value={newRate}
-                  onChange={(e) => setNewRate(Number(e.target.value))}
+                  value={newRate === 0 ? '' : newRate}
+                  onChange={(e) => setNewRate(e.target.value === '' ? 0 : Number(e.target.value))}
                 />
                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                   {newPenaltyType === 'per_minute' && 'Пример: при опоздании на 15 мин штраф = 15 × ставка'}

@@ -172,19 +172,19 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = React.me
       const dayStr = currentDayMoment.format('YYYY-MM-DD');
 
       // Дети с днем рождения
-      const childrenWithBirthday = children.filter((child) => {
+      const childrenWithBirthday = Array.isArray(children) ? children.filter((child) => {
         if (!child.birthday) return false;
         const birth = moment(child.birthday);
         return (
           birth.date() === currentDayMoment.date() &&
           birth.month() === currentDayMoment.month()
         );
-      });
+      }) : [];
 
       // События этого дня
-      const dayEvents = calendarEvents.filter(e => 
+      const dayEvents = Array.isArray(calendarEvents) ? calendarEvents.filter(e => 
         moment(e.date).isSame(currentDayMoment, 'day')
-      );
+      ) : [];
 
       // Проверка на выходной/праздник
       // 0 - Пн, 1 - Вт... 5 - Сб, 6 - Вс в ISO. Moment.js: 1 - Пн... 7 - Вс (isoWeekday)

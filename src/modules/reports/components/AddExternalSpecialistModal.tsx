@@ -28,7 +28,8 @@ const AddExternalSpecialistModal: React.FC<Props> = ({ open, onClose, onSuccess 
         name: '',
         type: 'tenant',
         phone: '',
-        description: ''
+        description: '',
+        rentAmount: '' as string | number
     });
     const [error, setError] = useState<string | null>(null);
 
@@ -50,11 +51,12 @@ const AddExternalSpecialistModal: React.FC<Props> = ({ open, onClose, onSuccess 
                 type: formData.type as any,
                 phone: formData.phone,
                 description: formData.description,
+                rentAmount: Number(formData.rentAmount),
                 active: true
             });
             onSuccess(result);
             onClose();
-            setFormData({ name: '', type: 'tenant', phone: '', description: '' });
+            setFormData({ name: '', type: 'tenant', phone: '', description: '', rentAmount: '' });
         } catch (err: any) {
             setError(err.message || 'Ошибка при создании специалиста');
         } finally {
@@ -103,6 +105,15 @@ const AddExternalSpecialistModal: React.FC<Props> = ({ open, onClose, onSuccess 
                         fullWidth
                         multiline
                         rows={3}
+                    />
+
+                    <TextField
+                        label="Сумма аренды (ожидаемая)"
+                        type="number"
+                        value={formData.rentAmount}
+                        onChange={(e) => handleChange('rentAmount', e.target.value)}
+                        fullWidth
+                        helperText="Будет использоваться при генерации расчетного листа, если нет данных за прошлый месяц"
                     />
 
                     {error && (

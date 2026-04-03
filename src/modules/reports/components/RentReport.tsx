@@ -34,6 +34,7 @@ import {
 import RentTenantSelector from './RentTenantSelector';
 import AddExternalSpecialistModal from './AddExternalSpecialistModal';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
+import RentReceiptDialog from './RentReceiptDialog';
 
 interface Props {
   userId?: string;
@@ -97,6 +98,10 @@ const RentReport: React.FC<Props> = ({ userId }) => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [selectedReceiptData, setSelectedReceiptData] = useState<any>(null);
+
+  const selectedMonthLabel = new Date(selectedMonth + '-01').toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
 
   useEffect(() => {
     let mounted = true;
@@ -569,8 +574,8 @@ const RentReport: React.FC<Props> = ({ userId }) => {
                             <TextField
                               size='small'
                               type='number'
-                              value={editData.amount ?? r.amount}
-                              onChange={(e) => handleInputChange('amount', Number(e.target.value))}
+                              value={editData.amount === 0 ? '' : (editData.amount ?? r.amount)}
+                              onChange={(e) => handleInputChange('amount', e.target.value === '' ? 0 : Number(e.target.value))}
                               inputProps={{ style: { fontSize: 14, textAlign: 'right' } }}
                               variant='standard'
                               sx={{ width: 100 }}
@@ -586,8 +591,8 @@ const RentReport: React.FC<Props> = ({ userId }) => {
                             <TextField
                               size='small'
                               type='number'
-                              value={editData.paidAmount ?? r.paidAmount}
-                              onChange={(e) => handleInputChange('paidAmount', Number(e.target.value))}
+                              value={editData.paidAmount === 0 ? '' : (editData.paidAmount ?? r.paidAmount)}
+                              onChange={(e) => handleInputChange('paidAmount', e.target.value === '' ? 0 : Number(e.target.value))}
                               inputProps={{ style: { fontSize: 14, textAlign: 'right' } }}
                               variant='standard'
                               sx={{ width: 100 }}
@@ -660,40 +665,57 @@ const RentReport: React.FC<Props> = ({ userId }) => {
                             />
                           )}
                         </TableCell>
-                        <TableCell>
-                          {editingId === r.tenantId ? (
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                              <IconButton color='success' onClick={() => handleSaveClick(r.tenantId)}>
-                                <SaveIcon />
+                      <TableCell>
+                        {editingId === r.tenantId ? (
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <IconButton color='success' onClick={() => handleSaveClick(r.tenantId)}>
+                              <SaveIcon />
+                            </IconButton>
+                            <IconButton onClick={handleCancelClick}>
+                              <CancelIcon />
+                            </IconButton>
+                          </Box>
+                        ) : (
+                          <Box sx={{ display: 'flex' }}>
+                            <IconButton color='primary' onClick={() => handleEditClick(r)}>
+                              <EditIcon />
+                            </IconButton>
+                            <Tooltip title="Просмотр квитанции">
+                              <IconButton onClick={() => {
+                                setSelectedReceiptData({
+                                  ...r,
+                                  period: selectedMonthLabel,
+                                  id: r._id || r.tenantId
+                                });
+                                setReceiptDialogOpen(true);
+                              }}>
+                                <VisibilityIcon />
                               </IconButton>
-                              <IconButton onClick={handleCancelClick}>
-                                <CancelIcon />
+                            </Tooltip>
+                            {currentUser?.role === 'admin' && (
+                              <IconButton color='error' onClick={() => handleDeleteClick(r)}>
+                                <CloseIcon />
                               </IconButton>
-                            </Box>
-                          ) : (
-                            <Box sx={{ display: 'flex' }}>
-                              <IconButton color='primary' onClick={() => handleEditClick(r)}>
-                                <EditIcon />
-                              </IconButton>
-                              <IconButton><VisibilityIcon /></IconButton>
-                              {currentUser?.role === 'admin' && (
-                                <IconButton color='error' onClick={() => handleDeleteClick(r)}>
-                                  <CloseIcon />
-                                </IconButton>
-                              )}
-                            </Box>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Box>
-            </CardContent>
-          </Card>
-        </Box>
+                            )}
+                          </Box>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
+          </CardContent>
+        </Card>
       </Box>
-    </>
+    </Box>
+
+    <RentReceiptDialog
+      open={receiptDialogOpen}
+      onClose={() => setReceiptDialogOpen(false)}
+      data={selectedReceiptData}
+    />
+  </>
   );
 };
 

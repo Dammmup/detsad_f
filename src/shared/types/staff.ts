@@ -26,6 +26,7 @@ export interface User extends BaseRecord {
     staffId?: string;
     staffName?: string;
     tenant?: boolean;
+    rentAmount?: number;
     allowToSeePayroll?: boolean;
     accessControls?: {
         canSeeChildren?: boolean;

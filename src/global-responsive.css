@@ -52,3 +52,71 @@ html, body {
     padding: 6px 10px !important;
   }
 }
+
+/* Скрываем стрелочки (spinners) в числовых полях ввода */
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', Arial, sans-serif;
+  overflow-x: hidden;
+  position: relative;
+  touch-action: pan-x pan-y;
+  width: 100%;
+}
+
+.MuiContainer-root {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+@media (max-width: 900px) {
+  .MuiContainer-root {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  .MuiAppBar-root {
+    min-height: 48px !important;
+  }
+  .MuiToolbar-root {
+    min-height: 48px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+    .MuiTypography-h6 {
+    font-size: 0.95rem !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .MuiContainer-root {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+  .MuiAppBar-root {
+    min-height: 44px !important;
+  }
+  .MuiToolbar-root {
+    min-height: 48px !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+ }
+   .MuiTypography-h6 {
+    font-size: 0.85rem !important;
+  }
+ .MuiButton-root {
+    font-size: 0.75rem !important;
+    padding: 6px 10px !important;
+  }
+}
+
+/* Скрываем стрелочки (spinners) в числовых полях ввода */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: none;
+}

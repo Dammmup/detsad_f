@@ -327,8 +327,8 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
             name='paymentAmount'
             label='Сумма оплаты (тенге)'
             type='number'
-            value={form.paymentAmount || 0}
-            onChange={(e) => setForm({ ...form, paymentAmount: Number(e.target.value) })}
+            value={form.paymentAmount === 0 ? '' : form.paymentAmount}
+            onChange={(e) => setForm({ ...form, paymentAmount: e.target.value === '' ? 0 : Number(e.target.value) })}
             fullWidth
             sx={{ mb: 2 }}
             variant='outlined'

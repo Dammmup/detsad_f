@@ -1,4 +1,3 @@
-
 import apiClient from '../../../shared/utils/api';
 
 export interface ExternalSpecialist {
@@ -8,6 +7,7 @@ export interface ExternalSpecialist {
     phone?: string;
     email?: string;
     description?: string;
+    rentAmount?: number;
     active: boolean;
 }
 

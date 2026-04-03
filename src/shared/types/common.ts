@@ -111,10 +111,23 @@ export interface User {
   };
 }
 
+export interface IExternalSpecialist {
+  _id: string;
+  name: string;
+  type: 'tenant' | 'speech_therapist' | 'other';
+  phone?: string;
+  email?: string;
+  description?: string;
+  rentAmount?: number;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface IRent {
   _id: ID;
   id?: ID;
-  tenantId: User | string;
+  tenantId: IExternalSpecialist | User | string;
   period: string;
   amount: number;
   total: number;

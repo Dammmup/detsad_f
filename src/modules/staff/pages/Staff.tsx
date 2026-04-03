@@ -53,7 +53,7 @@ import {
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { User as StaffMember } from '../../../shared/types/staff';
-import { UserRole, STAFF_ROLES, EXTERNAL_ROLES } from '../../../shared/types/common';
+import { UserRole, STAFF_ROLES, EXTERNAL_ROLES, IExternalSpecialist } from '../../../shared/types/common';
 import { UserRole as CommonUserRole } from '../../../shared/types/common';
 import { getGroups } from '../../children/services/groups';
 import { useAuth } from '../../../app/context/AuthContext';
@@ -121,6 +121,7 @@ const defaultForm: StaffMember = {
   updatedAt: new Date().toISOString(),
   salaryType: 'day',
   salary: 0,
+  rentAmount: 0,
   allowToSeePayroll: false,
 };
 
@@ -132,7 +133,8 @@ const StaffRow = React.memo(({
   translateRole,
   handleOpenModal,
   handleDelete,
-  index
+  index,
+  isExternal
 }: {
   member: any;
   currentUser: any;
@@ -140,13 +142,14 @@ const StaffRow = React.memo(({
   handleOpenModal: (member: StaffMember) => void;
   handleDelete: (member: StaffMember) => void;
   index: number;
+  isExternal?: boolean;
 }) => {
   return (
-    <TableRow key={member.id}>
+    <TableRow key={member.id || member._id}>
       <TableCell style={{ fontWeight: 'bold', width: 50 }}>{index + 1}</TableCell>
-      <TableCell>{member.fullName}</TableCell>
-      <TableCell>{member.iin || '—'}</TableCell>
-      <TableCell>{translateRole(member.role || '')}</TableCell>
+      <TableCell>{member.fullName || member.name}</TableCell>
+      {!isExternal && <TableCell>{member.iin || '—'}</TableCell>}
+      <TableCell>{translateRole(member.role || member.type || '')}</TableCell>
       <TableCell>
         <Box display='flex' flexDirection='column'>
           {member.phone && (
@@ -163,31 +166,35 @@ const StaffRow = React.memo(({
           )}
         </Box>
       </TableCell>
-      {currentUser?.role === 'admin' ? (
-        <TableCell>{member.initialPassword || '—'}</TableCell>
-      ) : (
-        <TableCell>—</TableCell>
+      {!isExternal && (
+        <>
+          {currentUser?.role === 'admin' ? (
+            <TableCell>{member.initialPassword || '—'}</TableCell>
+          ) : (
+            <TableCell>—</TableCell>
+          )}
+          <TableCell>
+            <Chip
+              label={member.active ? 'Активен' : 'Неактивен'}
+              color={member.active ? 'success' : 'default'}
+              size='small'
+            />
+          </TableCell>
+          <TableCell>
+            {member.lastLogin
+              ? new Date(member.lastLogin).toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+              : '—'}
+          </TableCell>
+        </>
       )}
-      <TableCell>
-        <Chip
-          label={member.active ? 'Активен' : 'Неактивен'}
-          color={member.active ? 'success' : 'default'}
-          size='small'
-        />
-      </TableCell>
-      <TableCell>
-        {member.lastLogin
-          ? new Date(member.lastLogin).toLocaleString('ru-RU', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })
-          : '—'}
-      </TableCell>
       <TableCell align='right'>
-        <AuditLogButton entityType="staff" entityId={member._id} entityName={member.fullName} />
+        <AuditLogButton entityType="staff" entityId={member._id || member.id} entityName={member.fullName || member.name} />
         <Tooltip title='Редактировать'>
           <IconButton onClick={() => handleOpenModal(member)}>
             <Edit />
@@ -213,7 +220,13 @@ const Staff = () => {
     updateUser, 
     deleteUser,
     updatePayrollSettings,
-    updateAllowToSeePayroll
+    updateAllowToSeePayroll,
+    // New fields
+    externalSpecialists,
+    fetchExternalSpecialists,
+    createExternalSpecialist,
+    updateExternalSpecialist,
+    deleteExternalSpecialist
   } = useStaff();
   
   const { 
@@ -261,17 +274,18 @@ const Staff = () => {
 
   useEffect(() => {
     fetchStaff({ includePasswords: currentUser?.role === 'admin' });
+    fetchExternalSpecialists();
     fetchGroups();
-  }, [fetchStaff, fetchGroups, currentUser?.role]);
+  }, [fetchStaff, fetchExternalSpecialists, fetchGroups, currentUser?.role]);
 
   const filteredStaff = useMemo(() => {
-    if (!allStaff.length) return [];
+    if (!allStaff.length && !externalSpecialists.length) return [];
 
-    let filtered = allStaff;
+    let filtered: any[] = allStaff;
     const externalRoles = EXTERNAL_ROLES;
 
     if (activeTab === 'external') {
-      filtered = allStaff.filter((member) => externalRoles.includes(member.role as any));
+      filtered = externalSpecialists;
     } else if (activeTab === 'inactive') {
       filtered = allStaff.filter((member) => member.active === false && !externalRoles.includes(member.role as any));
     } else {
@@ -299,13 +313,16 @@ const Staff = () => {
     }
 
     return filtered;
-  }, [allStaff, searchTerm, filterRole, activeTab]);
+  }, [allStaff, externalSpecialists, searchTerm, filterRole, activeTab]);
 
   const { items: sortedStaff, requestSort, sortConfig } = useSort(filteredStaff);
 
-  const handleOpenModal = useCallback((member?: StaffMember) => {
+  const handleOpenModal = useCallback((member?: any) => {
+    if (member && !member.fullName && member.name) {
+      member.fullName = member.name;
+    }
     setForm(member ? { ...member, allowToSeePayroll: member.allowToSeePayroll || false } : defaultForm);
-    setEditId(member?.id || null);
+    setEditId(member?.id || member?._id || null);
     setModalOpen(true);
   }, []);
 
@@ -317,7 +334,11 @@ const Staff = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    if (name === 'contactInfo') {
+       setForm({ ...form, [name]: value, phone: value } as any);
+    } else {
+       setForm({ ...form, [name]: value });
+    }
     if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -354,6 +375,25 @@ const Staff = () => {
     if (!validateForm()) return;
     setSaving(true);
     try {
+      if (activeTab === 'external') {
+        const specialistData = {
+          name: form.fullName,
+          type: form.role as any,
+          phone: form.phone || '',
+          email: form.email || '',
+          description: form.notes || '',
+          rentAmount: form.rentAmount || 0,
+          active: form.active
+        };
+        if (editId) {
+          await updateExternalSpecialist(editId, specialistData);
+        } else {
+          await createExternalSpecialist(specialistData);
+        }
+        handleCloseModal();
+        return;
+      }
+
       if (editId) {
         await updateUser(editId, form);
         await updatePayrollSettings(editId, {
@@ -373,18 +413,23 @@ const Staff = () => {
     }
   };
 
-  const handleDelete = useCallback(async (member: StaffMember) => {
-    if (!member.id) return;
-    if (!window.confirm('Удалить сотрудника?')) return;
+  const handleDelete = useCallback(async (member: any) => {
+    const id = member.id || member._id;
+    if (!id) return;
+    if (!window.confirm('Вы уверены, что хотите удалить эту запись?')) return;
     setSaving(true);
     try {
-      await deleteUser(member.id);
+      if (activeTab === 'external') {
+        await deleteExternalSpecialist(id);
+      } else {
+        await deleteUser(id);
+      }
     } catch (e: any) {
       alert(e?.response?.data?.message || 'Ошибка удаления');
     } finally {
       setSaving(false);
     }
-  }, [deleteUser]);
+  }, [deleteUser, deleteExternalSpecialist, activeTab]);
 
   const handleExport = async (
     exportType: string,
@@ -428,7 +473,7 @@ const Staff = () => {
             startIcon={<Add />}
             onClick={() => {
               if (activeTab === 'external') {
-                setForm({ ...defaultForm, role: 'speech_therapist' as UserRole });
+                setForm({ ...defaultForm, role: 'tenant' as UserRole });
                 setModalOpen(true);
               } else {
                 handleOpenModal();
@@ -552,7 +597,7 @@ const Staff = () => {
                         ФИО
                       </TableSortLabel>
                     </TableCell>
-                    <TableCell>ИИН</TableCell>
+                    {activeTab !== 'external' && <TableCell>ИИН</TableCell>}
                     <TableCell>
                       <TableSortLabel
                         active={sortConfig.key === 'role'}
@@ -563,22 +608,26 @@ const Staff = () => {
                       </TableSortLabel>
                     </TableCell>
                     <TableCell>Контакты</TableCell>
-                    <TableCell>Пароль</TableCell>
-                    <TableCell>Статус</TableCell>
-                    <TableCell>
-                      <TableSortLabel
-                        active={sortConfig.key === 'lastLogin'}
-                        direction={sortConfig.direction || 'asc'}
-                        onClick={() => requestSort('lastLogin')}
-                      >
-                        Последняя активность
-                      </TableSortLabel>
-                    </TableCell>
+                    {activeTab !== 'external' && (
+                       <>
+                        <TableCell>Пароль</TableCell>
+                        <TableCell>Статус</TableCell>
+                        <TableCell>
+                          <TableSortLabel
+                            active={sortConfig.key === 'lastLogin'}
+                            direction={sortConfig.direction || 'asc'}
+                            onClick={() => requestSort('lastLogin')}
+                          >
+                            Последняя активность
+                          </TableSortLabel>
+                        </TableCell>
+                       </>
+                    )}
                     <TableCell align='right'>Действия</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {sortedStaff.map((member, index) => (
+                  {Array.isArray(sortedStaff) ? sortedStaff.map((member, index) => (
                     <StaffRow
                       key={member.id || member._id}
                       member={member}
@@ -587,8 +636,13 @@ const Staff = () => {
                       handleOpenModal={handleOpenModal}
                       handleDelete={handleDelete}
                       index={index}
+                      isExternal={activeTab === 'external'}
                     />
-                  ))}
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">Список пуст или не удалось загрузить данные</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             )}
@@ -606,12 +660,11 @@ const Staff = () => {
             <Box display='flex' alignItems='center' flexDirection='row'>
               {editId ? (
                 <>
-                  <Edit style={{ marginRight: 8 }} /> Редактирование сотрудника
+                  <Edit style={{ marginRight: 8 }} /> {activeTab === 'external' ? 'Редактирование специалиста' : 'Редактирование сотрудника'}
                 </>
               ) : (
                 <>
-                  <Add style={{ marginRight: 8 }} /> Добавление нового
-                  сотрудника
+                  <Add style={{ marginRight: 8 }} /> {activeTab === 'external' ? 'Добавление специалиста' : 'Добавление нового сотрудника'}
                 </>
               )}
             </Box>
@@ -692,15 +745,30 @@ const Staff = () => {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label='ИИН'
-                  name='iin'
-                  value={form.iin || ''}
-                  onChange={handleChange}
-                  fullWidth
-                />
-              </Grid>
+              {activeTab !== 'external' && (
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label='ИИН'
+                    name='iin'
+                    value={form.iin || ''}
+                    onChange={handleChange}
+                    fullWidth
+                  />
+                </Grid>
+              )}
+              {activeTab === 'external' && (
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label='Сумма аренды по умолчанию'
+                    name='rentAmount'
+                    type='number'
+                    value={form.rentAmount === 0 ? '' : form.rentAmount}
+                    onChange={(e) => setForm({ ...form, rentAmount: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    fullWidth
+                    helperText="Используется для генерации расчетных листов"
+                  />
+                </Grid>
+              )}
               <Grid item xs={12} md={6}>
                 <FormControlLabel
                   control={
@@ -714,100 +782,120 @@ const Staff = () => {
                   label='Активен'
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={form.allowToSeePayroll || false}
-                      onChange={(e) =>
-                        setForm({ ...form, allowToSeePayroll: e.target.checked })
-                      }
-                    />
-                  }
-                  label='Разрешить просмотр зарплаты'
-                />
-              </Grid>
-
-              {/* Индивидуальные доступы */}
-              {currentUser?.role === 'admin' && (
+              {/* Поля для штатных сотрудников (только если не вкладка external) */}
+              {activeTab !== 'external' && (
                 <>
-                  <Grid item xs={12} sx={{ mt: 2 }}>
-                    <Typography variant='subtitle1' gutterBottom>
-                      <SettingsIcon style={{ marginRight: 8, verticalAlign: 'middle' }} /> Индивидуальные права доступа
-                    </Typography>
-                    <Divider sx={{ mb: 2 }} />
-                  </Grid>
                   <Grid item xs={12} md={6}>
                     <FormControlLabel
                       control={
                         <Checkbox
-                          name="canSeeChildren"
-                          checked={form.accessControls?.canSeeChildren === true}
-                          indeterminate={form.accessControls?.canSeeChildren === null || form.accessControls?.canSeeChildren === undefined}
-                          onChange={handleAccessControlChange}
+                          checked={form.allowToSeePayroll || false}
+                          onChange={(e) =>
+                            setForm({ ...form, allowToSeePayroll: e.target.checked })
+                          }
                         />
                       }
-                      label='Раздел "Дети"'
+                      label='Разрешить просмотр зарплаты'
                     />
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          name="canSeeFood"
-                          checked={form.accessControls?.canSeeFood === true}
-                          indeterminate={form.accessControls?.canSeeFood === null || form.accessControls?.canSeeFood === undefined}
-                          onChange={handleAccessControlChange}
+
+                  {/* Индивидуальные доступы */}
+                  {currentUser?.role === 'admin' && (
+                    <>
+                      <Grid item xs={12} sx={{ mt: 2 }}>
+                        <Typography variant='subtitle1' gutterBottom>
+                          <SettingsIcon style={{ marginRight: 8, verticalAlign: 'middle' }} /> Индивидуальные права доступа
+                        </Typography>
+                        <Divider sx={{ mb: 2 }} />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              name="canSeeChildren"
+                              checked={form.accessControls?.canSeeChildren === true}
+                              indeterminate={form.accessControls?.canSeeChildren === null || form.accessControls?.canSeeChildren === undefined}
+                              onChange={handleAccessControlChange}
+                            />
+                          }
+                          label='Раздел "Дети"'
                         />
-                      }
-                      label='Раздел "Склад и Питание"'
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          name="canSeeRent"
-                          checked={form.accessControls?.canSeeRent === true}
-                          indeterminate={form.accessControls?.canSeeRent === null || form.accessControls?.canSeeRent === undefined}
-                          onChange={handleAccessControlChange}
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              name="canSeeFood"
+                              checked={form.accessControls?.canSeeFood === true}
+                              indeterminate={form.accessControls?.canSeeFood === null || form.accessControls?.canSeeFood === undefined}
+                              onChange={handleAccessControlChange}
+                            />
+                          }
+                          label='Раздел "Склад и Питание"'
                         />
-                      }
-                      label='Раздел "Аренда"'
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          name="canSeeStaff"
-                          checked={form.accessControls?.canSeeStaff === true}
-                          indeterminate={form.accessControls?.canSeeStaff === null || form.accessControls?.canSeeStaff === undefined}
-                          onChange={handleAccessControlChange}
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              name="canSeeRent"
+                              checked={form.accessControls?.canSeeRent === true}
+                              indeterminate={form.accessControls?.canSeeRent === null || form.accessControls?.canSeeRent === undefined}
+                              onChange={handleAccessControlChange}
+                            />
+                          }
+                          label='Раздел "Аренда"'
                         />
-                      }
-                      label='Раздел "Сотрудники"'
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          name="canSeeSettings"
-                          checked={form.accessControls?.canSeeSettings === true}
-                          indeterminate={form.accessControls?.canSeeSettings === null || form.accessControls?.canSeeSettings === undefined}
-                          onChange={handleAccessControlChange}
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              name="canSeeStaff"
+                              checked={form.accessControls?.canSeeStaff === true}
+                              indeterminate={form.accessControls?.canSeeStaff === null || form.accessControls?.canSeeStaff === undefined}
+                              onChange={handleAccessControlChange}
+                            />
+                          }
+                          label='Раздел "Сотрудники"'
                         />
-                      }
-                      label='Настройки организации'
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Alert severity="info" sx={{ mt: 1 }}>
-                      Indeterminate статус (-) означает, что доступ определяется по умолчанию из должности сотрудника. Галочка дает доступ даже если по должности нельзя. Пустой квадрат - явно запрещает.
-                    </Alert>
-                  </Grid>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              name="canSeeSettings"
+                              checked={form.accessControls?.canSeeSettings === true}
+                              indeterminate={form.accessControls?.canSeeSettings === null || form.accessControls?.canSeeSettings === undefined}
+                              onChange={handleAccessControlChange}
+                            />
+                          }
+                          label='Настройки организации'
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Alert severity="info" sx={{ mt: 1 }}>
+                          Indeterminate статус (-) означает, что доступ определяется по умолчанию из должности сотрудника. Галочка дает доступ даже если по должности нельзя. Пустой квадрат - явно запрещает.
+                        </Alert>
+                      </Grid>
+                    </>
+                  )}
                 </>
+              )}
+
+              {/* Поле описания для внешних специалистов */}
+              {activeTab === 'external' && (
+                <Grid item xs={12}>
+                  <TextField
+                    label='Описание / Заметки'
+                    name='notes'
+                    value={form.notes || ''}
+                    onChange={handleChange}
+                    fullWidth
+                    multiline
+                    rows={3}
+                  />
+                </Grid>
               )}
             </Grid>
           </DialogContent>
