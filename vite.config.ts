@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import svgr from 'vite-plugin-svgr';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import envCompatible from 'vite-plugin-env-compatible';
+import path from 'path';
 
 // Переключайте этот адрес для смены окружения (локально или сервер)
 // const PROXY_TARGET = 'http://167.71.52.80:8080'; // Удаленный сервер
@@ -64,7 +65,7 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            'src': '/src',
+            'src': path.resolve(__dirname, './src'),
         }
     }
 });
