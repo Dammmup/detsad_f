@@ -40,6 +40,9 @@ import {
   ListItemText,
   FormControlLabel,
   TableSortLabel,
+  Avatar,
+  useMediaQuery,
+  TableContainer,
 } from '@mui/material';
 import {
   Edit,
@@ -210,7 +213,81 @@ const StaffRow = React.memo(({
   );
 });
 
+const StaffCard = React.memo(({ 
+  member, 
+  handleOpenModal, 
+  handleDelete, 
+  currentUser,
+  translateRole 
+}: any) => {
+  const isExternal = member.type === 'external' || member.isExternal;
+  
+  return (
+    <Paper sx={{ mb: 2, p: 2, borderRadius: 2, boxShadow: 1, border: '1px solid #eee' }}>
+      <Box display="flex" alignItems="center" gap={2} mb={2}>
+        <Avatar sx={{ width: 50, height: 50, bgcolor: 'primary.main' }}>
+          {(member.fullName || member.name)?.[0] || 'S'}
+        </Avatar>
+        <Box>
+          <Typography variant="body1" fontWeight="bold">
+            {member.fullName || member.name}
+          </Typography>
+          <Typography variant="caption" color="textSecondary" display="block">
+            {translateRole(member.role || member.type || '')}
+          </Typography>
+          {!isExternal && (
+            <Chip 
+              label={member.active ? 'Активен' : 'Неактивен'} 
+              size="small" 
+              color={member.active ? 'success' : 'default'}
+              sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
+            />
+          )}
+        </Box>
+      </Box>
+
+      <Box display="grid" gridTemplateColumns="1fr 1fr" gap={1} mb={2}>
+        <Box>
+          <Typography variant="caption" color="textSecondary" display="block">Телефон</Typography>
+          <Typography variant="body2">{member.phone || '-'}</Typography>
+        </Box>
+        <Box>
+          <Typography variant="caption" color="textSecondary" display="block">Email</Typography>
+          <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>{member.email || '-'}</Typography>
+        </Box>
+        {!isExternal && (
+          <>
+            <Box>
+              <Typography variant="caption" color="textSecondary" display="block">ИИН</Typography>
+              <Typography variant="body2">{member.iin || '-'}</Typography>
+            </Box>
+            {currentUser?.role === 'admin' && (
+              <Box>
+                <Typography variant="caption" color="textSecondary" display="block">Пароль</Typography>
+                <Typography variant="body2">{member.initialPassword || '-'}</Typography>
+              </Box>
+            )}
+          </>
+        )}
+      </Box>
+
+      <Box display="flex" justifyContent="space-between" alignItems="center" pt={1.5} sx={{ borderTop: '1px solid #f0f0f0' }}>
+        <AuditLogButton entityType="staff" entityId={member._id || member.id} entityName={member.fullName || member.name} />
+        <Box display="flex" gap={1}>
+          <IconButton size="small" onClick={() => handleOpenModal(member)} color="primary">
+            <Edit fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={() => handleDelete(member)} color="error">
+            <Delete fontSize="small" />
+          </IconButton>
+        </Box>
+      </Box>
+    </Paper>
+  );
+});
+
 const Staff = () => {
+  const isMobile = useMediaQuery('(max-width:640px)');
   const { 
     staff: allStaff, 
     loading: staffLoading, 
@@ -357,7 +434,12 @@ const Staff = () => {
 
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
     const { value } = event.target;
-    setFilterRole(typeof value === 'string' ? value.split(',') : value);
+    const values = typeof value === 'string' ? value.split(',') : value;
+    if (values.includes('all')) {
+      setFilterRole([]);
+    } else {
+      setFilterRole(values);
+    }
   };
 
   const validateForm = () => {
@@ -450,17 +532,19 @@ const Staff = () => {
       <Paper style={{ margin: 24, padding: 24 }}>
         <Box
           display='flex'
+          flexDirection={isMobile ? 'column' : 'row'}
           justifyContent='space-between'
-          alignItems='center'
+          alignItems={isMobile ? 'stretch' : 'center'}
+          gap={isMobile ? 2 : 0}
           mb={2}
         >
           <Typography
-            variant='h5'
+            variant={isMobile ? 'h6' : 'h5'}
             style={{ color: '#1890ff', display: 'flex', alignItems: 'center' }}
           >
             <Person style={{ marginRight: 8 }} /> Сотрудники
           </Typography>
-          <Box mb={2} display='flex' alignItems='center' gap={1}>
+          <Box display='flex' alignItems='center' gap={1} justifyContent={isMobile ? 'space-between' : 'flex-start'}>
             <AuditLogButton entityType="staff" />
             <ExportButton
               exportTypes={[{ value: 'staff', label: 'Список сотрудников' }]}
@@ -470,6 +554,7 @@ const Staff = () => {
           <Button
             variant='contained'
             color='primary'
+            fullWidth={isMobile}
             startIcon={<Add />}
             onClick={() => {
               if (activeTab === 'external') {
@@ -485,14 +570,14 @@ const Staff = () => {
         </Box>
 
         {/* Поиск и фильтры */}
-        <Box mb={3} display='flex' flexWrap='wrap' gap={2} alignItems='center'>
+        <Box mb={3} display='flex' flexDirection={isMobile ? 'column' : 'row'} flexWrap='wrap' gap={2} alignItems={isMobile ? 'stretch' : 'center'}>
           <TextField
             placeholder='Поиск сотрудников (быстрый поиск)...'
             variant='outlined'
             size='small'
             value={localSearchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
-            sx={{ flexGrow: 1, minWidth: '200px' }}
+            sx={{ flexGrow: 1, minWidth: isMobile ? '100%' : '200px' }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position='start'>
@@ -502,7 +587,7 @@ const Staff = () => {
             }}
           />
 
-          <FormControl size='small' sx={{ minWidth: '200px' }}>
+          <FormControl size='small' sx={{ minWidth: isMobile ? '100% ' : '200px' }}>
             <InputLabel id='role-filter-label'>Фильтр по должности</InputLabel>
             <Select
               labelId='role-filter-label'
@@ -512,12 +597,21 @@ const Staff = () => {
               input={<OutlinedInput label='Фильтр по должности' />}
               renderValue={(selected) => (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {selected.map((value) => (
-                    <Chip key={value} label={value} size='small' />
+                  {selected.length === 0 ? 'Все должности' : selected.map((value) => (
+                    <Chip
+                      key={value}
+                      label={value}
+                      size='small'
+                      onDelete={() => setFilterRole(filterRole.filter(r => r !== value))}
+                      onMouseDown={(e) => e.stopPropagation()}
+                    />
                   ))}
                 </Box>
               )}
             >
+              <MenuItem value='all'>
+                <em>Все должности</em>
+              </MenuItem>
               {availableRoles.map((role) => (
                 <MenuItem key={role} value={role}>
                   <Checkbox checked={filterRole.indexOf(role) > -1} />
@@ -528,11 +622,12 @@ const Staff = () => {
           </FormControl>
 
           {/* Кнопки фильтрации по активности и арендаторам */}
-          <Box display='flex' gap={1}>
+          <Box display='flex' gap={1} flexWrap={isMobile ? 'wrap' : 'nowrap'}>
             <Button
               variant={activeTab === 'active' ? 'contained' : 'outlined'}
               color='success'
               size='small'
+              fullWidth={isMobile}
               onClick={() => {
                 setActiveTab('active');
                 setFilterRole([]);
@@ -544,6 +639,7 @@ const Staff = () => {
               variant={activeTab === 'inactive' ? 'contained' : 'outlined'}
               color='error'
               size='small'
+              fullWidth={isMobile}
               onClick={() => {
                 setActiveTab('inactive');
                 setFilterRole([]);
@@ -554,6 +650,7 @@ const Staff = () => {
             <Button
               variant={activeTab === 'external' ? 'contained' : 'outlined'}
               size='small'
+              fullWidth={isMobile}
               onClick={() => {
                 setActiveTab('external');
                 setFilterRole([]);
@@ -567,7 +664,7 @@ const Staff = () => {
                 }
               }}
             >
-              Внешние специалисты / Услуги
+              Внешние специалисты
             </Button>
           </Box>
         </Box>
@@ -583,10 +680,24 @@ const Staff = () => {
                   ? 'Нет сотрудников. Добавьте первого сотрудника!'
                   : 'Нет сотрудников, соответствующих критериям поиска.'}
               </Alert>
+            ) : isMobile ? (
+              <Box mt={2}>
+                {sortedStaff.map((member) => (
+                  <StaffCard
+                    key={member.id || member._id}
+                    member={member}
+                    currentUser={currentUser}
+                    translateRole={translateRole}
+                    handleOpenModal={handleOpenModal}
+                    handleDelete={handleDelete}
+                  />
+                ))}
+              </Box>
             ) : (
-              <Table>
-                <TableHead>
-                  <TableRow>
+              <TableContainer component={Paper} sx={{ mt: 2, overflowX: 'auto' }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
                     <TableCell style={{ fontWeight: 'bold', width: 50 }}>#</TableCell>
                     <TableCell>
                       <TableSortLabel
@@ -645,6 +756,7 @@ const Staff = () => {
                   )}
                 </TableBody>
               </Table>
+            </TableContainer>
             )}
           </>
         )}

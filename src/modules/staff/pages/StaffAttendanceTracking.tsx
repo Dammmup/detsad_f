@@ -36,6 +36,9 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   TableSortLabel,
+  useMediaQuery,
+  TableContainer,
+  FormControlLabel,
 } from '@mui/material';
 import {
   AccessTime,
@@ -52,6 +55,8 @@ import {
   Send as TelegramIcon,
   PhoneAndroid,
   Delete,
+  ArrowUpward,
+  ArrowDownward,
 } from '@mui/icons-material';
 import moment from 'moment';
 import 'moment/locale/ru';
@@ -134,7 +139,164 @@ interface TimeRecord {
 
 
 
-// Мемоизированный компонент строки посещаемости сотрудника
+// Мемоизированный компонент карточки посещаемости сотрудника
+const AttendanceCard = React.memo(({
+  record,
+  selected,
+  onSelect,
+  onEdit,
+  onDelete,
+  getStaffName,
+  formatTime,
+  formatCurrency,
+  STATUS_TEXT,
+  STATUS_COLORS,
+  staffMap
+}: any) => {
+  const staff = staffMap.get(record.staffId) || {};
+  const status = record.statuses[0] || 'absent';
+  const statusColor = STATUS_COLORS[status] || 'default';
+  const statusText = STATUS_TEXT[status] || 'Неизвестно';
+
+  return (
+    <Card sx={{ mb: 2, borderLeft: `5px solid ${statusColor === 'default' ? '#bdbdbd' : statusColor + '.main'}` }}>
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Checkbox
+              size="small"
+              checked={selected}
+              onChange={(e) => onSelect(record.id, e.target.checked)}
+              sx={{ p: 0 }}
+            />
+            <Avatar
+              src={staff.photo}
+              sx={{ width: 32, height: 32 }}
+            >
+              {record.staffName?.charAt(0) || <Person />}
+            </Avatar>
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
+                {record.staffName || getStaffName(record.staffId)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {moment(record.date).format('DD.MM.YYYY')}
+              </Typography>
+            </Box>
+          </Box>
+          <Chip
+            label={statusText}
+            size="small"
+            color={statusColor as any}
+            sx={{ height: 20, fontSize: '0.65rem' }}
+          />
+        </Box>
+
+        <Grid container spacing={1} sx={{ mb: 1.5 }}>
+          <Grid item xs={6}>
+            <Typography variant="caption" color="text.secondary" display="block">Время / Смена</Typography>
+            <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {record.actualStart || '--:--'} - {record.actualEnd || '--:--'}
+              {record.checkInDevice && (
+                <Tooltip
+                  title={
+                    <Box sx={{ p: 0.5 }}>
+                      <Typography variant='caption' sx={{ fontWeight: 'bold', display: 'block' }}>
+                        📱 Устройство прихода
+                      </Typography>
+                      <Typography variant='caption' sx={{ display: 'block' }}>
+                        Модель: {record.checkInDevice.deviceModel || 'н/д'}
+                      </Typography>
+                      <Typography variant='caption' sx={{ display: 'block' }}>
+                        IP: {record.checkInDevice.ipAddress || 'н/д'}
+                      </Typography>
+                      <Typography variant='caption' sx={{ display: 'block' }}>
+                        Браузер: {record.checkInDevice.browser || 'н/д'}
+                      </Typography>
+                    </Box>
+                  }
+                  arrow
+                >
+                  <Box component="span" sx={{ cursor: 'help', display: 'inline-flex', alignItems: 'center' }}>
+                    {record.checkInDevice.deviceType === 'mobile' ? (
+                      <Smartphone sx={{ fontSize: 16, color: 'secondary.main' }} />
+                    ) : (
+                      <Computer sx={{ fontSize: 16, color: 'secondary.main' }} />
+                    )}
+                  </Box>
+                </Tooltip>
+              )}
+              {record.checkOutDevice && (
+                <Tooltip
+                  title={
+                    <Box sx={{ p: 0.5 }}>
+                      <Typography variant='caption' sx={{ fontWeight: 'bold', display: 'block' }}>
+                        📱 Устройство ухода
+                      </Typography>
+                      <Typography variant='caption' sx={{ display: 'block' }}>
+                        Модель: {record.checkOutDevice.deviceModel || 'н/д'}
+                      </Typography>
+                      <Typography variant='caption' sx={{ display: 'block' }}>
+                        IP: {record.checkOutDevice.ipAddress || 'н/д'}
+                      </Typography>
+                      <Typography variant='caption' sx={{ display: 'block' }}>
+                        Браузер: {record.checkOutDevice.browser || 'н/д'}
+                      </Typography>
+                    </Box>
+                  }
+                  arrow
+                >
+                  <Box component="span" sx={{ cursor: 'help', display: 'inline-flex', alignItems: 'center' }}>
+                    {record.checkOutDevice.deviceType === 'mobile' ? (
+                      <Smartphone sx={{ fontSize: 16, color: 'primary.main' }} />
+                    ) : (
+                      <Computer sx={{ fontSize: 16, color: 'primary.main' }} />
+                    )}
+                  </Box>
+                </Tooltip>
+              )}
+            </Typography>
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="caption" color="text.secondary" display="block">Отработано</Typography>
+            <Typography variant="body2">
+              {record.workDuration ? formatTime(record.workDuration) : '0ч 0м'}
+            </Typography>
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="caption" color="text.secondary" display="block">Начислено</Typography>
+            <Typography variant="body2" color="success.main" sx={{ fontWeight: 'medium' }}>
+              {formatCurrency(record.amount)}
+            </Typography>
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="caption" color="text.secondary" display="block">Вычеты</Typography>
+            <Typography variant="body2" color="error.main" sx={{ fontWeight: 'medium' }}>
+              {formatCurrency(record.penalties)}
+            </Typography>
+          </Grid>
+        </Grid>
+
+        {record.notes && (
+          <Box sx={{ mb: 1.5, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+            <Typography variant="caption" color="text.secondary" display="block">Примечание:</Typography>
+            <Typography variant="caption">{record.notes}</Typography>
+          </Box>
+        )}
+
+        <Box display="flex" justifyContent="flex-end" gap={1} pt={1} sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+          <IconButton size="small" onClick={() => onEdit(record)} color="primary">
+            <Edit fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={() => onDelete(record.id)} color="error">
+            <Delete fontSize="small" />
+          </IconButton>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+});
+
 const StaffAttendanceRow = React.memo(({ 
   record, 
   selected, 
@@ -441,7 +603,7 @@ const StaffAttendanceTracking: React.FC = () => {
 
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
     const { value } = event.target;
-    setFilterRole(typeof value === 'string' ? value.split(',') : value);
+    setFilterRole(value.includes('') ? [] : (typeof value === 'string' ? value.split(',') : value));
   };
 
   const getStaffName = useCallback(
@@ -453,6 +615,9 @@ const StaffAttendanceTracking: React.FC = () => {
     },
     [staffList],
   );
+
+  const isMobile = useMediaQuery('(max-width:900px)');
+  const isSmallMobile = useMediaQuery('(max-width:600px)');
 
   const fetchRecordsData = useCallback(async () => {
     try {
@@ -1194,97 +1359,149 @@ const StaffAttendanceTracking: React.FC = () => {
         </Box>
       )}
 
-      <Paper sx={{ p: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 'bold', width: 40 }}>#</TableCell>
-              <TableCell padding="checkbox">
-                <Checkbox
-                  indeterminate={selectedIds.length > 0 && selectedIds.length < sortedRecords.filter(r => !r.id.includes('_')).length}
-                  checked={selectedIds.length > 0 && selectedIds.length === sortedRecords.filter(r => !r.id.includes('_')).length}
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                />
-              </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={sortConfig.key === '_staffName'}
-                  direction={sortConfig.direction || 'asc'}
-                  onClick={() => requestSort('_staffName')}
-                >
-                  Сотрудник
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={sortConfig.key === '_date'}
-                  direction={sortConfig.direction || 'asc'}
-                  onClick={() => requestSort('_date')}
-                >
-                  Дата
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>Смена</TableCell>
-              <TableCell>Время работы</TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={sortConfig.key === '_status'}
-                  direction={sortConfig.direction || 'asc'}
-                  onClick={() => requestSort('_status')}
-                >
-                  Статус
-                </TableSortLabel>
-              </TableCell>
-              <TableCell align='right'>
-                <TableSortLabel
-                  active={sortConfig.key === 'amount'}
-                  direction={sortConfig.direction || 'asc'}
-                  onClick={() => requestSort('amount')}
-                >
-                  Начислено
-                </TableSortLabel>
-              </TableCell>
-              <TableCell align='right'>
-                <TableSortLabel
-                  active={sortConfig.key === 'penalties'}
-                  direction={sortConfig.direction || 'asc'}
-                  onClick={() => requestSort('penalties')}
-                >
-                  Вычеты
-                </TableSortLabel>
-              </TableCell>
-              <TableCell align='right'>Действия</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {records.length === 0 && viewMode === 'range' && selectedStaff === 'all' && (
-              <TableRow>
-                <TableCell colSpan={9} align="center" sx={{ py: 10 }}>
-                  <Typography variant="body1" color="text.secondary">
-                    Выберите сотрудника и период для отображения данных в режиме периода
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            )}
-            {sortedRecords.map((record, index) => (
-              <StaffAttendanceRow
-                key={record.id}
-                record={record}
-                selected={selectedIds.includes(record.id)}
-                onSelect={(id: string, checked: boolean) => handleSelectRecord(id, checked)}
-                onEdit={handleEditRecord}
-                onDelete={handleDeleteRecord}
-                getStaffName={getStaffName}
-                formatTime={formatTime}
-                formatCurrency={formatCurrency}
-                STATUS_TEXT={STATUS_TEXT}
-                STATUS_COLORS={STATUS_COLORS}
-                index={index}
-                staffMap={staffMap}
+      <Paper sx={{ p: isMobile ? 1 : 2, bgcolor: isMobile ? 'transparent' : 'background.paper', boxShadow: isMobile ? 'none' : undefined }}>
+        {isMobile ? (
+          <Box>
+            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    indeterminate={selectedIds.length > 0 && selectedIds.length < sortedRecords.filter(r => !r.id.includes('_')).length}
+                    checked={selectedIds.length > 0 && selectedIds.length === sortedRecords.filter(r => !r.id.includes('_')).length}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                  />
+                }
+                label={<Typography variant="body2">Выбрать все</Typography>}
               />
-            ))}
-          </TableBody>
-        </Table>
+              {sortConfig.key && (
+                <Chip 
+                  label={`Сортировка: ${sortConfig.key === '_staffName' ? 'Имя' : 'Дата'}`} 
+                  size="small" 
+                  onDelete={() => requestSort(sortConfig.key as any)}
+                  deleteIcon={sortConfig.direction === 'asc' ? <ArrowUpward /> : <ArrowDownward />}
+                />
+              )}
+            </Box>
+            {sortedRecords.length === 0 && viewMode === 'range' && selectedStaff === 'all' ? (
+              <Box sx={{ py: 10, textAlign: 'center' }}>
+                <Typography variant="body1" color="text.secondary">
+                  Выберите сотрудника и период
+                </Typography>
+              </Box>
+            ) : (
+              sortedRecords.map((record) => (
+                <AttendanceCard
+                  key={record.id}
+                  record={record}
+                  selected={selectedIds.includes(record.id)}
+                  onSelect={(id: string, checked: boolean) => handleSelectRecord(id, checked)}
+                  onEdit={handleEditRecord}
+                  onDelete={handleDeleteRecord}
+                  getStaffName={getStaffName}
+                  formatTime={formatTime}
+                  formatCurrency={formatCurrency}
+                  STATUS_TEXT={STATUS_TEXT}
+                  STATUS_COLORS={STATUS_COLORS}
+                  staffMap={staffMap}
+                />
+              ))
+            )}
+          </Box>
+        ) : (
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 'bold', width: 40 }}>#</TableCell>
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      indeterminate={selectedIds.length > 0 && selectedIds.length < sortedRecords.filter(r => !r.id.includes('_')).length}
+                      checked={selectedIds.length > 0 && selectedIds.length === sortedRecords.filter(r => !r.id.includes('_')).length}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortConfig.key === '_staffName'}
+                      direction={sortConfig.direction || 'asc'}
+                      onClick={() => requestSort('_staffName')}
+                    >
+                      Сотрудник
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortConfig.key === '_date'}
+                      direction={sortConfig.direction || 'asc'}
+                      onClick={() => requestSort('_date')}
+                    >
+                      Дата
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>Смена</TableCell>
+                  <TableCell>Время работы</TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortConfig.key === '_status'}
+                      direction={sortConfig.direction || 'asc'}
+                      onClick={() => requestSort('_status')}
+                    >
+                      Статус
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell align='right'>
+                    <TableSortLabel
+                      active={sortConfig.key === 'amount'}
+                      direction={sortConfig.direction || 'asc'}
+                      onClick={() => requestSort('amount')}
+                    >
+                      Начислено
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell align='right'>
+                    <TableSortLabel
+                      active={sortConfig.key === 'penalties'}
+                      direction={sortConfig.direction || 'asc'}
+                      onClick={() => requestSort('penalties')}
+                    >
+                      Вычеты
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell align='right'>Действия</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {records.length === 0 && viewMode === 'range' && selectedStaff === 'all' && (
+                  <TableRow>
+                    <TableCell colSpan={9} align="center" sx={{ py: 10 }}>
+                      <Typography variant="body1" color="text.secondary">
+                        Выберите сотрудника и период для отображения данных в режиме периода
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+                {sortedRecords.map((record, index) => (
+                  <StaffAttendanceRow
+                    key={record.id}
+                    record={record}
+                    selected={selectedIds.includes(record.id)}
+                    onSelect={(id: string, checked: boolean) => handleSelectRecord(id, checked)}
+                    onEdit={handleEditRecord}
+                    onDelete={handleDeleteRecord}
+                    getStaffName={getStaffName}
+                    formatTime={formatTime}
+                    formatCurrency={formatCurrency}
+                    STATUS_TEXT={STATUS_TEXT}
+                    STATUS_COLORS={STATUS_COLORS}
+                    index={index}
+                    staffMap={staffMap}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
       </Paper>
     </Box>
   );
@@ -1293,48 +1510,58 @@ const StaffAttendanceTracking: React.FC = () => {
     <Box>
       <Box
         display='flex'
+        flexDirection={isSmallMobile ? 'column' : 'row'}
         justifyContent='space-between'
-        alignItems='center'
+        alignItems={isSmallMobile ? 'flex-start' : 'center'}
         mb={3}
+        gap={2}
       >
-        <Typography variant='h4' component='h1' gutterBottom>
+        <Typography variant={isSmallMobile ? 'h5' : 'h4'} component='h1'>
           <AccessTime sx={{ mr: 1, verticalAlign: 'middle' }} />
-          Учет рабочего времени
+          Учет р/в
         </Typography>
-        <Box>
+        <Box display="flex" gap={1} flexWrap="wrap">
           <Button
             variant='contained'
             startIcon={<Schedule />}
             onClick={handleOpenMarkDialog}
-            sx={{ mr: 1 }}
+            size={isSmallMobile ? 'small' : 'medium'}
           >
-            Создать смену
+            {isSmallMobile ? 'Смена' : 'Создать смену'}
           </Button>
           <Button
             variant='contained'
             color='secondary'
             startIcon={<Edit />}
             onClick={() => setBulkStatusDialogOpen(true)}
-            sx={{ mr: 1 }}
+            size={isSmallMobile ? 'small' : 'medium'}
           >
-            Массовая корректировка
+            {isSmallMobile ? 'Комп.' : 'Массовая корректировка'}
           </Button>
           <AuditLogButton entityType="staffAttendance" />
         </Box>
       </Box>
 
-      <Paper sx={{ p: 2, mb: 2 }}>
+      <Paper sx={{ p: isMobile ? 1 : 2, mb: 2 }}>
         {viewMode === 'day' && <DateNavigator />}
-        <Box display='flex' flexWrap='wrap' gap={2} alignItems='center' p={2}>
+        <Box 
+          display='flex' 
+          flexDirection={isMobile ? 'column' : 'row'} 
+          flexWrap='wrap' 
+          gap={2} 
+          alignItems={isMobile ? 'stretch' : 'center'} 
+          p={isMobile ? 1 : 2}
+        >
           <ToggleButtonGroup
             value={viewMode}
             exclusive
             onChange={(_, value) => value && setViewMode(value)}
             size='small'
             color='primary'
+            fullWidth={isMobile}
           >
-            <ToggleButton value='day'>День</ToggleButton>
-            <ToggleButton value='range' onClick={() => {
+            <ToggleButton value='day' sx={{ flex: 1 }}>День</ToggleButton>
+            <ToggleButton value='range' sx={{ flex: 1 }} onClick={() => {
               if (viewMode === 'day') {
                 setStartDate(moment(selectedDate).startOf('month').format('YYYY-MM-DD'));
                 setEndDate(moment(selectedDate).endOf('month').format('YYYY-MM-DD'));
@@ -1342,107 +1569,115 @@ const StaffAttendanceTracking: React.FC = () => {
             }}>Период</ToggleButton>
           </ToggleButtonGroup>
 
-          {/* Выбор даты */}
-          {viewMode === 'day' ? (
+          <Box display="flex" gap={2} flexDirection={isSmallMobile ? 'column' : 'row'} width={isMobile ? '100%' : 'auto'}>
+            {/* Выбор даты */}
+            {viewMode === 'day' ? (
+              <TextField
+                label='Дата'
+                type='date'
+                size='small'
+                value={moment(selectedDate).format('YYYY-MM-DD')}
+                onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                fullWidth={isMobile}
+                sx={{ minWidth: isMobile ? '0' : '180px' }}
+                InputLabelProps={{ shrink: true }}
+              />
+            ) : (
+              <>
+                <TextField
+                  label='Начало'
+                  type='date'
+                  size='small'
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  fullWidth={isMobile}
+                  sx={{ minWidth: isMobile ? '0' : '150px' }}
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  label='Конец'
+                  type='date'
+                  size='small'
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  fullWidth={isMobile}
+                  sx={{ minWidth: isMobile ? '0' : '150px' }}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </>
+            )}
+          </Box>
+
+          <Box display="flex" gap={2} flexDirection={isMobile ? 'column' : 'row'} width={isMobile ? '100%' : 'auto'}>
+            <FormControl size="small" sx={{ minWidth: isMobile ? '0' : 200, width: isMobile ? '100%' : 'auto' }}>
+              <InputLabel>Сотрудник</InputLabel>
+              <Select
+                value={selectedStaff}
+                label='Сотрудник'
+                onChange={(e) => setSelectedStaff(e.target.value)}
+              >
+                <MenuItem value='all'>Все сотрудники</MenuItem>
+                {staffList.map((staff: any) => (
+                  <MenuItem key={staff.id} value={staff.id}>
+                    {staff.fullName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Фильтр по имени */}
             <TextField
-              label='Дата'
-              type='date'
+              placeholder='Поиск по имени...'
+              variant='outlined'
               size='small'
-              value={moment(selectedDate).format('YYYY-MM-DD')}
-              onChange={(e) => setSelectedDate(new Date(e.target.value))}
-              sx={{ minWidth: '180px' }}
-              InputLabelProps={{ shrink: true }}
+              value={searchQuery}
+              onChange={handleSearchChange}
+              fullWidth={isMobile}
+              sx={{ flexGrow: 1, minWidth: isMobile ? '0' : '200px' }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position='start'>
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
             />
-          ) : (
-            <>
-              <TextField
-                label='Начало'
-                type='date'
-                size='small'
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                sx={{ minWidth: '150px' }}
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                label='Конец'
-                type='date'
-                size='small'
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                sx={{ minWidth: '150px' }}
-                InputLabelProps={{ shrink: true }}
-              />
-            </>
-          )}
-          {(tabValue === 3 || tabValue === 4) && (
-            <TextField
-              label='Дата'
-              type='date'
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              sx={{ minWidth: 150 }}
-            />
-          )}
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Сотрудник</InputLabel>
-            <Select
-              value={selectedStaff}
-              label='Сотрудник'
-              onChange={(e) => setSelectedStaff(e.target.value)}
-            >
-              <MenuItem value='all'>Все сотрудники</MenuItem>
-              {staffList.map((staff: any) => (
-                <MenuItem key={staff.id} value={staff.id}>
-                  {staff.fullName}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
 
-          {/* Фильтр по имени */}
-          <TextField
-            placeholder='Поиск по имени...'
-            variant='outlined'
-            size='small'
-            value={searchQuery}
-            onChange={handleSearchChange}
-            sx={{ flexGrow: 1, minWidth: '200px' }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position='start'>
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-
-          {/* Фильтр по роли */}
-          <FormControl size='small' sx={{ minWidth: '200px' }}>
-            <InputLabel id='role-filter-label'>Фильтр по должности</InputLabel>
-            <Select
-              labelId='role-filter-label'
-              multiple
-              value={filterRole}
-              onChange={handleFilterRoleChange}
-              input={<OutlinedInput label='Фильтр по должности' />}
-              renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {selected.map((value) => (
-                    <Chip key={value} label={value} size='small' />
-                  ))}
-                </Box>
-              )}
-            >
-              {availableRoles.map((role) => (
-                <MenuItem key={role} value={role}>
-                  <Checkbox checked={filterRole.indexOf(role) > -1} />
-                  <ListItemText primary={role} />
+            {/* Фильтр по роли */}
+            <FormControl size='small' sx={{ minWidth: isMobile ? '0' : '200px', width: isMobile ? '100%' : 'auto' }}>
+              <InputLabel id='role-filter-label'>Фильтр по должности</InputLabel>
+              <Select
+                labelId='role-filter-label'
+                multiple
+                value={filterRole}
+                onChange={handleFilterRoleChange}
+                input={<OutlinedInput label='Фильтр по должности' />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.length === 0 ? 'Все должности' : selected.map((value) => (
+                      <Chip 
+                        key={value} 
+                        label={value} 
+                        size='small' 
+                        onDelete={() => setFilterRole(filterRole.filter(v => v !== value))}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      />
+                    ))}
+                  </Box>
+                )}
+              >
+                <MenuItem value="">
+                  <em>Все должности</em>
                 </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+                {availableRoles.map((role) => (
+                  <MenuItem key={role} value={role}>
+                    <Checkbox checked={filterRole.indexOf(role) > -1} />
+                    <ListItemText primary={role} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
         </Box>
       </Paper>
 

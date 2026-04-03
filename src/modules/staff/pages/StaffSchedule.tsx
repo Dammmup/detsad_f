@@ -347,6 +347,11 @@ const StaffSchedule: React.FC = () => {
     }, 500);
   }, []);
 
+  const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
+    const { value } = event.target;
+    setFilterRole(value.includes('') ? [] : (typeof value === 'string' ? value.split(',') : value));
+  };
+
 
   const { staff: allStaff, fetchStaff } = useStaff();
   const [shifts, setShifts] = useState<any[]>([]);
@@ -478,10 +483,7 @@ const StaffSchedule: React.FC = () => {
     fetchData();
   }, [currentDate, enqueueSnackbar]);
 
-  const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
-    const { value } = event.target;
-    setFilterRole(typeof value === 'string' ? value.split(',') : value);
-  };
+
 
 
   const assignFiveTwoSchedule = async () => {
@@ -936,12 +938,21 @@ const StaffSchedule: React.FC = () => {
                   input={<OutlinedInput label='Фильтр по должности' />}
                   renderValue={(selected) => (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} size='small' />
+                      {selected.length === 0 ? 'Все должности' : selected.map((value) => (
+                        <Chip 
+                          key={value} 
+                          label={value} 
+                          size='small' 
+                          onDelete={() => setFilterRole(filterRole.filter(v => v !== value))}
+                          onMouseDown={(e) => e.stopPropagation()}
+                        />
                       ))}
                     </Box>
                   )}
                 >
+                  <MenuItem value="">
+                    <em>Все должности</em>
+                  </MenuItem>
                   {Object.values(ROLE_LABELS).sort().map((role) => (
                     <MenuItem key={role} value={role}>
                       <Checkbox checked={filterRole.indexOf(role) > -1} />

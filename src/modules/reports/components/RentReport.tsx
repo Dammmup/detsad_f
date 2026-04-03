@@ -30,6 +30,8 @@ import {
   People as PeopleIcon,
   Delete as DeleteIcon,
   AccountBalanceWallet as DebtIcon,
+  Payments as PaymentsIcon,
+  RestartAlt as ResetIcon,
 } from '@mui/icons-material';
 import RentTenantSelector from './RentTenantSelector';
 import AddExternalSpecialistModal from './AddExternalSpecialistModal';
@@ -303,6 +305,89 @@ const RentReport: React.FC<Props> = ({ userId }) => {
   const handleCancelClick = () => {
     setEditingId(null);
     setEditData({});
+  };
+
+  const handleInstantPayment = async (row: RentRow) => {
+    if (!row._id) return;
+    
+    if (!window.confirm(`Отметить аренду для ${row.tenantName} как полностью оплаченную?`)) return;
+
+    try {
+      const { markRentAsPaid } = await import('../services/reports');
+      const updatedRent = await markRentAsPaid(row._id);
+      
+      const updatedRows = rows.map(r => 
+        r._id === row._id ? {
+          ...r,
+          paidAmount: updatedRent.paidAmount,
+          status: updatedRent.status,
+          paymentDate: updatedRent.paymentDate,
+          debt: updatedRent.debt || 0,
+          overpayment: updatedRent.overpayment || 0
+        } : r
+      );
+      
+      setRows(updatedRows);
+      
+      // Обновляем сводку
+      setSummary(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          totalReceivable: updatedRows.reduce((sum, p) => sum + Math.max(0, (p.amount || 0) - p.paidAmount), 0),
+          totalDebt: updatedRows.reduce((sum, p) => sum + (p.debt || 0), 0),
+          totalOverpayment: updatedRows.reduce((sum, p) => sum + (p.overpayment || 0), 0),
+        };
+      });
+
+      setSnackbarMessage('Оплата успешно проведена');
+      setSnackbarOpen(true);
+    } catch (error: any) {
+      console.error('Error in instant payment:', error);
+      setSnackbarMessage(error?.message || 'Ошибка при проведении мгновенной оплаты');
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleResetPayment = async (row: RentRow) => {
+    if (!row._id) return;
+    
+    if (!window.confirm(`Сбросить оплату для ${row.tenantName}?`)) return;
+
+    try {
+      const { resetRentPayment } = await import('../services/reports');
+      const updatedRent = await resetRentPayment(row._id);
+      
+      const updatedRows = rows.map(r => 
+        r._id === row._id ? {
+          ...r,
+          paidAmount: updatedRent.paidAmount,
+          status: updatedRent.status,
+          paymentDate: updatedRent.paymentDate,
+          debt: updatedRent.debt || 0,
+          overpayment: updatedRent.overpayment || 0
+        } : r
+      );
+      
+      setRows(updatedRows);
+      
+      setSummary(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          totalReceivable: updatedRows.reduce((sum, p) => sum + Math.max(0, (p.amount || 0) - p.paidAmount), 0),
+          totalDebt: updatedRows.reduce((sum, p) => sum + (p.debt || 0), 0),
+          totalOverpayment: updatedRows.reduce((sum, p) => sum + (p.overpayment || 0), 0),
+        };
+      });
+
+      setSnackbarMessage('Оплата успешно сброшена');
+      setSnackbarOpen(true);
+    } catch (error: any) {
+      console.error('Error in reset payment:', error);
+      setSnackbarMessage(error?.message || 'Ошибка при сбросе оплаты');
+      setSnackbarOpen(true);
+    }
   };
 
   const handleDeleteClick = async (row: RentRow) => {
@@ -680,6 +765,24 @@ const RentReport: React.FC<Props> = ({ userId }) => {
                             <IconButton color='primary' onClick={() => handleEditClick(r)}>
                               <EditIcon />
                             </IconButton>
+                            <Tooltip title="Мгновенная оплата">
+                              <IconButton 
+                                color='success' 
+                                onClick={() => handleInstantPayment(r)}
+                                disabled={r.paidAmount >= r.amount}
+                              >
+                                <PaymentsIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Сбросить оплату">
+                              <IconButton 
+                                color='warning' 
+                                onClick={() => handleResetPayment(r)}
+                                disabled={r.paidAmount <= 0 && r.status !== 'paid'}
+                              >
+                                <ResetIcon />
+                              </IconButton>
+                            </Tooltip>
                             <Tooltip title="Просмотр квитанции">
                               <IconButton onClick={() => {
                                 setSelectedReceiptData({

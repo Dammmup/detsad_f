@@ -455,18 +455,27 @@ export const Documents = () => {
                 onChange={(event: SelectChangeEvent<string[]>) => {
                   const { value } = event.target;
                   setFilterRole(
-                    typeof value === 'string' ? value.split(',') : value,
+                    value.includes('') ? [] : (typeof value === 'string' ? value.split(',') : value),
                   );
                 }}
                 input={<OutlinedInput label='Фильтр по должности' />}
                 renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => (
-                      <Chip key={value} label={value} size='small' />
+                    {selected.length === 0 ? 'Все должности' : selected.map((value) => (
+                      <Chip 
+                        key={value} 
+                        label={value} 
+                        size='small' 
+                        onDelete={() => setFilterRole(filterRole.filter(v => v !== value))}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      />
                     ))}
                   </Box>
                 )}
               >
+                <MenuItem value="">
+                  <em>Все должности</em>
+                </MenuItem>
                 {Object.values(roleTranslations)
                   .sort()
                   .map((role) => (

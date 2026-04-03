@@ -18,7 +18,11 @@ import {
     Tooltip,
     Chip,
     TextField,
-    InputAdornment
+    InputAdornment,
+    useTheme,
+    useMediaQuery,
+    Card,
+    Divider,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
@@ -48,6 +52,8 @@ const FinesDetailsDialog: React.FC<Props> = ({
     onDeleteFine,
     staffName,
 }) => {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [showAddForm, setShowAddForm] = useState(false);
     const [newFine, setNewFine] = useState({ amount: '', reason: '' });
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -118,16 +124,22 @@ const FinesDetailsDialog: React.FC<Props> = ({
                         color="primary"
                         startIcon={<AddCircleOutlineIcon />}
                         onClick={() => setShowAddForm(!showAddForm)}
+                        size={isMobile ? 'small' : 'medium'}
                     >
-                        {showAddForm ? 'Отмена' : 'Добавить Вычет'}
+                        {showAddForm ? 'Отмена' : 'Добавить'}
                     </Button>
                 </DialogTitle>
 
                 <DialogContent dividers sx={{ minHeight: '60vh' }}>
                     {showAddForm && (
                         <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'grey.50', border: '1px solid #eee', borderRadius: 2 }}>
-                            <Typography variant="h6" gutterBottom>Новый Вычет</Typography>
-                            <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) 2fr auto', gap: 2, alignItems: 'center' }}>
+                            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Новый Вычет</Typography>
+                            <Box sx={{ 
+                                display: 'grid', 
+                                gridTemplateColumns: { xs: '1fr', sm: 'minmax(120px, 1fr) 2fr auto' }, 
+                                gap: 2, 
+                                alignItems: 'center' 
+                            }}>
                                 <TextField
                                     label="Сумма"
                                     type="number"
@@ -137,6 +149,7 @@ const FinesDetailsDialog: React.FC<Props> = ({
                                     InputProps={{
                                         endAdornment: <InputAdornment position="end">тг</InputAdornment>,
                                     }}
+                                    fullWidth
                                 />
                                 <TextField
                                     label="Причина"
@@ -145,7 +158,7 @@ const FinesDetailsDialog: React.FC<Props> = ({
                                     value={newFine.reason}
                                     onChange={(e) => setNewFine({ ...newFine, reason: e.target.value })}
                                 />
-                                <Button variant="contained" color="success" onClick={handleAddSubmit} disabled={!newFine.amount || !newFine.reason}>
+                                <Button variant="contained" color="success" onClick={handleAddSubmit} disabled={!newFine.amount || !newFine.reason} fullWidth={isMobile}>
                                     Сохранить
                                 </Button>
                             </Box>
@@ -153,9 +166,48 @@ const FinesDetailsDialog: React.FC<Props> = ({
                     )}
 
                     {fines.length === 0 ? (
-                        <Box sx={{ p: 10, textAlign: 'center', color: 'text.secondary', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <Box sx={{ p: { xs: 4, md: 10 }, textAlign: 'center', color: 'text.secondary', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                             <Typography variant="h6">Вычетов нет</Typography>
                             <Typography variant="body2">У этого сотрудника нет зарегистрированных нарушений за этот период.</Typography>
+                        </Box>
+                    ) : isMobile ? (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            {fines.map((fine, index) => (
+                                <Card key={index} elevation={0} sx={{ 
+                                    p: 2, 
+                                    border: '1px solid', 
+                                    borderColor: 'divider', 
+                                    borderRadius: 2,
+                                    bgcolor: index % 2 === 0 ? 'background.paper' : 'grey.50'
+                                }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                        <Box>
+                                            <Typography variant="caption" color="text.secondary" display="block">
+                                                {fine.date ? new Date(fine.date).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' }) : '-'}
+                                                {fine.type === 'late' && fine.date ? ` • ${new Date(fine.date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                                            </Typography>
+                                            {getFineLabel(fine.type)}
+                                        </Box>
+                                        <Box sx={{ textAlign: 'right' }}>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'error.main' }}>
+                                                -{fine.amount.toLocaleString()} ₸
+                                            </Typography>
+                                            {fine.type === 'manual' && onDeleteFine && (
+                                                <IconButton
+                                                    size="small"
+                                                    color="error"
+                                                    onClick={() => handleDeleteClick(index, fine.amount)}
+                                                    sx={{ mt: 0.5 }}
+                                                >
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            )}
+                                        </Box>
+                                    </Box>
+                                    <Divider sx={{ my: 1, borderStyle: 'dotted' }} />
+                                    <Typography variant="body2">{fine.reason || 'Нет описания'}</Typography>
+                                </Card>
+                            ))}
                         </Box>
                     ) : (
                         <TableContainer component={Paper} elevation={0} variant="outlined">
@@ -171,53 +223,44 @@ const FinesDetailsDialog: React.FC<Props> = ({
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {fines.map((fine, index) => {
-                                        console.log(`🔍 [FinesDetailsDialog] Rendering fine ${index}: type="${fine.type}", amount=${fine.amount}, onDeleteFine=${!!onDeleteFine}`);
-                                        return (
-                                            <TableRow key={index} hover sx={{ '&:nth-of-type(odd)': { bgcolor: 'background.default' } }}>
-                                                <TableCell>
-                                                    {fine.date ? new Date(fine.date).toLocaleDateString('ru-RU', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {fine.type === 'late' && fine.date ? (
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'warning.dark' }}>
-                                                                {new Date(fine.date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                                                            </Typography>
-                                                        </Box>
-                                                    ) : '-'}
-                                                </TableCell>
-                                                <TableCell>{getFineLabel(fine.type)}</TableCell>
-                                                <TableCell>
-                                                    <Typography variant="body2">{fine.reason}</Typography>
-                                                </TableCell>
-                                                <TableCell align="right" sx={{ fontWeight: 'bold', color: 'error.main', fontSize: '1.1rem' }}>
-                                                    -{fine.amount.toLocaleString()}
-                                                </TableCell>
-                                                <TableCell align="center">
-                                                    {fine.type === 'manual' && onDeleteFine ? (
-                                                        <IconButton
-                                                            size="small"
-                                                            color="error"
-                                                            onClick={() => handleDeleteClick(index, fine.amount)}
-                                                            sx={{
-                                                                '&:hover': { backgroundColor: 'error.light', color: 'white' }
-                                                            }}
-                                                            title="Удалить вычет"
-                                                        >
-                                                            <DeleteIcon fontSize="small" />
-                                                        </IconButton>
-                                                    ) : (
-                                                        fine.type === 'manual' ? (
-                                                            <Typography variant="caption" color="text.secondary">
-                                                                onDeleteFine отсутствует
-                                                            </Typography>
-                                                        ) : null
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
+                                    {fines.map((fine, index) => (
+                                        <TableRow key={index} hover sx={{ '&:nth-of-type(odd)': { bgcolor: 'background.default' } }}>
+                                            <TableCell>
+                                                {fine.date ? new Date(fine.date).toLocaleDateString('ru-RU', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {fine.type === 'late' && fine.date ? (
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'warning.dark' }}>
+                                                            {new Date(fine.date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                                                        </Typography>
+                                                    </Box>
+                                                ) : '-'}
+                                            </TableCell>
+                                            <TableCell>{getFineLabel(fine.type)}</TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2">{fine.reason}</Typography>
+                                            </TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 'bold', color: 'error.main', fontSize: '1.1rem' }}>
+                                                -{fine.amount.toLocaleString()}
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                {fine.type === 'manual' && onDeleteFine ? (
+                                                    <IconButton
+                                                        size="small"
+                                                        color="error"
+                                                        onClick={() => handleDeleteClick(index, fine.amount)}
+                                                        sx={{
+                                                            '&:hover': { backgroundColor: 'error.light', color: 'white' }
+                                                        }}
+                                                        title="Удалить вычет"
+                                                    >
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                ) : null}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
                                 </TableBody>
                             </Table>
                         </TableContainer>

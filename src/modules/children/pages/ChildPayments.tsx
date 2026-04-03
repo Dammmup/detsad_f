@@ -29,6 +29,8 @@ import {
   Snackbar,
   Autocomplete,
   TableSortLabel,
+  Checkbox,
+  ListItemText,
 } from '@mui/material';
 import {
   Add,
@@ -36,6 +38,7 @@ import {
   Delete,
   Refresh,
   FileUpload,
+  SpaceBar,
 } from '@mui/icons-material';
 import { useDate } from '../../../app/context/DateContext';
 import { useChildren } from '../../../app/context/ChildrenContext';
@@ -64,6 +67,8 @@ const PaymentRow = React.memo(({
   index
 }: any) => {
   const handlePaidClick = useCallback(() => onMarkAsPaid(payment._id), [payment._id, onMarkAsPaid]);
+  const handleKaspiPaidClick = useCallback(() => onMarkAsPaid(payment._id, 'kaspi'), [payment._id, onMarkAsPaid]);
+  const handleCashPaidClick = useCallback(() => onMarkAsPaid(payment._id, 'cash'), [payment._id, onMarkAsPaid]);
   const handleCancelClick = useCallback(() => onCancelPayment(payment._id), [payment._id, onCancelPayment]);
   const handleEditClick = useCallback(() => onOpenModal(payment), [payment, onOpenModal]);
   const handleDeleteClick = useCallback(() => onDelete(payment._id), [payment._id, onDelete]);
@@ -76,41 +81,85 @@ const PaymentRow = React.memo(({
   return (
     <TableRow hover>
       <TableCell sx={{ p: isMobile ? 1 : 2, fontWeight: 'bold', width: 40 }}>{index + 1}</TableCell>
-      <TableCell sx={{ p: isMobile ? 1 : 2, textAlign: 'center', width: 80 }}>
-        <Tooltip title={payment.status === 'paid' ? 'Отменить оплату' : 'Мгновенная оплата'}>
-          <IconButton
-            size="small"
-            onClick={payment.status === 'paid' ? handleCancelClick : handlePaidClick}
-            sx={{
-              bgcolor: payment.status === 'paid' ? 'warning.main' : 'success.main',
-              color: '#fff',
-              '&:hover': {
-                bgcolor: payment.status === 'paid' ? 'warning.dark' : 'success.dark',
-              },
-            }}
-          >
-            {payment.status === 'paid' ? <Refresh fontSize="small" /> : <Add fontSize="small" />}
-          </IconButton>
-        </Tooltip>
+      <TableCell sx={{ p: isMobile ? 1 : 2, textAlign: 'center', width: 120 }}>
+        <Box display="flex" gap={0.5} justifyContent="center">
+          {payment.status === 'paid' ? (
+            <Tooltip title="Отменить оплату">
+              <IconButton
+                size="small"
+                onClick={handleCancelClick}
+                sx={{
+                  bgcolor: 'warning.main',
+                  color: '#fff',
+                  '&:hover': { bgcolor: 'warning.dark' },
+                }}
+              >
+                <Refresh fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <>
+              <Tooltip title="Оплатить (Kaspi)">
+                <IconButton
+                  size="small"
+                  onClick={handleKaspiPaidClick}
+                  sx={{
+                    p: 0.5,
+                    bgcolor: 'transparent',
+                    border: 'none',
+                    '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' },
+                  }}
+                >
+                  <img src="/templates/kaspi.svg" alt="Kaspi" style={{ width: 28, height: 28 }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Оплатить (Наличные)">
+                <IconButton
+                  size="small"
+                  onClick={handleCashPaidClick}
+                  sx={{
+                    p: 0.5,
+                    bgcolor: 'transparent',
+                    border: 'none',
+                    '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' },
+                  }}
+                >
+                  <img src="/templates/cash.svg" alt="Cash" style={{ width: 28, height: 28 }} />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
+        </Box>
       </TableCell>
       <TableCell sx={{ p: isMobile ? 0.5 : 1 }}>
         <Box display="flex" alignItems="center" gap={1}>
           <Avatar src={child?.photo} sx={{ width: 28, height: 28 }}>
             {child?.fullName?.charAt(0)}
           </Avatar>
-          <Typography 
-            variant="body2" 
-            fontWeight="bold" 
-            noWrap 
-            sx={{ 
-              maxWidth: '100%', 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis',
-              display: 'block'
-            }}
-          >
-            {child?.fullName || 'Загрузка...'}
-          </Typography>
+          <Box display="flex" flexDirection="row">
+            <Typography
+              variant="body2"
+              fontWeight="bold"
+              noWrap
+              sx={{
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: 'block'
+              }}
+            >
+              {child?.fullName || 'Загрузка...'}
+              <div> </div>
+              {payment.status === 'paid' && (
+                <Typography variant="caption" sx={{ color: 'text.primary', fontSize: '0.9rem' }}>
+                  {payment.paymentType === 'kaspi' ? '(Kaspi)' :
+                    payment.paymentType === 'cash' ? '(Наличные)' :
+                      '(Не указан тип оплаты)'}
+                </Typography>
+              )}
+            </Typography>
+
+          </Box>
         </Box>
       </TableCell>
       <TableCell sx={{ p: isMobile ? 0.5 : 1 }}>
@@ -159,6 +208,110 @@ const PaymentRow = React.memo(({
   );
 });
 
+// Новый компонент для мобильных карточек
+const PaymentCard = React.memo(({
+  payment,
+  child,
+  groupName,
+  onMarkAsPaid,
+  onCancelPayment,
+  onOpenModal,
+  onDelete,
+  getPaymentStatusColor,
+  index
+}: any) => {
+  const handleCancelClick = useCallback(() => onCancelPayment(payment._id), [payment._id, onCancelPayment]);
+  const handleKaspiPaidClick = useCallback(() => onMarkAsPaid(payment._id, 'kaspi'), [payment._id, onMarkAsPaid]);
+  const handleCashPaidClick = useCallback(() => onMarkAsPaid(payment._id, 'cash'), [payment._id, onMarkAsPaid]);
+  const handleEditClick = useCallback(() => onOpenModal(payment), [payment, onOpenModal]);
+  const handleDeleteClick = useCallback(() => onDelete(payment._id), [payment._id, onDelete]);
+
+  const debt = useMemo(() =>
+    (payment.total + (payment.accruals || 0) - (payment.paidAmount || 0) - (payment.deductions || 0)),
+    [payment.total, payment.accruals, payment.paidAmount, payment.deductions]
+  );
+
+  return (
+    <Paper sx={{ mb: 2, p: 2, borderRadius: 2, boxShadow: 1, border: '1px solid #eee' }}>
+      <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
+        <Box display="flex" alignItems="center" gap={1.5}>
+          <Avatar src={child?.photo} sx={{ width: 40, height: 40 }}>
+            {child?.fullName?.charAt(0)}
+          </Avatar>
+          <Box>
+            <Typography variant="body2" fontWeight="bold" sx={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {child?.fullName || 'Загрузка...'}
+            </Typography>
+            <Chip label={groupName} size="small" variant="outlined" sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }} />
+          </Box>
+        </Box>
+        <Chip
+          label={payment.status === 'paid' ? 'Оплачено' : payment.status === 'active' ? 'Активно' : 'Просрочено'}
+          size="small"
+          sx={{ bgcolor: getPaymentStatusColor(payment.status), color: '#fff', fontSize: '0.7rem' }}
+        />
+      </Box>
+
+      <Box display="grid" gridTemplateColumns="1fr 1fr" gap={1} mb={1.5}>
+        <Box>
+          <Typography variant="caption" color="textSecondary" display="block">Период</Typography>
+          <Typography variant="caption" fontWeight="medium">
+            {moment(payment.period.start).format('DD.MM')} - {moment(payment.period.end).format('DD.MM')}
+          </Typography>
+        </Box>
+        <Box textAlign="right">
+          <Typography variant="caption" color="textSecondary" display="block">Долг</Typography>
+          <Typography variant="body2" color="error.main" fontWeight="bold">
+            {debt.toLocaleString()} ₸
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="caption" color="textSecondary" display="block">Оплачено</Typography>
+          <Typography variant="body2" color="success.main" fontWeight="bold">
+            {payment.paidAmount?.toLocaleString()} ₸
+          </Typography>
+        </Box>
+        <Box textAlign="right">
+          <Typography variant="caption" color="textSecondary" display="block">Тип</Typography>
+          <Typography variant="caption">
+            {payment.status === 'paid' ? (
+              payment.paymentType === 'kaspi' ? 'Kaspi' :
+              payment.paymentType === 'cash' ? 'Наличные' : 'Не указан'
+            ) : '-'}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Box display="flex" justifyContent="space-between" alignItems="center" pt={1} sx={{ borderTop: '1px solid #f0f0f0' }}>
+        <Box display="flex" gap={1}>
+          {payment.status === 'paid' ? (
+            <IconButton size="small" onClick={handleCancelClick} sx={{ color: 'warning.main', border: '1px solid currentColor' }}>
+              <Refresh fontSize="small" />
+            </IconButton>
+          ) : (
+            <>
+              <IconButton size="small" onClick={handleKaspiPaidClick} sx={{ p: 0.5, border: '1px solid #efefef' }}>
+                <img src="/templates/kaspi.svg" alt="" style={{ width: 20 }} />
+              </IconButton>
+              <IconButton size="small" onClick={handleCashPaidClick} sx={{ p: 0.5, border: '1px solid #efefef' }}>
+                <img src="/templates/cash.svg" alt="" style={{ width: 20 }} />
+              </IconButton>
+            </>
+          )}
+        </Box>
+        <Box display="flex" gap={0.5}>
+          <IconButton size="small" onClick={handleEditClick} color="primary">
+            <Edit fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={handleDeleteClick} color="error">
+            <Delete fontSize="small" />
+          </IconButton>
+        </Box>
+      </Box>
+    </Paper>
+  );
+});
+
 const ChildPayments: React.FC = () => {
   const { user: currentUser } = useAuth();
   const { currentDate } = useDate();
@@ -179,14 +332,17 @@ const ChildPayments: React.FC = () => {
     accruals: 0,
     deductions: 0,
     comments: '',
+    paymentType: 'none' as 'none' | 'kaspi' | 'cash',
   });
 
   const [nameFilter, setNameFilter] = useState('');
   const [groupFilter, setGroupFilter] = useState<string[]>([]);
+  const [paymentTypeFilter, setPaymentTypeFilter] = useState<'all' | 'kaspi' | 'cash' | 'none'>('all');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
-  const isMobile = useMediaQuery('(max-width:900px)');
+  const isMobile = useMediaQuery('(max-width:640px)');
+  const isTablet = useMediaQuery('(max-width:1100px)');
 
   const childrenMap = useMemo(() => {
     const map = new Map<string, Child>();
@@ -275,13 +431,14 @@ const ChildPayments: React.FC = () => {
         const childId = typeof payment.childId === 'string' ? payment.childId : payment.childId?._id;
         if (!childId) return false;
         const child = childrenMap.get(childId);
-        const matchesName = !search || (child?.fullName.toLowerCase().includes(search));
-        let matchesGroup = true;
-        if (groupFilter.length > 0) {
-          const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
-          matchesGroup = groupFilter.includes(gId || '');
-        }
-        return matchesName && matchesGroup;
+        const matchesName = !search || (child?.fullName?.toLowerCase().includes(search));
+        
+        const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
+        const matchesGroup = groupFilter.length === 0 || groupFilter.includes(gId || '');
+        
+        const matchesType = paymentTypeFilter === 'all' || payment.paymentType === paymentTypeFilter;
+        
+        return matchesName && matchesGroup && matchesType;
       })
       .map(p => {
         const childId = typeof p.childId === 'string' ? p.childId : p.childId?._id;
@@ -300,7 +457,7 @@ const ChildPayments: React.FC = () => {
 
   const { items: sortedPayments, requestSort, sortConfig } = useSort(processedPayments);
 
-  const handleMarkAsPaid = useCallback(async (paymentId: string) => {
+  const handleMarkAsPaid = useCallback(async (paymentId: string, paymentType: 'kaspi' | 'cash' = 'kaspi') => {
     try {
       const payment = payments.find(p => p._id === paymentId);
       if (!payment) return;
@@ -308,7 +465,8 @@ const ChildPayments: React.FC = () => {
       await childPaymentApi.update(paymentId, {
         status: 'paid',
         paidAmount: totalAmount,
-        paymentDate: new Date()
+        paymentDate: new Date(),
+        paymentType: paymentType
       });
       fetchPayments();
     } catch (e: any) {
@@ -346,6 +504,7 @@ const ChildPayments: React.FC = () => {
         accruals: payment.accruals || 0,
         deductions: payment.deductions || 0,
         comments: payment.comments || '',
+        paymentType: payment.paymentType || 'none',
       });
     } else {
       setEditingPayment(null);
@@ -359,6 +518,7 @@ const ChildPayments: React.FC = () => {
         accruals: 0,
         deductions: 0,
         comments: '',
+        paymentType: 'none',
       });
     }
     setModalOpen(true);
@@ -459,51 +619,70 @@ const ChildPayments: React.FC = () => {
       <Box
         display='flex'
         flexDirection={isMobile ? 'column' : 'row'}
-        flexWrap='wrap'
         alignItems={isMobile ? 'stretch' : 'center'}
         justifyContent='space-between'
         mb={2}
-        gap={2}
+        gap={isMobile ? 1.5 : 2}
       >
-        <Box display='flex' alignItems='center' gap={2}>
-          <Typography variant={isMobile ? 'h5' : 'h4'} gutterBottom sx={{ mb: isMobile ? 1 : 0 }}>
-            Оплаты за посещение детей
+        <Box display='flex' alignItems='center' gap={2} width={isMobile ? '100%' : 'auto'} justifyContent="space-between">
+          <Typography variant={isMobile ? 'h5' : 'h4'} fontWeight="bold">
+            Оплаты
           </Typography>
           {!loading && !error && (
-            <Typography variant='h6' color='textSecondary' sx={{ mb: isMobile ? 1 : 0 }}>
-              ({sortedPayments.length} {sortedPayments.length === 1 ? 'оплата' : sortedPayments.length < 5 ? 'оплаты' : 'оплат'})
-            </Typography>
+            <Chip 
+              label={sortedPayments.length} 
+              size="small" 
+              color="primary" 
+              variant="outlined" 
+              sx={{ fontWeight: 'bold' }}
+            />
           )}
         </Box>
-        <Box display="flex" gap={1} flexWrap="wrap">
-          <AuditLogButton entityType="childPayment" />
-          <Button
-            variant='contained'
-            startIcon={<Add />}
-            onClick={() => handleOpenModal()}
-            sx={{ width: isMobile ? '100%' : 'auto' }}
-          >
-            Добавить оплату
-          </Button>
-          <Button
-            variant='outlined'
-            color='primary'
-            startIcon={isImporting ? <CircularProgress size={20} /> : <FileUpload />}
-            onClick={handleImportChildPayments}
-            disabled={isImporting || loading}
-          >
-            Импорт из Excel
-          </Button>
-          <Button
-            variant='outlined'
-            color='secondary'
-            startIcon={isGenerating ? <CircularProgress size={20} /> : <Refresh />}
-            onClick={handleGeneratePayments}
-            disabled={isGenerating || loading}
-          >
-            Обновить платежи
-          </Button>
-          <Button variant="outlined" onClick={handleExport}>Экспорт</Button>
+        <Box display="flex" gap={1} flexWrap="wrap" width={isMobile ? '100%' : 'auto'}>
+          <Box display="flex" gap={1} width="100%" justifyContent={isMobile ? 'space-between' : 'flex-start'}>
+            <AuditLogButton entityType="childPayment" />
+            <Button
+              variant='contained'
+              startIcon={<Add />}
+              onClick={() => handleOpenModal()}
+              fullWidth={isMobile}
+              size={isMobile ? "medium" : "medium"}
+              sx={{ flexGrow: isMobile ? 1 : 0 }}
+            >
+              Добавить
+            </Button>
+          </Box>
+          <Box display="flex" gap={1} width="100%" flexWrap={isMobile ? 'nowrap' : 'wrap'} overflow={isMobile ? 'auto' : 'visible'} sx={{ pb: isMobile ? 1 : 0 }}>
+            <Button
+              variant='outlined'
+              size="small"
+              startIcon={isImporting ? <CircularProgress size={16} /> : <FileUpload />}
+              onClick={handleImportChildPayments}
+              disabled={isImporting || loading}
+              sx={{ minWidth: isMobile ? 'fit-content' : 'auto', whiteSpace: 'nowrap' }}
+            >
+              Импорт
+            </Button>
+            <Button
+              variant='outlined'
+              size="small"
+              color='secondary'
+              startIcon={isGenerating ? <CircularProgress size={16} /> : <Refresh />}
+              onClick={handleGeneratePayments}
+              disabled={isGenerating || loading}
+              sx={{ minWidth: isMobile ? 'fit-content' : 'auto', whiteSpace: 'nowrap' }}
+            >
+              Обновить
+            </Button>
+            <Button 
+              variant="outlined" 
+              size="small" 
+              onClick={handleExport}
+              sx={{ minWidth: isMobile ? 'fit-content' : 'auto' }}
+            >
+              Экспорт
+            </Button>
+          </Box>
         </Box>
       </Box>
 
@@ -519,31 +698,57 @@ const ChildPayments: React.FC = () => {
         display='flex'
         flexDirection={isMobile ? 'column' : 'row'}
         alignItems={isMobile ? 'stretch' : 'center'}
-        gap={2}
+        gap={isMobile ? 1.5 : 2}
         mb={2}
-        sx={{ p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}
+        sx={{ 
+          p: isMobile ? 1.5 : 2, 
+          backgroundColor: '#f8f9fa', 
+          borderRadius: 2,
+          border: '1px solid #eee'
+        }}
       >
         <TextField
-          label='Фильтр по имени'
+          label='Поиск по имени'
           variant='outlined'
+          size={isMobile ? "small" : "medium"}
           fullWidth={isMobile}
           value={searchQuery}
           onChange={handleSearchChange}
           sx={{ minWidth: isMobile ? '100%' : 250 }}
         />
 
-        <FormControl fullWidth={isMobile} sx={{ minWidth: isMobile ? '100%' : 250 }}>
-          <InputLabel>Фильтр по группам</InputLabel>
+        <FormControl fullWidth={isMobile} size={isMobile ? "small" : "medium"} sx={{ minWidth: isMobile ? '100%' : 250 }}>
+          <InputLabel>Группы</InputLabel>
           <Select
             multiple
             value={groupFilter}
-            label='Фильтр по группам'
-            onChange={(e) => setGroupFilter(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+            label='Группы'
+            onChange={(e) => {
+              const value = e.target.value;
+              const values = typeof value === 'string' ? value.split(',') : value;
+              if (values.includes('')) {
+                setGroupFilter([]);
+              } else {
+                setGroupFilter(values);
+              }
+            }}
             renderValue={(selected) => (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {selected.length === 0 ? 'Все группы' : selected.map((value) => (
-                  <Chip key={value} label={groupsMap.get(value)?.name || value} size="small" />
-                ))}
+                {selected.length === 0 ? 'Все' : (
+                  isMobile && selected.length > 1 ? (
+                    <Typography variant="body2">{`Выбрано: ${selected.length}`}</Typography>
+                  ) : (
+                    selected.map((value) => (
+                      <Chip
+                        key={value}
+                        label={groupsMap.get(value)?.name || value}
+                        size="small"
+                        onDelete={() => setGroupFilter(groupFilter.filter((id) => id !== value))}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      />
+                    ))
+                  )
+                )}
               </Box>
             )}
           >
@@ -552,9 +757,24 @@ const ChildPayments: React.FC = () => {
             </MenuItem>
             {groups.map((group) => (
               <MenuItem key={group._id} value={group._id}>
-                {group.name}
+                <Checkbox checked={groupFilter.indexOf(group._id) > -1} />
+                <ListItemText primary={group.name} />
               </MenuItem>
             ))}
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth={isMobile} size={isMobile ? "small" : "medium"} sx={{ minWidth: isMobile ? '100%' : 200 }}>
+          <InputLabel>Тип оплаты</InputLabel>
+          <Select
+            value={paymentTypeFilter}
+            label='Тип оплаты'
+            onChange={(e) => setPaymentTypeFilter(e.target.value as any)}
+          >
+            <MenuItem value="all">Все</MenuItem>
+            <MenuItem value="kaspi">Kaspi</MenuItem>
+            <MenuItem value="cash">Наличные</MenuItem>
+            <MenuItem value="none">Не указано</MenuItem>
           </Select>
         </FormControl>
       </Box>
@@ -563,14 +783,39 @@ const ChildPayments: React.FC = () => {
       {error && <Alert severity='error' sx={{ m: 2 }}>{error}</Alert>}
 
       {!loading && !isGenerating && (
-        <>
+        <Box sx={{ px: isMobile ? 1 : 0 }}>
           {sortedPayments.length > 0 ? (
-            <TableContainer component={Paper} sx={{ mt: 2, boxShadow: 3, maxWidth: 1600, ml: 'auto', mr: 'auto' }}>
+            isMobile ? (
+              <Box mt={2}>
+                {sortedPayments.map((payment, index) => {
+                  const childId = typeof payment.childId === 'string' ? payment.childId : payment.childId?._id;
+                  const child = childrenMap.get(childId || '');
+                  const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
+                  const groupName = gId ? groupsMap.get(gId)?.name || 'Нет группы' : 'Нет группы';
+
+                  return (
+                    <PaymentCard
+                      key={payment._id}
+                      payment={payment}
+                      child={child}
+                      groupName={groupName}
+                      onMarkAsPaid={handleMarkAsPaid}
+                      onCancelPayment={handleCancelPayment}
+                      onOpenModal={handleOpenModal}
+                      onDelete={handleDelete}
+                      getPaymentStatusColor={getPaymentStatusColor}
+                      index={index}
+                    />
+                  );
+                })}
+              </Box>
+            ) : (
+              <TableContainer component={Paper} sx={{ mt: 2, boxShadow: 3, maxWidth: 1600, ml: 'auto', mr: 'auto', overflowX: 'auto' }}>
               <Table size={isMobile ? 'small' : 'medium'} sx={{ width: '100%', tableLayout: 'fixed' }}>
                 <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                   <TableRow>
                     <TableCell sx={{ fontWeight: 'bold', width: 40, p: isMobile ? 0.5 : 1 }}>#</TableCell>
-                    <TableCell align='center' sx={{ fontWeight: 'bold', width: 70, p: isMobile ? 0.5 : 1 }}>Оплата</TableCell>
+                    <TableCell align='center' sx={{ fontWeight: 'bold', width: 100, p: isMobile ? 0.5 : 1 }}>Оплата</TableCell>
                     <TableCell sx={{ p: isMobile ? 0.5 : 1 }}>
                       <TableSortLabel
                         active={sortConfig.key === '_childName'}
@@ -657,10 +902,15 @@ const ChildPayments: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-          ) : (
-            <Alert severity='info' sx={{ m: 2 }}>Нет данных об оплатах</Alert>
-          )}
-        </>
+          )
+        ) : (
+          <Box mt={4} textAlign='center'>
+            <Typography variant='h6' color='text.secondary'>
+              Платежи не найдены
+            </Typography>
+          </Box>
+        )}
+      </Box>
       )}
 
       <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth='sm' fullWidth>
@@ -720,6 +970,18 @@ const ChildPayments: React.FC = () => {
               onChange={(e) => setNewPayment({ ...newPayment, deductions: e.target.value === '' ? 0 : Number(e.target.value) })}
               disabled={currentUser?.role !== 'admin'}
             />
+            <FormControl fullWidth>
+              <InputLabel>Тип оплаты</InputLabel>
+              <Select
+                value={newPayment.paymentType}
+                label="Тип оплаты"
+                onChange={(e) => setNewPayment({ ...newPayment, paymentType: e.target.value as any })}
+              >
+                <MenuItem value="none">Не указано</MenuItem>
+                <MenuItem value="kaspi">Kaspi</MenuItem>
+                <MenuItem value="cash">Наличные</MenuItem>
+              </Select>
+            </FormControl>
             <TextField
               label='Комментарии'
               value={newPayment.comments}
@@ -736,9 +998,9 @@ const ChildPayments: React.FC = () => {
               </Box>
               <Box display='flex' justifyContent='space-between'>
                 <Typography variant='body2'>Баланс (Долг / Переплата):</Typography>
-                <Typography 
-                  variant='body2' 
-                  fontWeight='bold' 
+                <Typography
+                  variant='body2'
+                  fontWeight='bold'
                   color={(newPayment.total + (newPayment.accruals || 0) - (newPayment.deductions || 0) - newPayment.paidAmount) > 0 ? 'error.main' : 'success.main'}
                 >
                   {(newPayment.total + (newPayment.accruals || 0) - (newPayment.deductions || 0) - newPayment.paidAmount).toLocaleString()} ₸

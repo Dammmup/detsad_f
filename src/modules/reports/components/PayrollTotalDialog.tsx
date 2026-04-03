@@ -8,7 +8,9 @@ import {
     Typography,
     Box,
     Divider,
-    Grid
+    Grid,
+    useTheme,
+    useMediaQuery,
 } from '@mui/material';
 
 interface Props {
@@ -42,6 +44,8 @@ interface Props {
 }
 
 const PayrollTotalDialog: React.FC<Props> = ({ open, onClose, data, onUpdate }) => {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [loading, setLoading] = React.useState(false);
     if (!data) return null;
 
@@ -64,8 +68,10 @@ const PayrollTotalDialog: React.FC<Props> = ({ open, onClose, data, onUpdate }) 
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6">Детализация: {data.staffName}</Typography>
+            <DialogTitle sx={{ p: { xs: 2, sm: 3 }, pb: 1 }}>
+                <Typography variant={isMobile ? 'subtitle1' : 'h6'} sx={{ fontWeight: 'bold' }}>
+                    Детализация: {data.staffName}
+                </Typography>
             </DialogTitle>
             <DialogContent>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
@@ -105,29 +111,29 @@ const PayrollTotalDialog: React.FC<Props> = ({ open, onClose, data, onUpdate }) 
 
                                 {typeof data.normDays === 'number' && data.normDays > 0 ? (
                                     <>
-                                        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                                            <Typography variant="caption" fontWeight="bold" display="block" gutterBottom color="primary">
-                                                ВАРИАНТЫ НОРМЫ (ДЛЯ РАСЧЕТА СТАВКИ)
+                                        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                                            <Typography variant="caption" fontWeight="bold" display="block" gutterBottom color="primary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>
+                                                Варианты нормы
                                             </Typography>
                                             
-                                            <Grid container spacing={2}>
-                                                <Grid item xs={6}>
+                                            <Grid container spacing={1.5}>
+                                                <Grid item xs={isMobile ? 12 : 6}>
                                                     <Box 
                                                         onClick={() => handleVariantClick('shifts')}
                                                         sx={{ 
-                                                            p: 1, 
-                                                            borderRadius: 1, 
+                                                            p: 1.5, 
+                                                            borderRadius: 2, 
                                                             bgcolor: data.normType === 'shifts' ? 'action.selected' : 'transparent',
                                                             cursor: 'pointer',
                                                             border: '2px solid',
-                                                            borderColor: data.normType === 'shifts' ? 'primary.main' : 'transparent',
+                                                            borderColor: data.normType === 'shifts' ? 'primary.main' : 'divider',
                                                             '&:hover': { bgcolor: 'action.hover' },
                                                             transition: 'all 0.2s'
                                                         }}
                                                     >
                                                         <Typography variant="caption" color="text.secondary" display="block">По графику смен</Typography>
                                                         <Typography variant="body2" fontWeight="bold">{data.normShifts || 0} дн.</Typography>
-                                                        <Typography variant="caption" color="text.disabled">
+                                                        <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
                                                             Дн. ставка: {data.normShifts ? Math.round(data.baseSalary / data.normShifts).toLocaleString() : 0} тг
                                                         </Typography>
                                                         {data.normType === 'shifts' && (
@@ -137,23 +143,23 @@ const PayrollTotalDialog: React.FC<Props> = ({ open, onClose, data, onUpdate }) 
                                                         )}
                                                     </Box>
                                                 </Grid>
-                                                <Grid item xs={6} sx={{ borderLeft: '1px solid', borderColor: 'divider' }}>
+                                                <Grid item xs={isMobile ? 12 : 6} sx={{ borderLeft: isMobile ? 'none' : '1px solid', borderTop: isMobile ? '1px solid' : 'none', borderColor: 'divider', mt: isMobile ? 1 : 0, pt: isMobile ? 1 : 0 }}>
                                                     <Box 
                                                         onClick={() => handleVariantClick('production')}
                                                         sx={{ 
-                                                            p: 1, 
-                                                            borderRadius: 1, 
+                                                            p: 1.5, 
+                                                            borderRadius: 2, 
                                                             bgcolor: data.normType === 'production' || !data.normType ? 'action.selected' : 'transparent',
                                                             cursor: 'pointer',
                                                             border: '2px solid',
-                                                            borderColor: data.normType === 'production' || !data.normType ? 'primary.main' : 'transparent',
+                                                            borderColor: data.normType === 'production' || !data.normType ? 'primary.main' : 'divider',
                                                             '&:hover': { bgcolor: 'action.hover' },
                                                             transition: 'all 0.2s'
                                                         }}
                                                     >
                                                         <Typography variant="caption" color="text.secondary" display="block">Произв. календарь</Typography>
                                                         <Typography variant="body2" fontWeight="bold">{data.normProduction || 0} дн.</Typography>
-                                                        <Typography variant="caption" color="text.disabled">
+                                                        <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
                                                             Дн. ставка: {data.normProduction ? Math.round(data.baseSalary / data.normProduction).toLocaleString() : 0} тг
                                                         </Typography>
                                                         {(data.normType === 'production' || !data.normType) && (

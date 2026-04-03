@@ -163,6 +163,7 @@ export interface IChildPayment {
   deductions?: number;
   comments?: string;
   paidAmount?: number;
+  paymentType?: 'none' | 'kaspi' | 'cash';
   paymentDate?: Date;
   paidAt?: Date;
   createdAt: string;

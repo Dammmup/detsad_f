@@ -541,6 +541,21 @@ export const markRentAsPaid = async (id: string) => {
   }
 };
 
+export const resetRentPayment = async (id: string) => {
+  try {
+    const response = await apiClient.patch(
+      `/rent/${id}/reset-payment`,
+      {},
+      {
+        timeout: 30000,
+      },
+    );
+    return response.data;
+  } catch (error) {
+    return handleApiError(error, `resetting rent ${id} payment`);
+  }
+};
+
 export const generateRentSheets = async (params: {
   period: string;
   tenantIds?: string[];
@@ -617,6 +632,7 @@ const reportsService = {
   updateRent,
   deleteRent,
   markRentAsPaid,
+  resetRentPayment,
   generateRentSheets,
 
 

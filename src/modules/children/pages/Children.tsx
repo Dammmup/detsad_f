@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import moment from 'moment';
 import {
   Box,
   Typography,
@@ -24,6 +25,8 @@ import {
   Snackbar,
   Tooltip,
   TableSortLabel,
+  Checkbox,
+  ListItemText,
 } from '@mui/material';
 import { Add, Edit, Delete, Refresh } from '@mui/icons-material';
 import { Child } from '../services/children';
@@ -131,6 +134,106 @@ const ChildRow = React.memo(({
         </IconButton>
       </TableCell>
     </TableRow>
+  );
+});
+
+const ChildCard = React.memo(({
+  child,
+  getGroupColor,
+  handleOpenModal,
+  handleDelete,
+  groups,
+  onGroupChange,
+  isAdmin,
+}: any) => {
+  const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
+  const groupColor = childGroupId ? getGroupColor(childGroupId) : '#B0B0B0';
+
+  return (
+    <Paper sx={{ mb: 2, p: 2, borderRadius: 2, boxShadow: 1, border: '1px solid #eee', borderLeft: `5px solid ${groupColor}` }}>
+      <Box display="flex" alignItems="center" gap={2} mb={2}>
+        {child.photo ? (
+          <Avatar src={child.photo} alt={child.fullName} sx={{ width: 60, height: 60 }} />
+        ) : (
+          <Avatar sx={{ width: 60, height: 60, bgcolor: '#e0e0e0', color: '#666' }}>
+            {child.fullName?.charAt(0) || '?'}
+          </Avatar>
+        )}
+        <Box>
+          <Typography variant="body1" fontWeight="bold">
+            {child.fullName}
+          </Typography>
+          <Typography variant="caption" color="textSecondary" display="block">
+            {child.iin || 'ИИН не указан'}
+          </Typography>
+          <Chip 
+            label={child.active ? 'Активен' : 'Неактивен'} 
+            size="small" 
+            color={child.active ? 'success' : 'default'}
+            sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
+          />
+        </Box>
+      </Box>
+
+      <Box display="grid" gridTemplateColumns="1fr 1fr" gap={1} mb={2}>
+        <Box>
+          <Typography variant="caption" color="textSecondary" display="block">Дата рождения</Typography>
+          <Typography variant="body2">
+            {child.birthday ? moment(child.birthday).format('DD.MM.YYYY') : '-'}
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="caption" color="textSecondary" display="block">Телефон</Typography>
+          <Typography variant="body2">{child.parentPhone || '-'}</Typography>
+        </Box>
+        {isAdmin && (
+          <Box>
+            <Typography variant="caption" color="textSecondary" display="block">Сумма оплаты</Typography>
+            <Typography variant="body2" color="primary" fontWeight="bold">
+              {child.paymentAmount?.toLocaleString() || 0} ₸
+            </Typography>
+          </Box>
+        )}
+      </Box>
+
+      <Box mb={2}>
+        <Typography variant="caption" color="textSecondary" display="block" mb={0.5}>Группа</Typography>
+        <Select
+          size='small'
+          fullWidth
+          value={childGroupId || ''}
+          onChange={(e) => onGroupChange(child.id || (child._id as string), e.target.value as string)}
+          displayEmpty
+          sx={{ fontSize: '0.85rem' }}
+        >
+          <MenuItem value=''><em>Не указана</em></MenuItem>
+          {groups.filter((g: any) => g.name !== 'Все группы' && g.name !== 'Default Group').map((g: any) => (
+            <MenuItem key={g._id} value={g._id}>
+              <Box display='flex' alignItems='center' gap={1}>
+                <Avatar sx={{ width: 18, height: 18, bgcolor: getGroupColor(g._id as string), fontSize: '0.6rem' }}>
+                  {g.name.charAt(0)}
+                </Avatar>
+                {g.name}
+              </Box>
+            </MenuItem>
+          ))}
+        </Select>
+      </Box>
+
+      <Box display="flex" justifyContent="space-between" alignItems="center" pt={1.5} sx={{ borderTop: '1px solid #f0f0f0' }}>
+        <AuditLogButton entityType="child" entityId={child._id} entityName={child.fullName} />
+        <Box display="flex" gap={1}>
+          <IconButton size="small" onClick={() => handleOpenModal(child)} color="primary">
+            <Edit fontSize="small" />
+          </IconButton>
+          {isAdmin && (
+            <IconButton size="small" onClick={() => handleDelete(child.id || (child._id as string))} color="error">
+              <Delete fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
+      </Box>
+    </Paper>
   );
 });
 
@@ -391,6 +494,8 @@ const Children: React.FC = () => {
                     key={value}
                     label={groups.find(g => g._id === value)?.name || value}
                     size="small"
+                    onDelete={() => setGroupFilter(groupFilter.filter((id) => id !== value))}
+                    onMouseDown={(e) => e.stopPropagation()}
                     avatar={
                       <Avatar sx={{ bgcolor: getGroupColor(value) }}>
                         {groups.find(g => g._id === value)?.name?.charAt(0)}
@@ -404,16 +509,17 @@ const Children: React.FC = () => {
             <MenuItem value="">
               <em>Все группы</em>
             </MenuItem>
-            {groups.map((group) => (
-              <MenuItem key={group._id} value={group._id}>
-                <Box display='flex' alignItems='center' gap={1}>
-                  <Avatar sx={{ width: 20, height: 20, bgcolor: getGroupColor(group._id as string), fontSize: '0.7rem' }}>
-                    {group.name.charAt(0)}
-                  </Avatar>
-                  {group.name}
-                </Box>
-              </MenuItem>
-            ))}
+              {groups.map((group) => (
+                <MenuItem key={group._id} value={group._id}>
+                  <Checkbox checked={groupFilter.indexOf(group._id as string) > -1} />
+                  <Box display='flex' alignItems='center' gap={1}>
+                    <Avatar sx={{ width: 20, height: 20, bgcolor: getGroupColor(group._id as string), fontSize: '0.7rem' }}>
+                      {group.name.charAt(0)}
+                    </Avatar>
+                    {group.name}
+                  </Box>
+                </MenuItem>
+              ))}
           </Select>
         </FormControl>
 
@@ -457,65 +563,13 @@ const Children: React.FC = () => {
         </Box>
       )}
 
-      <TableContainer component={Paper} sx={{ mt: 2, width: '100%', overflowX: isMobile ? 'auto' : 'visible', boxShadow: isMobile ? 1 : 3 }}>
-        <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 650 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>#</TableCell>
-              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Фото</TableCell>
-              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
-                <TableSortLabel
-                  active={sortConfig.key === 'fullName'}
-                  direction={sortConfig.direction || 'asc'}
-                  onClick={() => requestSort('fullName')}
-                >
-                  ФИО
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
-                <TableSortLabel
-                  active={sortConfig.key === 'birthday'}
-                  direction={sortConfig.direction || 'asc'}
-                  onClick={() => requestSort('birthday')}
-                >
-                  Дата рождения
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Телефон родителя</TableCell>
-              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>ИИН</TableCell>
-              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
-                <TableSortLabel
-                  active={sortConfig.key === 'groupId.name'}
-                  direction={sortConfig.direction || 'asc'}
-                  onClick={() => requestSort('groupId.name')}
-                >
-                  Группа
-                </TableSortLabel>
-              </TableCell>
-              {currentUser?.role === 'admin' && (
-                <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
-                  <TableSortLabel
-                    active={sortConfig.key === 'paymentAmount'}
-                    direction={sortConfig.direction || 'asc'}
-                    onClick={() => requestSort('paymentAmount')}
-                  >
-                    Сумма оплаты
-                  </TableSortLabel>
-                </TableCell>
-              )}
-              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Заметки</TableCell>
-              <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Статус</TableCell>
-              <TableCell align='right' sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Действия</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {sortedChildren.map((child, index) => (
-              <ChildRow
+      {!loading && filteredChildren.length > 0 && (
+        isMobile ? (
+          <Box mt={2}>
+            {sortedChildren.map((child) => (
+              <ChildCard
                 key={child.id || child._id}
                 child={child}
-                index={index}
-                isMobile={isMobile}
-                currentUser={currentUser}
                 getGroupColor={getGroupColor}
                 handleOpenModal={handleOpenModal}
                 handleDelete={handleDelete}
@@ -524,9 +578,80 @@ const Children: React.FC = () => {
                 isAdmin={currentUser?.role === 'admin'}
               />
             ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+          </Box>
+        ) : (
+          <TableContainer component={Paper} sx={{ mt: 2, width: '100%', overflowX: 'auto', boxShadow: isMobile ? 1 : 3 }}>
+            <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 650 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>#</TableCell>
+                  <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Фото</TableCell>
+                  <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
+                    <TableSortLabel
+                      active={sortConfig.key === 'fullName'}
+                      direction={sortConfig.direction || 'asc'}
+                      onClick={() => requestSort('fullName')}
+                    >
+                      ФИО
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
+                    <TableSortLabel
+                      active={sortConfig.key === 'birthday'}
+                      direction={sortConfig.direction || 'asc'}
+                      onClick={() => requestSort('birthday')}
+                    >
+                      Дата рождения
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Телефон родителя</TableCell>
+                  <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>ИИН</TableCell>
+                  <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
+                    <TableSortLabel
+                      active={sortConfig.key === 'groupId.name'}
+                      direction={sortConfig.direction || 'asc'}
+                      onClick={() => requestSort('groupId.name')}
+                    >
+                      Группа
+                    </TableSortLabel>
+                  </TableCell>
+                  {currentUser?.role === 'admin' && (
+                    <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
+                      <TableSortLabel
+                        active={sortConfig.key === 'paymentAmount'}
+                        direction={sortConfig.direction || 'asc'}
+                        onClick={() => requestSort('paymentAmount')}
+                      >
+                        Сумма оплаты
+                      </TableSortLabel>
+                    </TableCell>
+                  )}
+                  <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Заметки</TableCell>
+                  <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Статус</TableCell>
+                  <TableCell align='right' sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>Действия</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {sortedChildren.map((child, index) => (
+                  <ChildRow
+                    key={child.id || child._id}
+                    child={child}
+                    index={index}
+                    isMobile={isMobile}
+                    currentUser={currentUser}
+                    getGroupColor={getGroupColor}
+                    handleOpenModal={handleOpenModal}
+                    handleDelete={handleDelete}
+                    groups={groups}
+                    onGroupChange={handleGroupChange}
+                    isAdmin={currentUser?.role === 'admin'}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )
+      )}
       <ChildrenModal open={modalOpen} onClose={handleCloseModal} onSaved={fetchChildren} child={editingChild as any} />
       <Snackbar
         open={snackbar.open}

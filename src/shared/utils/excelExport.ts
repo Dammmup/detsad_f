@@ -810,6 +810,7 @@ export const exportChildPayments = async (
     'Надбавки',
     'Вычеты',
     'Статус',
+    'Тип оплаты',
     'Комментарии',
   ];
 
@@ -862,6 +863,7 @@ export const exportChildPayments = async (
           : payment.status === 'active'
             ? 'Активно'
             : 'Черновик',
+      payment.paymentType === 'kaspi' ? 'Kaspi' : payment.paymentType === 'cash' ? 'Наличные' : 'Не указан',
       payment.comments || '',
     ];
   });

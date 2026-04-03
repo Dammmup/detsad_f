@@ -20,6 +20,9 @@ import {
   Snackbar,
   Chip,
   Button,
+  useTheme,
+  useMediaQuery,
+  Stack,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -107,6 +110,8 @@ interface PayrollRow {
 const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   const { user } = useAuth();
   const { staff } = useStaff();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasNoAccess, setHasNoAccess] = useState(false);
@@ -938,11 +943,11 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
           );
         })()
       ) : (
-        <Box sx={{ minHeight: '100vh', background: '#f5f7fa', p: 3, width: '100%' }}>
-          <Box sx={{ maxWidth: '1400px', mx: 'auto', display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <Box sx={{ textAlign: 'center', mb: 3 }}>
-              <Typography variant='h3' sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>Расчетные листы</Typography>
-              <Typography variant='h6' sx={{ color: 'text.secondary', fontWeight: 'medium' }}>Управление зарплатами за {selectedMonthLabel}</Typography>
+        <Box sx={{ minHeight: '100vh', background: '#f5f7fa', p: { xs: 1, sm: 2, md: 3 }, width: '100%' }}>
+          <Box sx={{ maxWidth: '1400px', mx: 'auto', display: 'flex', flexDirection: 'column', gap: { xs: 2, md: 3 } }}>
+            <Box sx={{ textAlign: 'center', mb: { xs: 2, md: 3 } }}>
+              <Typography variant={isMobile ? 'h5' : 'h3'} sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>Расчетные листы</Typography>
+              <Typography variant={isMobile ? 'body2' : 'h6'} sx={{ color: 'text.secondary', fontWeight: 'medium' }}>Управление зарплатами за {selectedMonthLabel}</Typography>
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
                 <TextField
                   label='Выберите месяц'
@@ -959,18 +964,20 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             {!personalOnly && (
               <>
                 <Card elevation={0} sx={{ borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
-                  <Box sx={{ p: 3, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 3 }}>
+                  <Box sx={{ p: { xs: 2, md: 3 }, display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(auto-fit, minmax(200px, 1fr))' }, gap: { xs: 1.5, md: 3 } }}>
                     {[
                       { label: 'Начислено', value: (summary?.totalAccruals || 0).toLocaleString() + ' ₸', color: '#10b981', icon: <EditIcon /> },
                       { label: 'Авансы', value: (summary?.totalAdvance || 0).toLocaleString() + ' ₸', color: '#2196f3', icon: <DebtIcon /> },
                       { label: 'Вычеты', value: (summary?.totalPenalties || 0).toLocaleString() + ' ₸', color: '#f43f5e', icon: <CancelIcon /> },
                       { label: 'К выплате', value: (summary?.totalPayout || 0).toLocaleString() + ' ₸', color: '#8b5cf6', icon: <VisibilityIcon /> },
                     ].map((stat, idx) => (
-                      <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Box sx={{ width: 48, height: 48, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: `${stat.color}15`, color: stat.color }}>{stat.icon}</Box>
+                      <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
+                        <Box sx={{ width: { xs: 32, md: 48 }, height: { xs: 32, md: 48 }, borderRadius: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: `${stat.color}15`, color: stat.color }}>
+                          {React.cloneElement(stat.icon as React.ReactElement, { sx: { fontSize: { xs: 18, md: 24 } } })}
+                        </Box>
                         <Box>
-                          <Typography variant='caption' color='text.secondary'>{stat.label}</Typography>
-                          <Typography variant='h6' sx={{ fontWeight: 'bold' }}>{stat.value}</Typography>
+                          <Typography variant='caption' color='text.secondary' sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}>{stat.label}</Typography>
+                          <Typography variant={isMobile ? 'body2' : 'h6'} sx={{ fontWeight: 'bold' }}>{stat.value}</Typography>
                         </Box>
                       </Box>
                     ))}
@@ -978,236 +985,388 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                 </Card>
 
                 {user?.id && (user?.role === 'admin' || user?.role === 'manager') && (
-                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  <Box sx={{ display: 'flex', gap: { xs: 1, md: 2 }, flexWrap: 'wrap', justifyContent: 'center' }}>
                     <Tooltip title="Сгенерировать расчетные листы за выбранный период">
-                      <Button variant='contained' startIcon={<EditIcon />} onClick={handleOpenConfirmDialog} disabled={generating}>Сгенерировать</Button>
+                      <Button variant='contained' startIcon={<EditIcon />} onClick={handleOpenConfirmDialog} disabled={generating} size={isMobile ? 'small' : 'medium'}>Сгенерировать</Button>
                     </Tooltip>
                     <Tooltip title="Обновить все расчетные листы на основе текущих данных">
-                      <Button variant='outlined' startIcon={<RefreshIcon />} onClick={handleRefreshPayrolls} disabled={refreshing}>Обновить всё</Button>
+                      <Button variant='outlined' startIcon={<RefreshIcon />} onClick={handleRefreshPayrolls} disabled={refreshing} size={isMobile ? 'small' : 'medium'}>Обновить всё</Button>
                     </Tooltip>
                     <Tooltip title="Импортировать данные из Excel файла">
-                      <Button variant='outlined' color='secondary' startIcon={<FileUploadIcon />} onClick={handleImportPayrolls} disabled={importing}>Импорт</Button>
+                      <Button variant='outlined' color='secondary' startIcon={<FileUploadIcon />} onClick={handleImportPayrolls} disabled={importing} size={isMobile ? 'small' : 'medium'}>Импорт</Button>
                     </Tooltip>
 
                     <Tooltip title={`Настроить ставку штрафа за опоздания (${globalPenaltyRate} тг)`}>
-                      <Button variant='outlined' onClick={handleOpenRateDialog}>Ставка: {globalPenaltyRate} ₸</Button>
+                      <Button variant='outlined' onClick={handleOpenRateDialog} size={isMobile ? 'small' : 'medium'}>Ставка: {globalPenaltyRate} ₸</Button>
                     </Tooltip>
                     <Tooltip title="Экспортировать данные в формате XLSX">
-                      <Button variant='contained' color='success' startIcon={<VisibilityIcon />} onClick={handleExportToExcel}>Экспорт XLSX</Button>
+                      <Button variant='contained' color='success' startIcon={<VisibilityIcon />} onClick={handleExportToExcel} size={isMobile ? 'small' : 'medium'}>Экспорт XLSX</Button>
                     </Tooltip>
                   </Box>
                 )}
 
-                <Card elevation={0} sx={{ borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
-                  <CardContent sx={{ p: 0 }}>
-                    <Box sx={{ overflowX: 'auto' }}>
-                      <Table>
-                        <TableHead sx={{ bgcolor: 'grey.50' }}>
-                          <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Сотрудник</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Оклад/Смены</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Премия</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Аванс</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Вычеты</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Итого</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Статус</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Действия</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {rows.map((r) => (
-                            <TableRow key={r.staffId} hover>
-                              <TableCell sx={{ fontWeight: 'medium' }}>{r.staffName}</TableCell>
-                              <TableCell>
-                                {editingId === r.staffId ? (
-                                  <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-                                    <TextField
-                                      size='small'
-                                      type='number'
-                                      value={editData.baseSalary === 0 ? '' : (editData.baseSalary ?? r.baseSalary ?? '')}
-                                      onChange={(e) => handleInputChange('baseSalary', e.target.value === '' ? 0 : Number(e.target.value))}
-                                      inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
-                                      sx={{ width: '80px' }}
-                                      variant='standard'
-                                    />
-                                    <Select
-                                      value={editData.baseSalaryType || r.baseSalaryType || 'month'}
-                                      onChange={(e) => handleInputChange('baseSalaryType', e.target.value)}
-                                      variant="standard"
+                {isMobile ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {rows.map((r) => (
+                      <Card key={r.staffId} elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+                        <CardContent sx={{ p: 2 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                            <Box>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{r.staffName}</Typography>
+                              <Chip
+                                label={r.status === 'paid' ? 'Оплачено' : r.status === 'approved' ? 'Утвержден' : 'Черновик'}
+                                color={r.status === 'paid' ? 'success' : r.status === 'approved' ? 'info' : 'warning'}
+                                size="small"
+                                sx={{ mt: 0.5, height: 20, fontSize: '0.65rem' }}
+                              />
+                            </Box>
+                            <Box sx={{ textAlign: 'right' }}>
+                              <Typography variant="h6" sx={{ fontWeight: 900, color: (r.total || 0) < 0 ? 'error.main' : 'primary.main' }}>
+                                {r.total?.toLocaleString()} ₸
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">Итого к выплате</Typography>
+                            </Box>
+                          </Box>
+
+                          {editingId === r.staffId ? (
+                            <Stack spacing={2}>
+                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                <TextField
+                                  label="Оклад/Смена"
+                                  size="small"
+                                  type="number"
+                                  fullWidth
+                                  value={editData.baseSalary === 0 ? '' : (editData.baseSalary ?? r.baseSalary ?? '')}
+                                  onChange={(e) => handleInputChange('baseSalary', e.target.value === '' ? 0 : Number(e.target.value))}
+                                />
+                                <Select
+                                  value={editData.baseSalaryType || r.baseSalaryType || 'month'}
+                                  onChange={(e) => handleInputChange('baseSalaryType', e.target.value)}
+                                  size="small"
+                                  sx={{ minWidth: 80 }}
+                                >
+                                  <MenuItem value="month">Мес</MenuItem>
+                                  <MenuItem value="shift">Смена</MenuItem>
+                                </Select>
+                              </Box>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                <TextField
+                                  label="Премия"
+                                  size="small"
+                                  type="number"
+                                  fullWidth
+                                  value={editData.bonuses === 0 ? '' : (editData.bonuses ?? r.bonuses)}
+                                  onChange={(e) => handleInputChange('bonuses', e.target.value === '' ? 0 : Number(e.target.value))}
+                                />
+                                <TextField
+                                  label="Аванс"
+                                  size="small"
+                                  type="number"
+                                  fullWidth
+                                  value={editData.advance === 0 ? '' : (editData.advance ?? r.advance)}
+                                  onChange={(e) => handleInputChange('advance', e.target.value === '' ? 0 : Number(e.target.value))}
+                                />
+                              </Box>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                <TextField
+                                  label="Вычеты"
+                                  size="small"
+                                  type="number"
+                                  fullWidth
+                                  value={editData.penalties === 0 ? '' : (editData.penalties ?? r.penalties)}
+                                  onChange={(e) => handleInputChange('penalties', e.target.value === '' ? 0 : Number(e.target.value))}
+                                />
+                                <Select
+                                  size="small"
+                                  fullWidth
+                                  value={editData.status ?? r.status}
+                                  onChange={(e) => handleInputChange('status', e.target.value)}
+                                >
+                                  <MenuItem value="draft">Черновик</MenuItem>
+                                  <MenuItem value="approved">Утвержден</MenuItem>
+                                  <MenuItem value="paid">Оплачено</MenuItem>
+                                </Select>
+                              </Box>
+                              <Button
+                                variant="contained"
+                                fullWidth
+                                startIcon={<SaveIcon />}
+                                onClick={() => handleSaveClick(r.staffId)}
+                                sx={{ mt: 1 }}
+                              >
+                                Сохранить
+                              </Button>
+                            </Stack>
+                          ) : (
+                            <>
+                              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 2, bgcolor: 'grey.50', p: 1.5, borderRadius: 1.5 }}>
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary">Оклад</Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                    {r.baseSalary?.toLocaleString()} ₸ ({r.baseSalaryType === 'shift' ? 'см.' : 'мес.'})
+                                  </Typography>
+                                </Box>
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary">Премия</Typography>
+                                  <Typography variant="body2" color="success.main" sx={{ fontWeight: 'medium' }}>
+                                    +{r.bonuses?.toLocaleString()}
+                                  </Typography>
+                                </Box>
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary">Аванс</Typography>
+                                  <Typography variant="body2" color="warning.main" sx={{ fontWeight: 'medium' }}>
+                                    -{r.advance?.toLocaleString()}
+                                  </Typography>
+                                </Box>
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    Вычеты <AddIcon sx={{ fontSize: 12, cursor: 'pointer' }} onClick={() => handleOpenFineDialog(r)} />
+                                  </Typography>
+                                  <Typography variant="body2" color="error.main" sx={{ fontWeight: 'medium', cursor: 'pointer', borderBottom: '1px dashed currentColor', display: 'inline-block' }} onClick={() => handleOpenFineDialog(r)}>
+                                    -{r.penalties?.toLocaleString()}
+                                  </Typography>
+                                </Box>
+                              </Box>
+
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <IconButton size="small" color="primary" onClick={() => handleEditClick(r)} sx={{ bgcolor: 'primary.lighter' }}>
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                  <IconButton size="small" onClick={() => handleOpenTotalDialog(r)} sx={{ bgcolor: 'grey.100' }}>
+                                    <VisibilityIcon fontSize="small" />
+                                  </IconButton>
+                                  {r._id && (
+                                    <AuditLogButton
+                                      entityType="payroll"
+                                      entityId={r._id}
+                                      entityName={`Зарплата: ${r.staffName}`}
                                       size="small"
-                                      sx={{ fontSize: '0.75rem', minWidth: '40px' }}
-                                    >
-                                      <MenuItem value="month">Мес</MenuItem>
-                                      <MenuItem value="shift">Смена</MenuItem>
-                                    </Select>
-                                  </Box>
-                                ) : (
-                                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                    <span>{r.baseSalary?.toLocaleString()} тг</span>
-                                    <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', fontWeight: 'bold' }}>
-                                      {r.baseSalaryType === 'shift' ? 'за смену' : 'в месяц'}
-                                    </Typography>
-                                  </Box>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {editingId === r.staffId ? (
-                                  <TextField 
-                                    type='number' 
-                                    size='small' 
-                                    value={editData.bonuses === 0 ? '' : (editData.bonuses ?? r.bonuses)} 
-                                    onChange={(e) => handleInputChange('bonuses', e.target.value === '' ? 0 : Number(e.target.value))} 
-                                    sx={{ width: '100px' }} 
-                                    inputProps={{ style: { textAlign: 'right' }, min: 0 }} 
-                                  />
-                                ) : (
-                                  <Typography variant='body2' color='success.main'>+{r.bonuses?.toLocaleString() || '0'}</Typography>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {editingId === r.staffId ? (
-                                  <TextField 
-                                    type='number' 
-                                    size='small' 
-                                    value={editData.advance === 0 ? '' : (editData.advance ?? r.advance)} 
-                                    onChange={(e) => handleInputChange('advance', e.target.value === '' ? 0 : Number(e.target.value))} 
-                                    sx={{ width: '100px' }} 
-                                    inputProps={{ style: { textAlign: 'right' }, min: 0 }} 
-                                  />
-                                ) : (
-                                  <Typography variant='body2' sx={{ color: '#e65100' }}>-{r.advance?.toLocaleString() || '0'}</Typography>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {editingId === r.staffId ? (
-                                  <TextField 
-                                    type='number' 
-                                    size='small' 
-                                    value={editData.penalties === 0 ? '' : (editData.penalties ?? r.penalties)} 
-                                    onChange={(e) => handleInputChange('penalties', e.target.value === '' ? 0 : Number(e.target.value))} 
-                                    sx={{ width: '100px' }} 
-                                    inputProps={{ style: { textAlign: 'right' }, min: 0 }} 
-                                  />
-                                ) : (
-                                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
-                                    <Tooltip
-                                      title="Нажмите для детализации"
-                                      placement="left"
-                                      arrow
-                                    >
-                                      <span
-                                        style={{
-                                          cursor: 'pointer',
-                                          borderBottom: '1px dashed #ef5350',
-                                          color: '#d32f2f',
-                                          fontWeight: 'bold'
-                                        }}
-                                        onClick={() => handleOpenFineDialog(r)}
-                                      >
-                                        {r.penalties ? r.penalties?.toLocaleString() : '0'}
-                                      </span>
-                                    </Tooltip>
-                                    {user?.role === 'admin' && (
-                                      <IconButton
+                                    />
+                                  )}
+                                </Box>
+                                <IconButton size="small" color="error" onClick={() => handleDeleteClick(r.staffId)} sx={{ bgcolor: 'error.lighter' }}>
+                                  <CloseIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Box>
+                ) : (
+                  <Card elevation={0} sx={{ borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
+                    <CardContent sx={{ p: 0 }}>
+                      <Box sx={{ overflowX: 'auto' }}>
+                        <Table>
+                          <TableHead sx={{ bgcolor: 'grey.50' }}>
+                            <TableRow>
+                              <TableCell sx={{ fontWeight: 'bold' }}>Сотрудник</TableCell>
+                              <TableCell sx={{ fontWeight: 'bold' }}>Оклад/Смены</TableCell>
+                              <TableCell sx={{ fontWeight: 'bold' }}>Премия</TableCell>
+                              <TableCell sx={{ fontWeight: 'bold' }}>Аванс</TableCell>
+                              <TableCell sx={{ fontWeight: 'bold' }}>Вычеты</TableCell>
+                              <TableCell sx={{ fontWeight: 'bold' }}>Итого</TableCell>
+                              <TableCell sx={{ fontWeight: 'bold' }}>Статус</TableCell>
+                              <TableCell sx={{ fontWeight: 'bold' }}>Действия</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {rows.map((r) => (
+                              <TableRow key={r.staffId} hover>
+                                <TableCell sx={{ fontWeight: 'medium' }}>{r.staffName}</TableCell>
+                                <TableCell>
+                                  {editingId === r.staffId ? (
+                                    <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                                      <TextField
+                                        size='small'
+                                        type='number'
+                                        value={editData.baseSalary === 0 ? '' : (editData.baseSalary ?? r.baseSalary ?? '')}
+                                        onChange={(e) => handleInputChange('baseSalary', e.target.value === '' ? 0 : Number(e.target.value))}
+                                        inputProps={{ style: { fontSize: 14, textAlign: 'right' }, min: 0 }}
+                                        sx={{ width: '80px' }}
+                                        variant='standard'
+                                      />
+                                      <Select
+                                        value={editData.baseSalaryType || r.baseSalaryType || 'month'}
+                                        onChange={(e) => handleInputChange('baseSalaryType', e.target.value)}
+                                        variant="standard"
                                         size="small"
-                                        onClick={() => handleOpenFineDialog(r)}
-                                        sx={{
-                                          color: 'error.main',
-                                          bgcolor: 'error.lighter',
-                                          width: 28,
-                                          height: 28,
-                                          '&:hover': { bgcolor: 'error.light', color: 'white' }
-                                        }}
+                                        sx={{ fontSize: '0.75rem', minWidth: '40px' }}
                                       >
-                                        <AddIcon fontSize="small" />
-                                      </IconButton>
-                                    )}
-                                  </Box>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Tooltip title="Нажмите для детализации" arrow placement="top">
-                                  <span
-                                    onClick={() => handleOpenTotalDialog(r)}
-                                    style={{
-                                      cursor: 'pointer',
-                                      borderBottom: '1px dashed currentColor',
-                                      paddingBottom: '2px'
-                                    }}
-                                  >
-                                    <Typography
-                                      variant='body1'
-                                      sx={{
-                                        fontWeight: '900',
-                                        color: (r.total || 0) < 0 ? 'error.main' : 'primary.main'
+                                        <MenuItem value="month">Мес</MenuItem>
+                                        <MenuItem value="shift">Смена</MenuItem>
+                                      </Select>
+                                    </Box>
+                                  ) : (
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                      <span>{r.baseSalary?.toLocaleString()} тг</span>
+                                      <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', fontWeight: 'bold' }}>
+                                        {r.baseSalaryType === 'shift' ? 'за смену' : 'в месяц'}
+                                      </Typography>
+                                    </Box>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {editingId === r.staffId ? (
+                                    <TextField 
+                                      type='number' 
+                                      size='small' 
+                                      value={editData.bonuses === 0 ? '' : (editData.bonuses ?? r.bonuses)} 
+                                      onChange={(e) => handleInputChange('bonuses', e.target.value === '' ? 0 : Number(e.target.value))} 
+                                      sx={{ width: '100px' }} 
+                                      inputProps={{ style: { textAlign: 'right' }, min: 0 }} 
+                                    />
+                                  ) : (
+                                    <Typography variant='body2' color='success.main'>+{r.bonuses?.toLocaleString() || '0'}</Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {editingId === r.staffId ? (
+                                    <TextField 
+                                      type='number' 
+                                      size='small' 
+                                      value={editData.advance === 0 ? '' : (editData.advance ?? r.advance)} 
+                                      onChange={(e) => handleInputChange('advance', e.target.value === '' ? 0 : Number(e.target.value))} 
+                                      sx={{ width: '100px' }} 
+                                      inputProps={{ style: { textAlign: 'right' }, min: 0 }} 
+                                    />
+                                  ) : (
+                                    <Typography variant='body2' sx={{ color: '#e65100' }}>-{r.advance?.toLocaleString() || '0'}</Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {editingId === r.staffId ? (
+                                    <TextField 
+                                      type='number' 
+                                      size='small' 
+                                      value={editData.penalties === 0 ? '' : (editData.penalties ?? r.penalties)} 
+                                      onChange={(e) => handleInputChange('penalties', e.target.value === '' ? 0 : Number(e.target.value))} 
+                                      sx={{ width: '100px' }} 
+                                      inputProps={{ style: { textAlign: 'right' }, min: 0 }} 
+                                    />
+                                  ) : (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+                                      <Tooltip
+                                        title="Нажмите для детализации"
+                                        placement="left"
+                                        arrow
+                                      >
+                                        <span
+                                          style={{
+                                            cursor: 'pointer',
+                                            borderBottom: '1px dashed #ef5350',
+                                            color: '#d32f2f',
+                                            fontWeight: 'bold'
+                                          }}
+                                          onClick={() => handleOpenFineDialog(r)}
+                                        >
+                                          {r.penalties ? r.penalties?.toLocaleString() : '0'}
+                                        </span>
+                                      </Tooltip>
+                                      {user?.role === 'admin' && (
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => handleOpenFineDialog(r)}
+                                          sx={{
+                                            color: 'error.main',
+                                            bgcolor: 'error.lighter',
+                                            width: 28,
+                                            height: 28,
+                                            '&:hover': { bgcolor: 'error.light', color: 'white' }
+                                          }}
+                                        >
+                                          <AddIcon fontSize="small" />
+                                        </IconButton>
+                                      )}
+                                    </Box>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Tooltip title="Нажмите для детализации" arrow placement="top">
+                                    <span
+                                      onClick={() => handleOpenTotalDialog(r)}
+                                      style={{
+                                        cursor: 'pointer',
+                                        borderBottom: '1px dashed currentColor',
+                                        paddingBottom: '2px'
                                       }}
                                     >
-                                      {r.total?.toLocaleString() || '0'} ₸
-                                    </Typography>
-                                  </span>
-                                </Tooltip>
-                              </TableCell>
-                              <TableCell>
-                                {editingId === r.staffId ? (
-                                  <Select size='small' value={editData.status ?? r.status} onChange={(e) => handleInputChange('status', e.target.value)}>
-                                    <MenuItem value='draft'>Черновик</MenuItem>
-                                    <MenuItem value='approved'>Утвержден</MenuItem>
-                                    <MenuItem value='paid'>Оплачено</MenuItem>
-                                  </Select>
-                                ) : (
-                                  <Chip
-                                    label={r.status === 'paid' ? 'Оплачено' : r.status === 'approved' ? 'Утвержден' : 'Черновик'}
-                                    color={r.status === 'paid' ? 'success' : r.status === 'approved' ? 'info' : 'warning'}
-                                    size='small'
-                                  />
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {editingId === r.staffId ? (
-                                  <IconButton color='success' onClick={() => handleSaveClick(r.staffId)}><SaveIcon /></IconButton>
-                                ) : (
-                                  <>
-                                    <Tooltip title='Редактировать'>
-                                      <IconButton
-                                        color='primary'
-                                        size='small'
-                                        onClick={() => handleEditClick(r)}
-                                        sx={{ mr: 1 }}
+                                      <Typography
+                                        variant='body1'
+                                        sx={{
+                                          fontWeight: '900',
+                                          color: (r.total || 0) < 0 ? 'error.main' : 'primary.main'
+                                        }}
                                       >
-                                        <EditIcon />
-                                      </IconButton>
-                                    </Tooltip>
-                                    <Tooltip title='Просмотр'>
-                                      <IconButton color='default' size='small' onClick={() => handleOpenTotalDialog(r)}>
-                                        <VisibilityIcon />
-                                      </IconButton>
-                                    </Tooltip>
-                                    {r._id && (
-                                      <AuditLogButton
-                                        entityType="payroll"
-                                        entityId={r._id}
-                                        entityName={`Зарплата: ${r.staffName}`}
-                                      />
-                                    )}
-                                    <Tooltip title='Удалить'>
-                                      <IconButton
-                                        color='error'
-                                        size='small'
-                                        onClick={() => handleDeleteClick(r.staffId)}
-                                      >
-                                        <CloseIcon />
-                                      </IconButton>
-                                    </Tooltip>
-                                  </>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </Box>
-                  </CardContent>
-                </Card>
+                                        {r.total?.toLocaleString() || '0'} ₸
+                                      </Typography>
+                                    </span>
+                                  </Tooltip>
+                                </TableCell>
+                                <TableCell>
+                                  {editingId === r.staffId ? (
+                                    <Select size='small' value={editData.status ?? r.status} onChange={(e) => handleInputChange('status', e.target.value)}>
+                                      <MenuItem value='draft'>Черновик</MenuItem>
+                                      <MenuItem value='approved'>Утвержден</MenuItem>
+                                      <MenuItem value='paid'>Оплачено</MenuItem>
+                                    </Select>
+                                  ) : (
+                                    <Chip
+                                      label={r.status === 'paid' ? 'Оплачено' : r.status === 'approved' ? 'Утвержден' : 'Черновик'}
+                                      color={r.status === 'paid' ? 'success' : r.status === 'approved' ? 'info' : 'warning'}
+                                      size='small'
+                                    />
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {editingId === r.staffId ? (
+                                    <IconButton color='success' onClick={() => handleSaveClick(r.staffId)}><SaveIcon /></IconButton>
+                                  ) : (
+                                    <>
+                                      <Tooltip title='Редактировать'>
+                                        <IconButton
+                                          color='primary'
+                                          size='small'
+                                          onClick={() => handleEditClick(r)}
+                                          sx={{ mr: 1 }}
+                                        >
+                                          <EditIcon />
+                                        </IconButton>
+                                      </Tooltip>
+                                      <Tooltip title='Просмотр'>
+                                        <IconButton color='default' size='small' onClick={() => handleOpenTotalDialog(r)}>
+                                          <VisibilityIcon />
+                                        </IconButton>
+                                      </Tooltip>
+                                      {r._id && (
+                                        <AuditLogButton
+                                          entityType="payroll"
+                                          entityId={r._id}
+                                          entityName={`Зарплата: ${r.staffName}`}
+                                        />
+                                      )}
+                                      <Tooltip title='Удалить'>
+                                        <IconButton
+                                          color='error'
+                                          size='small'
+                                          onClick={() => handleDeleteClick(r.staffId)}
+                                        >
+                                          <CloseIcon />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
 
