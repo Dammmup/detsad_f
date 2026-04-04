@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/(api|auth|users|children|groups|shifts|child-attendance|child-payment|documents|files|reports|stats|holidays|fine|audit-log|accounting|qwen3-chat|payroll|settings|staff-shifts|attendance|child-payments|dishes|products|daily-menu|weekly-menu-template|medical-journals|health-passport|menu-items|task-list|vitaminization-journal|organoleptic-journal|perishable-brak|product-certificates|food-stock-log|food-staff-health|rent|external-specialists|main-events|calendar-events|telegram|export|cyclogram)/:path*",
+      "source": "/(api|auth|users|children|groups|shifts|child-attendance|child-payment|documents|files|reports|stats|holidays|fine|audit-log|accounting|ai|payroll|settings|staff-shifts|attendance|child-payments|dishes|products|daily-menu|weekly-menu-template|medical-journals|health-passport|menu-items|task-list|vitaminization-journal|organoleptic-journal|perishable-brak|product-certificates|food-stock-log|food-staff-health|rent|external-specialists|main-events|calendar-events|telegram|export|cyclogram)/:path*",
       "destination": "http://167.71.52.80:8080/$1/:path*"
     },
     {

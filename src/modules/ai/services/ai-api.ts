@@ -2,7 +2,7 @@
 interface ChatMessage {
   id: number;
   text: string;
-  sender: 'user' | 'ai';
+  sender: 'user' | 'assistant';
   timestamp: Date;
 }
 
@@ -13,7 +13,7 @@ export interface PendingAction {
   [key: string]: any;
 }
 
-export interface Qwen3Response {
+export interface AIResponse {
   content: string;
   action?: 'query' | 'navigate' | 'text' | 'confirm_action';
   navigateTo?: string;
@@ -25,16 +25,16 @@ const getAuthToken = (): string | null => {
   return localStorage.getItem('auth_token');
 };
 
-export class Qwen3ApiService {
-  private static readonly API_URL = `${import.meta.env.VITE_API_URL || ''}/qwen3-chat/chat`.replace(/([^:]\/)\/+/g, '$1');
-  private static readonly CONFIRM_URL = `${import.meta.env.VITE_API_URL || ''}/qwen3-chat/confirm`.replace(/([^:]\/)\/+/g, '$1');
+export class AIService {
+  private static readonly API_URL = `${import.meta.env.VITE_API_URL || ''}/ai/message`.replace(/([^:]\/)\/+/g, '$1');
+  private static readonly CONFIRM_URL = `${import.meta.env.VITE_API_URL || ''}/ai/confirm`.replace(/([^:]\/)\/+/g, '$1');
 
   static async sendMessage(
-    messages: ChatMessage[],
+    messages: any[],
     currentPage?: string,
     imageFile?: File,
     sessionId?: string,
-  ): Promise<Qwen3Response> {
+  ): Promise<AIResponse> {
     try {
       const token = getAuthToken();
       const headers: HeadersInit = {};
@@ -50,13 +50,13 @@ export class Qwen3ApiService {
           'messages',
           JSON.stringify(
             messages.map((msg) => ({
-              ...msg,
-              timestamp: msg.timestamp.toISOString(),
+              text: msg.text,
+              sender: msg.sender === 'ai' || msg.sender === 'assistant' ? 'assistant' : 'user'
             })),
           ),
         );
 
-        formData.append('model', 'qwen-vl-max');
+        // formData.append('model', 'gemini-2.0-flash');
 
         if (currentPage) {
           formData.append('currentPage', currentPage);
@@ -86,17 +86,16 @@ export class Qwen3ApiService {
           );
         }
 
-        const data: Qwen3Response = await response.json();
+        const data: AIResponse = await response.json();
         return data;
       } else {
         headers['Content-Type'] = 'application/json';
 
         const requestData: any = {
           messages: messages.map((msg) => ({
-            ...msg,
-            timestamp: msg.timestamp.toISOString(),
-          })),
-          model: 'qwen/qwen3.6-plus:free',
+            text: msg.text,
+            sender: msg.sender === 'ai' || msg.sender === 'assistant' ? 'assistant' : 'user'
+          }))
         };
 
         if (currentPage) {
@@ -125,11 +124,11 @@ export class Qwen3ApiService {
           );
         }
 
-        const data: Qwen3Response = await response.json();
+        const data: AIResponse = await response.json();
         return data;
       }
     } catch (error) {
-      console.error('Error calling Qwen3 API through backend:', error);
+      console.error('Error calling AI API through backend:', error);
       throw error;
     }
   }
@@ -137,7 +136,7 @@ export class Qwen3ApiService {
   /**
    * Подтверждение действия (оплата, создание, обновление)
    */
-  static async confirmAction(pendingAction: PendingAction): Promise<Qwen3Response> {
+  static async confirmAction(pendingAction: PendingAction): Promise<AIResponse> {
     try {
       const token = getAuthToken();
       const headers: HeadersInit = {
@@ -158,7 +157,7 @@ export class Qwen3ApiService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data: Qwen3Response = await response.json();
+      const data: AIResponse = await response.json();
       return data;
     } catch (error) {
       console.error('Error confirming action:', error);

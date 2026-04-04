@@ -34,7 +34,7 @@ export default defineConfig({
             '/fine': PROXY_TARGET,
             '/audit-log': PROXY_TARGET,
             '/accounting': PROXY_TARGET,
-            '/qwen3-chat': PROXY_TARGET,
+            '/ai': PROXY_TARGET,
             '/payroll': PROXY_TARGET,
             '/settings': PROXY_TARGET,
             '/staff-shifts': PROXY_TARGET,

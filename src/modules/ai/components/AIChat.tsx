@@ -21,19 +21,19 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Qwen3ApiService, Qwen3Response, PendingAction } from '../services/qwen3-api';
+import { AIService, AIResponse, PendingAction } from '../services/ai-api';
 
 import { getCurrentUser } from '../../staff/services/auth';
 
 interface Message {
   id: number;
   text: string;
-  sender: 'user' | 'ai';
+  sender: 'user' | 'assistant';
   timestamp: Date;
   imageUrl?: string;
 }
 
-const Qwen3Chat: React.FC = () => {
+const AIChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -43,10 +43,10 @@ const Qwen3Chat: React.FC = () => {
   const [accessError, setAccessError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [sessionId] = useState(() => {
-    let id = localStorage.getItem('qwen3-session-id');
+    let id = localStorage.getItem('ai-session-id');
     if (!id) {
       id = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      localStorage.setItem('qwen3-session-id', id);
+      localStorage.setItem('ai-session-id', id);
     }
     return id;
   });
@@ -71,7 +71,7 @@ const Qwen3Chat: React.FC = () => {
           '- Анализировать зарплату (например: "Проверь зарплату Замиры")\n' +
           '- Строить отчёты (например: "Кто опоздал сегодня?")\n\n' +
           'Чем могу помочь?',
-        sender: 'ai',
+        sender: 'assistant',
         timestamp: new Date(),
       };
       setMessages([welcomeMessage]);
@@ -112,22 +112,22 @@ const Qwen3Chat: React.FC = () => {
     // Индикатор загрузки
     setMessages((prev) => [
       ...prev,
-      { id: Date.now(), text: '...', sender: 'ai', timestamp: new Date() },
+      { id: Date.now(), text: '...', sender: 'assistant', timestamp: new Date() },
     ]);
 
     try {
-      const result = await Qwen3ApiService.confirmAction(pendingAction);
+      const result = await AIService.confirmAction(pendingAction);
 
       setMessages((prev) => prev.filter((msg) => msg.text !== '...'));
       setMessages((prev) => [
         ...prev,
-        { id: Date.now() + 1, text: result.content || 'Действие выполнено.', sender: 'ai', timestamp: new Date() },
+        { id: Date.now() + 1, text: result.content || 'Действие выполнено.', sender: 'assistant', timestamp: new Date() },
       ]);
     } catch (e: any) {
       setMessages((prev) => prev.filter((msg) => msg.text !== '...'));
       setMessages((prev) => [
         ...prev,
-        { id: Date.now() + 1, text: e.message || 'Ошибка при выполнении действия.', sender: 'ai', timestamp: new Date() },
+        { id: Date.now() + 1, text: e.message || 'Ошибка при выполнении действия.', sender: 'assistant', timestamp: new Date() },
       ]);
     } finally {
       setIsProcessing(false);
@@ -138,7 +138,7 @@ const Qwen3Chat: React.FC = () => {
     setPendingAction(null);
     setMessages((prev) => [
       ...prev,
-      { id: Date.now(), text: 'Действие отменено.', sender: 'ai', timestamp: new Date() },
+      { id: Date.now(), text: 'Действие отменено.', sender: 'assistant', timestamp: new Date() },
     ]);
   };
 
@@ -167,12 +167,12 @@ const Qwen3Chat: React.FC = () => {
         {
           id: Date.now() + 1,
           text: '...',
-          sender: 'ai',
+          sender: 'assistant',
           timestamp: new Date(),
         },
       ]);
 
-      const response: Qwen3Response = await Qwen3ApiService.sendMessage(
+      const response: AIResponse = await AIService.sendMessage(
         [...messages.filter(m => m.text !== '...'), userMessage],
         location.pathname,
         selectedImage || undefined,
@@ -187,7 +187,7 @@ const Qwen3Chat: React.FC = () => {
         const aiMessage: Message = {
           id: Date.now() + 2,
           text: response.content,
-          sender: 'ai',
+          sender: 'assistant',
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, aiMessage]);
@@ -201,7 +201,7 @@ const Qwen3Chat: React.FC = () => {
         const aiMessage: Message = {
           id: Date.now() + 2,
           text: response.content,
-          sender: 'ai',
+          sender: 'assistant',
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, aiMessage]);
@@ -210,7 +210,7 @@ const Qwen3Chat: React.FC = () => {
         const aiMessage: Message = {
           id: Date.now() + 2,
           text: response.content || 'Не удалось получить ответ от ИИ.',
-          sender: 'ai',
+          sender: 'assistant',
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, aiMessage]);
@@ -222,7 +222,7 @@ const Qwen3Chat: React.FC = () => {
       const errorMessage: Message = {
         id: Date.now() + 2,
         text: e.message || 'Произошла ошибка при обращении к AI.',
-        sender: 'ai',
+        sender: 'assistant',
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -545,4 +545,4 @@ const Qwen3Chat: React.FC = () => {
   );
 };
 
-export default Qwen3Chat;
+export default AIChat;

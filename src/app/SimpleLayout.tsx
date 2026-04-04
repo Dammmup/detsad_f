@@ -58,7 +58,7 @@ import FoodStockLogPage from '../modules/food/pages/FoodStockLogPage';
 import FoodStaffHealthPage from '../modules/food/pages/FoodStaffHealthPage';
 import ReportsRent from '../modules/reports/components/RentReport';
 import ChildPayments from '../modules/children/pages/ChildPayments';
-import Qwen3Chat from '../modules/ai/components/Qwen3Chat';
+import AIChat from '../modules/ai/components/AIChat';
 import ProfilePage from '../modules/staff/pages/ProfilePage';
 import ProductAccountingPage from '../modules/food/pages/ProductAccountingPage';
 import Statistics from '../modules/dashboard/pages/Statistics';
@@ -418,7 +418,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
           </Routes>
         </Container>
       </Box>
-      <Qwen3Chat />
+      <AIChat />
       <PushNotificationPrompt />
       <PWAInstallPrompt />
     </Box>
