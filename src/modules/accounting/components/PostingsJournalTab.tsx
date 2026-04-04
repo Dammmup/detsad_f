@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import accountingApi, { IPosting } from '../services/accountingApi';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
 
 const ACCOUNT_NAMES: Record<string, string> = {
   '20': 'Осн. производство',
@@ -39,7 +40,7 @@ const PostingsJournalTab: React.FC = () => {
       const result = await accountingApi.getPostings(filters);
       setPostings(result);
     } catch (err: any) {
-      setError(err.message || 'Ошибка загрузки');
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

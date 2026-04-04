@@ -44,6 +44,9 @@ import { SomaticRecord } from '../../../shared/types/somatic';
 import { AnyAaaaRecord } from 'dns';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { showSnackbar } from '../../../shared/components/Snackbar';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 
 // Helper function to format dates
 const formatDate = (date: Date | string | undefined | null): string => {
@@ -62,6 +65,7 @@ export default function SomaticJournal() {
   const [toDate, setToDate] = useState('');
   const [onlyCurrentYear, setOnlyCurrentYear] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [error, setError] = useState<string|null>(null);
   const [newRecord, setNewRecord] = useState<Partial<SomaticRecord>>({});
 
   useEffect(() => {
@@ -123,11 +127,13 @@ export default function SomaticJournal() {
     if (
       !newRecord.childId ||
       !newRecord.fio ||
-      !newRecord.diagnosis ||
       !newRecord.fromDate ||
       !newRecord.toDate
-    )
+    ) {
+      setError('Заполните обязательные поля');
       return;
+    }
+    setError(null);
     setLoading(true);
     try {
       const from = new Date(newRecord.fromDate!);
@@ -145,9 +151,12 @@ export default function SomaticJournal() {
         birthdate: newRecord.birthdate || '',
         address: newRecord.address || '',
       });
+      showSnackbar({ message: 'Запись успешно добавлена', type: 'success' });
       setRecords((prev) => [...prev, created]);
       setModalOpen(false);
       setNewRecord({});
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -158,7 +167,10 @@ export default function SomaticJournal() {
     setLoading(true);
     try {
       await deleteSomaticRecord(id);
+      showSnackbar({ message: 'Запись удалена', type: 'success' });
       setRecords((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      showSnackbar({ message: 'Ошибка при удалении: ' + getErrorMessage(err), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -364,6 +376,7 @@ export default function SomaticJournal() {
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
         <DialogTitle>Новая запись</DialogTitle>
         <DialogContent>
+          <FormErrorAlert error={error} onClose={() => setError(null)} />
           <TextField
             select
             label='Ребенок'

@@ -22,6 +22,8 @@ import { useChildren } from '../../../app/context/ChildrenContext';
 import { useGroups } from '../../../app/context/GroupsContext';
 import childPaymentApi from '../services/childPayment';
 import moment from 'moment';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 
 interface ChildrenModalProps {
   open: boolean;
@@ -156,7 +158,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
       onSaved();
       handleClose();
     } catch (e: any) {
-      setError(e?.message || 'Ошибка сохранения');
+      setError(getErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -193,11 +195,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
         {child ? '✏️ Редактировать ребёнка' : '👶 Добавить ребёнка'}
       </DialogTitle>
       <DialogContent sx={{ pt: 3 }}>
-        {error && (
-          <Alert severity='error' sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
+        <FormErrorAlert error={error} onClose={() => setError(null)} />
 
         {/* Фотография */}
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>

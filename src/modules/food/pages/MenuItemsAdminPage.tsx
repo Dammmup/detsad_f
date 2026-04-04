@@ -29,6 +29,9 @@ import {
   deleteMenuItem,
 } from '../services/menuItems';
 import { MenuItem as MenuItemType } from '../types/menuItem';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
+import { showSnackbar } from '../../../shared/components/Snackbar';
 
 const MEALS = ['Завтрак', 'Обед', 'Полдник', 'Ужин'];
 const GROUPS = [
@@ -45,6 +48,7 @@ export default function MenuItemsAdminPage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<Partial<MenuItemType> | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchItems();
@@ -74,6 +78,9 @@ export default function MenuItemsAdminPage() {
       }
       setModalOpen(false);
       setEditItem(null);
+      setSaveError(null);
+    } catch (e: any) {
+      setSaveError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -84,6 +91,8 @@ export default function MenuItemsAdminPage() {
     try {
       await deleteMenuItem(id);
       setItems((prev) => prev.filter((i) => i._id !== id));
+    } catch (e: any) {
+      showSnackbar({ message: getErrorMessage(e), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -167,6 +176,7 @@ export default function MenuItemsAdminPage() {
           {editItem?._id ? 'Редактировать блюдо' : 'Добавить блюдо'}
         </DialogTitle>
         <DialogContent>
+          <FormErrorAlert error={saveError} onClose={() => setSaveError(null)} />
           <TextField
             label='Название'
             value={editItem?.name || ''}

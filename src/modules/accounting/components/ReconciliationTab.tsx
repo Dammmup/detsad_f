@@ -9,6 +9,9 @@ import WarningIcon from '@mui/icons-material/Warning';
 import SyncIcon from '@mui/icons-material/Sync';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import accountingApi, { ITrialBalanceResponse, ISyncStatus } from '../services/accountingApi';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import { showSnackbar } from '../../../shared/components/Snackbar';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 
 interface CheckResult {
   name: string;
@@ -20,7 +23,7 @@ interface CheckResult {
 const ReconciliationTab: React.FC = () => {
   const [results, setResults] = useState<CheckResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<ISyncStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
 
@@ -150,7 +153,7 @@ const ReconciliationTab: React.FC = () => {
 
       setResults(checks);
     } catch (err: any) {
-      setError(err.message || 'Ошибка проверки');
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -160,11 +163,12 @@ const ReconciliationTab: React.FC = () => {
     setSyncing(true);
     try {
       await accountingApi.triggerSync();
+      showSnackbar({ message: 'Синхронизация успешно запущена', type: 'success' });
       // Refresh sync status after triggering
       const status = await accountingApi.getSyncStatus();
       setSyncStatus(status);
     } catch (err: any) {
-      setError(err.message || 'Ошибка синхронизации');
+      setError(getErrorMessage(err));
     } finally {
       setSyncing(false);
     }
@@ -208,7 +212,7 @@ const ReconciliationTab: React.FC = () => {
         )}
       </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <FormErrorAlert error={error} />
       {loading && <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}
 
       {results.length > 0 && !loading && (

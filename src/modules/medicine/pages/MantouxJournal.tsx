@@ -39,6 +39,9 @@ import {
 import { saveAs } from 'file-saver';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { showSnackbar } from '../../../shared/components/Snackbar';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 
 export default function MantouxJournal() {
   const navigate = useNavigate();
@@ -47,6 +50,7 @@ export default function MantouxJournal() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [error, setError] = useState<string|null>(null);
   const [newRecord, setNewRecord] = useState<Partial<MantouxRecord>>({ mm: 0, reactionSize: 0 });
 
 
@@ -77,10 +81,10 @@ export default function MantouxJournal() {
 
 
   const handleAdd = async () => {
-    if (!newRecord.childId || !newRecord.fio) return;
-    if (newRecord.reactionSize === undefined || newRecord.reactionSize === null) return;
-    if (!newRecord.reactionType) return;
-    if (!newRecord.injectionSite) return;
+    if (newRecord.reactionSize === undefined || newRecord.reactionSize === null) { setError('Укажите размер реакции'); return; }
+    if (!newRecord.reactionType) { setError('Выберите тип реакции'); return; }
+    if (!newRecord.injectionSite) { setError('Укажите место инъекции'); return; }
+    setError(null);
     setLoading(true);
     try {
       const created = await createMantouxRecord({
@@ -94,9 +98,12 @@ export default function MantouxJournal() {
         diagnosis: newRecord.diagnosis || '',
         reactionSize: Number(newRecord.reactionSize),
       });
+      showSnackbar({ message: 'Запись успешно добавлена', type: 'success' });
       setRecords((prev) => [...prev, created]);
       setModalOpen(false);
       setNewRecord({ mm: 0, reactionSize: 0 });
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -107,7 +114,10 @@ export default function MantouxJournal() {
     setLoading(true);
     try {
       await deleteMantouxRecord(id);
+      showSnackbar({ message: 'Запись удалена', type: 'success' });
       setRecords((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      showSnackbar({ message: 'Ошибка при удалении: ' + getErrorMessage(err), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -280,6 +290,7 @@ export default function MantouxJournal() {
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
         <DialogTitle>Новая запись</DialogTitle>
         <DialogContent>
+          <FormErrorAlert error={error} onClose={() => setError(null)} />
           <TextField
             select
             label='Ребенок'

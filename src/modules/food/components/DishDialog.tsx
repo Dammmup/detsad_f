@@ -8,17 +8,20 @@ import {
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { Dish } from '../services/dishes';
 import { Product, ProductIngredient, getProducts } from '../services/products';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 
 interface DishDialogProps {
     open: boolean;
     onClose: () => void;
     onSave: (dish: Partial<Dish>) => void;
     dish: Dish | null;
+    error?: string | null;
+    onCloseError?: () => void;
 }
 
 const UNITS = ['г', 'кг', 'мл', 'л', 'шт'];
 
-const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) => {
+const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish, error, onCloseError }) => {
     const [form, setForm] = useState<Partial<Dish>>({
         name: '',
         category: 'breakfast',
@@ -153,6 +156,7 @@ const DishDialog: React.FC<DishDialogProps> = ({ open, onClose, onSave, dish }) 
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
             <DialogTitle>{dish ? 'Редактировать блюдо' : 'Добавить блюдо'}</DialogTitle>
             <DialogContent>
+                <FormErrorAlert error={error} onClose={onCloseError} />
                 <Grid container spacing={2} sx={{ mt: 1 }}>
                     <Grid item xs={12}>
                         <TextField

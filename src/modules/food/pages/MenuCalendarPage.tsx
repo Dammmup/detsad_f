@@ -15,7 +15,9 @@ import {
     WeeklyMenuTemplate, getWeeklyMenuTemplates, applyTemplateToWeek, applyTemplateToMonth
 } from '../services/weeklyMenuTemplate';
 import { Dish } from '../services/dishes';
-import { toast } from 'react-toastify';
+import { showSnackbar } from '../../../shared/components/Snackbar';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 import { format } from 'date-fns';
 
 interface IMenuItem {
@@ -188,11 +190,11 @@ const MenuCalendarPage: React.FC = () => {
 
         try {
             await deleteDailyMenu(selectedMenu._id);
-            toast.success('Меню успешно удалено');
+            showSnackbar({ message: 'Меню успешно удалено', type: 'success' });
             handleCloseDialog();
             fetchMenus();
         } catch (err) {
-            toast.error('Ошибка при удалении меню: ' + (err as Error).message);
+            showSnackbar({ message: 'Ошибка при удалении меню: ' + getErrorMessage(err), type: 'error' });
         }
     }, [selectedMenu, handleCloseDialog, fetchMenus]);
 
@@ -207,11 +209,11 @@ const MenuCalendarPage: React.FC = () => {
                 ? await applyTemplateToWeek(selectedTemplateId, startDateStr, applyChildCount)
                 : await applyTemplateToMonth(selectedTemplateId, startDateStr, applyChildCount);
 
-            toast.success(result.message);
+            showSnackbar({ message: result.message, type: 'success' });
             handleCloseDialog();
             fetchMenus();
         } catch (err) {
-            toast.error('Ошибка при применении шаблона: ' + (err as Error).message);
+            setError(getErrorMessage(err));
         } finally {
             setApplying(false);
         }
@@ -227,7 +229,7 @@ const MenuCalendarPage: React.FC = () => {
 
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
-            toast.error('Разрешите всплывающие окна для работы печати');
+            showSnackbar({ message: 'Разрешите всплывающие окна для работы печати', type: 'error' });
             return;
         }
 
@@ -388,6 +390,7 @@ const MenuCalendarPage: React.FC = () => {
                         <IconButton onClick={handleCloseDialog}><CloseIcon /></IconButton>
                     </DialogTitle>
                     <DialogContent dividers>
+                        <FormErrorAlert error={error} onClose={() => setError(null)} />
                         {selectedMenu ? (
                             <Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>

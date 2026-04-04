@@ -3,7 +3,7 @@ import {
     Box, Typography, Paper, TextField, Grid, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, Card, CardContent, CircularProgress, Chip
 } from '@mui/material';
-import { toast } from 'react-toastify';
+import { showSnackbar } from '../../../shared/components/Snackbar';
 import { getConsumptionReport, getSummaryReport, ConsumptionReportItem, SummaryReport } from '../services/productReports';
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -32,7 +32,7 @@ const ReportsTab: React.FC = () => {
             setConsumption(consumptionData);
             setSummary(summaryData);
         } catch (error) {
-            toast.error('Ошибка загрузки отчётов');
+            showSnackbar({ message: 'Ошибка загрузки отчётов', type: 'error' });
         } finally {
             setLoading(false);
         }

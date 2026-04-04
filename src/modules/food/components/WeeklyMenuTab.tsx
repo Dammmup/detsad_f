@@ -11,7 +11,9 @@ import {
     Add as AddIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon,
     PlayArrow as PlayArrowIcon, CalendarMonth as CalendarIcon
 } from '@mui/icons-material';
-import { toast } from 'react-toastify';
+import { showSnackbar } from '../../../shared/components/Snackbar';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 import { getDishes, Dish } from '../services/dishes';
 import {
     WeeklyMenuTemplate, getWeeklyMenuTemplates, createWeeklyMenuTemplate,
@@ -90,6 +92,9 @@ const WeeklyMenuTab: React.FC = () => {
     const [applyType, setApplyType] = useState<'week' | 'month'>('week');
     const [requiredProducts, setRequiredProducts] = useState<RequiredProduct[]>([]);
     const [showRequirements, setShowRequirements] = useState(false);
+    const [createError, setCreateError] = useState<string | null>(null);
+    const [applyError, setApplyError] = useState<string | null>(null);
+    const [addDishError, setAddDishError] = useState<string | null>(null);
     const [dishSearchTerm, setDishSearchTerm] = useState('');
     const [debouncedDishSearch, setDebouncedDishSearch] = useState('');
     const dishSearchRef = React.useRef<any>(null);
@@ -117,7 +122,7 @@ const WeeklyMenuTab: React.FC = () => {
             const data = await getWeeklyMenuTemplates();
             setTemplates(data);
         } catch (error) {
-            toast.error('Ошибка загрузки шаблонов');
+            showSnackbar({ message: 'Ошибка загрузки шаблонов', type: 'error' });
         } finally {
             setLoading(false);
         }
@@ -142,7 +147,7 @@ const WeeklyMenuTab: React.FC = () => {
             const data = await getWeeklyMenuTemplateById(templateId);
             setSelectedTemplate(data);
         } catch (error) {
-            toast.error('Ошибка загрузки шаблона');
+            showSnackbar({ message: 'Ошибка загрузки шаблона', type: 'error' });
         }
     }, []);
 
@@ -150,12 +155,13 @@ const WeeklyMenuTab: React.FC = () => {
         if (!newTemplateName.trim()) return;
         try {
             await createWeeklyMenuTemplate({ name: newTemplateName, defaultChildCount: 30 });
-            toast.success('Шаблон создан');
+            showSnackbar({ message: 'Шаблон создан', type: 'success' });
             setCreateDialogOpen(false);
+            setCreateError(null);
             setNewTemplateName('');
             loadTemplates();
         } catch (error) {
-            toast.error('Ошибка создания шаблона');
+            setCreateError(getErrorMessage(error));
         }
     }, [newTemplateName, loadTemplates]);
 
@@ -163,11 +169,11 @@ const WeeklyMenuTab: React.FC = () => {
         if (!window.confirm('Удалить шаблон?')) return;
         try {
             await deleteWeeklyMenuTemplate(id);
-            toast.success('Шаблон удален');
+            showSnackbar({ message: 'Шаблон удален', type: 'success' });
             setSelectedTemplate(prev => prev?._id === id ? null : prev);
             loadTemplates();
         } catch (error) {
-            toast.error('Ошибка удаления');
+            showSnackbar({ message: 'Ошибка удаления', type: 'error' });
         }
     }, [loadTemplates]);
 
@@ -177,9 +183,10 @@ const WeeklyMenuTab: React.FC = () => {
             await addDishToTemplateDay(selectedTemplate._id!, selectedDay, selectedMealType, dishId);
             handleSelectTemplate(selectedTemplate._id!);
             setAddDishDialogOpen(false);
-            toast.success('Блюдо добавлено');
+            setAddDishError(null);
+            showSnackbar({ message: 'Блюдо добавлено', type: 'success' });
         } catch (error) {
-            toast.error('Ошибка добавления блюда');
+            setAddDishError(getErrorMessage(error));
         }
     }, [selectedTemplate, selectedDay, selectedMealType, handleSelectTemplate]);
 
@@ -188,9 +195,9 @@ const WeeklyMenuTab: React.FC = () => {
         try {
             await removeDishFromTemplateDay(selectedTemplate._id!, day, mealType, dishId);
             handleSelectTemplate(selectedTemplate._id!);
-            toast.success('Блюдо удалено');
+            showSnackbar({ message: 'Блюдо удалено', type: 'success' });
         } catch (error) {
-            toast.error('Ошибка удаления блюда');
+            showSnackbar({ message: 'Ошибка удаления блюда', type: 'error' });
         }
     }, [selectedTemplate, handleSelectTemplate]);
 
@@ -202,14 +209,15 @@ const WeeklyMenuTab: React.FC = () => {
                 ? await applyTemplateToWeek(selectedTemplate._id!, applyStartDate, applyChildCount)
                 : await applyTemplateToMonth(selectedTemplate._id!, applyStartDate, applyChildCount);
 
-            toast.success(result.message);
+            showSnackbar({ message: result.message, type: 'success' });
             if (result.shortages.length > 0) {
                 setRequiredProducts(result.shortages);
                 setShowRequirements(true);
             }
             setApplyDialogOpen(false);
+            setApplyError(null);
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка применения шаблона');
+            setApplyError(getErrorMessage(error));
         } finally {
             setLoading(false);
         }
@@ -246,7 +254,7 @@ const WeeklyMenuTab: React.FC = () => {
             setRequiredProducts(data);
             setShowRequirements(true);
         } catch (error) {
-            toast.error('Ошибка расчёта');
+            showSnackbar({ message: 'Ошибка расчёта', type: 'error' });
         }
     }, [selectedTemplate, applyType, applyChildCount]);
 
@@ -324,6 +332,7 @@ const WeeklyMenuTab: React.FC = () => {
             <Dialog open={createDialogOpen} onClose={handleCloseCreateDialog}>
                 <DialogTitle>Новый шаблон</DialogTitle>
                 <DialogContent>
+                    <FormErrorAlert error={createError} onClose={() => setCreateError(null)} />
                     <TextField fullWidth label="Название" value={newTemplateName} onChange={handleNewTemplateNameChange} sx={{ mt: 1 }} />
                 </DialogContent>
                 <DialogActions>
@@ -336,6 +345,7 @@ const WeeklyMenuTab: React.FC = () => {
             <Dialog open={applyDialogOpen} onClose={handleCloseApplyDialog}>
                 <DialogTitle>Применить шаблон</DialogTitle>
                 <DialogContent>
+                    <FormErrorAlert error={applyError} onClose={() => setApplyError(null)} />
                     <Grid container spacing={2} sx={{ mt: 1 }}>
                         <Grid item xs={12}>
                             <TextField fullWidth type="date" label="Дата начала" value={applyStartDate} onChange={handleApplyStartDateChange} InputLabelProps={{ shrink: true }} />
@@ -367,6 +377,7 @@ const WeeklyMenuTab: React.FC = () => {
             <Dialog open={addDishDialogOpen} onClose={handleCloseAddDishDialog} fullWidth maxWidth="sm">
                 <DialogTitle>Добавить блюдо - {WEEKDAY_NAMES[selectedDay]}, {getMealTypeName(selectedMealType)}</DialogTitle>
                 <DialogContent>
+                    <FormErrorAlert error={addDishError} onClose={() => setAddDishError(null)} />
                     <TextField
                         fullWidth
                         size="small"

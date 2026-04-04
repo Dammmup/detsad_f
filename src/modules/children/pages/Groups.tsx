@@ -44,6 +44,9 @@ import { SelectChangeEvent } from '@mui/material/Select';
 import apiClient from '../../../shared/utils/api';
 import ExportButton from '../../../shared/components/ExportButton';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
+import { showSnackbar } from '../../../shared/components/Snackbar';
 
 import { Child } from '../../../shared/types/common';
 
@@ -104,6 +107,7 @@ const Groups = () => {
   const [form, setForm] = useState<GroupFormData>(defaultForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [expandedGroups, setExpandedGroups] = useState<{
     [groupId: string]: {
@@ -136,7 +140,7 @@ const Groups = () => {
       link.click();
       link.remove();
     } catch (e: any) {
-      alert(e?.message || 'Ошибка экспорта');
+      showSnackbar({ message: getErrorMessage(e), type: 'error' });
     }
   };
 
@@ -199,6 +203,7 @@ const Groups = () => {
       setEditId(null);
     }
     setModalOpen(true);
+    setSaveError(null);
   };
 
 
@@ -207,6 +212,7 @@ const Groups = () => {
     setForm(defaultForm);
     setEditId(null);
     setSaving(false);
+    setSaveError(null);
   };
 
 
@@ -262,7 +268,7 @@ const Groups = () => {
       // Либо доверяем обновлению в контексте, либо форсируем перезагрузку
       await contextFetchGroups(true);
     } catch (e: any) {
-      alert(e?.message || 'Ошибка сохранения');
+      setSaveError(getErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -277,7 +283,7 @@ const Groups = () => {
       await contextDeleteGroup(id);
       await contextFetchGroups(true);
     } catch (e: any) {
-      alert(e?.message || 'Ошибка удаления');
+      showSnackbar({ message: getErrorMessage(e), type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -561,6 +567,7 @@ const Groups = () => {
           {editId ? 'Редактировать' : 'Добавить'} группу
         </DialogTitle>
         <DialogContent>
+          <FormErrorAlert error={saveError} onClose={() => setSaveError(null)} />
           <TextField
             autoFocus
             margin='dense'

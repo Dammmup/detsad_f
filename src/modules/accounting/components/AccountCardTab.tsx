@@ -7,6 +7,8 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import accountingApi, { IAccountReport } from '../services/accountingApi';
 
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+
 const ACCOUNTS = [
   { code: '20', name: 'Основное производство' },
   { code: '26', name: 'Общехозяйственные расходы' },
@@ -42,7 +44,7 @@ const AccountCardTab: React.FC<Props> = ({ initialAccount }) => {
       const result = await accountingApi.getAccountCard(accountCode, from, to);
       setData(result);
     } catch (err: any) {
-      setError(err.message || 'Ошибка загрузки');
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

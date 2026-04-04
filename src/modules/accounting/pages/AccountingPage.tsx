@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import {
-  Box, Typography, Tabs, Tab, Paper, Button, Alert, Snackbar
+  Box, Typography, Tabs, Tab, Paper, Button
 } from '@mui/material';
+import { showSnackbar } from '../../../shared/components/Snackbar';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import ListAltIcon from '@mui/icons-material/ListAlt';
@@ -33,9 +35,6 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 const AccountingPage: React.FC = () => {
   const [tab, setTab] = useState(0);
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success'
-  });
 
   const handleSelectAccount = (code: string) => {
     setSelectedAccount(code);
@@ -47,9 +46,9 @@ const AccountingPage: React.FC = () => {
   const handleSeed = async () => {
     try {
       const result = await accountingApi.seedAccounts();
-      setSnackbar({ open: true, message: result.message, severity: 'success' });
+      showSnackbar({ message: result.message, type: 'success' });
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.message || 'Ошибка', severity: 'error' });
+      showSnackbar({ message: getErrorMessage(err), type: 'error' });
     }
   };
 
@@ -58,13 +57,12 @@ const AccountingPage: React.FC = () => {
     try {
       const result = await accountingApi.retroGenerate();
       const g = result.generated;
-      setSnackbar({
-        open: true,
-        severity: 'success',
-        message: `Сгенерировано ${result.total} документов (оплаты: ${g.childPayments}, начисл. ЗП: ${g.payrollApproved}, выпл. ЗП: ${g.payrollPaid}, аренда: ${g.rents})`
+      showSnackbar({
+        message: `Сгенерировано ${result.total} документов (оплаты: ${g.childPayments}, начисл. ЗП: ${g.payrollApproved}, выпл. ЗП: ${g.payrollPaid}, аренда: ${g.rents})`,
+        type: 'success'
       });
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.message || 'Ошибка', severity: 'error' });
+      showSnackbar({ message: getErrorMessage(err), type: 'error' });
     } finally {
       setRetroLoading(false);
     }
@@ -130,15 +128,6 @@ const AccountingPage: React.FC = () => {
         <DocumentsTab />
       </TabPanel>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

@@ -6,9 +6,11 @@ import {
     Grid, CircularProgress, Card, CardContent, Chip
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, ShoppingCart } from '@mui/icons-material';
-import { toast } from 'react-toastify';
 import { Product, getProducts } from '../services/products';
 import { ProductPurchase, getProductPurchases, createProductPurchase, deleteProductPurchase } from '../services/productPurchase';
+import { showSnackbar } from '../../../shared/components/Snackbar';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 
 interface SelectedProduct {
     product: Product;
@@ -29,6 +31,7 @@ const PurchasesTab: React.FC = () => {
     const [supplier, setSupplier] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [productCodeInput, setProductCodeInput] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
     const loadData = async () => {
         try {
@@ -40,7 +43,7 @@ const PurchasesTab: React.FC = () => {
             setPurchases(purchasesData);
             setProducts(productsData);
         } catch (error) {
-            toast.error('Ошибка загрузки данных');
+            showSnackbar({ message: 'Ошибка загрузки данных', type: 'error' });
         } finally {
             setLoading(false);
         }
@@ -87,7 +90,7 @@ const PurchasesTab: React.FC = () => {
             if (!isAlreadySelected) {
                 handleToggleProduct(product);
                 setProductCodeInput('');
-                toast.success(`Продукт "${product.name}" добавлен`);
+                showSnackbar({ message: `Продукт "${product.name}" добавлен`, type: 'success' });
             }
         }
     };
@@ -137,13 +140,13 @@ const PurchasesTab: React.FC = () => {
 
     const handleCreateBatch = async () => {
         if (selectedProducts.length === 0) {
-            toast.error('Выберите хотя бы один продукт');
+            setError('Выберите хотя бы один продукт');
             return;
         }
 
         const invalidProducts = selectedProducts.filter(sp => sp.quantity <= 0);
         if (invalidProducts.length > 0) {
-            toast.error('Укажите количество для всех выбранных продуктов');
+            setError('Укажите количество для всех выбранных продуктов');
             return;
         }
 
@@ -165,13 +168,14 @@ const PurchasesTab: React.FC = () => {
                     notes: ''
                 });
             }
-            toast.success(`Добавлено ${selectedProducts.length} закупок`);
+            showSnackbar({ message: `Добавлено ${selectedProducts.length} закупок`, type: 'success' });
             setDialogOpen(false);
+            setError(null);
             setSelectedProducts([]);
             setSearchTerm('');
             loadData();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка');
+            setError(getErrorMessage(error));
         } finally {
             setLoading(false);
         }
@@ -181,10 +185,10 @@ const PurchasesTab: React.FC = () => {
         if (!window.confirm('Удалить запись о закупке?')) return;
         try {
             await deleteProductPurchase(id);
-            toast.success('Удалено');
+            showSnackbar({ message: 'Удалено', type: 'success' });
             loadData();
         } catch (error) {
-            toast.error('Ошибка удаления');
+            showSnackbar({ message: 'Ошибка удаления', type: 'error' });
         }
     };
 
@@ -293,6 +297,7 @@ const PurchasesTab: React.FC = () => {
                     </Box>
                 </DialogTitle>
                 <DialogContent>
+                    <FormErrorAlert error={error} onClose={() => setError(null)} />
                     <Grid container spacing={2} sx={{ mt: 1 }}>
                         <Grid item xs={6}>
                             <TextField

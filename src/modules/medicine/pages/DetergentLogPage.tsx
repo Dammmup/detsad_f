@@ -22,6 +22,9 @@ import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { showSnackbar } from '../../../shared/components/Snackbar';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 const defaultForm: DetergentLog = {
   date: '',
   detergent: '',
@@ -39,6 +42,7 @@ const DetergentLogPage: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Partial<DetergentLog>>(defaultForm);
   const [editId, setEditId] = useState<string | undefined>();
+  const [error, setError] = useState<string|null>(null);
 
   const fetchRows = async () => {
     setLoading(true);
@@ -62,6 +66,7 @@ const DetergentLogPage: React.FC = () => {
       setForm(defaultForm);
       setEditId(undefined);
     }
+    setError(null);
     setOpen(true);
   };
 
@@ -83,8 +88,11 @@ const DetergentLogPage: React.FC = () => {
       } else {
         await detergentLogApi.create(form);
       }
+      showSnackbar({ message: editId ? 'Запись обновлена' : 'Запись создана', type: 'success' });
       await fetchRows();
       handleClose();
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -95,7 +103,10 @@ const DetergentLogPage: React.FC = () => {
     setLoading(true);
     try {
       await detergentLogApi.deleteItem(id);
+      showSnackbar({ message: 'Запись удалена', type: 'success' });
       await fetchRows();
+    } catch (err) {
+      showSnackbar({ message: 'Ошибка удаления: ' + getErrorMessage(err), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -180,6 +191,7 @@ const DetergentLogPage: React.FC = () => {
           {editId ? 'Редактировать запись' : 'Добавить запись'}
         </DialogTitle>
         <DialogContent>
+          <FormErrorAlert error={error} onClose={() => setError(null)} />
           <Stack spacing={2} mt={1}>
             <TextField
               label='Дата'

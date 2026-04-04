@@ -15,7 +15,9 @@ import { Document, Packer, Paragraph, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
 import childrenApi from '../../children/services/children';
 import childHealthPassportApi from '../services/childHealthPassport';
-import { toast } from 'react-toastify';
+import { showSnackbar } from '../../../shared/components/Snackbar';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
@@ -45,6 +47,7 @@ export default function ChildHealthPassportPage() {
   const [children, setChildren] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string|null>(null);
   const [form, setForm] = React.useState<ChildPassportForm>({
     fio: '',
     iin: '',
@@ -118,9 +121,11 @@ export default function ChildHealthPassportPage() {
 
   const handleSave = async () => {
     if (!selectedId) {
-      toast.error('Выберите ребенка');
+      setError('Выберите ребенка');
       return;
     }
+
+    setError(null);
 
     setSaving(true);
     try {
@@ -142,10 +147,9 @@ export default function ChildHealthPassportPage() {
         checkups: form.checkups,
         birthPlace: form.address || 'Не указано', // Fallback
       });
-      toast.success('Данные успешно сохранены в базе');
+      showSnackbar({ message: 'Данные успешно сохранены в базе', type: 'success' });
     } catch (err: any) {
-      console.error('Error saving passport:', err);
-      toast.error('Ошибка при сохранении: ' + (err.response?.data?.error || err.message));
+      setError(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -236,6 +240,7 @@ export default function ChildHealthPassportPage() {
         <Typography variant='h5' gutterBottom>
           Паспорт здоровья ребенка (форма 052-2/у)
         </Typography>
+        <FormErrorAlert error={error} onClose={() => setError(null)} />
         <Stack spacing={2}>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>

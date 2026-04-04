@@ -66,6 +66,9 @@ import { exportData } from '../../../shared/utils/exportUtils';
 import { useSort } from '../../../shared/hooks/useSort';
 import { useStaff } from '../../../app/context/StaffContext';
 import { useGroups } from '../../../app/context/GroupsContext';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
+import { showSnackbar } from '../../../shared/components/Snackbar';
 
 
 const roleTranslations: Record<string, string> = {
@@ -319,6 +322,7 @@ const Staff = () => {
   const [form, setForm] = useState<StaffMember>(defaultForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [localSearchTerm, setLocalSearchTerm] = useState('');
@@ -401,12 +405,14 @@ const Staff = () => {
     setForm(member ? { ...member, allowToSeePayroll: member.allowToSeePayroll || false } : defaultForm);
     setEditId(member?.id || member?._id || null);
     setModalOpen(true);
+    setSaveError(null);
   }, []);
 
   const handleCloseModal = useCallback(() => {
     setModalOpen(false);
     setForm(defaultForm);
     setEditId(null);
+    setSaveError(null);
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -489,7 +495,7 @@ const Staff = () => {
         handleCloseModal();
       }
     } catch (e: any) {
-      alert(e?.response?.data?.message || 'Ошибка сохранения');
+      setSaveError(getErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -507,7 +513,7 @@ const Staff = () => {
         await deleteUser(id);
       }
     } catch (e: any) {
-      alert(e?.response?.data?.message || 'Ошибка удаления');
+      showSnackbar({ message: getErrorMessage(e), type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -782,6 +788,7 @@ const Staff = () => {
             </Box>
           </DialogTitle>
           <DialogContent>
+            <FormErrorAlert error={saveError} onClose={() => setSaveError(null)} />
             <Grid container spacing={2} sx={{ mt: 1 }}>
               {/* Основная информация */}
               <Grid item xs={12}>

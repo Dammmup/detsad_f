@@ -30,6 +30,9 @@ import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { showSnackbar } from '../../../shared/components/Snackbar';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 
 export default function TubPositiveJournal() {
   const navigate = useNavigate();
@@ -42,6 +45,7 @@ export default function TubPositiveJournal() {
   const [group, setGroup] = useState('');
   const [referral, setReferral] = useState('');
   const [doctor, setDoctor] = useState('');
+  const [error, setError] = useState<string|null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -72,16 +76,23 @@ export default function TubPositiveJournal() {
   }, [records, search, group, referral, doctor]);
 
   const handleAdd = async () => {
-    if (!newRecord.childId || !newRecord.fio || !newRecord.date) return;
+    if (!newRecord.childId || !newRecord.fio || !newRecord.date) {
+      setError('Заполните обязательные поля');
+      return;
+    }
+    setError(null);
     setLoading(true);
     try {
       const created = await createTubPositiveRecord({
         ...newRecord,
         notes: newRecord.notes || '',
       });
+      showSnackbar({ message: 'Запись добавлена', type: 'success' });
       setRecords((prev) => [...prev, created]);
       setModalOpen(false);
       setNewRecord({});
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -91,7 +102,10 @@ export default function TubPositiveJournal() {
     setLoading(true);
     try {
       await deleteTubPositiveRecord(id);
+      showSnackbar({ message: 'Запись удалена', type: 'success' });
       setRecords((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      showSnackbar({ message: 'Ошибка при удалении: ' + getErrorMessage(err), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -215,6 +229,7 @@ export default function TubPositiveJournal() {
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
         <DialogTitle>Новая запись</DialogTitle>
         <DialogContent>
+          <FormErrorAlert error={error} onClose={() => setError(null)} />
           <TextField
             select
             label='Ребенок'

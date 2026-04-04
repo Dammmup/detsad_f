@@ -5,6 +5,7 @@ import {
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import accountingApi, { ITrialBalanceRow, ITrialBalanceResponse } from '../services/accountingApi';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
 
 interface Props {
   onSelectAccount?: (code: string) => void;
@@ -26,7 +27,7 @@ const TrialBalanceTab: React.FC<Props> = ({ onSelectAccount }) => {
       const result = await accountingApi.getTrialBalance(from, to);
       setData(result);
     } catch (err: any) {
-      setError(err.message || 'Ошибка загрузки');
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

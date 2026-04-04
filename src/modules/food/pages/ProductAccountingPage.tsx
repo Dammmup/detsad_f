@@ -54,7 +54,9 @@ import {
     Print as PrintIcon,
     PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
-import { toast } from 'react-toastify';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
+import { showSnackbar } from '../../../shared/components/Snackbar';
 
 import {
     Product,
@@ -276,6 +278,9 @@ const ProductAccountingPage: React.FC = () => {
     const [dishDialogOpen, setDishDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [editingDish, setEditingDish] = useState<Dish | null>(null);
+    const [productSaveError, setProductSaveError] = useState<string | null>(null);
+    const [dishSaveError, setDishSaveError] = useState<string | null>(null);
+    const [techCardSaveError, setTechCardSaveError] = useState<string | null>(null);
     const [productForm, setProductForm] = useState<Partial<Product>>({
         name: '',
         code: '',
@@ -335,7 +340,7 @@ const ProductAccountingPage: React.FC = () => {
             setProducts(productsData);
             setAlerts(alertsData);
         } catch (error) {
-            toast.error('Ошибка загрузки продуктов');
+            showSnackbar({ message: 'Ошибка загрузки продуктов', type: 'error' });
         } finally {
             setLoading(false);
         }
@@ -346,7 +351,7 @@ const ProductAccountingPage: React.FC = () => {
             const data = await getDishes({});
             setDishes(data);
         } catch (error) {
-            toast.error('Ошибка загрузки блюд');
+            showSnackbar({ message: 'Ошибка загрузки блюд', type: 'error' });
         }
     }, []);
 
@@ -425,21 +430,23 @@ const ProductAccountingPage: React.FC = () => {
             });
         }
         setProductDialogOpen(true);
+        setProductSaveError(null);
     }, []);
 
     const handleSaveProduct = useCallback(async () => {
         try {
             if (editingProduct) {
                 await updateProduct(editingProduct._id || editingProduct.id || '', productForm);
-                toast.success('Продукт обновлен');
+                showSnackbar({ message: 'Продукт обновлен', type: 'success' });
             } else {
                 await createProduct(productForm);
-                toast.success('Продукт создан');
+                showSnackbar({ message: 'Продукт создан', type: 'success' });
             }
             setProductDialogOpen(false);
+            setProductSaveError(null);
             loadProducts();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка сохранения');
+            setProductSaveError(getErrorMessage(error));
         }
     }, [editingProduct, productForm, loadProducts]);
 
@@ -447,10 +454,10 @@ const ProductAccountingPage: React.FC = () => {
         if (!window.confirm(`Удалить "${product.name}"?`)) return;
         try {
             await deleteProduct(product._id || product.id || '');
-            toast.success('Продукт удален');
+            showSnackbar({ message: 'Продукт удален', type: 'success' });
             loadProducts();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка удаления');
+            showSnackbar({ message: getErrorMessage(error), type: 'error' });
         }
     }, [loadProducts]);
 
@@ -467,15 +474,16 @@ const ProductAccountingPage: React.FC = () => {
         try {
             if (editingDish) {
                 await updateDish(editingDish._id || editingDish.id || '', dishData);
-                toast.success('Блюдо обновлено');
+                showSnackbar({ message: 'Блюдо обновлено', type: 'success' });
             } else {
                 await createDish(dishData);
-                toast.success('Блюдо создано');
+                showSnackbar({ message: 'Блюдо создано', type: 'success' });
             }
             setDishDialogOpen(false);
+            setDishSaveError(null);
             loadDishes();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка сохранения');
+            setDishSaveError(getErrorMessage(error));
         }
     }, [editingDish, loadDishes]);
 
@@ -483,20 +491,20 @@ const ProductAccountingPage: React.FC = () => {
         if (!window.confirm(`Удалить "${dish.name}"?`)) return;
         try {
             await deleteDish(dish._id || dish.id || '');
-            toast.success('Блюдо удалено');
+            showSnackbar({ message: 'Блюдо удалено', type: 'success' });
             loadDishes();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка удаления');
+            showSnackbar({ message: getErrorMessage(error), type: 'error' });
         }
     }, [loadDishes]);
 
     const handleCreateTodayMenu = async () => {
         try {
             await createDailyMenu({ date: new Date().toISOString(), totalChildCount: childCountInput });
-            toast.success('Меню создано');
+            showSnackbar({ message: 'Меню создано', type: 'success' });
             loadTodayMenu();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка создания');
+            showSnackbar({ message: getErrorMessage(error), type: 'error' });
         }
     };
 
@@ -505,11 +513,11 @@ const ProductAccountingPage: React.FC = () => {
         try {
             setServingMeal(mealType);
             await serveMeal(todayMenu._id || todayMenu.id || '', mealType, childCountInput);
-            toast.success('Приём пищи подан!');
+            showSnackbar({ message: 'Приём пищи подан!', type: 'success' });
             loadTodayMenu();
             loadProducts();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка подачи');
+            showSnackbar({ message: getErrorMessage(error), type: 'error' });
         } finally {
             setServingMeal(null);
         }
@@ -519,11 +527,11 @@ const ProductAccountingPage: React.FC = () => {
         if (!todayMenu) return;
         try {
             await addDishToMeal(todayMenu._id || todayMenu.id || '', selectedMealType, dishId);
-            toast.success('Блюдо добавлено');
+            showSnackbar({ message: 'Блюдо добавлено', type: 'success' });
             setAddDishDialogOpen(false);
             loadTodayMenu();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка добавления');
+            showSnackbar({ message: getErrorMessage(error), type: 'error' });
         }
     };
 
@@ -531,10 +539,10 @@ const ProductAccountingPage: React.FC = () => {
         if (!todayMenu) return;
         try {
             await removeDishFromMeal(todayMenu._id || todayMenu.id || '', mealType, dishId);
-            toast.success('Блюдо удалено');
+            showSnackbar({ message: 'Блюдо удалено', type: 'success' });
             loadTodayMenu();
         } catch (error: any) {
-            toast.error(error.message || 'Ошибка удаления блюда');
+            showSnackbar({ message: getErrorMessage(error), type: 'error' });
         }
     };
 
@@ -905,6 +913,7 @@ const ProductAccountingPage: React.FC = () => {
             <Dialog open={productDialogOpen} onClose={() => setProductDialogOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>{editingProduct ? 'Редактировать продукт' : 'Добавить продукт'}</DialogTitle>
                 <DialogContent>
+                    <FormErrorAlert error={productSaveError} onClose={() => setProductSaveError(null)} />
                     <Grid container spacing={2} sx={{ mt: 1 }}>
                         <Grid item xs={12}>
                             <TextField
@@ -1026,6 +1035,8 @@ const ProductAccountingPage: React.FC = () => {
                 onClose={() => setDishDialogOpen(false)}
                 onSave={handleSaveDish}
                 dish={editingDish}
+                error={dishSaveError}
+                onCloseError={() => setDishSaveError(null)}
             />
 
             {/* Add Dish to Meal Dialog */}
@@ -1093,10 +1104,11 @@ const ProductAccountingPage: React.FC = () => {
                                 if (tempDishForTechCard) {
                                     try {
                                         await updateDish(tempDishForTechCard._id || tempDishForTechCard.id || '', tempDishForTechCard);
-                                        toast.success('Технологическая карта сохранена');
+                                        showSnackbar({ message: 'Технологическая карта сохранена', type: 'success' });
+                                        setTechCardSaveError(null);
                                         loadDishes();
                                     } catch (e: any) {
-                                        toast.error(e.message || 'Ошибка сохранения');
+                                        setTechCardSaveError(getErrorMessage(e));
                                     }
                                 }
                             }}
@@ -1106,6 +1118,7 @@ const ProductAccountingPage: React.FC = () => {
                     </Box>
                 </DialogTitle>
                 <DialogContent dividers>
+                    <FormErrorAlert error={techCardSaveError} onClose={() => setTechCardSaveError(null)} />
                     {tempDishForTechCard && (
                         <TechnicalCard 
                             dish={tempDishForTechCard} 

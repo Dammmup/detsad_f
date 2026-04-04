@@ -8,6 +8,9 @@ import {
 import RefreshIcon from '@mui/icons-material/Refresh';
 import UndoIcon from '@mui/icons-material/Undo';
 import accountingApi, { IAccountingDocument } from '../services/accountingApi';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import { showSnackbar } from '../../../shared/components/Snackbar';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 
 const TYPE_LABELS: Record<string, string> = {
   child_payment: 'Оплата родителя',
@@ -27,7 +30,7 @@ const STATUS_COLORS: Record<string, 'success' | 'default' | 'error'> = {
 const DocumentsTab: React.FC = () => {
   const [docs, setDocs] = useState<IAccountingDocument[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [reverseDialogOpen, setReverseDialogOpen] = useState(false);
@@ -45,7 +48,7 @@ const DocumentsTab: React.FC = () => {
       const result = await accountingApi.getDocuments(filters);
       setDocs(result);
     } catch (err: any) {
-      setError(err.message || 'Ошибка загрузки');
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -61,11 +64,12 @@ const DocumentsTab: React.FC = () => {
     setReversing(true);
     try {
       await accountingApi.reverseDocument(reverseDocId, reverseReason);
+      showSnackbar({ message: 'Документ успешно сторнирован', type: 'success' });
       setReverseDialogOpen(false);
       setReverseReason('');
       fetchData();
     } catch (err: any) {
-      setError(err.message || 'Ошибка сторно');
+      setError(getErrorMessage(err));
     } finally {
       setReversing(false);
     }
@@ -100,7 +104,7 @@ const DocumentsTab: React.FC = () => {
         </Typography>
       </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <FormErrorAlert error={error} />
       {loading && <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}
 
       {!loading && (

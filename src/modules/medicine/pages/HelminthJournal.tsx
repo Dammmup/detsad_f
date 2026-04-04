@@ -43,6 +43,9 @@ import {
 import { saveAs } from 'file-saver';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { showSnackbar } from '../../../shared/components/Snackbar';
+import { getErrorMessage } from '../../../shared/utils/errorUtils';
+import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 
 const MONTHS = [
   'Январь',
@@ -79,6 +82,7 @@ export default function HelminthJournal() {
   const [year, setYear] = useState('all');
   const [examType, setExamType] = useState('all');
   const [result, setResult] = useState('all');
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -131,9 +135,11 @@ export default function HelminthJournal() {
         !newRecord.examType ||
         !newRecord.result
       ) {
-        alert('Пожалуйста, заполните все обязательные поля');
+        setError('Пожалуйста, заполните все обязательные поля');
         return;
       }
+
+      setError(null);
 
       setLoading(true);
       const monthIndex = MONTHS.indexOf(newRecord.month);
@@ -150,6 +156,7 @@ export default function HelminthJournal() {
       };
 
       const created = await createHelminthRecord(requestData as any);
+      showSnackbar({ message: 'Запись успешно добавлена', type: 'success' });
       // Refresh to get populated data or just add to list
       setRecords((prev) => [created, ...prev]);
       setModalOpen(false);
@@ -159,9 +166,8 @@ export default function HelminthJournal() {
         examType: 'primary',
         result: 'negative'
       });
-    } catch (error: any) {
-      console.error('Error creating record:', error);
-      alert('Ошибка при создании записи: ' + (error.response?.data?.error || error.message));
+    } catch (err: any) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -172,9 +178,10 @@ export default function HelminthJournal() {
     setLoading(true);
     try {
       await deleteHelminthRecord(id);
+      showSnackbar({ message: 'Запись удалена', type: 'success' });
       setRecords((prev) => prev.filter((r) => (r.id || r._id) !== id));
-    } catch (error: any) {
-      alert('Ошибка при удалении: ' + error.message);
+    } catch (err: any) {
+      showSnackbar({ message: 'Ошибка при удалении: ' + getErrorMessage(err), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -382,6 +389,7 @@ export default function HelminthJournal() {
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Добавление в журнал гельминтов</DialogTitle>
         <DialogContent dividers>
+          <FormErrorAlert error={error} onClose={() => setError(null)} />
           <FormControl fullWidth margin='dense'>
             <InputLabel>Ребенок</InputLabel>
             <Select
