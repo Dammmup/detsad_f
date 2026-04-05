@@ -337,6 +337,7 @@ const ChildPayments: React.FC = () => {
 
   const [nameFilter, setNameFilter] = useState('');
   const [groupFilter, setGroupFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
   const [paymentTypeFilter, setPaymentTypeFilter] = useState<'all' | 'kaspi' | 'cash' | 'none'>('all');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -437,8 +438,10 @@ const ChildPayments: React.FC = () => {
         const matchesGroup = groupFilter.length === 0 || groupFilter.includes(gId || '');
         
         const matchesType = paymentTypeFilter === 'all' || payment.paymentType === paymentTypeFilter;
+        const matchesStatus = statusFilter === 'all' || 
+          (statusFilter === 'paid' ? payment.status === 'paid' : payment.status !== 'paid');
         
-        return matchesName && matchesGroup && matchesType;
+        return matchesName && matchesGroup && matchesType && matchesStatus;
       })
       .map(p => {
         const childId = typeof p.childId === 'string' ? p.childId : p.childId?._id;
@@ -761,6 +764,19 @@ const ChildPayments: React.FC = () => {
                 <ListItemText primary={group.name} />
               </MenuItem>
             ))}
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth={isMobile} size={isMobile ? "small" : "medium"} sx={{ minWidth: isMobile ? '100%' : 180 }}>
+          <InputLabel>Статус</InputLabel>
+          <Select
+            value={statusFilter}
+            label='Статус'
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+          >
+            <MenuItem value="all">Все</MenuItem>
+            <MenuItem value="paid">Оплачено</MenuItem>
+            <MenuItem value="unpaid">Не оплачено</MenuItem>
           </Select>
         </FormControl>
 
