@@ -40,6 +40,7 @@ import AuditLogButton from '../../../shared/components/AuditLogButton';
 import { useAuth } from '../../../app/context/AuthContext';
 import { useChildren } from '../../../app/context/ChildrenContext';
 import { useGroups } from '../../../app/context/GroupsContext';
+import { exportData } from '../../../shared/utils/exportUtils';
 
 
 
@@ -374,27 +375,17 @@ const Children: React.FC = () => {
     setIsExporting(true);
     setExportError(null);
     try {
-      const response = await apiClient.post(
-        '/export/children',
-        {
-          format: exportFormat,
-          filters: { name: nameFilter, group: groupFilter },
-        },
-        { responseType: 'blob' },
-      );
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `children.${exportFormat}`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      await exportData('children', exportFormat, { 
+        name: nameFilter, 
+        group: groupFilter,
+        active: activeFilter === 'active'
+      });
     } catch (e: any) {
       setExportError(e?.message || 'Ошибка экспорта');
     } finally {
       setIsExporting(false);
     }
-  }, [nameFilter, groupFilter]);
+  }, [nameFilter, groupFilter, activeFilter]);
 
   const handleGeneratePayments = useCallback(async () => {
     setIsGeneratingPayments(true);
@@ -440,7 +431,9 @@ const Children: React.FC = () => {
         </Box>
         <Box mb={isMobile ? 0 : 2} display='flex' flexDirection={isMobile ? 'column' : 'row'} gap={1}>
           <AuditLogButton entityType="child" />
-          <ExportButton exportTypes={[{ value: 'children', label: 'Список детей' }]} onExport={handleExport} />
+          {(currentUser?.role === 'admin' || currentUser?.role === 'manager') && (
+            <ExportButton exportTypes={[{ value: 'children', label: 'Список детей' }]} onExport={handleExport} />
+          )}
           <Tooltip title="Сгенерировать недостающие платежи за текущий month">
             <Button
               variant='outlined'

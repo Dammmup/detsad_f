@@ -16,32 +16,13 @@ import {
   Payment,
   Restaurant,
   LocalGroceryStore,
+  AccessTime,
 } from '@mui/icons-material';
 import moment from 'moment';
 import { useDate } from '../../../app/context/DateContext';
 import { useAuth } from '../../../app/context/AuthContext';
-import childrenApi from '../../children/services/children';
-import { getChildAttendance } from '../../children/services/childAttendance';
-import { getShifts } from '../../staff/services/shifts';
-import {
-  exportChildrenList,
-  exportChildrenAttendance,
-  exportStaffAttendance,
-  exportSalaryReport,
-  exportStaffList,
-  exportChildPayments,
-  exportProducts,
-  exportDishes,
-} from '../../../shared/utils/excelExport';
-import {
-  getPayrollsByUsers,
-  generatePayrollSheets,
-} from '../../staff/services/payroll';
-import { usersApi } from '../../staff/services/users';
-import childPaymentApi from '../../children/services/childPayment';
-import groupsApi from '../../children/services/groups';
-import { getProducts } from '../../food/services/products';
-import { getDishes } from '../../food/services/dishes';
+import { generatePayrollSheets } from '../../staff/services/payroll';
+import { exportData } from '../../../shared/utils/exportUtils';
 
 const ReportsWidget: React.FC = () => {
   const { currentDate } = useDate();
@@ -55,11 +36,9 @@ const ReportsWidget: React.FC = () => {
     setError(null);
     try {
       const period = moment(currentDate).format('YYYY-MM');
+      // Предварительно генерируем расчетные листы, если их нет
       await generatePayrollSheets(period);
-      const payrolls = await getPayrollsByUsers({
-        period: period,
-      });
-      await exportSalaryReport(payrolls);
+      await exportData('salary', 'xlsx', { period });
       setSuccess('Отчет по зарплатам успешно экспортирован!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта отчета по зарплатам');
@@ -73,8 +52,7 @@ const ReportsWidget: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const children = await childrenApi.getAll();
-      await exportChildrenList(children);
+      await exportData('children', 'xlsx', {});
       setSuccess('Список детей успешно экспортирован!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта списка детей');
@@ -91,14 +69,7 @@ const ReportsWidget: React.FC = () => {
       const startDate = moment(currentDate).startOf('month').format('YYYY-MM-DD');
       const endDate = moment(currentDate).endOf('month').format('YYYY-MM-DD');
 
-      const attendanceData = await getChildAttendance({
-        startDate,
-        endDate,
-      });
-      const allChildren = await childrenApi.getAll();
-
-      const groupName = 'All_Groups';
-      await exportChildrenAttendance(attendanceData, groupName, `${startDate}_${endDate}`, allChildren);
+      await exportData('children-attendance', 'xlsx', { startDate, endDate });
       setSuccess('Отчет по посещаемости успешно экспортирован!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта посещаемости');
@@ -115,8 +86,7 @@ const ReportsWidget: React.FC = () => {
       const startDate = moment(currentDate).startOf('month').format('YYYY-MM-DD');
       const endDate = moment(currentDate).endOf('month').format('YYYY-MM-DD');
 
-      const shifts = await getShifts(startDate, endDate);
-      await exportStaffAttendance(shifts, `${startDate}_${endDate}`);
+      await exportData('staff-schedule', 'xlsx', { startDate, endDate });
       setSuccess('Расписание сотрудников успешно экспортировано!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта расписания');
@@ -130,11 +100,27 @@ const ReportsWidget: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const staffList = await usersApi.getAll();
-      await exportStaffList(staffList);
+      await exportData('staff', 'xlsx', {});
       setSuccess('Список сотрудников успешно экспортирован!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта списка сотрудников');
+    } finally {
+      setLoading(false);
+      setTimeout(() => setSuccess(null), 3000);
+    }
+  };
+
+  const handleExportStaffAttendance = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const startDate = moment(currentDate).startOf('month').format('YYYY-MM-DD');
+      const endDate = moment(currentDate).endOf('month').format('YYYY-MM-DD');
+
+      await exportData('staff-attendance-tracking', 'xlsx', { startDate, endDate });
+      setSuccess('Отчет по посещаемости сотрудников успешно экспортирован!');
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка экспорта учета времени');
     } finally {
       setLoading(false);
       setTimeout(() => setSuccess(null), 3000);
@@ -145,11 +131,8 @@ const ReportsWidget: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const monthPeriod = moment(currentDate).format('YYYY-MM');
-      const payments = await childPaymentApi.getAll({ monthPeriod });
-      const children = await childrenApi.getAll();
-      const groups = await groupsApi.getAll();
-      await exportChildPayments(payments, children, groups);
+      const period = moment(currentDate).format('YYYY-MM');
+      await exportData('child-payments', 'xlsx', { period });
       setSuccess('Оплаты посещений детей успешно экспортированы!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта оплат детей');
@@ -163,8 +146,7 @@ const ReportsWidget: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const products = await getProducts();
-      await exportProducts(products);
+      await exportData('products', 'xlsx', {});
       setSuccess('Список продуктов успешно экспортирован!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта продуктов');
@@ -178,9 +160,7 @@ const ReportsWidget: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const dishes = await getDishes();
-      const products = await getProducts();
-      await exportDishes(dishes, products);
+      await exportData('dishes', 'xlsx', {});
       setSuccess('Справочник блюд успешно экспортирован!');
     } catch (err: any) {
       setError(err?.message || 'Ошибка экспорта блюд');
@@ -303,6 +283,24 @@ const ReportsWidget: React.FC = () => {
             }}
           >
             Сотрудники
+          </Button>
+        )}
+
+        {isAdminOrManager && (
+          <Button
+            variant='contained'
+            color='inherit'
+            size="small"
+            startIcon={<AccessTime />}
+            onClick={handleExportStaffAttendance}
+            disabled={loading}
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.2)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+              fontSize: '0.75rem',
+            }}
+          >
+            Учет времени
           </Button>
         )}
 

@@ -52,9 +52,8 @@ import { Search as SearchIcon } from '@mui/icons-material';
 import { useSort } from '../../../shared/hooks/useSort';
 import ExportButton from '../../../shared/components/ExportButton';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
-import {
-  exportStaffAttendance,
-} from '../../../shared/utils/excelExport';
+import { exportData } from '../../../shared/utils/exportUtils';
+
 import { useDate } from '../../../app/context/DateContext';
 import DateNavigator from '../../../shared/components/DateNavigator';
 
@@ -406,11 +405,10 @@ const StaffSchedule: React.FC = () => {
 
     try {
       setLoading(true);
-      const shiftsForMonth = await getShifts(
-        monthStart.format('YYYY-MM-DD'),
-        monthEnd.format('YYYY-MM-DD'),
-      );
-      await exportStaffAttendance(shiftsForMonth, period);
+      await exportData('staff-schedule', 'xlsx', {
+        startDate: monthStart.format('YYYY-MM-DD'),
+        endDate: monthEnd.format('YYYY-MM-DD'),
+      });
       enqueueSnackbar('Отчет за месяц экспортирован', { variant: 'success' });
     } catch (e: any) {
       console.error('Error exporting staff schedule:', e);

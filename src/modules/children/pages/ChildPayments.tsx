@@ -46,7 +46,8 @@ import { useGroups } from '../../../app/context/GroupsContext';
 import childPaymentApi from '../services/childPayment';
 import { IChildPayment, Child, Group } from '../../../shared/types/common';
 import moment from 'moment';
-import { exportChildPayments } from '../../../shared/utils/excelExport';
+import { exportData } from '../../../shared/utils/exportUtils';
+
 import { importChildPayments } from '../../../shared/services/importService';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 import DateNavigator from '../../../shared/components/DateNavigator';
@@ -456,7 +457,7 @@ const ChildPayments: React.FC = () => {
           _periodStart: p.period?.start ? new Date(p.period.start).getTime() : 0
         };
       });
-  }, [payments, childrenMap, groupsMap, nameFilter, groupFilter]);
+  }, [payments, childrenMap, groupsMap, nameFilter, groupFilter, statusFilter, paymentTypeFilter]);
 
   const { items: sortedPayments, requestSort, sortConfig } = useSort(processedPayments);
 
@@ -575,8 +576,14 @@ const ChildPayments: React.FC = () => {
     }
   }, [fetchPayments]);
 
-  const handleExport = () => {
-    exportChildPayments(sortedPayments, children, groups);
+  const handleExport = async () => {
+    await exportData('child-payments', 'xlsx', {
+      monthPeriod: moment(currentDate).format('YYYY-MM'),
+      name: nameFilter,
+      group: groupFilter,
+      status: statusFilter,
+      paymentType: paymentTypeFilter,
+    });
   };
 
   const handleImportChildPayments = async () => {

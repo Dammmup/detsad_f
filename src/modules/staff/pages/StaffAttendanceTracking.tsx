@@ -80,6 +80,7 @@ import { useSnackbar } from 'notistack';
 import { collectDeviceMetadata } from '../../../shared/utils/deviceMetadata';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 import { useSort } from '../../../shared/hooks/useSort';
+import { exportData } from '../../../shared/utils/exportUtils';
 moment.locale('ru');
 
 interface TimeRecord {
@@ -461,12 +462,9 @@ const StaffAttendanceTracking: React.FC = () => {
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
   const [currentStaffId, setCurrentStaffId] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-  const [viewMode, setViewMode] = useState<'day' | 'range'>(() => {
-    const saved = localStorage.getItem('sat_viewMode');
-    return (saved === 'day' || saved === 'range') ? saved : 'day';
-  });
-  const [startDate, setStartDate] = useState(() => localStorage.getItem('sat_startDate') || moment().format('YYYY-MM-DD'));
-  const [endDate, setEndDate] = useState(() => localStorage.getItem('sat_endDate') || moment().format('YYYY-MM-DD'));
+  const [viewMode, setViewMode] = useState<'day' | 'range'>('day');
+  const [startDate, setStartDate] = useState(() => moment().startOf('month').format('YYYY-MM-DD'));
+  const [endDate, setEndDate] = useState(() => moment().endOf('month').format('YYYY-MM-DD'));
   const [workingHours, setWorkingHours] = useState({ start: '09:00', end: '18:00' });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
@@ -1161,6 +1159,47 @@ const StaffAttendanceTracking: React.FC = () => {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      let exportFilters: any = {};
+      if (viewMode === 'day') {
+        const formattedDate = moment(selectedDate).format('YYYY-MM-DD');
+        exportFilters.startDate = formattedDate;
+        exportFilters.endDate = formattedDate;
+      } else {
+        exportFilters.startDate = startDate;
+        exportFilters.endDate = endDate;
+      }
+      if (selectedStaff !== 'all') exportFilters.staffId = selectedStaff;
+
+      await exportData('staff-attendance-tracking', 'xlsx', exportFilters);
+      enqueueSnackbar('Отчет успешно экспортирован', { variant: 'success' });
+    } catch (e) {
+      console.error('Export error:', e);
+      enqueueSnackbar('Ошибка при экспорте', { variant: 'error' });
+    }
+  };
+
+  const handleExportFullMonth = async () => {
+    try {
+      const monthStart = moment(selectedDate).startOf('month').format('YYYY-MM-DD');
+      const monthEnd = moment(selectedDate).endOf('month').format('YYYY-MM-DD');
+      
+      let exportFilters: any = {
+        startDate: monthStart,
+        endDate: monthEnd
+      };
+      
+      if (selectedStaff !== 'all') exportFilters.staffId = selectedStaff;
+
+      await exportData('staff-attendance-tracking', 'xlsx', exportFilters);
+      enqueueSnackbar('Отчет за месяц успешно экспортирован', { variant: 'success' });
+    } catch (e) {
+      console.error('Export month error:', e);
+      enqueueSnackbar('Ошибка при экспорте за месяц', { variant: 'error' });
+    }
+  };
+
   const handleSelectRecord = useCallback((id: string, checked: boolean) => {
     if (checked) {
       setSelectedIds(prev => [...prev, id]);
@@ -1537,6 +1576,24 @@ const StaffAttendanceTracking: React.FC = () => {
             size={isSmallMobile ? 'small' : 'medium'}
           >
             {isSmallMobile ? 'Комп.' : 'Массовая корректировка'}
+          </Button>
+          <Button
+            variant='contained'
+            color='success'
+            startIcon={<FileUpload />}
+            onClick={handleExport}
+            size={isSmallMobile ? 'small' : 'medium'}
+          >
+            {isSmallMobile ? 'Эксп.' : 'Экспорт'}
+          </Button>
+          <Button
+            variant='contained'
+            color='info'
+            startIcon={<FileUpload />}
+            onClick={handleExportFullMonth}
+            size={isSmallMobile ? 'small' : 'medium'}
+          >
+            {isSmallMobile ? 'Месяц' : 'Экспорт за месяц'}
           </Button>
           <AuditLogButton entityType="staffAttendance" />
         </Box>

@@ -153,7 +153,14 @@ const StaffRow = React.memo(({
   return (
     <TableRow key={member.id || member._id}>
       <TableCell style={{ fontWeight: 'bold', width: 50 }}>{index + 1}</TableCell>
-      <TableCell>{member.fullName || member.name}</TableCell>
+      <TableCell>
+        <Box display="flex" alignItems="center" gap={1.5}>
+          <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: '1rem' }}>
+            {(member.fullName || member.name)?.[0] || 'S'}
+          </Avatar>
+          {member.fullName || member.name}
+        </Box>
+      </TableCell>
       {!isExternal && <TableCell>{member.iin || '—'}</TableCell>}
       <TableCell>{translateRole(member.role || member.type || '')}</TableCell>
       <TableCell>
@@ -711,7 +718,7 @@ const Staff = () => {
                         direction={sortConfig.direction || 'asc'}
                         onClick={() => requestSort('fullName')}
                       >
-                        ФИО
+                        Сотрудник
                       </TableSortLabel>
                     </TableCell>
                     {activeTab !== 'external' && <TableCell>ИИН</TableCell>}

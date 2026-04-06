@@ -58,9 +58,8 @@ import {
 } from '../services/childAttendance';
 import { useAuth } from '../../../app/context/AuthContext';
 import { useDate } from '../../../app/context/DateContext';
-import {
-  exportChildrenAttendance,
-} from '../../../shared/utils/excelExport';
+import { exportData } from '../../../shared/utils/exportUtils';
+
 import AttendanceBulkModal from '../components/AttendanceBulkModal';
 import ExportButton from '../../../shared/components/ExportButton';
 import DateNavigator from '../../../shared/components/DateNavigator';
@@ -447,33 +446,16 @@ const WeeklyAttendance: React.FC = () => {
     setSelectedGroup(event.target.value as string);
   };
 
-  const handleExport = (type: string) => {
+  const handleExport = async (type: string) => {
     if (type === 'children-attendance') {
       const weekStart = moment(currentDate).startOf('isoWeek');
       const weekEnd = moment(currentDate).endOf('isoWeek');
-      const period = `${weekStart.format('DD.MM')} - ${weekEnd.format('DD.MM')}`;
-      
-      const groupName = groups.find(g => (g.id || g._id) === selectedGroup)?.name || 'Группа';
-      
-      // Преобразуем объект attendanceData в массив для экспорта
-      const attendanceArray: any[] = [];
-      Object.entries(attendanceData).forEach(([childId, dates]) => {
-        Object.entries(dates).forEach(([date, data]) => {
-          attendanceArray.push({
-            childId,
-            date,
-            status: data.status,
-            notes: data.notes
-          });
-        });
-      });
 
-      exportChildrenAttendance(
-        attendanceArray,
-        groupName,
-        period,
-        filteredChildren
-      );
+      await exportData('children-attendance', 'xlsx', {
+        groupId: selectedGroup,
+        startDate: weekStart.format('YYYY-MM-DD'),
+        endDate: weekEnd.format('YYYY-MM-DD'),
+      });
     }
   };
 

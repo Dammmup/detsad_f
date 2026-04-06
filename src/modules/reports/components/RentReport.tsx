@@ -462,38 +462,22 @@ const RentReport: React.FC<Props> = ({ userId }) => {
 
   const handleExportToExcel = async () => {
     try {
-      const { utils, writeFile } = await import('xlsx');
+      const { exportData } = await import('../../../shared/utils/exportUtils');
+      
+      const filters: any = {};
+      
+      // Добавляем фильтры по выбранным арендаторам, если они есть
+      if (selectedTenantIds.length > 0) {
+        filters.tenantIds = selectedTenantIds;
+      }
 
-      const exportData = rows.map(row => {
-        const total = Math.max(0, (row.amount || row.accruals || 0) - row.paidAmount);
-        return {
-          'Арендатор': row.tenantName,
-          'Сумма аренды': row.amount || row.accruals || 0,
-          'Оплачено': row.paidAmount,
-          'Долг': row.debt,
-          'Переплата': row.overpayment,
-          'Статус': row.status,
-          'Дата оплаты': row.paymentDate ? new Date(row.paymentDate).toLocaleDateString('ru-RU') : 'Не оплачено',
-        };
+      await exportData('rents', 'xlsx', {
+        period: selectedMonth,
+        filters
       });
-
-      const worksheet = utils.json_to_sheet(exportData);
-
-      const colWidths = [
-        { wch: 25 },
-        { wch: 15 },
-        { wch: 20 },
-        { wch: 18 },
-        { wch: 12 },
-        { wch: 15 },
-      ];
-      worksheet['!cols'] = colWidths;
-
-      const workbook = utils.book_new();
-      utils.book_append_sheet(workbook, worksheet, 'Арендные платежи');
-
-      const fileName = `арендные_платежи_${new Date().toLocaleString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\./g, '-')}.xlsx`;
-      writeFile(workbook, fileName);
+      
+      setSnackbarMessage('Экспорт запущен');
+      setSnackbarOpen(true);
     } catch (error) {
       console.error('Ошибка при экспорте в Excel:', error);
       setSnackbarMessage('Ошибка при экспорте файла');

@@ -27,14 +27,12 @@ import {
 import { useAuth } from '../../../app/context/AuthContext';
 
 
+import { exportData } from '../../../shared/utils/exportUtils';
 import { getChildAttendance } from '../../children/services/childAttendance';
 import { getShifts } from '../../staff/services/shifts';
 import { getPayrolls } from '../../staff/services/payroll';
 import {
   getRents,
-  exportSalaryReport,
-  exportChildrenReport,
-  exportAttendanceReport,
   sendReportByEmail,
 } from '../../reports/services/reports';
 import childPaymentApi from '../../children/services/childPayment';
@@ -241,126 +239,42 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
     try {
       setLoading(true);
 
-
       switch (entity.id) {
         case 'childAttendance':
-          const attendanceBlob = await exportAttendanceReport({
+          await exportData('children-attendance', 'xlsx', {
             startDate: new Date().toISOString().split('T')[0],
             endDate: new Date().toISOString().split('T')[0],
-            format: entity.format,
             includeStatistics: true,
             includeCharts: true,
           });
-          const attendanceUrl = window.URL.createObjectURL(
-            attendanceBlob as Blob,
-          );
-          const attendanceLink = document.createElement('a');
-          attendanceLink.href = attendanceUrl;
-          attendanceLink.download = `attendance_report_${new Date().toISOString().split('T')[0]}.${entity.format === 'xlsx' ? 'xlsx' : entity.format}`;
-          document.body.appendChild(attendanceLink);
-          attendanceLink.click();
-          document.body.removeChild(attendanceLink);
-          window.URL.revokeObjectURL(attendanceUrl);
           break;
 
         case 'staffShifts':
-          const { exportStaffAttendanceCurrentMonth } = await import(
-            '../../../shared/utils/documentExport'
-          );
-          const { getCurrentMonthRange } = await import(
-            '../../../shared/utils/excelExport'
-          );
-          const { getShifts } = await import('../../staff/services/shifts');
-
-          const { startDate, endDate } = getCurrentMonthRange();
-          const shiftsData = await getShifts(startDate, endDate);
-          await exportStaffAttendanceCurrentMonth(shiftsData);
+          await exportData('staff-schedule', 'xlsx', {
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: new Date().toISOString().split('T')[0],
+          });
           break;
 
         case 'childPayment':
-          const childrenBlob = await exportChildrenReport({
-            groupId: undefined,
-            format: entity.format,
-            includeParentInfo: true,
-            includeHealthInfo: true,
+          // В данном контексте это скорее отчет по оплатам, а не список детей
+          await exportData('child-payments', 'xlsx', {
+            period: new Date().toISOString().substring(0, 7)
           });
-          const childrenUrl = window.URL.createObjectURL(childrenBlob as Blob);
-          const childrenLink = document.createElement('a');
-          childrenLink.href = childrenUrl;
-          childrenLink.download = `children_report_${new Date().toISOString().split('T')[0]}.${entity.format === 'xlsx' ? 'xlsx' : entity.format}`;
-          document.body.appendChild(childrenLink);
-          childrenLink.click();
-          document.body.removeChild(childrenLink);
-          window.URL.revokeObjectURL(childrenUrl);
           break;
 
         case 'payroll':
-          const payrollBlob = await exportSalaryReport({
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: new Date().toISOString().split('T')[0],
-            format: entity.format,
-            includeDeductions: true,
-            includeBonus: true,
+          await exportData('salary', 'xlsx', {
+            period: new Date().toISOString().substring(0, 7)
           });
-          const payrollUrl = window.URL.createObjectURL(payrollBlob as Blob);
-          const payrollLink = document.createElement('a');
-          payrollLink.href = payrollUrl;
-          payrollLink.download = `salary_report_${new Date().toISOString().split('T')[0]}.${entity.format === 'xlsx' ? 'xlsx' : entity.format}`;
-          document.body.appendChild(payrollLink);
-          payrollLink.click();
-          document.body.removeChild(payrollLink);
-          window.URL.revokeObjectURL(payrollUrl);
           break;
 
         case 'rent':
-          const rentData = await getRents();
-          const rentHeaders = [
-            'Арендатор',
-            'Адрес',
-            'Площадь',
-            'Стоимость',
-            'Дата начала',
-            'Дата окончания',
-            'Статус',
-          ];
-          const rentDataRows = rentData.map((rent: any) => [
-            rent.tenantId
-              ? typeof rent.tenantId === 'object'
-                ? rent.tenantId.fullName
-                : 'Арендатор'
-              : 'Не указан',
-            rent.period || '',
-            '',
-            rent.amount ? `${rent.amount} тг` : '',
-            rent.startDate
-              ? new Date(rent.startDate).toLocaleDateString('ru-RU')
-              : '',
-            rent.endDate
-              ? new Date(rent.endDate).toLocaleDateString('ru-RU')
-              : '',
-            rent.status || '',
-          ]);
-
-          const rentConfig = {
-            filename: `Аренда_${new Date().toISOString().split('T')[0]}`,
-            sheetName: 'Аренда',
-            title: 'Арендные платежи',
-            headers: rentHeaders,
-            data: rentDataRows,
-            includeDate: true,
-          };
-
-          const { exportToExcel: exportRentToExcel } = await import(
-            '../../../shared/utils/excelExport'
-          );
-          exportRentToExcel(rentData);
+          await exportData('rents', 'xlsx', {});
           break;
 
         case 'schedule':
-
-          alert(
-            `Экспорт отчета по расписанию в формате ${entity.format} запущен!`,
-          );
+          alert(`Экспорт отчета по расписанию в формате ${entity.format} запустится скоро (в разработке)`);
           break;
 
         default:
@@ -379,78 +293,16 @@ const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
 
   const handleQuickExportAll = async () => {
     try {
-
-
-
-      alert(
-        'Досрочный экспорт всех сущностей запущен (создание детализированных xlsx-файлов)',
-      );
-
-
-      const currentDate = new Date();
-      const month = currentDate.getMonth() + 1;
-      const year = currentDate.getFullYear();
-
-
-      const exportPromises = exportEntities.map(async (entity) => {
-        const fileName = `export_${entity.id}_${new Date().toISOString().split('T')[0]}.xlsx`;
-
-
-        let content = '';
-
-        switch (entity.id) {
-          case 'childAttendance':
-            content = `Посещаемость детей за ${month} ${year} год\nДети,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31\nДима Иванов,1,1,0,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1\nАнна Петрова,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1\nСергей Сидоров,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1`;
-            break;
-          case 'childPayment':
-            content = `Оплаты за посещение детей за ${month} ${year} год\nДети,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31\nДима Иванов,1000,1000,0,1000,1000,0,1000,1000,1000,0,1000,1000,0,1000,1000,1000,0,1000,1000,1000,0,1000,1000,0,1000,1000,1000,0,1000,1000,1000\nАнна Петрова,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000,0,1000,1000\nСергей Сидоров,1000,1000,1000,0,1000,1000,0,1000,1000,1000,0,1000,1000,1000,0,1000,1000,0,1000,1000,1000,0,1000,1000,1000,0,1000,1000,1000,0,1000`;
-            break;
-          case 'staffShifts':
-
-            const shiftsDataForExport = await getShifts();
-
-            const {
-              getCurrentPeriod: getCurrentShiftPeriodForExport,
-              exportStaffAttendance,
-            } = await import('../../../shared/utils/excelExport');
-            const shiftPeriodForExport = getCurrentShiftPeriodForExport();
-
-
-            await exportStaffAttendance(
-              shiftsDataForExport,
-              shiftPeriodForExport,
-            );
-            return;
-          case 'payroll':
-            content = `Зарплаты за ${month} ${year} год\nСотрудники,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31\nИван Петров,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,50000\nМария Сидорова,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000,0,50000,50000\nАлексей Козлов,50000,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,50000,0,50000,50000,0,50000,50000,50000,0,50000,50000,50000,0,50000,50000,50000,0,50000`;
-            break;
-          case 'rent':
-            content = `Аренда за ${month} ${year} год\nАрендаторы,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31\nИван Петров,25000,25000,0,25000,25000,0,25000,25000,25000,0,25000,25000,0,25000,25000,25000,0,25000,25000,25000,0,25000,25000,0,25000,25000,25000,0,25000,25000,25000\nМария Сидорова,25000,0,25000,25000,0,25000,25000,0,25000,25000,0,25000,25000,0,25000,25000,0,25000,25000,0,25000,25000,0,25000,25000,0,25000,25000,0,25000,25000\nАлексей Козлов,25000,25000,25000,0,25000,25000,0,25000,25000,25000,0,25000,25000,25000,0,25000,25000,0,25000,25000,25000,0,25000,25000,25000,0,25000,25000,25000,0,25000`;
-            break;
-          default:
-            content = `Экспорт данных для сущности: ${entity.id}\nДата,Данные\n${new Date().toLocaleDateString()},Пример данных`;
-        }
-
-
-        const blob = new Blob([content], {
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      });
-
-
-      await Promise.all(exportPromises);
-
-      alert('Все сущности успешно экспортированы в xlsx-файлы');
+      setLoading(true);
+      // Для упрощения просто вызываем экспорт по очереди для всех сущностей
+      for (const entity of exportEntities) {
+        await handleExecuteExportForEntity(entity);
+      }
+      alert('Все сущности успешно экспортированы');
     } catch (err) {
-      setError('Ошибка досрочного экспорта: ' + (err as Error).message);
+      setError('Ошибка массового экспорта: ' + (err as Error).message);
+    } finally {
+      setLoading(false);
     }
   };
 

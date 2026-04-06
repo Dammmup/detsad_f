@@ -62,6 +62,7 @@ import { useStaff } from '../../../app/context/StaffContext';
 import { getKindergartenSettings, updateKindergartenSettings } from '../../settings/services/settings';
 import FinesDetailsDialog from './FinesDetailsDialog';
 import PayrollTotalDialog from './PayrollTotalDialog';
+import { exportData } from '../../../shared/utils/exportUtils';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 
 interface Props {
@@ -401,57 +402,17 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
 
   const handleExportToExcel = async () => {
     try {
-      const { utils, writeFile } = await import('xlsx');
-
-      // Подготавливаем данные для экспорта
-      const exportData = rows.map(row => ({
-        'Сотрудник': row.staffName,
-        'Оклад': row.baseSalary,
-        'Тип оклада': row.baseSalaryType,
-        'Отработано (см)': row.workedShifts,
-        'Отработано (дн)': row.workedDays,
-        'Начисления': row.accruals,
-        'Премия': row.bonuses,
-        'Аванс': row.advance,
-        'Вычеты': row.penalties,
-        'Ставка за опоздание': `${globalPenaltyRate} тг/мин`,
-        'Итого': row.total,
-        'Статус': row.status,
-      }));
-      // Создаем worksheet
-      const worksheet = utils.json_to_sheet(exportData);
-
-      // Устанавливаем ширину колонок для лучшего отображения
-      const colWidths = [
-        { wch: 25 }, // Сотрудник
-        { wch: 15 }, // Начисления
-        { wch: 10 }, // Премия
-        { wch: 10 }, // Аванс
-        { wch: 10 }, // Вычеты
-        { wch: 20 }, // Ставка за опоздание
-        { wch: 15 }, // Итого
-        { wch: 12 }, // Статус
-        { wch: 12 }, // Оклад
-        { wch: 12 }, // Тип оклада
-        { wch: 15 }, // Отработано
-      ];
-      worksheet['!cols'] = colWidths;
-
-      // Создаем workbook и добавляем worksheet
-      const workbook = utils.book_new();
-      utils.book_append_sheet(workbook, worksheet, 'Расчетные листы');
-
-      // Генерируем имя файла с датой
-      const fileName = `расчетный_лист_${new Date().toLocaleString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\./g, '-')}.xlsx`;
-
-      // Сохраняем файл
-      writeFile(workbook, fileName);
+      await exportData(
+        'salary',
+        'xlsx',
+        { period: selectedMonth },
+        `зарплатная_ведомость_${selectedMonth}`
+      );
     } catch (error) {
       console.error('Ошибка при экспорте в Excel:', error);
       setSnackbarMessage('Ошибка при экспорте файла');
       setSnackbarOpen(true);
     }
-
   }
   // Open confirmation dialog for generate
   const handleOpenConfirmDialog = () => {

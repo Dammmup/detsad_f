@@ -37,16 +37,27 @@ const Login: React.FC = () => {
     }
     setLoading(true);
     setError(null);
+
+    // Нормализация номера перед отправкой
+    let normalizedPhone = phone.replace(/[^\d+]/g, '');
+    if (normalizedPhone.length === 11 && normalizedPhone.startsWith('8')) {
+      normalizedPhone = '+7' + normalizedPhone.substring(1);
+    } else if (normalizedPhone.length === 10 && !normalizedPhone.startsWith('+')) {
+      normalizedPhone = '+7' + normalizedPhone;
+    } else if (normalizedPhone.length === 11 && normalizedPhone.startsWith('7')) {
+      normalizedPhone = '+' + normalizedPhone;
+    }
+
     try {
-      const authResponse = await authApi.login({ phone, password });
+      const authResponse = await authApi.login({ phone: normalizedPhone, password });
 
       const userData: User = {
         _id: authResponse.user._id || authResponse.user.id || '',
         id: authResponse.user.id || authResponse.user._id || '',
         fullName: authResponse.user.fullName || '',
         role: authResponse.user.role || 'staff',
-        phone: phone,
-        email: authResponse.user.phone || phone,
+        phone: normalizedPhone,
+        email: authResponse.user.phone || normalizedPhone,
         active: authResponse.user.active ?? true,
         createdAt: authResponse.user.createdAt || new Date().toISOString(),
         updatedAt: authResponse.user.updatedAt || new Date().toISOString(),
@@ -93,6 +104,8 @@ const Login: React.FC = () => {
           <TextField
             fullWidth
             label='Номер телефона'
+            placeholder="+7 (___) ___-__-__"
+            helperText="Можно вводить с 8 или +7"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             onKeyDown={handleKeyDown}
