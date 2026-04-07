@@ -190,20 +190,30 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
               >
                 Система управления
               </Typography>
-              <Typography
-                variant='subtitle2'
-                noWrap
-                component='div'
-                sx={{ 
-                  fontWeight: 400, 
-                  letterSpacing: 0.5, 
-                  opacity: 0.9, 
-                  fontSize: { xs: '0.65rem', sm: '0.8rem' },
-                  display: { xs: 'none', sm: 'block' } // Скрываем имя на очень маленьких экранах, чтобы не толкало кнопки
-                }}
-              >
-                {currentUser?.fullName || ''}
-              </Typography>
+                <Box 
+                  onClick={() => navigate('/app/profile')}
+                  sx={{ 
+                    cursor: 'pointer',
+                    '&:hover': { opacity: 0.8 },
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                >
+                  <Typography
+                    variant='subtitle2'
+                    noWrap
+                    component='div'
+                    sx={{ 
+                      fontWeight: 400, 
+                      letterSpacing: 0.5, 
+                      opacity: 0.9, 
+                      fontSize: { xs: '0.65rem', sm: '0.8rem' },
+                      display: { xs: 'none', sm: 'block' } 
+                    }}
+                  >
+                    {currentUser?.fullName || ''}
+                  </Typography>
+                </Box>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexShrink: 0 }}>
@@ -243,7 +253,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
               Выйти
             </Button>
             {/* Меню для профиля/выхода */}
-            <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Box sx={{ display: { xs: 'flex', sm: 'none' }, gap: 0.5 }}>
               <IconButton
                 color='inherit'
                 onClick={handleMenuOpen}

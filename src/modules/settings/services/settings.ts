@@ -58,6 +58,8 @@ export interface KindergartenSettings {
   payroll?: {
     latePenaltyRate: number;
     latePenaltyType: 'fixed' | 'per_minute' | 'per_5_minutes' | 'per_10_minutes';
+    missingChildAttendancePenaltyRate?: number;
+    missingChildAttendancePenaltyEnabled?: boolean;
   };
   holidays?: string[];
 }
@@ -183,7 +185,9 @@ export const getKindergartenSettings = async () => {
       currency: response.data.currency,
       payroll: {
         latePenaltyRate: response.data.payroll?.latePenaltyRate || 50,
-        latePenaltyType: response.data.payroll?.latePenaltyType || 'per_minute'
+        latePenaltyType: response.data.payroll?.latePenaltyType || 'per_minute',
+        missingChildAttendancePenaltyRate: response.data.payroll?.missingChildAttendancePenaltyRate || 0,
+        missingChildAttendancePenaltyEnabled: response.data.payroll?.missingChildAttendancePenaltyEnabled || false
       }
     };
 
@@ -230,7 +234,9 @@ export const updateKindergartenSettings = async (
       currency: response.data.currency,
       payroll: {
         latePenaltyRate: response.data.payroll?.latePenaltyRate || 50,
-        latePenaltyType: response.data.payroll?.latePenaltyType || 'per_minute'
+        latePenaltyType: response.data.payroll?.latePenaltyType || 'per_minute',
+        missingChildAttendancePenaltyRate: response.data.payroll?.missingChildAttendancePenaltyRate || 0,
+        missingChildAttendancePenaltyEnabled: response.data.payroll?.missingChildAttendancePenaltyEnabled || false
       }
     };
 

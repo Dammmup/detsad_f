@@ -109,6 +109,9 @@ const Groups = () => {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [childSearchTerms, setChildSearchTerms] = useState<{ [groupId: string]: string }>({});
+
   const [expandedGroups, setExpandedGroups] = useState<{
     [groupId: string]: {
       expanded: boolean;
@@ -146,7 +149,6 @@ const Groups = () => {
 
   const teacherList = useMemo(() => {
     return staff
-      .filter((u) => ['teacher', 'assistant'].includes(u.role))
       .map((u) => ({
         id: u.id || (u as any)._id,
         fullName: u.fullName,
@@ -170,18 +172,12 @@ const Groups = () => {
     }
   }, [isLoggedIn, currentUser, authLoading, contextFetchGroups]);
 
-  // Загрузка данных при первом рендере
   useEffect(() => {
     if (isLoggedIn && currentUser && !authLoading) {
       fetchGroupsInternal();
       fetchTeachers();
     }
   }, [isLoggedIn, currentUser, authLoading, fetchGroupsInternal]);
-
-
-
-
-
 
   const handleOpenModal = (group?: GroupInternal) => {
     if (group) {
@@ -265,7 +261,6 @@ const Groups = () => {
       }
 
       handleCloseModal();
-      // Либо доверяем обновлению в контексте, либо форсируем перезагрузку
       await contextFetchGroups(true);
     } catch (e: any) {
       setSaveError(getErrorMessage(e));
@@ -353,33 +348,71 @@ const Groups = () => {
     }
   };
 
+  const handleChildSearchChange = (groupId: string, value: string) => {
+    setChildSearchTerms(prev => ({
+      ...prev,
+      [groupId]: value
+    }));
+  };
+
+  const filteredGroups = useMemo(() => {
+    if (!searchTerm) return contextGroups;
+    const lowerSearch = searchTerm.toLowerCase();
+    return contextGroups.filter(g => 
+      g.name.toLowerCase().includes(lowerSearch) || 
+      (g.description && g.description.toLowerCase().includes(lowerSearch))
+    );
+  }, [contextGroups, searchTerm]);
+
   const renderGroupChildren = (groupId: string, groupName: string) => {
     const groupState = expandedGroups[groupId];
     if (!groupState?.expanded) return null;
 
+    const childSearch = (childSearchTerms[groupId] || '').toLowerCase();
+    const filteredChildren = (groupState.children || []).filter(child => {
+      const name = child.fullName.toLowerCase();
+      // Исключаем итоговые строки (регистронезависимо)
+      if (name.includes('итого') || name.includes('всего')) {
+        return false;
+      }
+      
+      if (!childSearch) return true;
+      return child.fullName.toLowerCase().includes(childSearch) || 
+             (child.parentName && child.parentName.toLowerCase().includes(childSearch));
+    });
+
     return (
       <Box sx={{ mt: 2, mb: 1, px: isMobile ? 1 : 2 }}>
-        <Typography
-          variant='h6'
-          gutterBottom
-          component='div'
-          sx={{ color: '#1890ff', fontSize: isMobile ? '1rem' : '1.25rem' }}
-        >
-          {isMobile ? `Дети: ${groupName}` : `Дети группы "${groupName}"`}
-        </Typography>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1} flexWrap="wrap" gap={1}>
+          <Typography
+            variant='h6'
+            gutterBottom
+            component='div'
+            sx={{ color: '#1890ff', fontSize: isMobile ? '1rem' : '1.25rem', mb: 0 }}
+          >
+            {isMobile ? `Дети: ${groupName}` : `Дети группы "${groupName}"`}
+          </Typography>
+          <TextField
+            size="small"
+            placeholder="Поиск ребенка..."
+            value={childSearchTerms[groupId] || ''}
+            onChange={(e) => handleChildSearchChange(groupId, e.target.value)}
+            sx={{ width: isMobile ? '100%' : '250px' }}
+          />
+        </Box>
         
         {groupState.loading ? (
           <Box display="flex" justifyContent="center" alignItems='center' py={2}>
             <CircularProgress size={24} />
             <Typography variant='body2' sx={{ ml: 2 }}>Загрузка...</Typography>
           </Box>
-        ) : !groupState.children?.length ? (
+        ) : !filteredChildren.length ? (
           <Typography variant="body2" color='text.secondary' sx={{ py: 1 }}>
-            В группе нет детей
+            {childSearch ? 'Дети не найдены' : 'В группе нет детей'}
           </Typography>
         ) : isMobile ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {groupState.children.map((child: Child, index: number) => (
+            {filteredChildren.map((child: Child, index: number) => (
               <Box key={child.id || index} sx={{ p: 1, bgcolor: '#f8f9fa', borderRadius: 1, border: '1px solid #eee' }}>
                 <Typography variant="subtitle2">{child.fullName}</Typography>
                 <Typography variant="caption" display="block">Родитель: {child.parentName || '—'}</Typography>
@@ -398,7 +431,7 @@ const Groups = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {groupState.children.map((child: Child, index: number) => (
+              {filteredChildren.map((child: Child, index: number) => (
                 <TableRow key={child.id || index}>
                   <TableCell>{child.fullName}</TableCell>
                   <TableCell>{child.parentName || '—'}</TableCell>
@@ -423,7 +456,14 @@ const Groups = () => {
             <GroupsIcon style={{ marginRight: 8, verticalAlign: 'middle' }} />
             Группы
           </h1>
-          <Box sx={{ display: 'flex', gap: 1, width: isMobile ? '100%' : 'auto', flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 1, width: isMobile ? '100%' : 'auto', flexWrap: 'wrap', alignItems: 'center' }}>
+            <TextField
+              size="small"
+              placeholder="Поиск группы..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              sx={{ minWidth: '200px' }}
+            />
             <AuditLogButton entityType="group" />
             <ExportButton
               exportTypes={[{ value: 'groups', label: 'Список групп' }]}
@@ -454,11 +494,11 @@ const Groups = () => {
 
         {!contextLoading && !contextError && (
           <>
-            {contextGroups.length === 0 ? (
-              <Alert severity='info'>Группы не найдены. Добавьте первую группу!</Alert>
+            {filteredGroups.length === 0 ? (
+              <Alert severity='info'>Группы не найдены.</Alert>
             ) : isMobile ? (
               <Grid container spacing={2}>
-                {contextGroups.map((group) => (
+                {filteredGroups.map((group) => (
                   <Grid item xs={12} key={group.id}>
                     <Card variant="outlined" sx={{ borderRadius: 2, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
                       <CardContent sx={{ pb: 1 }}>
@@ -481,7 +521,7 @@ const Groups = () => {
                           <Box display="flex" alignItems="center" gap={1}>
                             <Person sx={{ fontSize: 18, color: 'text.secondary' }} />
                             <Typography variant="body2">
-                              Воспитатель: <strong>{group.teacher ? teacherMap.get(group.teacher) || '—' : '—'}</strong>
+                              Воспитатель: <strong>{teacherMap.get(group.teacherId!) || teacherMap.get(group.teacher!) || group.teacher || '—'}</strong>
                             </Typography>
                           </Box>
                           <Box display="flex" alignItems="center" gap={1}>
@@ -511,7 +551,7 @@ const Groups = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {contextGroups.map((group) => (
+                  {filteredGroups.map((group) => (
                     <React.Fragment key={group.id}>
                       <TableRow hover>
                         <TableCell><strong>{group.name}</strong></TableCell>
@@ -525,7 +565,7 @@ const Groups = () => {
                         </TableCell>
                         <TableCell>{group.maxStudents}</TableCell>
                         <TableCell>
-                          {group.teacher ? teacherMap.get(group.teacher) || '—' : '—'}
+                          {teacherMap.get(group.teacherId!) || teacherMap.get(group.teacher!) || group.teacher || '—'}
                         </TableCell>
                         <TableCell align='right'>
                           <IconButton onClick={(e) => handleToggleGroupChildren(e, group.id || "")}>

@@ -510,6 +510,52 @@ const Settings: React.FC = () => {
                 />
               </Grid>
 
+              <Grid item xs={12}>
+                <Divider sx={{ my: 1 }} />
+                <Typography variant='subtitle1' gutterBottom sx={{ mt: 1 }}>
+                  Штраф за отсутствие отметок детей (минимум 3) для воспитателей
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={kindergartenSettings.payroll?.missingChildAttendancePenaltyEnabled || false}
+                      onChange={(e) =>
+                        setKindergartenSettings({
+                          ...kindergartenSettings,
+                          payroll: {
+                            ...kindergartenSettings.payroll!,
+                            missingChildAttendancePenaltyEnabled: e.target.checked,
+                          },
+                        })
+                      }
+                    />
+                  }
+                  label='Включить вычет'
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label='Сумма вычета (за рабочий день сотрудника)'
+                  type='number'
+                  fullWidth
+                  disabled={!kindergartenSettings.payroll?.missingChildAttendancePenaltyEnabled}
+                  value={kindergartenSettings.payroll?.missingChildAttendancePenaltyRate || 0}
+                  onChange={(e) =>
+                    setKindergartenSettings({
+                      ...kindergartenSettings,
+                      payroll: {
+                        ...kindergartenSettings.payroll!,
+                        missingChildAttendancePenaltyRate: parseInt(e.target.value) || 0,
+                      },
+                    })
+                  }
+                />
+              </Grid>
+
               <Grid item xs={12} md={6}>
                 <TextField
                   label='Время начала работы'
