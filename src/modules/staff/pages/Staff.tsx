@@ -129,6 +129,7 @@ const defaultForm: StaffMember = {
   salary: 0,
   rentAmount: 0,
   allowToSeePayroll: false,
+  photo: '',
 };
 
 
@@ -155,8 +156,11 @@ const StaffRow = React.memo(({
       <TableCell style={{ fontWeight: 'bold', width: 50 }}>{index + 1}</TableCell>
       <TableCell>
         <Box display="flex" alignItems="center" gap={1.5}>
-          <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: '1rem' }}>
-            {(member.fullName || member.name)?.[0] || 'S'}
+          <Avatar 
+            src={member.photo || member.avatar} 
+            sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: '1rem' }}
+          >
+            {!(member.photo || member.avatar) && ((member.fullName || member.name)?.[0] || 'S')}
           </Avatar>
           {member.fullName || member.name}
         </Box>
@@ -223,20 +227,23 @@ const StaffRow = React.memo(({
   );
 });
 
-const StaffCard = React.memo(({ 
-  member, 
-  handleOpenModal, 
-  handleDelete, 
+const StaffCard = React.memo(({
+  member,
+  handleOpenModal,
+  handleDelete,
   currentUser,
-  translateRole 
+  translateRole
 }: any) => {
   const isExternal = member.type === 'external' || member.isExternal;
-  
+
   return (
     <Paper sx={{ mb: 2, p: 2, borderRadius: 2, boxShadow: 1, border: '1px solid #eee' }}>
       <Box display="flex" alignItems="center" gap={2} mb={2}>
-        <Avatar sx={{ width: 50, height: 50, bgcolor: 'primary.main' }}>
-          {(member.fullName || member.name)?.[0] || 'S'}
+        <Avatar 
+          src={member.photo || member.avatar} 
+          sx={{ width: 50, height: 50, bgcolor: 'primary.main' }}
+        >
+          {!(member.photo || member.avatar) && ((member.fullName || member.name)?.[0] || 'S')}
         </Avatar>
         <Box>
           <Typography variant="body1" fontWeight="bold">
@@ -246,9 +253,9 @@ const StaffCard = React.memo(({
             {translateRole(member.role || member.type || '')}
           </Typography>
           {!isExternal && (
-            <Chip 
-              label={member.active ? 'Активен' : 'Неактивен'} 
-              size="small" 
+            <Chip
+              label={member.active ? 'Активен' : 'Неактивен'}
+              size="small"
               color={member.active ? 'success' : 'default'}
               sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
             />
@@ -298,13 +305,13 @@ const StaffCard = React.memo(({
 
 const Staff = () => {
   const isMobile = useMediaQuery('(max-width:640px)');
-  const { 
-    staff: allStaff, 
-    loading: staffLoading, 
-    error: staffError, 
-    fetchStaff, 
-    createUser, 
-    updateUser, 
+  const {
+    staff: allStaff,
+    loading: staffLoading,
+    error: staffError,
+    fetchStaff,
+    createUser,
+    updateUser,
     deleteUser,
     updatePayrollSettings,
     updateAllowToSeePayroll,
@@ -315,11 +322,11 @@ const Staff = () => {
     updateExternalSpecialist,
     deleteExternalSpecialist
   } = useStaff();
-  
-  const { 
-    groups, 
-    loading: groupsLoading, 
-    fetchGroups 
+
+  const {
+    groups,
+    loading: groupsLoading,
+    fetchGroups
   } = useGroups();
 
   const loading = staffLoading || groupsLoading;
@@ -425,12 +432,25 @@ const Staff = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (name === 'contactInfo') {
-       setForm({ ...form, [name]: value, phone: value } as any);
+      setForm({ ...form, [name]: value, phone: value } as any);
     } else {
-       setForm({ ...form, [name]: value });
+      setForm({ ...form, [name]: value });
     }
     if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+
+      reader.onloadend = () => {
+        setForm(prev => ({ ...prev, photo: reader.result as string }));
+      };
+
+      reader.readAsDataURL(file);
     }
   };
 
@@ -711,65 +731,65 @@ const Staff = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
-                    <TableCell style={{ fontWeight: 'bold', width: 50 }}>#</TableCell>
-                    <TableCell>
-                      <TableSortLabel
-                        active={sortConfig.key === 'fullName'}
-                        direction={sortConfig.direction || 'asc'}
-                        onClick={() => requestSort('fullName')}
-                      >
-                        Сотрудник
-                      </TableSortLabel>
-                    </TableCell>
-                    {activeTab !== 'external' && <TableCell>ИИН</TableCell>}
-                    <TableCell>
-                      <TableSortLabel
-                        active={sortConfig.key === 'role'}
-                        direction={sortConfig.direction || 'asc'}
-                        onClick={() => requestSort('role')}
-                      >
-                        Должность
-                      </TableSortLabel>
-                    </TableCell>
-                    <TableCell>Контакты</TableCell>
-                    {activeTab !== 'external' && (
-                       <>
-                        <TableCell>Пароль</TableCell>
-                        <TableCell>Статус</TableCell>
-                        <TableCell>
-                          <TableSortLabel
-                            active={sortConfig.key === 'lastLogin'}
-                            direction={sortConfig.direction || 'asc'}
-                            onClick={() => requestSort('lastLogin')}
-                          >
-                            Последняя активность
-                          </TableSortLabel>
-                        </TableCell>
-                       </>
-                    )}
-                    <TableCell align='right'>Действия</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {Array.isArray(sortedStaff) ? sortedStaff.map((member, index) => (
-                    <StaffRow
-                      key={member.id || member._id}
-                      member={member}
-                      currentUser={currentUser}
-                      translateRole={translateRole}
-                      handleOpenModal={handleOpenModal}
-                      handleDelete={handleDelete}
-                      index={index}
-                      isExternal={activeTab === 'external'}
-                    />
-                  )) : (
-                    <TableRow>
-                      <TableCell colSpan={6} align="center">Список пуст или не удалось загрузить данные</TableCell>
+                      <TableCell style={{ fontWeight: 'bold', width: 50 }}>#</TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortConfig.key === 'fullName'}
+                          direction={sortConfig.direction || 'asc'}
+                          onClick={() => requestSort('fullName')}
+                        >
+                          Сотрудник
+                        </TableSortLabel>
+                      </TableCell>
+                      {activeTab !== 'external' && <TableCell>ИИН</TableCell>}
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortConfig.key === 'role'}
+                          direction={sortConfig.direction || 'asc'}
+                          onClick={() => requestSort('role')}
+                        >
+                          Должность
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell>Контакты</TableCell>
+                      {activeTab !== 'external' && (
+                        <>
+                          <TableCell>Пароль</TableCell>
+                          <TableCell>Статус</TableCell>
+                          <TableCell>
+                            <TableSortLabel
+                              active={sortConfig.key === 'lastLogin'}
+                              direction={sortConfig.direction || 'asc'}
+                              onClick={() => requestSort('lastLogin')}
+                            >
+                              Последняя активность
+                            </TableSortLabel>
+                          </TableCell>
+                        </>
+                      )}
+                      <TableCell align='right'>Действия</TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {Array.isArray(sortedStaff) ? sortedStaff.map((member, index) => (
+                      <StaffRow
+                        key={member.id || member._id}
+                        member={member}
+                        currentUser={currentUser}
+                        translateRole={translateRole}
+                        handleOpenModal={handleOpenModal}
+                        handleDelete={handleDelete}
+                        index={index}
+                        isExternal={activeTab === 'external'}
+                      />
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">Список пуст или не удалось загрузить данные</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             )}
           </>
         )}
@@ -797,6 +817,37 @@ const Staff = () => {
           <DialogContent>
             <FormErrorAlert error={saveError} onClose={() => setSaveError(null)} />
             <Grid container spacing={2} sx={{ mt: 1 }}>
+              {/* Фотография */}
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                  <Box sx={{ position: 'relative', textAlign: 'center' }}>
+                    <Avatar
+                      src={form.photo || form.avatar}
+                      alt={form.fullName || 'Фото сотрудника'}
+                      sx={{
+                        width: 100,
+                        height: 100,
+                        mb: 1,
+                        border: '2px solid #e0e0e0',
+                        cursor: 'pointer',
+                      }}
+                    />
+                    <input
+                      accept='image/*'
+                      id='staff-photo-upload'
+                      type='file'
+                      style={{ display: 'none' }}
+                      onChange={handlePhotoChange}
+                    />
+                    <label htmlFor='staff-photo-upload'>
+                      <Button variant='outlined' component='span' size='small'>
+                        {form.photo || form.avatar ? 'Изменить фото' : 'Загрузить фото'}
+                      </Button>
+                    </label>
+                  </Box>
+                </Box>
+              </Grid>
+
               {/* Основная информация */}
               <Grid item xs={12}>
                 <Typography variant='subtitle1' gutterBottom>
@@ -804,7 +855,9 @@ const Staff = () => {
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
               </Grid>
+
               <Grid item xs={12} md={6}>
+
                 <TextField
                   label='ФИО'
                   name='fullName'
