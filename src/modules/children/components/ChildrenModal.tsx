@@ -24,6 +24,7 @@ import childPaymentApi from '../services/childPayment';
 import moment from 'moment';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
+import { compressImage } from '../../../shared/utils/imageUtils';
 
 interface ChildrenModalProps {
   open: boolean;
@@ -103,8 +104,15 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
       const file = e.target.files[0];
       const reader = new FileReader();
 
-      reader.onloadend = () => {
-        setForm({ ...form, photo: reader.result as string });
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        try {
+          const compressed = await compressImage(base64);
+          setForm({ ...form, photo: compressed });
+        } catch (err) {
+          console.error('Ошибка сжатия изображения:', err);
+          setForm({ ...form, photo: base64 }); // fallback to original if compression fails
+        }
       };
 
       reader.readAsDataURL(file);

@@ -21,6 +21,7 @@ import { User } from '../../../shared/types/common';
 import PushService from '../../../shared/services/pushService';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import NotificationsOffIcon from '@mui/icons-material/NotificationsOff';
+import { compressImage } from '../../../shared/utils/imageUtils';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   maxWidth: 600,
@@ -155,12 +156,22 @@ const ProfilePage: React.FC = () => {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         if (event.target?.result) {
-          setFormData((prev) => ({
-            ...prev,
-            photo: event.target?.result as string,
-          }));
+          const base64 = event.target.result as string;
+          try {
+            const compressed = await compressImage(base64);
+            setFormData((prev) => ({
+              ...prev,
+              photo: compressed,
+            }));
+          } catch (err) {
+            console.error('Ошибка сжатия изображения:', err);
+            setFormData((prev) => ({
+              ...prev,
+              photo: base64,
+            }));
+          }
         }
       };
       reader.readAsDataURL(e.target.files[0]);

@@ -69,6 +69,7 @@ import { useGroups } from '../../../app/context/GroupsContext';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 import { showSnackbar } from '../../../shared/components/Snackbar';
+import { compressImage } from '../../../shared/utils/imageUtils';
 
 
 const roleTranslations: Record<string, string> = {
@@ -446,8 +447,15 @@ const Staff = () => {
       const file = e.target.files[0];
       const reader = new FileReader();
 
-      reader.onloadend = () => {
-        setForm(prev => ({ ...prev, photo: reader.result as string }));
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        try {
+          const compressed = await compressImage(base64);
+          setForm(prev => ({ ...prev, photo: compressed }));
+        } catch (err) {
+          console.error('Ошибка сжатия изображения:', err);
+          setForm(prev => ({ ...prev, photo: base64 }));
+        }
       };
 
       reader.readAsDataURL(file);
