@@ -22,9 +22,10 @@ import {
   Select,
   MenuItem,
   IconButton,
-  Tooltip
+  Tooltip,
+  Box
 } from '@mui/material';
-import { Save, PlayArrow, CheckCircle, SyncProblem } from '@mui/icons-material';
+import { Save, PlayArrow, CheckCircle, SyncProblem, Settings as SettingsIcon } from '@mui/icons-material';
 import {
   Integration1CSettings,
   SyncReconciliationAlert,
@@ -263,9 +264,5 @@ const Integration1CSettingsTab: React.FC = () => {
     </Box>
   );
 };
-
-// Хак для иконок чтобы не тащить сверху
-import { Settings as SettingsIcon } from '@mui/icons-material';
-import { Box } from '@mui/material';
 
 export default Integration1CSettingsTab;

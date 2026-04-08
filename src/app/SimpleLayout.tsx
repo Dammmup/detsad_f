@@ -217,43 +217,43 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexShrink: 0 }}>
-            <Button
-              variant='outlined'
-              color='primary'
-              onClick={() => navigate('/app/profile')}
-              sx={{
-                mr: 1,
-                borderColor: 'white',
-                color: 'white',
-                '&:hover': { background: 'rgba(255,255,0.08)' },
-                display: { xs: 'none', sm: 'inline-flex' },
-                minWidth: 'auto',
-                px: 1.5,
-                py: 0.5,
-                fontSize: { xs: '0.7rem', sm: '0.8rem' }
-              }}
-            >
-              Профиль
-            </Button>
-            <Button
-              variant='outlined'
-              color='secondary'
-              onClick={handleLogout}
-              sx={{
-                borderColor: 'white',
-                color: 'white',
-                '&:hover': { background: 'rgba(255,255,0.08)' },
-                display: { xs: 'none', sm: 'inline-flex' },
-                minWidth: 'auto',
-                px: 1.5,
-                py: 0.5,
-                fontSize: { xs: '0.7rem', sm: '0.8rem' }
-              }}
-            >
-              Выйти
-            </Button>
-            {/* Меню для профиля/выхода */}
-            <Box sx={{ display: { xs: 'flex', sm: 'none' }, gap: 0.5 }}>
+            {!isMobile ? (
+              <>
+                <Button
+                  variant='outlined'
+                  color='primary'
+                  onClick={() => navigate('/app/profile')}
+                  sx={{
+                    mr: 1,
+                    borderColor: 'white',
+                    color: 'white',
+                    '&:hover': { background: 'rgba(255,255,0.08)' },
+                    minWidth: 'auto',
+                    px: 1.5,
+                    py: 0.5,
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  Профиль
+                </Button>
+                <Button
+                  variant='outlined'
+                  color='secondary'
+                  onClick={handleLogout}
+                  sx={{
+                    borderColor: 'white',
+                    color: 'white',
+                    '&:hover': { background: 'rgba(255,255,0.08)' },
+                    minWidth: 'auto',
+                    px: 1.5,
+                    py: 0.5,
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  Выйти
+                </Button>
+              </>
+            ) : (
               <IconButton
                 color='inherit'
                 onClick={handleMenuOpen}
@@ -262,7 +262,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
               >
                 <MoreVertIcon sx={{ color: 'white', fontSize: 20 }} />
               </IconButton>
-            </Box>
+            )}
           </Box>
         </Toolbar>
         {/* Dropdown menu for mobile */}

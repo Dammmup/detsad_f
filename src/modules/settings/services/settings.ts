@@ -398,7 +398,7 @@ export const updateGeolocationSettings = async (
 
 export const getIntegration1CSettings = async () => {
   try {
-    const response = await apiClient.get<Integration1CSettings>('/1c/settings');
+    const response = await apiClient.get<Integration1CSettings>('/api/1c/settings');
     return response.data;
   } catch (error) {
     return handleApiError(error, 'fetching 1C integration settings');
@@ -407,7 +407,7 @@ export const getIntegration1CSettings = async () => {
 
 export const updateIntegration1CSettings = async (settings: Partial<Integration1CSettings>) => {
   try {
-    const response = await apiClient.put<Integration1CSettings>('/1c/settings', settings);
+    const response = await apiClient.put<Integration1CSettings>('/api/1c/settings', settings);
     return response.data;
   } catch (error) {
     return handleApiError(error, 'updating 1C integration settings');
@@ -416,7 +416,7 @@ export const updateIntegration1CSettings = async (settings: Partial<Integration1
 
 export const trigger1CReconciliation = async () => {
   try {
-    const response = await apiClient.post('/1c/reconcile');
+    const response = await apiClient.post('/api/1c/reconcile');
     return response.data;
   } catch (error) {
     return handleApiError(error, 'triggering 1C reconciliation');
@@ -425,7 +425,7 @@ export const trigger1CReconciliation = async () => {
 
 export const get1CAlerts = async (status?: string) => {
   try {
-    const response = await apiClient.get<SyncReconciliationAlert[]>(status ? `/1c/alerts?status=${status}` : '/1c/alerts');
+    const response = await apiClient.get<SyncReconciliationAlert[]>(status ? `/api/1c/alerts?status=${status}` : '/api/1c/alerts');
     return response.data;
   } catch (error) {
     return handleApiError(error, 'fetching 1C integration alerts');
@@ -434,7 +434,7 @@ export const get1CAlerts = async (status?: string) => {
 
 export const update1CAlertStatus = async (id: string, status: string) => {
   try {
-    const response = await apiClient.patch<SyncReconciliationAlert>(`/1c/alerts/${id}/status`, { status });
+    const response = await apiClient.patch<SyncReconciliationAlert>(`/api/1c/alerts/${id}/status`, { status });
     return response.data;
   } catch (error) {
     return handleApiError(error, 'updating 1C alert status');

@@ -58,7 +58,7 @@ interface ExportEntity {
 
 const MainEventsSettings: React.FC<MainEventsSettingsProps> = () => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
 
