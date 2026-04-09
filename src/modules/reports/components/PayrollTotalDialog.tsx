@@ -11,7 +11,12 @@ import {
     Grid,
     useTheme,
     useMediaQuery,
+    Switch,
+    FormControlLabel,
+    IconButton,
 } from '@mui/material';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 
 interface Props {
     open: boolean;
@@ -47,6 +52,8 @@ const PayrollTotalDialog: React.FC<Props> = ({ open, onClose, data, onUpdate }) 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [loading, setLoading] = React.useState(false);
+    const [showWithoutDebt, setShowWithoutDebt] = React.useState(false); // Локальный режим просмотра без долга
+
     if (!data) return null;
 
     const isShiftBased = data.baseSalaryType === 'shift';
@@ -60,18 +67,48 @@ const PayrollTotalDialog: React.FC<Props> = ({ open, onClose, data, onUpdate }) 
         } catch (error) {
             console.error('Error updating norm type:', error);
         } finally {
-            setLoading(true); // Keep loading until closed or data refreshed
             setLoading(false);
         }
     };
+
+    const handleResetDebt = async () => {
+        if (!data._id || !onUpdate || loading) return;
+        if (!window.confirm('Вы уверены, что хотите обнулить долг сотрудника за этот месяц?')) return;
+
+        setLoading(true);
+        try {
+            await onUpdate(data._id, { carryOverDebt: 0 });
+        } catch (error) {
+            console.error('Error resetting debt:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const displayTotal = showWithoutDebt 
+        ? data.total + (data.carryOverDebt || 0) 
+        : data.total;
 
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
             <DialogTitle sx={{ p: { xs: 2, sm: 3 }, pb: 1 }}>
-                <Typography variant={isMobile ? 'subtitle1' : 'h6'} sx={{ fontWeight: 'bold' }}>
-                    Детализация: {data.staffName}
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Typography variant={isMobile ? 'subtitle1' : 'h6'} sx={{ fontWeight: 'bold' }}>
+                        Детализация: {data.staffName}
+                    </Typography>
+                    <FormControlLabel
+                        control={
+                            <Switch 
+                                size="small" 
+                                checked={showWithoutDebt} 
+                                onChange={(e) => setShowWithoutDebt(e.target.checked)} 
+                            />
+                        }
+                        label={<Typography variant="caption">Без долга</Typography>}
+                        sx={{ m: 0 }}
+                    />
+                </Box>
             </DialogTitle>
             <DialogContent>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
@@ -286,11 +323,24 @@ const PayrollTotalDialog: React.FC<Props> = ({ open, onClose, data, onUpdate }) 
                             </Box>
                         ) : null}
                         
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Typography variant="body2">Долг с прошлого месяца</Typography>
-                            <Typography variant="body2" color={data.carryOverDebt ? "error.main" : "text.secondary"}>
-                                {data.carryOverDebt ? `-${data.carryOverDebt.toLocaleString()}` : "0"} тг
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Typography variant="body2" color={data.carryOverDebt ? "error.main" : "text.secondary"}>
+                                    {data.carryOverDebt ? `-${data.carryOverDebt.toLocaleString()}` : "0"} тг
+                                </Typography>
+                                {!!data.carryOverDebt && onUpdate && (
+                                    <IconButton 
+                                        size="small" 
+                                        color="error" 
+                                        onClick={handleResetDebt}
+                                        disabled={loading}
+                                        title="Обнулить долг"
+                                    >
+                                        <RestartAltIcon fontSize="small" />
+                                    </IconButton>
+                                )}
+                            </Box>
                         </Box>
                     </Box>
 
@@ -298,9 +348,9 @@ const PayrollTotalDialog: React.FC<Props> = ({ open, onClose, data, onUpdate }) 
 
                     {/* Total */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-                        <Typography variant="h6">Итого к выплате</Typography>
+                        <Typography variant="h6">Итого к выплате {showWithoutDebt ? "(без долга)" : ""}</Typography>
                         <Typography variant="h5" color="primary.main" fontWeight="bold">
-                            {data.total.toLocaleString()} тг
+                            {displayTotal.toLocaleString()} тг
                         </Typography>
                     </Box>
 
