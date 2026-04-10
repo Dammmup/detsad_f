@@ -75,7 +75,12 @@ const PaymentRow = React.memo(({
   const handleDeleteClick = useCallback(() => onDelete(payment._id), [payment._id, onDelete]);
 
   const debt = useMemo(() =>
-    (payment.total + (payment.accruals || 0) - (payment.paidAmount || 0) - (payment.deductions || 0)),
+    Math.max(0, (payment.total + (payment.accruals || 0) - (payment.deductions || 0)) - (payment.paidAmount || 0)),
+    [payment.total, payment.accruals, payment.paidAmount, payment.deductions]
+  );
+
+  const overpayment = useMemo(() =>
+    Math.max(0, (payment.paidAmount || 0) - (payment.total + (payment.accruals || 0) - (payment.deductions || 0))),
     [payment.total, payment.accruals, payment.paidAmount, payment.deductions]
   );
 
@@ -179,6 +184,11 @@ const PaymentRow = React.memo(({
           {debt.toLocaleString()} ₸
         </Typography>
       </TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+        <Typography variant="body2" color="info.main" fontWeight="bold">
+          {overpayment.toLocaleString()} ₸
+        </Typography>
+      </TableCell>
       <TableCell sx={{ p: isMobile ? 0.5 : 1, textAlign: 'center', width: 80 }}>{payment.accruals?.toLocaleString() || 0} ₸</TableCell>
       <TableCell sx={{ p: isMobile ? 0.5 : 1, textAlign: 'center', width: 80 }}>{payment.deductions?.toLocaleString() || 0} ₸</TableCell>
       <TableCell sx={{ p: isMobile ? 0.5 : 1 }}>
@@ -228,7 +238,12 @@ const PaymentCard = React.memo(({
   const handleDeleteClick = useCallback(() => onDelete(payment._id), [payment._id, onDelete]);
 
   const debt = useMemo(() =>
-    (payment.total + (payment.accruals || 0) - (payment.paidAmount || 0) - (payment.deductions || 0)),
+    Math.max(0, (payment.total + (payment.accruals || 0) - (payment.deductions || 0)) - (payment.paidAmount || 0)),
+    [payment.total, payment.accruals, payment.paidAmount, payment.deductions]
+  );
+
+  const overpayment = useMemo(() =>
+    Math.max(0, (payment.paidAmount || 0) - (payment.total + (payment.accruals || 0) - (payment.deductions || 0))),
     [payment.total, payment.accruals, payment.paidAmount, payment.deductions]
   );
 
@@ -264,6 +279,12 @@ const PaymentCard = React.memo(({
           <Typography variant="caption" color="textSecondary" display="block">Долг</Typography>
           <Typography variant="body2" color="error.main" fontWeight="bold">
             {debt.toLocaleString()} ₸
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="caption" color="textSecondary" display="block">Переплата</Typography>
+          <Typography variant="body2" color="info.main" fontWeight="bold">
+            {overpayment.toLocaleString()} ₸
           </Typography>
         </Box>
         <Box>
@@ -332,6 +353,7 @@ const ChildPayments: React.FC = () => {
     status: 'active' as 'active' | 'overdue' | 'paid' | 'draft',
     accruals: 0,
     deductions: 0,
+    overpayment: 0,
     comments: '',
     paymentType: 'none' as 'none' | 'kaspi' | 'cash',
   });
@@ -453,7 +475,8 @@ const ChildPayments: React.FC = () => {
           ...p,
           _childName: child?.fullName || '',
           _groupName: groupName,
-          _debt: (p.total || 0) + (p.accruals || 0) - (p.paidAmount || 0) - (p.deductions || 0),
+          _debt: Math.max(0, (p.total || 0) + (p.accruals || 0) - (p.deductions || 0) - (p.paidAmount || 0)),
+          _overpayment: Math.max(0, (p.paidAmount || 0) - ((p.total || 0) + (p.accruals || 0) - (p.deductions || 0))),
           _periodStart: p.period?.start ? new Date(p.period.start).getTime() : 0
         };
       });
@@ -507,6 +530,7 @@ const ChildPayments: React.FC = () => {
         status: payment.status || 'active',
         accruals: payment.accruals || 0,
         deductions: payment.deductions || 0,
+        overpayment: payment.overpayment || 0,
         comments: payment.comments || '',
         paymentType: payment.paymentType || 'none',
       });
@@ -521,6 +545,7 @@ const ChildPayments: React.FC = () => {
         status: 'active',
         accruals: 0,
         deductions: 0,
+        overpayment: 0,
         comments: '',
         paymentType: 'none',
       });
@@ -528,18 +553,16 @@ const ChildPayments: React.FC = () => {
     setModalOpen(true);
   }, [childrenMap]);
 
-  // Автоматический перенос переплаты в надбавки
+  // Автоматический перенос переплаты в новое поле "Переплата"
   useEffect(() => {
     if (modalOpen) {
-      const netTotal = (newPayment.total || 0) - (newPayment.deductions || 0);
-      if (newPayment.paidAmount > netTotal) {
-        const diff = newPayment.paidAmount - netTotal;
-        if (newPayment.accruals !== diff) {
-          setNewPayment(prev => ({ ...prev, accruals: diff }));
-        }
+      const netTotal = (newPayment.total || 0) + (newPayment.accruals || 0) - (newPayment.deductions || 0);
+      const diff = Math.max(0, (newPayment.paidAmount || 0) - netTotal);
+      if (newPayment.overpayment !== diff) {
+        setNewPayment(prev => ({ ...prev, overpayment: diff }));
       }
     }
-  }, [newPayment.paidAmount, newPayment.total, newPayment.deductions, modalOpen]);
+  }, [newPayment.paidAmount, newPayment.total, newPayment.accruals, newPayment.deductions, newPayment.overpayment, modalOpen]);
 
   const handleCloseModal = useCallback(() => {
     setModalOpen(false);
@@ -884,6 +907,15 @@ const ChildPayments: React.FC = () => {
                         Долг
                       </TableSortLabel>
                     </TableCell>
+                    <TableCell sx={{ width: 120, p: isMobile ? 0.5 : 1 }}>
+                      <TableSortLabel
+                        active={sortConfig.key === '_overpayment'}
+                        direction={sortConfig.direction || 'asc'}
+                        onClick={() => requestSort('_overpayment')}
+                      >
+                        Переплата
+                      </TableSortLabel>
+                    </TableCell>
                     <TableCell sx={{ width: 90, textAlign: 'center', p: isMobile ? 0.5 : 1 }}>Надбавки</TableCell>
                     <TableCell sx={{ width: 90, textAlign: 'center', p: isMobile ? 0.5 : 1 }}>Вычеты</TableCell>
                     <TableCell sx={{ width: 150, p: isMobile ? 0.5 : 1 }}>Комментарии</TableCell>
@@ -987,6 +1019,12 @@ const ChildPayments: React.FC = () => {
               disabled={currentUser?.role !== 'admin'}
             />
             <TextField
+              label='Переплата'
+              type='number'
+              value={newPayment.overpayment === 0 ? '' : newPayment.overpayment}
+              InputProps={{ readOnly: true }}
+            />
+            <TextField
               label='Вычеты'
               type='number'
               value={newPayment.deductions === 0 ? '' : newPayment.deductions}
@@ -1024,9 +1062,15 @@ const ChildPayments: React.FC = () => {
                 <Typography
                   variant='body2'
                   fontWeight='bold'
-                  color={(newPayment.total + (newPayment.accruals || 0) - (newPayment.deductions || 0) - newPayment.paidAmount) > 0 ? 'error.main' : 'success.main'}
+                  color={(newPayment.total + (newPayment.accruals || 0) - (newPayment.deductions || 0) - newPayment.paidAmount) > 0 ? 'error.main' : ((newPayment.total + (newPayment.accruals || 0) - (newPayment.deductions || 0) - newPayment.paidAmount) < 0 ? 'info.main' : 'success.main')}
                 >
-                  {(newPayment.total + (newPayment.accruals || 0) - (newPayment.deductions || 0) - newPayment.paidAmount).toLocaleString()} ₸
+                  {(() => {
+                    const net = (newPayment.total || 0) + (newPayment.accruals || 0) - (newPayment.deductions || 0);
+                    const paid = newPayment.paidAmount || 0;
+                    const debt = Math.max(0, net - paid);
+                    const over = Math.max(0, paid - net);
+                    return `Долг: ${debt.toLocaleString('ru-RU')} ₸ / Переплата: ${over.toLocaleString('ru-RU')} ₸`;
+                  })()}
                 </Typography>
               </Box>
             </Box>

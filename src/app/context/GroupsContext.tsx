@@ -33,12 +33,28 @@ export const GroupsContext = createContext<GroupsContextType | undefined>(
 
 let groupsCache: Group[] | null = null;
 let cacheTimestamp = 0;
+
+let cacheUserKey: string | null = null;
 const CACHE_DURATION = 5 * 60 * 1000;
 
 export const clearGroupsCache = () => {
   groupsCache = null;
   cacheTimestamp = 0;
+  cacheUserKey = null;
 };
+
+function readSessionUserKey(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('user');
+    if (!raw) return null;
+    const u = JSON.parse(raw) as { id?: string; _id?: string };
+    const id = u?.id || u?._id;
+    return id != null && id !== '' ? String(id) : null;
+  } catch {
+    return null;
+  }
+}
 
 
 
@@ -51,7 +67,15 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
   const fetchGroups = useCallback(async (force = false) => {
 
     const now = Date.now();
-    if (!force && groupsCache && now - cacheTimestamp < CACHE_DURATION) {
+    const sessionKey = readSessionUserKey();
+    if (
+      !force &&
+      groupsCache &&
+      sessionKey &&
+      cacheUserKey === sessionKey &&
+      now - cacheTimestamp < CACHE_DURATION
+    ) {
+      setGroups(groupsCache);
       return groupsCache;
     }
 
@@ -62,6 +86,7 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
 
       groupsCache = data;
       cacheTimestamp = now;
+      cacheUserKey = sessionKey;
 
       setGroups(data as Group[]);
       setError(null);

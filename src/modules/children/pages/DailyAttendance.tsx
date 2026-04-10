@@ -46,6 +46,27 @@ import AuditLogButton from '../../../shared/components/AuditLogButton';
 // Таймер автосохранения (в миллисекундах)
 const AUTO_SAVE_DELAY = 5000;
 
+const FULL_GROUP_ACCESS_ROLES = ['admin', 'manager', 'director', 'owner'] as const;
+
+function refId(ref: unknown): string {
+    if (ref == null) return '';
+    if (typeof ref === 'string') return ref;
+    if (typeof ref === 'object') {
+        const o = ref as { _id?: unknown; id?: unknown };
+        return String(o._id ?? o.id ?? '');
+    }
+    return String(ref);
+}
+
+function isUserAssignedToGroup(
+    group: { teacherId?: string; teacher?: string; assistantId?: string },
+    userId: string,
+): boolean {
+    const teacherSide = refId(group.teacherId ?? group.teacher);
+    const assistantSide = refId(group.assistantId);
+    return teacherSide === userId || assistantSide === userId;
+}
+
 const ATTENDANCE_STATUSES = [
     { id: 'present', label: 'Присутствует', color: 'success', icon: <CheckCircleIcon /> },
     { id: 'absent', label: 'Отсутствует', color: 'error', icon: <CancelIcon /> },
@@ -60,6 +81,15 @@ const DailyAttendance: React.FC = () => {
     
     const { groups: groupsList, loading: groupsLoading, fetchGroups } = useGroups();
     const { children: allChildren, loading: childrenLoading, fetchChildren } = useChildren();
+
+    const visibleGroups = useMemo(() => {
+        const uid = String(currentUser?.id || (currentUser as { _id?: string })?._id || '');
+        const role = String(currentUser?.role || '');
+        if (!uid || (FULL_GROUP_ACCESS_ROLES as readonly string[]).includes(role)) {
+            return groupsList;
+        }
+        return groupsList.filter((g) => isUserAssignedToGroup(g, uid));
+    }, [groupsList, currentUser]);
     
     const [saving, setSaving] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState(moment());
@@ -80,8 +110,8 @@ const DailyAttendance: React.FC = () => {
     const canChangeDate = isAdmin;
 
     const group = useMemo(() => 
-        groupsList.find(g => (g.id || g._id) === selectedGroupId), 
-    [groupsList, selectedGroupId]);
+        visibleGroups.find(g => (g.id || g._id) === selectedGroupId), 
+    [visibleGroups, selectedGroupId]);
 
     const children = useMemo(() => {
         if (!selectedGroupId) return [];
@@ -160,10 +190,13 @@ const DailyAttendance: React.FC = () => {
     }, [fetchGroups, fetchChildren]);
 
     useEffect(() => {
-        if (groupsList.length > 0 && !selectedGroupId) {
-            setSelectedGroupId(groupsList[0].id || groupsList[0]._id);
+        if (visibleGroups.length === 0) return;
+        const ids = visibleGroups.map((g) => String(g.id || g._id));
+        const cur = String(selectedGroupId);
+        if (!selectedGroupId || !ids.includes(cur)) {
+            setSelectedGroupId(visibleGroups[0].id || visibleGroups[0]._id);
         }
-    }, [groupsList, selectedGroupId]);
+    }, [visibleGroups, selectedGroupId]);
 
     useEffect(() => {
         const fetchAttendance = async () => {
@@ -245,7 +278,7 @@ const DailyAttendance: React.FC = () => {
         setSelectedDate(newDate);
     };
 
-    if (loading && groupsList.length === 0) {
+    if (loading && visibleGroups.length === 0) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
                 <CircularProgress />
@@ -253,7 +286,7 @@ const DailyAttendance: React.FC = () => {
         );
     }
 
-    if (!loading && groupsList.length === 0) {
+    if (!loading && visibleGroups.length === 0) {
         return (
             <Box p={3} textAlign="center">
                 <Typography variant="h6" color="textSecondary">
@@ -269,7 +302,7 @@ const DailyAttendance: React.FC = () => {
                 <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
                     <Box>
                         <Box display="flex" alignItems="center" gap={2} mb={1}>
-                            {groupsList.length > 1 ? (
+                            {visibleGroups.length > 1 ? (
                                 <FormControl size="small" sx={{ minWidth: 200 }}>
                                     <InputLabel>Выберите группу</InputLabel>
                                     <Select
@@ -277,7 +310,7 @@ const DailyAttendance: React.FC = () => {
                                         label="Выберите группу"
                                         onChange={handleGroupChange}
                                     >
-                                        {groupsList.map((g: any) => (
+                                        {visibleGroups.map((g: any) => (
                                             <MenuItem key={g.id || g._id} value={g.id || g._id}>
                                                 {g.name}
                                             </MenuItem>

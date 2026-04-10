@@ -65,6 +65,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 
   const handleLogin = (userData: User, token: string) => {
+    clearGroupsCache();
     setUser(userData);
     setIsLoggedIn(true);
 

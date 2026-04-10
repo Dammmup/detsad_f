@@ -32,6 +32,7 @@ export interface Group {
   childrenCount?: number;
   teacher?: string;
   teacherId?: string;
+  assistantId?: string;
   isActive?: boolean;
   maxStudents?: number;
   ageGroup?: string[];
@@ -161,6 +162,7 @@ export interface IChildPayment {
   latePenaltyRate?: number;
   accruals?: number;
   deductions?: number;
+  overpayment?: number;
   comments?: string;
   paidAmount?: number;
   paymentType?: 'none' | 'kaspi' | 'cash';
