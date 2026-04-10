@@ -76,6 +76,8 @@ const DailyAttendance: React.FC = () => {
 
     const loading = groupsLoading || childrenLoading;
     const isToday = selectedDate.isSame(moment(), 'day');
+    const isAdmin = ['admin', 'manager', 'director', 'owner'].includes(currentUser?.role || '');
+    const canChangeDate = isAdmin;
 
     const group = useMemo(() => 
         groupsList.find(g => (g.id || g._id) === selectedGroupId), 
@@ -316,6 +318,7 @@ const DailyAttendance: React.FC = () => {
                             Отметка посещаемости детей
                         </Typography>
                     </Box>
+                    {canChangeDate && (
                     <Box display="flex" alignItems="center" bgcolor="white" borderRadius={3} p={0.5} boxShadow={1}>
                         <IconButton onClick={() => changeDate(-1)} size="small">
                             <ChevronLeftIcon />
@@ -336,6 +339,7 @@ const DailyAttendance: React.FC = () => {
                             <ChevronRightIcon />
                         </IconButton>
                     </Box>
+                    )}
                 </Box>
             </Paper>
 
