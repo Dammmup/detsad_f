@@ -134,7 +134,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
         parentName: form.parentName || '',
         notes: form.notes || '',
         active: form.active !== false,
-        paymentAmount: form.paymentAmount || 40000,
+        paymentAmount: form.paymentAmount ?? 0,
       };
 
       if (child && child.id) {
