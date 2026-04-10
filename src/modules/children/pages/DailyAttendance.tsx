@@ -86,10 +86,11 @@ const DailyAttendance: React.FC = () => {
     const children = useMemo(() => {
         if (!selectedGroupId) return [];
         return allChildren.filter((child) => {
-            const childGroupId = typeof child.groupId === 'object' && child.groupId !== null 
-                ? (child.groupId as any)._id || (child.groupId as any).id 
-                : child.groupId;
-            return childGroupId === selectedGroupId;
+            const groupRef = child.groupId;
+            const childGroupId = typeof groupRef === 'object' && groupRef !== null
+                ? String((groupRef as any)._id || (groupRef as any).id || '')
+                : String(groupRef || '');
+            return childGroupId === String(selectedGroupId);
         });
     }, [allChildren, selectedGroupId]);
 

@@ -308,9 +308,12 @@ const Children: React.FC = () => {
           (group as any).assistantId === currentUser.id ||
           (group as any).assistantId === currentUser._id
       );
-      const userGroupIds = userGroups.map(group => group._id || group.id).filter(id => id !== undefined) as string[];
+      const userGroupIds = userGroups.map(group => String(group._id || group.id)).filter(Boolean);
       return allChildren.filter(child => {
-        const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
+        const groupRef = child.groupId;
+        const childGroupId = typeof groupRef === 'object' && groupRef !== null
+          ? String((groupRef as any)._id || (groupRef as any).id || '')
+          : String(groupRef || '');
         return childGroupId && userGroupIds.includes(childGroupId);
       });
     }
