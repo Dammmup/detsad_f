@@ -43,6 +43,7 @@ interface Props {
         latePenalties?: number;
         absencePenalties?: number;
         userFines?: number;
+        missingChildAttendancePenalties?: number;
         carryOverDebt?: number;
     } | null;
     onUpdate?: (id: string, updates: any) => Promise<void>;
@@ -305,6 +306,13 @@ const PayrollTotalDialog: React.FC<Props> = ({ open, onClose, data, onUpdate }) 
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', pl: 1 }}>
                                     <Typography variant="caption" color="text.secondary">• Пропуски</Typography>
                                     <Typography variant="caption">-{data.absencePenalties.toLocaleString()} тг</Typography>
+                                </Box>
+                            ) : null}
+
+                            {data.missingChildAttendancePenalties ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', pl: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">• Пропуск отметки детей</Typography>
+                                    <Typography variant="caption">-{data.missingChildAttendancePenalties.toLocaleString()} тг</Typography>
                                 </Box>
                             ) : null}
 

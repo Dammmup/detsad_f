@@ -91,6 +91,7 @@ interface PayrollRow {
   baseSalaryType?: 'month' | 'shift';
   fines?: any[];
   userFines?: number;
+  missingChildAttendancePenalties?: number;
   bonuses: number;
   bonusDetails?: {
     weekendWork?: number;
@@ -235,6 +236,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             baseSalaryType: p.baseSalaryType || 'month',
             fines: p.fines || [],
             userFines: p.userFines || 0,
+            missingChildAttendancePenalties: p.missingChildAttendancePenalties || 0,
             workedShifts: p.workedShifts || 0,
             workedDays: p.workedDays || 0,
             normDays: p.normDays || 0,

@@ -117,6 +117,8 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
       if (!groupData.name) throw new Error('Название группы обязательно');
       const newGroup = await groupsApi.createGroup(groupData as Group);
       setGroups((prevGroups) => [...prevGroups, newGroup]);
+      // Очищаем кэш чтобы при следующем fetchGroups загрузились актуальные данные
+      clearGroupsCache();
       setError(null);
       return newGroup;
     } catch (err) {
@@ -135,6 +137,8 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
       setGroups((prevGroups) =>
         prevGroups.map((g) => (g.id === id ? updatedGroup : g)),
       );
+      // Очищаем кэш чтобы при следующем fetchGroups загрузились актуальные данные
+      clearGroupsCache();
       setError(null);
       return updatedGroup;
     } catch (err) {
@@ -151,6 +155,8 @@ export const GroupsProvider: React.FC<GroupsProviderProps> = ({ children }) => {
       setLoading(true);
       await groupsApi.deleteGroup(id);
       setGroups((prevGroups) => prevGroups.filter((group) => group.id !== id));
+      // Очищаем кэш чтобы при следующем fetchGroups загрузились актуальные данные
+      clearGroupsCache();
       setError(null);
     } catch (err) {
       console.error(`Failed to delete group ${id}:`, err);

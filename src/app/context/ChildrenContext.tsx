@@ -74,6 +74,8 @@ export const ChildrenProvider: React.FC<ChildrenProviderProps> = ({ children }) 
     try {
       const newChild = await childrenApi.create(childData as Child);
       setChildrenList((prev) => [...prev, newChild]);
+      // Очищаем кэш чтобы при следующем fetchChildren загрузились актуальные данные
+      clearChildrenCache();
       return newChild;
     } catch (err) {
       setError('Не удалось добавить ребенка.');
@@ -90,6 +92,8 @@ export const ChildrenProvider: React.FC<ChildrenProviderProps> = ({ children }) 
       setChildrenList((prev) =>
         prev.map((c) => (c.id === id ? updatedChild : c)),
       );
+      // Очищаем кэш чтобы при следующем fetchChildren загрузились актуальные данные
+      clearChildrenCache();
       return updatedChild;
     } catch (err) {
       setError('Не удалось обновить данные ребенка.');
@@ -104,6 +108,8 @@ export const ChildrenProvider: React.FC<ChildrenProviderProps> = ({ children }) 
     try {
       await childrenApi.deleteItem(id);
       setChildrenList((prev) => prev.filter((c) => c.id !== id));
+      // Очищаем кэш чтобы при следующем fetchChildren загрузились актуальные данные
+      clearChildrenCache();
     } catch (err) {
       setError('Не удалось удалить ребенка.');
       throw err;

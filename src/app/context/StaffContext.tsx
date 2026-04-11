@@ -87,6 +87,8 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
     try {
       const newUser = await usersApi.create(userData);
       setStaffList((prev) => [...prev, newUser]);
+      // Очищаем кэш чтобы при следующем fetchStaff загрузились актуальные данные
+      clearStaffCache();
       return newUser;
     } catch (err) {
       setError('Не удалось добавить сотрудника.');
@@ -103,6 +105,8 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
       setStaffList((prev) =>
         prev.map((u) => (u.id === id ? updatedUser : u)),
       );
+      // Очищаем кэш чтобы при следующем fetchStaff загрузились актуальные данные
+      clearStaffCache();
       return updatedUser;
     } catch (err) {
       setError('Не удалось обновить данные сотрудника.');
@@ -117,6 +121,8 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
     try {
       await usersApi.delete(id);
       setStaffList((prev) => prev.filter((u) => u.id !== id));
+      // Очищаем кэш чтобы при следующем fetchStaff загрузились актуальные данные
+      clearStaffCache();
     } catch (err) {
       setError('Не удалось удалить сотрудника.');
       throw err;

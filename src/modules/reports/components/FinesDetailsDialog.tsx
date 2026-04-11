@@ -100,6 +100,8 @@ const FinesDetailsDialog: React.FC<Props> = ({
                 return <Chip label="Ручной" color="error" size="small" />;
             case 'absence':
                 return <Chip label="Прогул" color="error" size="small" variant="outlined" />;
+            case 'missing_child_attendance':
+                return <Chip label="Пропуск отметки детей" color="info" size="small" variant="outlined" />;
             default:
                 return <Chip label="Другое" size="small" />;
         }
@@ -134,11 +136,11 @@ const FinesDetailsDialog: React.FC<Props> = ({
                     {showAddForm && (
                         <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'grey.50', border: '1px solid #eee', borderRadius: 2 }}>
                             <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Новый Вычет</Typography>
-                            <Box sx={{ 
-                                display: 'grid', 
-                                gridTemplateColumns: { xs: '1fr', sm: 'minmax(120px, 1fr) 2fr auto' }, 
-                                gap: 2, 
-                                alignItems: 'center' 
+                            <Box sx={{
+                                display: 'grid',
+                                gridTemplateColumns: { xs: '1fr', sm: 'minmax(120px, 1fr) 2fr auto' },
+                                gap: 2,
+                                alignItems: 'center'
                             }}>
                                 <TextField
                                     label="Сумма"
@@ -173,10 +175,10 @@ const FinesDetailsDialog: React.FC<Props> = ({
                     ) : isMobile ? (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                             {fines.map((fine, index) => (
-                                <Card key={index} elevation={0} sx={{ 
-                                    p: 2, 
-                                    border: '1px solid', 
-                                    borderColor: 'divider', 
+                                <Card key={index} elevation={0} sx={{
+                                    p: 2,
+                                    border: '1px solid',
+                                    borderColor: 'divider',
                                     borderRadius: 2,
                                     bgcolor: index % 2 === 0 ? 'background.paper' : 'grey.50'
                                 }}>
