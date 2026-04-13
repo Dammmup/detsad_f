@@ -144,7 +144,10 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
           });
         }
       })
-      .catch(() => setGeolocation(null));
+      .catch((err) => {
+        console.error('🔴 [StaffAttendanceButton] Failed to fetch geolocation settings:', err);
+        setGeolocation(null);
+      });
   }, []);
 
 
@@ -155,8 +158,10 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
       let userLat: number | undefined = undefined;
       let userLng: number | undefined = undefined;
 
-      if (geolocation) {
+      // Пытаемся получить геолокацию, если она поддерживается браузером
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
         try {
+          console.log('📍 [StaffAttendanceButton] Requesting GPS coordinates for checkIn...');
           const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
             navigator.geolocation.getCurrentPosition(resolve, reject, {
               enableHighAccuracy: true,
@@ -165,33 +170,43 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
           );
           userLat = pos.coords.latitude;
           userLng = pos.coords.longitude;
-          const dist = haversineDistance(
-            userLat,
-            userLng,
-            geolocation.latitude,
-            geolocation.longitude,
-          );
-          if (dist > geolocation.radius) {
-            setSnackbarMessage(
-              'Вы вне разрешённой зоны для отметки прихода.\nДопустимо ' +
-              Math.round(geolocation.radius) +
-              'м, у вас ' +
-              Math.round(dist) +
-              'м.',
+          console.log('📍 [StaffAttendanceButton] GPS success:', userLat, userLng);
+
+          if (geolocation) {
+            const dist = haversineDistance(
+              userLat,
+              userLng,
+              geolocation.latitude,
+              geolocation.longitude,
             );
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
-            setLoading(false);
-            return;
+            console.log(`📍 [StaffAttendanceButton] Distance to center: ${Math.round(dist)}m (Radius: ${geolocation.radius}m)`);
+            
+            if (dist > geolocation.radius) {
+              setSnackbarMessage(
+                'Вы вне разрешённой зоны для отметки прихода.\nДопустимо ' +
+                Math.round(geolocation.radius) +
+                'м, у вас ' +
+                Math.round(dist) +
+                'м.',
+              );
+              setSnackbarSeverity('error');
+              setSnackbarOpen(true);
+              setLoading(false);
+              return;
+            }
           }
         } catch (geoErr: any) {
-          console.error('Geolocation error:', geoErr);
+          console.error('🔴 [StaffAttendanceButton] Geolocation error:', geoErr);
           if (geoErr.code === 1) { // PERMISSION_DENIED
             setGeoErrorOpen(true);
             setLoading(false);
             return;
           }
-          throw new Error('Не удалось получить ваше местоположение. Убедитесь, что GPS включен.');
+          // Если настройки геолокации были загружены и активны, то отсутствие координат - это ошибка.
+          // Если же настройки не загрузились, мы позволяем попытку без координат (бэкенд решит).
+          if (geolocation) {
+            throw new Error('Не удалось получить ваше местоположение. Убедитесь, что GPS включен.');
+          }
         }
       }
 
@@ -300,8 +315,10 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
       let userLat: number | undefined = undefined;
       let userLng: number | undefined = undefined;
 
-      if (geolocation) {
+      // Пытаемся получить геолокацию, если она поддерживается браузером
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
         try {
+          console.log('📍 [StaffAttendanceButton] Requesting GPS coordinates for checkOut...');
           const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
             navigator.geolocation.getCurrentPosition(resolve, reject, {
               enableHighAccuracy: true,
@@ -310,33 +327,42 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
           );
           userLat = pos.coords.latitude;
           userLng = pos.coords.longitude;
-          const dist = haversineDistance(
-            userLat,
-            userLng,
-            geolocation.latitude,
-            geolocation.longitude,
-          );
-          if (dist > geolocation.radius) {
-            setSnackbarMessage(
-              'Вы вне разрешённой зоны для отметки ухода.\nДопустимо ' +
-              Math.round(geolocation.radius) +
-              'м, у вас ' +
-              Math.round(dist) +
-              'м.',
+          console.log('📍 [StaffAttendanceButton] GPS success (checkOut):', userLat, userLng);
+
+          if (geolocation) {
+            const dist = haversineDistance(
+              userLat,
+              userLng,
+              geolocation.latitude,
+              geolocation.longitude,
             );
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
-            setLoading(false);
-            return;
+            console.log(`📍 [StaffAttendanceButton] Distance to center: ${Math.round(dist)}m (Radius: ${geolocation.radius}m)`);
+            
+            if (dist > geolocation.radius) {
+              setSnackbarMessage(
+                'Вы вне разрешённой зоны для отметки ухода.\nДопустимо ' +
+                Math.round(geolocation.radius) +
+                'м, у вас ' +
+                Math.round(dist) +
+                'м.',
+              );
+              setSnackbarSeverity('error');
+              setSnackbarOpen(true);
+              setLoading(false);
+              return;
+            }
           }
         } catch (geoErr: any) {
-          console.error('Geolocation error:', geoErr);
+          console.error('🔴 [StaffAttendanceButton] Geolocation error (checkOut):', geoErr);
           if (geoErr.code === 1) { // PERMISSION_DENIED
             setGeoErrorOpen(true);
             setLoading(false);
             return;
           }
-          throw new Error('Не удалось получить ваше местоположение. Убедитесь, что GPS включен.');
+          // Если настройки геолокации были загружены и активны, то отсутствие координат - это ошибка.
+          if (geolocation) {
+            throw new Error('Не удалось получить ваше местоположение. Убедитесь, что GPS включен.');
+          }
         }
       }
 
