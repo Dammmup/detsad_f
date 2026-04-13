@@ -18,6 +18,7 @@ import {
   FormControl,
   InputLabel,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ExportButton from '../../../shared/components/ExportButton';
@@ -26,6 +27,7 @@ import { getNormsData, NormsData } from '../services/productReports';
 import { SANPIN_NORMS, CATEGORY_MAPPING } from '../../../shared/constants/foodNorms';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useAuth } from '../../../app/context/AuthContext';
 
 const AGE_GROUPS = [
   { value: '1-3', label: '1-3 года' },
@@ -44,6 +46,10 @@ interface NormRow {
 
 const FoodNormsControlPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role;
+  const canViewReports = role === 'admin' || role === 'manager';
+
   const [rows, setRows] = useState<NormRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -53,6 +59,10 @@ const FoodNormsControlPage: React.FC = () => {
   const [note, setNote] = useState('');
 
   const calculateReport = async () => {
+    if (!canViewReports) {
+      setRows([]);
+      return;
+    }
     setLoading(true);
     try {
       const end = new Date(startDate);
@@ -107,7 +117,7 @@ const FoodNormsControlPage: React.FC = () => {
 
   useEffect(() => {
     calculateReport();
-  }, [startDate, days, ageGroup]);
+  }, [startDate, days, ageGroup, canViewReports]);
 
   const filteredRows = rows.filter((row) => {
     return !search || row.category.toLowerCase().includes(search.toLowerCase());
@@ -152,6 +162,11 @@ const FoodNormsControlPage: React.FC = () => {
       >
         Назад к журналам
       </Button>
+      {!canViewReports && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Недостаточно прав для просмотра ведомости контроля норм питания.
+        </Alert>
+      )}
       <Typography variant='h4' gutterBottom>
         Ведомость контроля норм питания (СанПиН)
       </Typography>
@@ -203,15 +218,17 @@ const FoodNormsControlPage: React.FC = () => {
             sx={{ minWidth: 200 }}
           />
           <Box sx={{ flexGrow: 1 }} />
-          <ExportButton
-            exportTypes={[
-              {
-                value: 'food-norms-control',
-                label: 'Ведомость норм питания',
-              },
-            ]}
-            onExport={handleExport}
-          />
+          {canViewReports && (
+            <ExportButton
+              exportTypes={[
+                {
+                  value: 'food-norms-control',
+                  label: 'Ведомость норм питания',
+                },
+              ]}
+              onExport={handleExport}
+            />
+          )}
         </Stack>
 
         {loading ? (

@@ -39,6 +39,7 @@ import {
   useMediaQuery,
   TableContainer,
   FormControlLabel,
+  Alert,
 } from '@mui/material';
 import {
   AccessTime,
@@ -81,6 +82,7 @@ import { collectDeviceMetadata } from '../../../shared/utils/deviceMetadata';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 import { useSort } from '../../../shared/hooks/useSort';
 import { exportData } from '../../../shared/utils/exportUtils';
+import { useAuth } from '../../../app/context/AuthContext';
 moment.locale('ru');
 
 interface TimeRecord {
@@ -152,7 +154,10 @@ const AttendanceCard = React.memo(({
   formatCurrency,
   STATUS_TEXT,
   STATUS_COLORS,
-  staffMap
+  staffMap,
+  canEdit,
+  canDelete,
+  canSelect
 }: any) => {
   const staff = staffMap.get(record.staffId) || {};
   const status = record.statuses[0] || 'absent';
@@ -169,6 +174,7 @@ const AttendanceCard = React.memo(({
               checked={selected}
               onChange={(e) => onSelect(record.id, e.target.checked)}
               sx={{ p: 0 }}
+              disabled={!canSelect}
             />
             <Avatar
               src={staff.photo}
@@ -286,12 +292,16 @@ const AttendanceCard = React.memo(({
         )}
 
         <Box display="flex" justifyContent="flex-end" gap={1} pt={1} sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-          <IconButton size="small" onClick={() => onEdit(record)} color="primary">
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton size="small" onClick={() => onDelete(record.id)} color="error">
-            <Delete fontSize="small" />
-          </IconButton>
+          {canEdit && (
+            <IconButton size="small" onClick={() => onEdit(record)} color="primary">
+              <Edit fontSize="small" />
+            </IconButton>
+          )}
+          {canDelete && (
+            <IconButton size="small" onClick={() => onDelete(record.id)} color="error">
+              <Delete fontSize="small" />
+            </IconButton>
+          )}
         </Box>
       </CardContent>
     </Card>
@@ -310,7 +320,10 @@ const StaffAttendanceRow = React.memo(({
   STATUS_TEXT, 
   STATUS_COLORS,
   index,
-  staffMap
+  staffMap,
+  canEdit,
+  canDelete,
+  canSelect
 }: any) => {
   const handleSelectChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     onSelect(record.id, e.target.checked);
@@ -331,6 +344,7 @@ const StaffAttendanceRow = React.memo(({
         <Checkbox
           checked={selected}
           onChange={handleSelectChange}
+          disabled={!canSelect}
         />
       </TableCell>
       <TableCell>
@@ -422,12 +436,16 @@ const StaffAttendanceRow = React.memo(({
         </Typography>
       </TableCell>
       <TableCell align='right'>
-        <IconButton size='small' onClick={handleEditClick} title="Редактировать">
-          <Edit fontSize="small" />
-        </IconButton>
-        <IconButton size='small' onClick={handleDeleteClick} color="error" title="Удалить">
-          <Delete fontSize="small" />
-        </IconButton>
+        {canEdit && (
+          <IconButton size='small' onClick={handleEditClick} title="Редактировать">
+            <Edit fontSize="small" />
+          </IconButton>
+        )}
+        {canDelete && (
+          <IconButton size='small' onClick={handleDeleteClick} color="error" title="Удалить">
+            <Delete fontSize="small" />
+          </IconButton>
+        )}
         <AuditLogButton
           entityType="staffAttendance"
           entityId={record.id}
@@ -442,6 +460,11 @@ const StaffAttendanceRow = React.memo(({
 const StaffAttendanceTracking: React.FC = () => {
   const { currentDate } = useDate();
   const { enqueueSnackbar } = useSnackbar();
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role;
+  const canViewRecords = ['admin', 'manager', 'doctor', 'nurse', 'teacher', 'substitute', 'assistant'].includes(role || '');
+  const canManageRecords = ['admin', 'manager', 'doctor', 'nurse'].includes(role || '');
+  const canBulkUpdate = ['admin', 'manager'].includes(role || '');
   
   // 1. Все стейты в начале
   const { staff: allStaff, fetchStaff } = useStaff();
@@ -618,6 +641,10 @@ const StaffAttendanceTracking: React.FC = () => {
   const isSmallMobile = useMediaQuery('(max-width:600px)');
 
   const fetchRecordsData = useCallback(async () => {
+    if (!canViewRecords) {
+      setAllRawRecords([]);
+      return;
+    }
     try {
       const settings = await getKindergartenSettings();
       if (settings.workingHours) {
@@ -957,6 +984,7 @@ const StaffAttendanceTracking: React.FC = () => {
     staffList,
     staffMap,
     getStaffName,
+    canViewRecords,
   ]);
 
   useEffect(() => {
@@ -968,6 +996,10 @@ const StaffAttendanceTracking: React.FC = () => {
   }, [fetchRecordsData]);
 
   const handleOpenMarkDialog = () => {
+    if (!canManageRecords) {
+      enqueueSnackbar('Недостаточно прав для отметки рабочего времени', { variant: 'error' });
+      return;
+    }
     setMarkForm((prev) => ({
       ...prev,
       actualStart: workingHours.start,
@@ -1071,6 +1103,10 @@ const StaffAttendanceTracking: React.FC = () => {
   };
 
   const handleMarkSubmit = async () => {
+    if (!canManageRecords) {
+      enqueueSnackbar('Недостаточно прав для создания записи', { variant: 'error' });
+      return;
+    }
     try {
 
       await staffAttendanceTrackingService.createRecord({
@@ -1110,6 +1146,10 @@ const StaffAttendanceTracking: React.FC = () => {
   }, [workingHours.start]);
 
   const handleSaveRecord = async () => {
+    if (!canManageRecords) {
+      enqueueSnackbar('Недостаточно прав для изменения записей', { variant: 'error' });
+      return;
+    }
     if (!selectedRecord) return;
 
     try {
@@ -1220,6 +1260,10 @@ const StaffAttendanceTracking: React.FC = () => {
   };
 
   const handleBulkUpdate = async () => {
+    if (!canBulkUpdate) {
+      enqueueSnackbar('Недостаточно прав для массового обновления', { variant: 'error' });
+      return;
+    }
     if (selectedIds.length === 0) {
       enqueueSnackbar('Выберите хотя бы одну запись', { variant: 'warning' });
       return;
@@ -1294,6 +1338,10 @@ const StaffAttendanceTracking: React.FC = () => {
   };
 
   const handleBulkStatusUpdate = async () => {
+    if (!canBulkUpdate) {
+      enqueueSnackbar('Недостаточно прав для массовой корректировки статусов', { variant: 'error' });
+      return;
+    }
     setIsBulkUpdating(true);
     try {
       const filters = {
@@ -1317,6 +1365,10 @@ const StaffAttendanceTracking: React.FC = () => {
   };
 
   const handleDeleteRecord = useCallback(async (id: string) => {
+    if (!canManageRecords) {
+      enqueueSnackbar('Недостаточно прав для удаления записи', { variant: 'error' });
+      return;
+    }
     if (!window.confirm('Вы уверены, что хотите удалить эту запись?')) return;
     try {
       await staffAttendanceTrackingService.deleteRecord(id);
@@ -1326,10 +1378,15 @@ const StaffAttendanceTracking: React.FC = () => {
       console.error('Error deleting record:', e);
       enqueueSnackbar('Ошибка при удалении', { variant: 'error' });
     }
-  }, [enqueueSnackbar, fetchRecordsData]);
+  }, [enqueueSnackbar, fetchRecordsData, canManageRecords]);
 
   const renderOverviewTab = () => (
     <Box>
+      {!canViewRecords && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Недостаточно прав для просмотра учета рабочего времени сотрудников.
+        </Alert>
+      )}
       <Grid container spacing={3} mb={3}>
         <Grid item xs={12} md={3}>
           <Card>
@@ -1364,7 +1421,7 @@ const StaffAttendanceTracking: React.FC = () => {
       </Grid>
 
       {/* Кнопка массового обновления */}
-      {selectedIds.length > 0 && (
+      {canBulkUpdate && selectedIds.length > 0 && (
         <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
           <Chip
             label={`Выбрано: ${selectedIds.length}`}
@@ -1409,6 +1466,7 @@ const StaffAttendanceTracking: React.FC = () => {
                     indeterminate={selectedIds.length > 0 && selectedIds.length < sortedRecords.filter(r => !r.id.includes('_')).length}
                     checked={selectedIds.length > 0 && selectedIds.length === sortedRecords.filter(r => !r.id.includes('_')).length}
                     onChange={(e) => handleSelectAll(e.target.checked)}
+                    disabled={!canBulkUpdate}
                   />
                 }
                 label={<Typography variant="body2">Выбрать все</Typography>}
@@ -1443,6 +1501,9 @@ const StaffAttendanceTracking: React.FC = () => {
                   STATUS_TEXT={STATUS_TEXT}
                   STATUS_COLORS={STATUS_COLORS}
                   staffMap={staffMap}
+                  canEdit={canManageRecords}
+                  canDelete={canManageRecords}
+                  canSelect={canBulkUpdate}
                 />
               ))
             )}
@@ -1535,6 +1596,9 @@ const StaffAttendanceTracking: React.FC = () => {
                     STATUS_COLORS={STATUS_COLORS}
                     index={index}
                     staffMap={staffMap}
+                    canEdit={canManageRecords}
+                    canDelete={canManageRecords}
+                    canSelect={canBulkUpdate}
                   />
                 ))}
               </TableBody>
@@ -1560,41 +1624,49 @@ const StaffAttendanceTracking: React.FC = () => {
           Учет р/в
         </Typography>
         <Box display="flex" gap={1} flexWrap="wrap">
-          <Button
-            variant='contained'
-            startIcon={<Schedule />}
-            onClick={handleOpenMarkDialog}
-            size={isSmallMobile ? 'small' : 'medium'}
-          >
-            {isSmallMobile ? 'Смена' : 'Создать смену'}
-          </Button>
-          <Button
-            variant='contained'
-            color='secondary'
-            startIcon={<Edit />}
-            onClick={() => setBulkStatusDialogOpen(true)}
-            size={isSmallMobile ? 'small' : 'medium'}
-          >
-            {isSmallMobile ? 'Комп.' : 'Массовая корректировка'}
-          </Button>
-          <Button
-            variant='contained'
-            color='success'
-            startIcon={<FileUpload />}
-            onClick={handleExport}
-            size={isSmallMobile ? 'small' : 'medium'}
-          >
-            {isSmallMobile ? 'Эксп.' : 'Экспорт'}
-          </Button>
-          <Button
-            variant='contained'
-            color='info'
-            startIcon={<FileUpload />}
-            onClick={handleExportFullMonth}
-            size={isSmallMobile ? 'small' : 'medium'}
-          >
-            {isSmallMobile ? 'Месяц' : 'Экспорт за месяц'}
-          </Button>
+          {canManageRecords && (
+            <Button
+              variant='contained'
+              startIcon={<Schedule />}
+              onClick={handleOpenMarkDialog}
+              size={isSmallMobile ? 'small' : 'medium'}
+            >
+              {isSmallMobile ? 'Смена' : 'Создать смену'}
+            </Button>
+          )}
+          {canBulkUpdate && (
+            <Button
+              variant='contained'
+              color='secondary'
+              startIcon={<Edit />}
+              onClick={() => setBulkStatusDialogOpen(true)}
+              size={isSmallMobile ? 'small' : 'medium'}
+            >
+              {isSmallMobile ? 'Комп.' : 'Массовая корректировка'}
+            </Button>
+          )}
+          {canViewRecords && (
+            <Button
+              variant='contained'
+              color='success'
+              startIcon={<FileUpload />}
+              onClick={handleExport}
+              size={isSmallMobile ? 'small' : 'medium'}
+            >
+              {isSmallMobile ? 'Эксп.' : 'Экспорт'}
+            </Button>
+          )}
+          {canViewRecords && (
+            <Button
+              variant='contained'
+              color='info'
+              startIcon={<FileUpload />}
+              onClick={handleExportFullMonth}
+              size={isSmallMobile ? 'small' : 'medium'}
+            >
+              {isSmallMobile ? 'Месяц' : 'Экспорт за месяц'}
+            </Button>
+          )}
           <AuditLogButton entityType="staffAttendance" />
         </Box>
       </Box>
@@ -1828,9 +1900,11 @@ const StaffAttendanceTracking: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseMarkDialog}>Отмена</Button>
-          <Button variant='contained' onClick={handleMarkSubmit}>
-            Сохранить
-          </Button>
+          {canManageRecords && (
+            <Button variant='contained' onClick={handleMarkSubmit}>
+              Сохранить
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
@@ -1934,9 +2008,11 @@ const StaffAttendanceTracking: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditDialogOpen(false)}>Отмена</Button>
-          <Button variant='contained' onClick={handleSaveRecord}>
-            Сохранить
-          </Button>
+          {canManageRecords && (
+            <Button variant='contained' onClick={handleSaveRecord}>
+              Сохранить
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
@@ -2040,14 +2116,16 @@ const StaffAttendanceTracking: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setBulkDialogOpen(false)}>Отмена</Button>
-          <Button
-            variant='contained'
-            onClick={handleBulkUpdate}
-            disabled={isBulkUpdating || (!bulkForm.actualStart && !bulkForm.actualEnd && !bulkForm.notes)}
-            startIcon={isBulkUpdating ? <Schedule /> : <Check />}
-          >
-            {isBulkUpdating ? 'Обновление...' : 'Обновить'}
-          </Button>
+          {canBulkUpdate && (
+            <Button
+              variant='contained'
+              onClick={handleBulkUpdate}
+              disabled={isBulkUpdating || (!bulkForm.actualStart && !bulkForm.actualEnd && !bulkForm.notes)}
+              startIcon={isBulkUpdating ? <Schedule /> : <Check />}
+            >
+              {isBulkUpdating ? 'Обновление...' : 'Обновить'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
@@ -2121,15 +2199,17 @@ const StaffAttendanceTracking: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setBulkStatusDialogOpen(false)}>Отмена</Button>
-          <Button
-            variant='contained'
-            color='primary'
-            onClick={handleBulkStatusUpdate}
-            disabled={isBulkUpdating}
-            startIcon={isBulkUpdating ? <Schedule /> : <Check />}
-          >
-            {isBulkUpdating ? 'Обновление...' : 'Применить'}
-          </Button>
+          {canBulkUpdate && (
+            <Button
+              variant='contained'
+              color='primary'
+              onClick={handleBulkStatusUpdate}
+              disabled={isBulkUpdating}
+              startIcon={isBulkUpdating ? <Schedule /> : <Check />}
+            >
+              {isBulkUpdating ? 'Обновление...' : 'Применить'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

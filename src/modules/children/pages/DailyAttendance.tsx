@@ -78,6 +78,8 @@ const ATTENDANCE_STATUSES = [
 const DailyAttendance: React.FC = () => {
     const { user: currentUser } = useAuth();
     const { enqueueSnackbar } = useSnackbar();
+    const role = currentUser?.role;
+    const canEditAttendance = role === 'admin' || role === 'teacher' || role === 'assistant';
     
     const { groups: groupsList, loading: groupsLoading, fetchGroups } = useGroups();
     const { children: allChildren, loading: childrenLoading, fetchChildren } = useChildren();
@@ -126,6 +128,10 @@ const DailyAttendance: React.FC = () => {
 
     // Функция автосохранения накопленных изменений
     const flushPendingChanges = useCallback(async () => {
+        if (!canEditAttendance) {
+            enqueueSnackbar('Недостаточно прав для изменения посещаемости', { variant: 'error' });
+            return;
+        }
         if (!selectedGroupId || pendingChanges.length === 0) return;
 
         setIsAutoSaving(true);
@@ -154,10 +160,13 @@ const DailyAttendance: React.FC = () => {
         } finally {
             setIsAutoSaving(false);
         }
-    }, [selectedGroupId, pendingChanges, attendance, enqueueSnackbar]);
+    }, [selectedGroupId, pendingChanges, attendance, enqueueSnackbar, canEditAttendance]);
 
     // Таймер автосохранения
     useEffect(() => {
+        if (!canEditAttendance) {
+            return;
+        }
         if (pendingChanges.length > 0 && !isAutoSaving) {
             if (autoSaveTimerRef.current) {
                 clearTimeout(autoSaveTimerRef.current);
@@ -173,7 +182,7 @@ const DailyAttendance: React.FC = () => {
                 clearTimeout(autoSaveTimerRef.current);
             }
         };
-    }, [pendingChanges, isAutoSaving, flushPendingChanges]);
+    }, [pendingChanges, isAutoSaving, flushPendingChanges, canEditAttendance]);
 
     // Сохранение при смене даты
     useEffect(() => {
@@ -226,6 +235,10 @@ const DailyAttendance: React.FC = () => {
     };
 
     const handleStatusChange = async (childId: string, status: any) => {
+        if (!canEditAttendance) {
+            enqueueSnackbar('Недостаточно прав для изменения посещаемости', { variant: 'error' });
+            return;
+        }
         if (!selectedGroupId) return;
         const dateStr = selectedDate.format('YYYY-MM-DD');
 
@@ -247,6 +260,10 @@ const DailyAttendance: React.FC = () => {
     };
 
     const handleMarkAllPresent = async () => {
+        if (!canEditAttendance) {
+            enqueueSnackbar('Недостаточно прав для изменения посещаемости', { variant: 'error' });
+            return;
+        }
         if (!selectedGroupId || children.length === 0) return;
         const dateStr = selectedDate.format('YYYY-MM-DD');
         const records = children.map(child => ({
@@ -330,11 +347,11 @@ const DailyAttendance: React.FC = () => {
                                 onClick={handleMarkAllPresent}
                                 size="small"
                                 sx={{ borderRadius: 2, textTransform: 'none' }}
-                                disabled={!isToday}
+                                disabled={!isToday || !canEditAttendance}
                             >
                                 Все на месте
                             </Button>
-                            {pendingChanges.length > 0 && (
+                            {pendingChanges.length > 0 && canEditAttendance && (
                                 <Button
                                     variant="contained"
                                     color="primary"
@@ -351,6 +368,11 @@ const DailyAttendance: React.FC = () => {
                         <Typography variant="body2" color="textSecondary">
                             Отметка посещаемости детей
                         </Typography>
+                        {!canEditAttendance && (
+                            <Alert severity="info" sx={{ mt: 1 }}>
+                                У вас нет прав на изменение посещаемости.
+                            </Alert>
+                        )}
                     </Box>
                     {canChangeDate && (
                     <Box display="flex" alignItems="center" bgcolor="white" borderRadius={3} p={0.5} boxShadow={1}>
@@ -445,7 +467,7 @@ const DailyAttendance: React.FC = () => {
                                                 color={status.color as any}
                                                 size="small"
                                                 onClick={() => handleStatusChange(childId, status.id)}
-                                                disabled={isChildSaving}
+                                                disabled={isChildSaving || !canEditAttendance}
                                                 sx={{
                                                     py: 1,
                                                     px: 0,

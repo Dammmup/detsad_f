@@ -15,6 +15,7 @@ import { showSnackbar } from '../../../shared/components/Snackbar';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 import { getDishes, Dish } from '../services/dishes';
+import { useAuth } from '../../../app/context/AuthContext';
 import {
     WeeklyMenuTemplate, getWeeklyMenuTemplates, createWeeklyMenuTemplate,
     deleteWeeklyMenuTemplate, getWeeklyMenuTemplateById, addDishToTemplateDay,
@@ -32,13 +33,15 @@ const DayAccordion = React.memo(({
     dayName,
     dayData,
     onRemoveDish,
-    onAddDishClick
+    onAddDishClick,
+    canManage
 }: {
     day: Weekday;
     dayName: string;
     dayData: any;
     onRemoveDish: (day: Weekday, mealType: MealType, dishId: string) => void;
     onAddDishClick: (day: Weekday, mealType: MealType) => void;
+    canManage: boolean;
 }) => (
     <Accordion>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -56,17 +59,21 @@ const DayAccordion = React.memo(({
                                     {meals.map((dish: any) => (
                                         <ListItem key={dish._id || dish}>
                                             <ListItemText primary={dish.name || 'Блюдо'} />
-                                            <ListItemSecondaryAction>
-                                                <IconButton size="small" onClick={() => onRemoveDish(day, mealType, dish._id || dish)}>
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </ListItemSecondaryAction>
+                                            {canManage && (
+                                                <ListItemSecondaryAction>
+                                                    <IconButton size="small" onClick={() => onRemoveDish(day, mealType, dish._id || dish)}>
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                </ListItemSecondaryAction>
+                                            )}
                                         </ListItem>
                                     ))}
                                 </List>
-                                <Button size="small" startIcon={<AddIcon />} onClick={() => onAddDishClick(day, mealType)}>
-                                    Добавить
-                                </Button>
+                                {canManage && (
+                                    <Button size="small" startIcon={<AddIcon />} onClick={() => onAddDishClick(day, mealType)}>
+                                        Добавить
+                                    </Button>
+                                )}
                             </Paper>
                         </Grid>
                     );
@@ -77,6 +84,13 @@ const DayAccordion = React.memo(({
 ));
 
 const WeeklyMenuTab: React.FC = () => {
+    const { user: currentUser } = useAuth();
+    const role = currentUser?.role;
+    const canViewWeeklyMenu =
+        role === 'admin' || role === 'manager' || role === 'director' || role === 'cook' || role === 'doctor' || role === 'nurse';
+    const canManageTemplates = role === 'admin' || role === 'manager';
+    const canCalculateRequirements = role === 'admin' || role === 'manager' || role === 'director' || role === 'cook';
+
     const [templates, setTemplates] = useState<WeeklyMenuTemplate[]>([]);
     const [selectedTemplate, setSelectedTemplate] = useState<WeeklyMenuTemplate | null>(null);
     const [dishes, setDishes] = useState<Dish[]>([]);
@@ -117,6 +131,10 @@ const WeeklyMenuTab: React.FC = () => {
     }, [dishes, selectedMealType, debouncedDishSearch]);
 
     const loadTemplates = useCallback(async () => {
+        if (!canViewWeeklyMenu) {
+            setTemplates([]);
+            return;
+        }
         try {
             setLoading(true);
             const data = await getWeeklyMenuTemplates();
@@ -129,18 +147,22 @@ const WeeklyMenuTab: React.FC = () => {
     }, []);
 
     const loadDishes = useCallback(async () => {
+        if (!canViewWeeklyMenu) {
+            setDishes([]);
+            return;
+        }
         try {
             const data = await getDishes({ isActive: true });
             setDishes(data);
         } catch (error) {
             console.error('Error loading dishes:', error);
         }
-    }, []);
+    }, [canViewWeeklyMenu]);
 
     useEffect(() => {
         loadTemplates();
         loadDishes();
-    }, []);
+    }, [loadTemplates, loadDishes]);
 
     const handleSelectTemplate = useCallback(async (templateId: string) => {
         try {
@@ -149,9 +171,13 @@ const WeeklyMenuTab: React.FC = () => {
         } catch (error) {
             showSnackbar({ message: 'Ошибка загрузки шаблона', type: 'error' });
         }
-    }, []);
+    }, [canViewWeeklyMenu]);
 
     const handleCreateTemplate = useCallback(async () => {
+        if (!canManageTemplates) {
+            showSnackbar({ message: 'Недостаточно прав для создания шаблона', type: 'error' });
+            return;
+        }
         if (!newTemplateName.trim()) return;
         try {
             await createWeeklyMenuTemplate({ name: newTemplateName, defaultChildCount: 30 });
@@ -163,9 +189,13 @@ const WeeklyMenuTab: React.FC = () => {
         } catch (error) {
             setCreateError(getErrorMessage(error));
         }
-    }, [newTemplateName, loadTemplates]);
+    }, [newTemplateName, loadTemplates, canManageTemplates]);
 
     const handleDeleteTemplate = useCallback(async (id: string) => {
+        if (!canManageTemplates) {
+            showSnackbar({ message: 'Недостаточно прав для удаления шаблона', type: 'error' });
+            return;
+        }
         if (!window.confirm('Удалить шаблон?')) return;
         try {
             await deleteWeeklyMenuTemplate(id);
@@ -175,9 +205,13 @@ const WeeklyMenuTab: React.FC = () => {
         } catch (error) {
             showSnackbar({ message: 'Ошибка удаления', type: 'error' });
         }
-    }, [loadTemplates]);
+    }, [loadTemplates, canManageTemplates]);
 
     const handleAddDish = useCallback(async (dishId: string) => {
+        if (!canManageTemplates) {
+            showSnackbar({ message: 'Недостаточно прав для изменения шаблона', type: 'error' });
+            return;
+        }
         if (!selectedTemplate) return;
         try {
             await addDishToTemplateDay(selectedTemplate._id!, selectedDay, selectedMealType, dishId);
@@ -188,9 +222,13 @@ const WeeklyMenuTab: React.FC = () => {
         } catch (error) {
             setAddDishError(getErrorMessage(error));
         }
-    }, [selectedTemplate, selectedDay, selectedMealType, handleSelectTemplate]);
+    }, [selectedTemplate, selectedDay, selectedMealType, handleSelectTemplate, canManageTemplates]);
 
     const handleRemoveDish = useCallback(async (day: Weekday, mealType: MealType, dishId: string) => {
+        if (!canManageTemplates) {
+            showSnackbar({ message: 'Недостаточно прав для изменения шаблона', type: 'error' });
+            return;
+        }
         if (!selectedTemplate) return;
         try {
             await removeDishFromTemplateDay(selectedTemplate._id!, day, mealType, dishId);
@@ -199,9 +237,13 @@ const WeeklyMenuTab: React.FC = () => {
         } catch (error) {
             showSnackbar({ message: 'Ошибка удаления блюда', type: 'error' });
         }
-    }, [selectedTemplate, handleSelectTemplate]);
+    }, [selectedTemplate, handleSelectTemplate, canManageTemplates]);
 
     const handleApplyTemplate = useCallback(async () => {
+        if (!canManageTemplates) {
+            setApplyError('Недостаточно прав для применения шаблона');
+            return;
+        }
         if (!selectedTemplate) return;
         try {
             setLoading(true);
@@ -221,7 +263,7 @@ const WeeklyMenuTab: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [selectedTemplate, applyType, applyStartDate, applyChildCount]);
+    }, [selectedTemplate, applyType, applyStartDate, applyChildCount, canManageTemplates]);
 
     const handleOpenCreateDialog = useCallback(() => setCreateDialogOpen(true), []);
     const handleCloseCreateDialog = useCallback(() => setCreateDialogOpen(false), []);
@@ -247,6 +289,10 @@ const WeeklyMenuTab: React.FC = () => {
     }, []);
 
     const handleCalculateRequirements = useCallback(async () => {
+        if (!canCalculateRequirements) {
+            showSnackbar({ message: 'Недостаточно прав для расчета потребности', type: 'error' });
+            return;
+        }
         if (!selectedTemplate) return;
         try {
             const days = applyType === 'week' ? 7 : 30;
@@ -256,7 +302,7 @@ const WeeklyMenuTab: React.FC = () => {
         } catch (error) {
             showSnackbar({ message: 'Ошибка расчёта', type: 'error' });
         }
-    }, [selectedTemplate, applyType, applyChildCount]);
+    }, [selectedTemplate, applyType, applyChildCount, canCalculateRequirements]);
 
     const handleDayAddDishClick = useCallback((day: Weekday, mealType: MealType) => {
         setSelectedDay(day);
@@ -270,6 +316,11 @@ const WeeklyMenuTab: React.FC = () => {
 
     return (
         <Box sx={{ px: 3 }}>
+            {!canViewWeeklyMenu && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                    Недостаточно прав для просмотра шаблонов меню.
+                </Alert>
+            )}
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
                 <FormControl size="small" sx={{ minWidth: 200 }}>
                     <InputLabel>Шаблон</InputLabel>
@@ -283,17 +334,23 @@ const WeeklyMenuTab: React.FC = () => {
                         ))}
                     </Select>
                 </FormControl>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreateDialog}>
-                    Новый шаблон
-                </Button>
+                {canManageTemplates && (
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreateDialog}>
+                        Новый шаблон
+                    </Button>
+                )}
                 {selectedTemplate && (
                     <>
-                        <Button variant="outlined" startIcon={<PlayArrowIcon />} onClick={handleOpenApplyDialog}>
-                            Применить
-                        </Button>
-                        <IconButton color="error" onClick={handleDeleteTemplateClick}>
-                            <DeleteIcon />
-                        </IconButton>
+                        {canManageTemplates && (
+                            <Button variant="outlined" startIcon={<PlayArrowIcon />} onClick={handleOpenApplyDialog}>
+                                Применить
+                            </Button>
+                        )}
+                        {canManageTemplates && (
+                            <IconButton color="error" onClick={handleDeleteTemplateClick}>
+                                <DeleteIcon />
+                            </IconButton>
+                        )}
                     </>
                 )}
             </Box>
@@ -323,6 +380,7 @@ const WeeklyMenuTab: React.FC = () => {
                             dayData={selectedTemplate!.days[day]}
                             onRemoveDish={handleRemoveDish}
                             onAddDishClick={handleDayAddDishClick}
+                            canManage={canManageTemplates}
                         />
                     ))}
                 </Box>
@@ -337,7 +395,9 @@ const WeeklyMenuTab: React.FC = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseCreateDialog}>Отмена</Button>
-                    <Button variant="contained" onClick={handleCreateTemplate}>Создать</Button>
+                    {canManageTemplates && (
+                        <Button variant="contained" onClick={handleCreateTemplate}>Создать</Button>
+                    )}
                 </DialogActions>
             </Dialog>
  
@@ -363,13 +423,17 @@ const WeeklyMenuTab: React.FC = () => {
                             </FormControl>
                         </Grid>
                     </Grid>
-                    <Button sx={{ mt: 2 }} onClick={handleCalculateRequirements}>Рассчитать продукты</Button>
+                    {canCalculateRequirements && (
+                        <Button sx={{ mt: 2 }} onClick={handleCalculateRequirements}>Рассчитать продукты</Button>
+                    )}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseApplyDialog}>Отмена</Button>
-                    <Button variant="contained" onClick={handleApplyTemplate} disabled={loading}>
-                        {loading ? <CircularProgress size={20} /> : 'Применить'}
-                    </Button>
+                    {canManageTemplates && (
+                        <Button variant="contained" onClick={handleApplyTemplate} disabled={loading}>
+                            {loading ? <CircularProgress size={20} /> : 'Применить'}
+                        </Button>
+                    )}
                 </DialogActions>
             </Dialog>
  

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Box, Typography, Button, Stack, Table, TableHead, TableRow, TableCell, TableBody, Paper, TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select, FormControl, InputLabel, CircularProgress } from '@mui/material';
+import { Box, Typography, Button, Stack, Table, TableHead, TableRow, TableCell, TableBody, Paper, TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select, FormControl, InputLabel, CircularProgress, Alert } from '@mui/material';
 import { Document, Packer, Paragraph, HeadingLevel, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell } from 'docx';
 import { saveAs } from 'file-saver';
 import { VitaminizationRecord } from '../types/vitaminization';
@@ -11,12 +11,19 @@ import {
     clearVitaminizationRecords
 } from '../services/vitaminizationJournal';
 import { generateVitaminizationByMenu } from '../services/vitaminizationGenerate';
+import { useAuth } from '../../../app/context/AuthContext';
 
 const GROUPS = ['Ясельная', 'Младшая', 'Средняя', 'Старшая', 'Подготовительная'];
 const MEALS = ['Завтрак', 'Обед', 'Полдник', 'Ужин'];
 const STATUS = ['Проведено', 'Не проведено'];
 
 export default function VitaminizationJournalPage() {
+    const { user: currentUser } = useAuth();
+    const role = currentUser?.role;
+    const canManageVitaminization =
+        role === 'admin' || role === 'manager' || role === 'doctor' || role === 'nurse' || role === 'cook';
+    const canClearAll = role === 'admin' || role === 'manager';
+
     const [records, setRecords] = useState<VitaminizationRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
@@ -25,9 +32,13 @@ export default function VitaminizationJournalPage() {
 
     useEffect(() => {
         fetchRecords();
-    }, [filters]);
+    }, [filters, canManageVitaminization]);
 
     const fetchRecords = async () => {
+        if (!canManageVitaminization) {
+            setRecords([]);
+            return;
+        }
         setLoading(true);
         try {
             const data = await getVitaminizationRecords(filters);
@@ -38,6 +49,7 @@ export default function VitaminizationJournalPage() {
     };
 
     const handleAdd = async () => {
+        if (!canManageVitaminization) return;
         if (!newRecord.date || !newRecord.group || !newRecord.meal || !newRecord.dish || !newRecord.dose || !newRecord.portions || !newRecord.nurse || !newRecord.status) return;
         setLoading(true);
         try {
@@ -51,6 +63,7 @@ export default function VitaminizationJournalPage() {
     };
 
     const handleDelete = async (id: string) => {
+        if (!canManageVitaminization) return;
         setLoading(true);
         try {
             await deleteVitaminizationRecord(id);
@@ -61,6 +74,7 @@ export default function VitaminizationJournalPage() {
     };
 
     const handleClearAll = async () => {
+        if (!canClearAll) return;
         setLoading(true);
         try {
             await clearVitaminizationRecords();
@@ -73,6 +87,7 @@ export default function VitaminizationJournalPage() {
 
     // Генерация по меню
     const handleGenerateByMenu = async () => {
+        if (!canManageVitaminization) return;
         setLoading(true);
         try {
             const generated = await generateVitaminizationByMenu({ date: filters.dateFrom || new Date().toISOString(), group: filters.group });
@@ -124,11 +139,24 @@ export default function VitaminizationJournalPage() {
         <Box sx={{ p: { xs: 1, md: 3 } }}>
             <Typography variant="h4" gutterBottom>Журнал витаминизации готовых блюд</Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
-                <Button variant="contained" color="secondary" onClick={handleGenerateByMenu}>Сгенерировать по меню</Button>
-                <Button variant="contained" onClick={() => setModalOpen(true)}>Добавить вручную</Button>
-                <Button variant="outlined" onClick={handleExport}>Экспорт</Button>
-                <Button variant="outlined" color="error" onClick={handleClearAll}>Очистить всё</Button>
+                {canManageVitaminization && (
+                    <Button variant="contained" color="secondary" onClick={handleGenerateByMenu}>Сгенерировать по меню</Button>
+                )}
+                {canManageVitaminization && (
+                    <Button variant="contained" onClick={() => setModalOpen(true)}>Добавить вручную</Button>
+                )}
+                {canManageVitaminization && (
+                    <Button variant="outlined" onClick={handleExport}>Экспорт</Button>
+                )}
+                {canClearAll && (
+                    <Button variant="outlined" color="error" onClick={handleClearAll}>Очистить всё</Button>
+                )}
             </Stack>
+            {!canManageVitaminization && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                    Недостаточно прав для работы с журналом витаминизации.
+                </Alert>
+            )}
             <Paper sx={{ p: 2, mb: 2 }}>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
                     <TextField type="date" label="От даты" InputLabelProps={{ shrink: true }} value={filters.dateFrom} onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))} size="small" />
@@ -192,7 +220,9 @@ export default function VitaminizationJournalPage() {
                                 <TableCell>{r.nurse}</TableCell>
                                 <TableCell>{r.status}</TableCell>
                                 <TableCell>
-                                    <Button color="error" size="small" onClick={() => r._id && handleDelete(r._id)}>Удалить</Button>
+                                    {canManageVitaminization && (
+                                        <Button color="error" size="small" onClick={() => r._id && handleDelete(r._id)}>Удалить</Button>
+                                    )}
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -269,7 +299,9 @@ export default function VitaminizationJournalPage() {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setModalOpen(false)}>Отмена</Button>
-                    <Button onClick={handleAdd} variant="contained">Сохранить</Button>
+                    {canManageVitaminization && (
+                        <Button onClick={handleAdd} variant="contained">Сохранить</Button>
+                    )}
                 </DialogActions>
             </Dialog>
             {loading && <CircularProgress sx={{ position: 'fixed', top: '50%', left: '50%' }} />}

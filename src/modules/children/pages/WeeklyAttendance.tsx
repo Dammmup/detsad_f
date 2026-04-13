@@ -103,15 +103,16 @@ const AttendanceCell = React.memo(({
   day, 
   attendance, 
   isWeekend, 
-  onClick
+  onClick,
+  canEdit,
 }: any) => {
   const theme = useTheme();
   
   const handleClick = useCallback(() => {
-    if (!isWeekend) {
+    if (!isWeekend && canEdit) {
       onClick(child, day);
     }
-  }, [child, day, isWeekend, onClick]);
+  }, [child, day, isWeekend, onClick, canEdit]);
 
   if (isWeekend) {
     return (
@@ -139,9 +140,9 @@ const AttendanceCell = React.memo(({
         minHeight: '80px',
         border: '1px solid',
         borderColor: 'divider',
-        cursor: 'pointer',
+        cursor: canEdit ? 'pointer' : 'default',
         '&:hover': {
-          backgroundColor: 'action.selected',
+          backgroundColor: canEdit ? 'action.selected' : 'inherit',
         },
       }}
     >
@@ -155,9 +156,15 @@ const AttendanceCell = React.memo(({
               {attendance.notes && (
                 <Typography variant='body2'>Примечание: {attendance.notes}</Typography>
               )}
-              <Typography variant='caption' sx={{ mt: 1, display: 'block' }}>
-                Нажмите для изменения статуса
-              </Typography>
+              {canEdit ? (
+                <Typography variant='caption' sx={{ mt: 1, display: 'block' }}>
+                  Нажмите для изменения статуса
+                </Typography>
+              ) : (
+                <Typography variant='caption' sx={{ mt: 1, display: 'block' }}>
+                  Просмотр без права редактирования
+                </Typography>
+              )}
             </Box>
           }
           arrow
@@ -178,8 +185,8 @@ const AttendanceCell = React.memo(({
                       ? theme.palette.warning.main
                       : theme.palette.error.main
                 }`,
-              cursor: 'pointer',
-              '&:hover': { bgcolor: 'action.selected' },
+              cursor: canEdit ? 'pointer' : 'default',
+              '&:hover': { bgcolor: canEdit ? 'action.selected' : 'inherit' },
             }}
           >
             <Chip
@@ -196,7 +203,11 @@ const AttendanceCell = React.memo(({
             <Box>
               <Typography variant='body2'>{child.fullName}</Typography>
               <Typography variant='body2'>{moment(day).format('D MMMM YYYY')}</Typography>
-              <Typography variant='caption'>Нажмите для отметки посещаемости</Typography>
+              {canEdit ? (
+                <Typography variant='caption'>Нажмите для отметки посещаемости</Typography>
+              ) : (
+                <Typography variant='caption'>Просмотр без права редактирования</Typography>
+              )}
             </Box>
           }
           arrow
@@ -209,11 +220,11 @@ const AttendanceCell = React.memo(({
               border: '1px dashed',
               borderColor: 'divider',
               textAlign: 'center',
-              cursor: 'pointer',
-              '&:hover': {
+              cursor: canEdit ? 'pointer' : 'default',
+              '&:hover': canEdit ? {
                 bgcolor: 'action.selected',
                 borderColor: 'primary.main',
-              },
+              } : undefined,
             }}
           >
             <Typography variant='caption' color='text.secondary'>
@@ -231,7 +242,8 @@ const AttendanceRow = React.memo(({
   weekDays, 
   attendanceData, 
   onCellClick, 
-  onOpenDetails
+  onOpenDetails,
+  canEdit,
 }: any) => {
   const childId = child.id || child._id;
   
@@ -276,6 +288,7 @@ const AttendanceRow = React.memo(({
             attendance={attendance}
             isWeekend={isWeekend}
             onClick={onCellClick}
+            canEdit={canEdit}
           />
         );
       })}
@@ -287,6 +300,9 @@ const WeeklyAttendance: React.FC = () => {
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
   const { currentDate } = useDate();
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role;
+  const canEditAttendance = role === 'admin' || role === 'teacher' || role === 'assistant';
 
   const { groups, loading: groupsLoading, fetchGroups } = useGroups();
   const { children, loading: childrenLoading, fetchChildren } = useChildren();
@@ -369,6 +385,10 @@ const WeeklyAttendance: React.FC = () => {
   }, [fetchAttendanceData]);
 
   const handleAttendanceClick = useCallback((child: any, date: Date) => {
+    if (!canEditAttendance) {
+      enqueueSnackbar('Недостаточно прав для изменения посещаемости', { variant: 'error' });
+      return;
+    }
     const childId = child.id || child._id;
     const dateString = moment(date).format('YYYY-MM-DD');
     const existing = attendanceData[childId]?.[dateString];
@@ -396,7 +416,7 @@ const WeeklyAttendance: React.FC = () => {
         [dateString]: { status: nextStatus, notes: existing?.notes || '' },
       },
     }));
-  }, [attendanceData]);
+  }, [attendanceData, canEditAttendance, enqueueSnackbar]);
 
   const handleOpenChildDetails = useCallback((childId: string, childName: string) => {
     setSelectedChildDetails({ id: childId, name: childName });
@@ -404,6 +424,10 @@ const WeeklyAttendance: React.FC = () => {
   }, []);
 
   const flushPendingChanges = useCallback(async () => {
+    if (!canEditAttendance) {
+      enqueueSnackbar('Недостаточно прав для изменения посещаемости', { variant: 'error' });
+      return;
+    }
     if (pendingChanges.length === 0) return;
 
     setIsAutoSaving(true);
@@ -416,10 +440,13 @@ const WeeklyAttendance: React.FC = () => {
     } finally {
       setIsAutoSaving(false);
     }
-  }, [pendingChanges, enqueueSnackbar]);
+  }, [pendingChanges, enqueueSnackbar, canEditAttendance]);
 
   // Auto-save logic
   useEffect(() => {
+    if (!canEditAttendance) {
+      return;
+    }
     if (pendingChanges.length > 0) {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = setTimeout(() => {
@@ -429,7 +456,7 @@ const WeeklyAttendance: React.FC = () => {
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [pendingChanges, flushPendingChanges]);
+  }, [pendingChanges, flushPendingChanges, canEditAttendance]);
 
   useEffect(() => {
     fetchGroups();
@@ -447,6 +474,10 @@ const WeeklyAttendance: React.FC = () => {
   };
 
   const handleExport = async (type: string) => {
+    if (!canEditAttendance) {
+      enqueueSnackbar('Недостаточно прав для экспорта посещаемости', { variant: 'error' });
+      return;
+    }
     if (type === 'children-attendance') {
       const weekStart = moment(currentDate).startOf('isoWeek');
       const weekEnd = moment(currentDate).endOf('isoWeek');
@@ -461,6 +492,10 @@ const WeeklyAttendance: React.FC = () => {
 
   // Импорт посещаемости детей из Excel
   const handleImportChildAttendance = async () => {
+    if (!canEditAttendance) {
+      enqueueSnackbar('Недостаточно прав для импорта посещаемости', { variant: 'error' });
+      return;
+    }
     try {
       setIsImporting(true);
       const year = moment(currentDate).year();
@@ -519,7 +554,7 @@ const WeeklyAttendance: React.FC = () => {
                   <AuditLogButton entityType="childAttendance" />
                 </Box>
                 <Box display='flex' gap={2}>
-                  {pendingChanges.length > 0 && (
+                  {pendingChanges.length > 0 && canEditAttendance && (
                     <Button
                       variant='contained'
                       color='primary'
@@ -531,36 +566,44 @@ const WeeklyAttendance: React.FC = () => {
                       Сохранить ({pendingChanges.length})
                     </Button>
                   )}
-                  <Button
-                    variant='contained'
-                    color='primary'
-                    startIcon={<EventNoteIcon />}
-                    onClick={() => setBulkModalOpen(true)}
-                    disabled={!selectedGroup}
-                  >
-                    Массовое назначение
-                  </Button>
+                  {canEditAttendance ? (
+                    <>
+                      <Button
+                        variant='contained'
+                        color='primary'
+                        startIcon={<EventNoteIcon />}
+                        onClick={() => setBulkModalOpen(true)}
+                        disabled={!selectedGroup}
+                      >
+                        Массовое назначение
+                      </Button>
 
-                  <ExportButton
-                    exportTypes={[
-                      {
-                        value: 'children-attendance',
-                        label: 'Посещаемость детей',
-                      },
-                    ]}
-                    onExport={handleExport}
-                  />
-                  <Tooltip title="Импортировать из Excel (docs/Посещаемость детей.xlsx)">
-                    <Button
-                      variant='outlined'
-                      color='primary'
-                      startIcon={isImporting ? <CircularProgress size={20} /> : <FileUploadIcon />}
-                      onClick={handleImportChildAttendance}
-                      disabled={isImporting || loading}
-                    >
-                      {isImporting ? 'Импорт...' : 'Импорт'}
-                    </Button>
-                  </Tooltip>
+                      <ExportButton
+                        exportTypes={[
+                          {
+                            value: 'children-attendance',
+                            label: 'Посещаемость детей',
+                          },
+                        ]}
+                        onExport={handleExport}
+                      />
+                      <Tooltip title="Импортировать из Excel (docs/Посещаемость детей.xlsx)">
+                        <Button
+                          variant='outlined'
+                          color='primary'
+                          startIcon={isImporting ? <CircularProgress size={20} /> : <FileUploadIcon />}
+                          onClick={handleImportChildAttendance}
+                          disabled={isImporting || loading}
+                        >
+                          {isImporting ? 'Импорт...' : 'Импорт'}
+                        </Button>
+                      </Tooltip>
+                    </>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Только просмотр
+                    </Typography>
+                  )}
                 </Box>
               </Box>
             }
@@ -615,6 +658,7 @@ const WeeklyAttendance: React.FC = () => {
                         attendanceData={attendanceData}
                         onCellClick={handleAttendanceClick}
                         onOpenDetails={handleOpenChildDetails}
+                        canEdit={canEditAttendance}
                       />
                     ))}
                   </TableBody>

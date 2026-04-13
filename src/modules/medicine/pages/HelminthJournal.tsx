@@ -46,6 +46,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { showSnackbar } from '../../../shared/components/Snackbar';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
+import { useAuth } from '../../../app/context/AuthContext';
 
 const MONTHS = [
   'Январь',
@@ -68,6 +69,8 @@ const YEARS = Array.from({ length: CURRENT_YEAR - 2018 }, (_, i) =>
 
 export default function HelminthJournal() {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const canManageMedical = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
   const [records, setRecords] = useState<HelminthRecord[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
@@ -174,6 +177,10 @@ export default function HelminthJournal() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canManageMedical) {
+      showSnackbar({ message: 'Недостаточно прав для удаления записи', type: 'error' });
+      return;
+    }
     if (!window.confirm('Вы уверены, что хотите удалить эту запись?')) return;
     setLoading(true);
     try {
@@ -363,13 +370,15 @@ export default function HelminthJournal() {
                     </TableCell>
                     <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.notes}</TableCell>
                     <TableCell align="right">
-                      <Button
-                        color='error'
-                        size='small'
-                        onClick={() => handleDelete(r.id || r._id || '')}
-                      >
-                        Удалить
-                      </Button>
+                      {canManageMedical && (
+                        <Button
+                          color='error'
+                          size='small'
+                          onClick={() => handleDelete(r.id || r._id || '')}
+                        >
+                          Удалить
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 )

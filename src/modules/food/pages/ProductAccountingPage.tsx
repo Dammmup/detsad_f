@@ -57,6 +57,7 @@ import {
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 import { showSnackbar } from '../../../shared/components/Snackbar';
+import { useAuth } from '../../../app/context/AuthContext';
 
 import {
     Product,
@@ -145,13 +146,17 @@ const ProductRow = React.memo(({
     categoryLabel,
     onEdit,
     onDelete,
-    index
+    index,
+    canEdit,
+    canDelete
 }: {
     product: Product;
     categoryLabel: string;
     onEdit: (p: Product) => void;
     onDelete: (p: Product) => void;
     index: number;
+    canEdit: boolean;
+    canDelete: boolean;
 }) => {
     const expired = isExpired(product);
     const expiringSoon = isExpiringSoon(product);
@@ -180,12 +185,16 @@ const ProductRow = React.memo(({
             <TableCell>{product.purchaseDays || '-'}</TableCell>
             <TableCell align="center">
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                    <IconButton size="small" onClick={handleEdit}>
-                        <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" color="error" onClick={handleDelete}>
-                        <DeleteIcon fontSize="small" />
-                    </IconButton>
+                    {canEdit && (
+                        <IconButton size="small" onClick={handleEdit}>
+                            <EditIcon fontSize="small" />
+                        </IconButton>
+                    )}
+                    {canDelete && (
+                        <IconButton size="small" color="error" onClick={handleDelete}>
+                            <DeleteIcon fontSize="small" />
+                        </IconButton>
+                    )}
                 </Box>
             </TableCell>
         </TableRow>
@@ -198,13 +207,17 @@ const DishCard = React.memo(({
     onEdit,
     onDelete,
     onViewTechnical,
-    onViewCalc
+    onViewCalc,
+    canEdit,
+    canDelete
 }: {
     dish: Dish;
     onEdit: (d: Dish) => void;
     onDelete: (d: Dish) => void;
     onViewTechnical: (d: Dish) => void;
     onViewCalc: (d: Dish) => void;
+    canEdit: boolean;
+    canDelete: boolean;
 }) => {
     const handleEdit = useCallback(() => onEdit(dish), [onEdit, dish]);
     const handleDelete = useCallback(() => onDelete(dish), [onDelete, dish]);
@@ -249,16 +262,20 @@ const DishCard = React.memo(({
                                 <RestaurantIcon fontSize="small" />
                             </IconButton>
                         </Tooltip>
-                        <Tooltip title="Редактировать">
-                            <IconButton size="small" onClick={handleEdit}>
-                                <EditIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Удалить">
-                            <IconButton size="small" color="error" onClick={handleDelete}>
-                                <DeleteIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
+                        {canEdit && (
+                            <Tooltip title="Редактировать">
+                                <IconButton size="small" onClick={handleEdit}>
+                                    <EditIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                        {canDelete && (
+                            <Tooltip title="Удалить">
+                                <IconButton size="small" color="error" onClick={handleDelete}>
+                                    <DeleteIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                        )}
                     </Box>
                 </CardContent>
             </Card>
@@ -267,6 +284,17 @@ const DishCard = React.memo(({
 });
 
 const ProductAccountingPage: React.FC = () => {
+    const { user: currentUser } = useAuth();
+    const role = currentUser?.role;
+    const isAdmin = role === 'admin';
+    const isManager = role === 'manager';
+    const isCook = role === 'cook';
+    const canManageProducts = isAdmin || isManager || isCook;
+    const canDeleteProducts = isAdmin || isManager;
+    const canManageDishes = isAdmin || isManager || isCook;
+    const canDeleteDishes = isAdmin || isManager;
+    const canManageDailyMenu = isAdmin || isManager || isCook;
+
     const [tabValue, setTabValue] = useState(0);
     const [loading, setLoading] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
@@ -434,6 +462,10 @@ const ProductAccountingPage: React.FC = () => {
     }, []);
 
     const handleSaveProduct = useCallback(async () => {
+        if (!canManageProducts) {
+            showSnackbar({ message: 'Недостаточно прав для изменения продуктов', type: 'error' });
+            return;
+        }
         try {
             if (editingProduct) {
                 await updateProduct(editingProduct._id || editingProduct.id || '', productForm);
@@ -448,9 +480,13 @@ const ProductAccountingPage: React.FC = () => {
         } catch (error: any) {
             setProductSaveError(getErrorMessage(error));
         }
-    }, [editingProduct, productForm, loadProducts]);
+    }, [editingProduct, productForm, loadProducts, canManageProducts]);
 
     const handleDeleteProduct = useCallback(async (product: Product) => {
+        if (!canDeleteProducts) {
+            showSnackbar({ message: 'Недостаточно прав для удаления продукта', type: 'error' });
+            return;
+        }
         if (!window.confirm(`Удалить "${product.name}"?`)) return;
         try {
             await deleteProduct(product._id || product.id || '');
@@ -459,7 +495,7 @@ const ProductAccountingPage: React.FC = () => {
         } catch (error: any) {
             showSnackbar({ message: getErrorMessage(error), type: 'error' });
         }
-    }, [loadProducts]);
+    }, [loadProducts, canDeleteProducts]);
 
     const handleOpenDishDialog = useCallback((dish?: Dish) => {
         if (dish && !(dish as any).target) {
@@ -471,6 +507,10 @@ const ProductAccountingPage: React.FC = () => {
     }, []);
 
     const handleSaveDish = useCallback(async (dishData: Partial<Dish>) => {
+        if (!canManageDishes) {
+            showSnackbar({ message: 'Недостаточно прав для изменения блюд', type: 'error' });
+            return;
+        }
         try {
             if (editingDish) {
                 await updateDish(editingDish._id || editingDish.id || '', dishData);
@@ -485,9 +525,13 @@ const ProductAccountingPage: React.FC = () => {
         } catch (error: any) {
             setDishSaveError(getErrorMessage(error));
         }
-    }, [editingDish, loadDishes]);
+    }, [editingDish, loadDishes, canManageDishes]);
 
     const handleDeleteDish = useCallback(async (dish: Dish) => {
+        if (!canDeleteDishes) {
+            showSnackbar({ message: 'Недостаточно прав для удаления блюда', type: 'error' });
+            return;
+        }
         if (!window.confirm(`Удалить "${dish.name}"?`)) return;
         try {
             await deleteDish(dish._id || dish.id || '');
@@ -496,9 +540,13 @@ const ProductAccountingPage: React.FC = () => {
         } catch (error: any) {
             showSnackbar({ message: getErrorMessage(error), type: 'error' });
         }
-    }, [loadDishes]);
+    }, [loadDishes, canDeleteDishes]);
 
     const handleCreateTodayMenu = async () => {
+        if (!canManageDailyMenu) {
+            showSnackbar({ message: 'Недостаточно прав для создания меню', type: 'error' });
+            return;
+        }
         try {
             await createDailyMenu({ date: new Date().toISOString(), totalChildCount: childCountInput });
             showSnackbar({ message: 'Меню создано', type: 'success' });
@@ -509,6 +557,10 @@ const ProductAccountingPage: React.FC = () => {
     };
 
     const handleServeMeal = async (mealType: MealType) => {
+        if (!canManageDailyMenu) {
+            showSnackbar({ message: 'Недостаточно прав для подачи блюда', type: 'error' });
+            return;
+        }
         if (!todayMenu) return;
         try {
             setServingMeal(mealType);
@@ -524,6 +576,10 @@ const ProductAccountingPage: React.FC = () => {
     };
 
     const handleAddDishToMeal = async (dishId: string) => {
+        if (!canManageDailyMenu) {
+            showSnackbar({ message: 'Недостаточно прав для изменения меню', type: 'error' });
+            return;
+        }
         if (!todayMenu) return;
         try {
             await addDishToMeal(todayMenu._id || todayMenu.id || '', selectedMealType, dishId);
@@ -536,6 +592,10 @@ const ProductAccountingPage: React.FC = () => {
     };
 
     const handleRemoveDishFromMeal = async (mealType: MealType, dishId: string) => {
+        if (!canManageDailyMenu) {
+            showSnackbar({ message: 'Недостаточно прав для изменения меню', type: 'error' });
+            return;
+        }
         if (!todayMenu) return;
         try {
             await removeDishFromMeal(todayMenu._id || todayMenu.id || '', mealType, dishId);
@@ -620,9 +680,11 @@ const ProductAccountingPage: React.FC = () => {
                                 onChange={onProductSearchChange}
                                 sx={{ flexGrow: 1, maxWidth: 400 }}
                             />
-                            <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenProductDialog()}>
-                                Добавить продукт
-                            </Button>
+                            {canManageProducts && (
+                                <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenProductDialog()}>
+                                    Добавить продукт
+                                </Button>
+                            )}
                         </Box>
 
                         {loading ? (
@@ -710,6 +772,8 @@ const ProductAccountingPage: React.FC = () => {
                                                 onEdit={handleOpenProductDialog}
                                                 onDelete={handleDeleteProduct}
                                                 index={index}
+                                                canEdit={canManageProducts}
+                                                canDelete={canDeleteProducts}
                                             />
                                         ))}
                                     </TableBody>
@@ -775,9 +839,11 @@ const ProductAccountingPage: React.FC = () => {
                                     Импорт из PDF
                                 </Button>
                                 */}
-                                <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDishDialog()}>
-                                    Добавить блюдо
-                                </Button>
+                                {canManageDishes && (
+                                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDishDialog()}>
+                                        Добавить блюдо
+                                    </Button>
+                                )}
                             </Box>
                         </Box>
 
@@ -790,6 +856,8 @@ const ProductAccountingPage: React.FC = () => {
                                     onDelete={handleDeleteDish}
                                     onViewTechnical={handleViewTechnical}
                                     onViewCalc={handleViewCalc}
+                                    canEdit={canManageDishes}
+                                    canDelete={canDeleteDishes}
                                 />
                             ))}
                         </Grid>
@@ -808,7 +876,7 @@ const ProductAccountingPage: React.FC = () => {
                                 onChange={(e) => setChildCountInput(parseInt(e.target.value) || 0)}
                                 sx={{ width: 150 }}
                             />
-                            {!todayMenu && (
+                            {!todayMenu && canManageDailyMenu && (
                                 <Button variant="contained" onClick={handleCreateTodayMenu}>
                                     Создать меню на сегодня
                                 </Button>
@@ -840,7 +908,7 @@ const ProductAccountingPage: React.FC = () => {
                                                         />
                                                     )}
                                                     <Box sx={{ flexGrow: 1 }} />
-                                                    {!isServed && (
+                                                    {!isServed && canManageDailyMenu && (
                                                         <Button
                                                             size="small"
                                                             variant="contained"
@@ -859,7 +927,7 @@ const ProductAccountingPage: React.FC = () => {
                                                     {meal?.dishes?.map((dish: any) => (
                                                         <ListItem key={dish._id || dish.id}>
                                                             <ListItemText primary={dish.name || 'Блюдо'} />
-                                                            {!isServed && (
+                                                            {!isServed && canManageDailyMenu && (
                                                                 <ListItemSecondaryAction>
                                                                     <IconButton
                                                                         size="small"
@@ -873,7 +941,7 @@ const ProductAccountingPage: React.FC = () => {
                                                         </ListItem>
                                                     ))}
                                                 </List>
-                                                {!isServed && (
+                                                {!isServed && canManageDailyMenu && (
                                                     <Button
                                                         size="small"
                                                         startIcon={<AddIcon />}
@@ -1025,7 +1093,9 @@ const ProductAccountingPage: React.FC = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setProductDialogOpen(false)}>Отмена</Button>
-                    <Button variant="contained" onClick={handleSaveProduct}>Сохранить</Button>
+                    {canManageProducts && (
+                        <Button variant="contained" onClick={handleSaveProduct}>Сохранить</Button>
+                    )}
                 </DialogActions>
             </Dialog>
 
@@ -1097,24 +1167,26 @@ const ProductAccountingPage: React.FC = () => {
                         >
                             Печать
                         </Button>
-                        <Button
-                            variant="contained"
-                            color="success"
-                            onClick={async () => {
-                                if (tempDishForTechCard) {
-                                    try {
-                                        await updateDish(tempDishForTechCard._id || tempDishForTechCard.id || '', tempDishForTechCard);
-                                        showSnackbar({ message: 'Технологическая карта сохранена', type: 'success' });
-                                        setTechCardSaveError(null);
-                                        loadDishes();
-                                    } catch (e: any) {
-                                        setTechCardSaveError(getErrorMessage(e));
+                        {canManageDishes && (
+                            <Button
+                                variant="contained"
+                                color="success"
+                                onClick={async () => {
+                                    if (tempDishForTechCard) {
+                                        try {
+                                            await updateDish(tempDishForTechCard._id || tempDishForTechCard.id || '', tempDishForTechCard);
+                                            showSnackbar({ message: 'Технологическая карта сохранена', type: 'success' });
+                                            setTechCardSaveError(null);
+                                            loadDishes();
+                                        } catch (e: any) {
+                                            setTechCardSaveError(getErrorMessage(e));
+                                        }
                                     }
-                                }
-                            }}
-                        >
-                            Сохранить изменения
-                        </Button>
+                                }}
+                            >
+                                Сохранить изменения
+                            </Button>
+                        )}
                     </Box>
                 </DialogTitle>
                 <DialogContent dividers>

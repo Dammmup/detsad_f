@@ -115,7 +115,7 @@ const sidebarStructure: SidebarItem[] = [
         label: 'Зарплаты',
         link: '/app/salary',
         icon: <AssessmentIcon />,
-        visibleFor: ['admin']
+        visibleFor: ['admin', 'manager']
       },
 
     ],

@@ -36,13 +36,12 @@ const Dashboard = () => {
     'success',
   );
 
-  const isStaff = currentUser && currentUser.role !== 'admin';
-  const isAdmin = currentUser && currentUser.role === 'admin';
+  const showAttendanceButton = currentUser && currentUser.role !== 'admin';
+  const canViewReports = currentUser && ['admin', 'manager', 'director'].includes(currentUser.role);
+  const canViewFinancialStats = currentUser && ['admin', 'director'].includes(currentUser.role);
   const canManageChildren =
     currentUser &&
-    (currentUser.role === 'admin' ||
-      currentUser.role === 'teacher' ||
-      currentUser.role === 'substitute');
+    ['admin', 'manager', 'director', 'owner', 'teacher', 'assistant'].includes(currentUser.role);
 
   const handleAttendanceStatusChange = () => {
 
@@ -87,7 +86,7 @@ const Dashboard = () => {
       }}
     >
       <DateNavigator />
-      {!isStaff && <ReportsWidget />}
+      {canViewReports && <ReportsWidget />}
 
       <Box
         sx={{
@@ -100,7 +99,7 @@ const Dashboard = () => {
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <Grid container spacing={3}>
             {/* Кнопка отметки прихода/ухода для сотрудников */}
-            {isStaff && (
+            {showAttendanceButton && (
               <Grid item xs={12} sm={6} md={6}>
                 <Card
                   sx={{
@@ -338,7 +337,7 @@ const Dashboard = () => {
           </Grid>
 
           {/* Виджет финансовой статистики - только для админов */}
-          {isAdmin && (
+          {canViewFinancialStats && (
             <Grid item xs={12} md={6}>
               <Card
                 sx={{

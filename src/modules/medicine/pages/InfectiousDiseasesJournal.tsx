@@ -33,9 +33,12 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { showSnackbar } from '../../../shared/components/Snackbar';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
+import { useAuth } from '../../../app/context/AuthContext';
 
 export default function InfectiousDiseasesJournal() {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const canManageMedical = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
   const [records, setRecords] = useState<InfectiousDiseaseRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +102,10 @@ export default function InfectiousDiseasesJournal() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canManageMedical) {
+      showSnackbar({ message: 'Недостаточно прав для удаления записи', type: 'error' });
+      return;
+    }
     setLoading(true);
     try {
       await deleteInfectiousDiseaseRecord(id);
@@ -207,13 +214,15 @@ export default function InfectiousDiseasesJournal() {
                 <TableCell>{r.diagnosis || '-'}</TableCell>
                 <TableCell>{r.notes || '-'}</TableCell>
                 <TableCell>
-                  <Button
-                    color='error'
-                    size='small'
-                    onClick={() => handleDelete(r.id || r._id || '')}
-                  >
-                    Удалить
-                  </Button>
+                  {canManageMedical && (
+                    <Button
+                      color='error'
+                      size='small'
+                      onClick={() => handleDelete(r.id || r._id || '')}
+                    >
+                      Удалить
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             )

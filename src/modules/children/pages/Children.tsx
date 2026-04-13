@@ -69,6 +69,7 @@ const ChildRow = React.memo(({
 }) => {
   const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
   const groupColor = childGroupId ? getGroupColor(childGroupId) : '#B0B0B0';
+  const canDeleteChildren = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
 
   return (
     <TableRow
@@ -129,7 +130,7 @@ const ChildRow = React.memo(({
         <IconButton
           size={isMobile ? 'small' : 'medium'}
           onClick={() => handleDelete(child.id || (child._id as string))}
-          sx={{ visibility: currentUser?.role === 'admin' ? 'visible' : 'hidden' }}
+          sx={{ visibility: canDeleteChildren ? 'visible' : 'hidden' }}
         >
           <Delete fontSize={isMobile ? 'small' : 'medium'} />
         </IconButton>
@@ -240,6 +241,8 @@ const ChildCard = React.memo(({
 
 const Children: React.FC = () => {
   const { user: currentUser } = useAuth();
+  const canManagePayments = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
+  const canExportChildren = ['admin', 'manager', 'director', 'teacher'].includes(currentUser?.role || '');
   const { 
     children: allChildren, 
     loading: childrenLoading, 
@@ -434,21 +437,23 @@ const Children: React.FC = () => {
         </Box>
         <Box mb={isMobile ? 0 : 2} display='flex' flexDirection={isMobile ? 'column' : 'row'} gap={1}>
           <AuditLogButton entityType="child" />
-          {(currentUser?.role === 'admin' || currentUser?.role === 'manager') && (
+          {canExportChildren && (
             <ExportButton exportTypes={[{ value: 'children', label: 'Список детей' }]} onExport={handleExport} />
           )}
-          <Tooltip title="Сгенерировать недостающие платежи за текущий month">
-            <Button
-              variant='outlined'
-              color='secondary'
-              startIcon={isGeneratingPayments ? <CircularProgress size={20} /> : <Refresh />}
-              onClick={handleGeneratePayments}
-              disabled={isGeneratingPayments || loading}
-              sx={{ width: isMobile ? '100%' : 'auto' }}
-            >
-              {isGeneratingPayments ? 'Генерация...' : 'Сгенерировать платежи'}
-            </Button>
-          </Tooltip>
+          {canManagePayments && (
+            <Tooltip title="Сгенерировать недостающие платежи за текущий month">
+              <Button
+                variant='outlined'
+                color='secondary'
+                startIcon={isGeneratingPayments ? <CircularProgress size={20} /> : <Refresh />}
+                onClick={handleGeneratePayments}
+                disabled={isGeneratingPayments || loading}
+                sx={{ width: isMobile ? '100%' : 'auto' }}
+              >
+                {isGeneratingPayments ? 'Генерация...' : 'Сгенерировать платежи'}
+              </Button>
+            </Tooltip>
+          )}
           <Button variant='contained' startIcon={<Add />} onClick={() => handleOpenModal()} sx={{ width: isMobile ? '100%' : 'auto' }}>
             Добавить ребёнка
           </Button>
@@ -571,7 +576,7 @@ const Children: React.FC = () => {
                 handleDelete={handleDelete}
                 groups={groups}
                 onGroupChange={handleGroupChange}
-                isAdmin={currentUser?.role === 'admin'}
+                isAdmin={canManagePayments}
               />
             ))}
           </Box>
@@ -611,7 +616,7 @@ const Children: React.FC = () => {
                       Группа
                     </TableSortLabel>
                   </TableCell>
-                  {currentUser?.role === 'admin' && (
+                  {canManagePayments && (
                     <TableCell sx={{ fontSize: isMobile ? '0.9rem' : '1rem', p: isMobile ? 1 : 2 }}>
                       <TableSortLabel
                         active={sortConfig.key === 'paymentAmount'}
@@ -640,7 +645,7 @@ const Children: React.FC = () => {
                     handleDelete={handleDelete}
                     groups={groups}
                     onGroupChange={handleGroupChange}
-                    isAdmin={currentUser?.role === 'admin'}
+                    isAdmin={canManagePayments}
                   />
                 ))}
               </TableBody>

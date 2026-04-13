@@ -42,9 +42,12 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { showSnackbar } from '../../../shared/components/Snackbar';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
+import { useAuth } from '../../../app/context/AuthContext';
 
 export default function MantouxJournal() {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const canManageMedical = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
   const [records, setRecords] = useState<MantouxRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,6 +114,10 @@ export default function MantouxJournal() {
 
 
   const handleDelete = async (id: string) => {
+    if (!canManageMedical) {
+      showSnackbar({ message: 'Недостаточно прав для удаления записи', type: 'error' });
+      return;
+    }
     setLoading(true);
     try {
       await deleteMantouxRecord(id);
@@ -273,13 +280,15 @@ export default function MantouxJournal() {
                 <TableCell>{r.injectionSite}</TableCell>
                 <TableCell>{r.has063 ? 'Да' : 'Нет'}</TableCell>
                 <TableCell>
-                  <Button
-                    color='error'
-                    size='small'
-                    onClick={() => handleDelete(r.id || r._id || '')}
-                  >
-                    Удалить
-                  </Button>
+                  {canManageMedical && (
+                    <Button
+                      color='error'
+                      size='small'
+                      onClick={() => handleDelete(r.id || r._id || '')}
+                    >
+                      Удалить
+                    </Button>
+                  )}
                   {/* Для редактирования можно добавить отдельную кнопку/диалог */}
                 </TableCell>
               </TableRow>

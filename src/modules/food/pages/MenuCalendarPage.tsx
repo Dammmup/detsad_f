@@ -19,6 +19,7 @@ import { showSnackbar } from '../../../shared/components/Snackbar';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 import { format } from 'date-fns';
+import { useAuth } from '../../../app/context/AuthContext';
 
 interface IMenuItem {
     _id: string;
@@ -92,6 +93,12 @@ const CalendarDayCell = React.memo(({
 });
 
 const MenuCalendarPage: React.FC = () => {
+    const { user: currentUser } = useAuth();
+    const role = currentUser?.role;
+    const isAdmin = role === 'admin';
+    const isManager = role === 'manager';
+    const canManageMenus = isAdmin || isManager;
+
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [dailyMenus, setDailyMenus] = useState<DailyMenuType[]>([]);
@@ -183,6 +190,10 @@ const MenuCalendarPage: React.FC = () => {
     // Handle delete menu
     const handleDeleteMenu = useCallback(async () => {
         if (!selectedMenu || !selectedMenu._id) return;
+        if (!canManageMenus) {
+            showSnackbar({ message: 'Недостаточно прав для удаления меню', type: 'error' });
+            return;
+        }
 
         if (!window.confirm('Вы уверены, что хотите удалить меню на этот день?')) {
             return;
@@ -196,11 +207,15 @@ const MenuCalendarPage: React.FC = () => {
         } catch (err) {
             showSnackbar({ message: 'Ошибка при удалении меню: ' + getErrorMessage(err), type: 'error' });
         }
-    }, [selectedMenu, handleCloseDialog, fetchMenus]);
+    }, [selectedMenu, handleCloseDialog, fetchMenus, canManageMenus]);
 
     // Handle apply template
     const handleApplyTemplate = useCallback(async () => {
         if (!selectedTemplateId || !selectedDate) return;
+        if (!canManageMenus) {
+            setError('Недостаточно прав для применения шаблонов меню');
+            return;
+        }
 
         setApplying(true);
         try {
@@ -217,7 +232,7 @@ const MenuCalendarPage: React.FC = () => {
         } finally {
             setApplying(false);
         }
-    }, [selectedTemplateId, selectedDate, applyType, applyChildCount, handleCloseDialog, fetchMenus]);
+    }, [selectedTemplateId, selectedDate, applyType, applyChildCount, handleCloseDialog, fetchMenus, canManageMenus]);
 
     const handleTemplateChange = useCallback((e: any) => setSelectedTemplateId(e.target.value), []);
     const handleChildCountChange = useCallback((e: any) => setApplyChildCount(Number(e.target.value)), []);
@@ -397,7 +412,9 @@ const MenuCalendarPage: React.FC = () => {
                                     <Typography variant="h6">Детали меню</Typography>
                                     <Box sx={{ display: 'flex', gap: 2 }}>
                                         <Button variant="outlined" color="primary" startIcon={<PrintIcon />} onClick={handlePrintMenu}>Печать</Button>
-                                        <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteMenu}>Удалить меню на день</Button>
+                                        {canManageMenus && (
+                                            <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteMenu}>Удалить меню на день</Button>
+                                        )}
                                     </Box>
                                 </Box>
                                 <Divider sx={{ my: 2 }} />
@@ -465,12 +482,19 @@ const MenuCalendarPage: React.FC = () => {
                                         </FormControl>
                                     </Grid>
                                 </Grid>
-                                <Button
-                                    variant="contained" fullWidth size="large" startIcon={<PlayArrowIcon />} sx={{ mt: 3 }}
-                                    onClick={handleApplyTemplate} disabled={!selectedTemplateId || applying}
-                                >
-                                    {applying ? <CircularProgress size={24} /> : 'Применить шаблон'}
-                                </Button>
+                                {!canManageMenus && (
+                                    <Alert severity="info" sx={{ mt: 2 }}>
+                                        Недостаточно прав для применения шаблонов меню.
+                                    </Alert>
+                                )}
+                                {canManageMenus && (
+                                    <Button
+                                        variant="contained" fullWidth size="large" startIcon={<PlayArrowIcon />} sx={{ mt: 3 }}
+                                        onClick={handleApplyTemplate} disabled={!selectedTemplateId || applying}
+                                    >
+                                        {applying ? <CircularProgress size={24} /> : 'Применить шаблон'}
+                                    </Button>
+                                )}
                             </Box>
                         )}
                     </DialogContent>

@@ -20,6 +20,7 @@ import {
   FormControl,
   InputLabel,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import { OrganolepticRecord } from '../../../shared/types/organoleptic';
 import {
@@ -34,6 +35,7 @@ import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useAuth } from '../../../app/context/AuthContext';
 
 const GROUPS = [
   'Все',
@@ -53,6 +55,12 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export default function OrganolepticJournalPage() {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role;
+  const canManageOrganoleptic =
+    role === 'admin' || role === 'manager' || role === 'doctor' || role === 'nurse' || role === 'cook';
+  const canClearAll = role === 'admin' || role === 'manager';
+
   const [records, setRecords] = useState<OrganolepticRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -62,6 +70,10 @@ export default function OrganolepticJournalPage() {
   const [group, setGroup] = useState('Все');
   const [responsibleSignature, setResponsibleSignature] = useState('');
   const fetchRecords = React.useCallback(async () => {
+    if (!canManageOrganoleptic) {
+      setRecords([]);
+      return;
+    }
     setLoading(true);
     try {
       const data = await getOrganolepticRecords({ date, group });
@@ -69,13 +81,14 @@ export default function OrganolepticJournalPage() {
     } finally {
       setLoading(false);
     }
-  }, [date, group]);
+  }, [date, group, canManageOrganoleptic]);
 
   useEffect(() => {
     fetchRecords();
   }, [date, group, fetchRecords]);
 
   const handleGenerateByMenu = async () => {
+    if (!canManageOrganoleptic) return;
     setLoading(true);
     try {
       const generated = await generateOrganolepticByMenu({ date, group });
@@ -86,6 +99,7 @@ export default function OrganolepticJournalPage() {
   };
 
   const handleClearAll = async () => {
+    if (!canClearAll) return;
     setLoading(true);
     try {
       await clearOrganolepticRecords({ date, group });
@@ -96,6 +110,7 @@ export default function OrganolepticJournalPage() {
   };
 
   const handleSave = async () => {
+    if (!canManageOrganoleptic) return;
     setLoading(true);
     try {
       if (editRecord?._id) {
@@ -118,6 +133,7 @@ export default function OrganolepticJournalPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canManageOrganoleptic) return;
     setLoading(true);
     try {
       await deleteOrganolepticRecord(id);
@@ -165,26 +181,37 @@ export default function OrganolepticJournalPage() {
       <Typography variant='h4' gutterBottom>
         Журнал органолептической оценки качества блюд
       </Typography>
+      {!canManageOrganoleptic && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Недостаточно прав для работы с журналом органолептической оценки.
+        </Alert>
+      )}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
-        <Button
-          variant='contained'
-          color='secondary'
-          onClick={handleGenerateByMenu}
-        >
-          Сгенерировать по меню
-        </Button>
-        <Button variant='outlined' color='error' onClick={handleClearAll}>
-          Очистить
-        </Button>
-        <ExportButton
-          exportTypes={[
-            {
-              value: 'organoleptic-journal',
-              label: 'Журнал органолептической оценки',
-            },
-          ]}
-          onExport={handleExport}
-        />
+        {canManageOrganoleptic && (
+          <Button
+            variant='contained'
+            color='secondary'
+            onClick={handleGenerateByMenu}
+          >
+            Сгенерировать по меню
+          </Button>
+        )}
+        {canClearAll && (
+          <Button variant='outlined' color='error' onClick={handleClearAll}>
+            Очистить
+          </Button>
+        )}
+        {canManageOrganoleptic && (
+          <ExportButton
+            exportTypes={[
+              {
+                value: 'organoleptic-journal',
+                label: 'Журнал органолептической оценки',
+              },
+            ]}
+            onExport={handleExport}
+          />
+        )}
       </Stack>
       <Paper sx={{ p: 2, mb: 2 }}>
         <Typography variant='h6' gutterBottom>
@@ -262,22 +289,26 @@ export default function OrganolepticJournalPage() {
                     <TableCell>{r.smell}</TableCell>
                     <TableCell>{r.decision}</TableCell>
                     <TableCell>
-                      <Button
-                        size='small'
-                        onClick={() => {
-                          setEditRecord(r);
-                          setModalOpen(true);
-                        }}
-                      >
-                        Редактировать
-                      </Button>
-                      <Button
-                        size='small'
-                        color='error'
-                        onClick={() => r._id && handleDelete(r._id)}
-                      >
-                        Удалить
-                      </Button>
+                      {canManageOrganoleptic && (
+                        <>
+                          <Button
+                            size='small'
+                            onClick={() => {
+                              setEditRecord(r);
+                              setModalOpen(true);
+                            }}
+                          >
+                            Редактировать
+                          </Button>
+                          <Button
+                            size='small'
+                            color='error'
+                            onClick={() => r._id && handleDelete(r._id)}
+                          >
+                            Удалить
+                          </Button>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -364,9 +395,11 @@ export default function OrganolepticJournalPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setModalOpen(false)}>Отмена</Button>
-          <Button onClick={handleSave} variant='contained'>
-            Сохранить
-          </Button>
+          {canManageOrganoleptic && (
+            <Button onClick={handleSave} variant='contained'>
+              Сохранить
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
       {loading && (

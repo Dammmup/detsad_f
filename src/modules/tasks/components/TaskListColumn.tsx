@@ -39,6 +39,7 @@ interface TaskListColumnProps {
 
 const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
   const { user: currentUser } = useAuth();
+  const canManageTasks = ['admin', 'manager'].includes(currentUser?.role || '');
   const [tasks, setTasks] = useState<TaskList[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +106,10 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
   }, [tasks]);
 
   const handleAddTask = async () => {
+    if (!canManageTasks) {
+      setError('Недостаточно прав для добавления уведомлений');
+      return;
+    }
     if (!newTaskTitle.trim() || !currentUser || !currentUser.id) return;
 
     try {
@@ -145,11 +150,11 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
 
 
       if (task.status === 'completed') {
-
         updatedTask = await toggleTaskStatus(taskId, currentUser.id);
-      } else {
-
+      } else if (canManageTasks) {
         updatedTask = await markTaskAsCompleted(taskId, currentUser.id);
+      } else {
+        updatedTask = await toggleTaskStatus(taskId, currentUser.id);
       }
 
 
@@ -163,6 +168,10 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
   };
 
   const handleDeleteTask = async (id: string) => {
+    if (!canManageTasks) {
+      setError('Недостаточно прав для удаления уведомлений');
+      return;
+    }
     try {
       await deleteTask(id);
       setTasks(tasks.filter((task) => task._id !== id));
@@ -241,22 +250,24 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <AuditLogButton entityType="task" />
-            <Button
-              variant='contained'
-              size='small'
-              startIcon={<Add />}
-              onClick={() => setShowAddTaskDialog(true)}
-              sx={{
-                backgroundColor: 'rgb(24, 144, 255)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,255,0.3)',
-                '&:hover': {
-                  backgroundColor: 'green',
-                },
-              }}
-            >
-              Добавить
-            </Button>
+            {canManageTasks && (
+              <Button
+                variant='contained'
+                size='small'
+                startIcon={<Add />}
+                onClick={() => setShowAddTaskDialog(true)}
+                sx={{
+                  backgroundColor: 'rgb(24, 144, 255)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255,255,0.3)',
+                  '&:hover': {
+                    backgroundColor: 'green',
+                  },
+                }}
+              >
+                Добавить
+              </Button>
+            )}
           </Box>
         </Box>
 
@@ -458,19 +469,21 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                     />
                   </Box>
 
-                  <IconButton
-                    size='small'
-                    onClick={() => setTaskToDelete(task._id!)}
-                    sx={{
-                      color: '#6c757d',
-                      '&:hover': {
-                        color: '#dc3545',
-                        backgroundColor: 'rgba(220,53,69,0.1)',
-                      },
-                    }}
-                  >
-                    <Delete fontSize='small' />
-                  </IconButton>
+                  {canManageTasks && (
+                    <IconButton
+                      size='small'
+                      onClick={() => setTaskToDelete(task._id!)}
+                      sx={{
+                        color: '#6c757d',
+                        '&:hover': {
+                          color: '#dc3545',
+                          backgroundColor: 'rgba(220,53,69,0.1)',
+                        },
+                      }}
+                    >
+                      <Delete fontSize='small' />
+                    </IconButton>
+                  )}
                 </Box>
 
                 {task.dueDate && (
@@ -493,7 +506,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
                 )}
 
                 {/* Отображение информации о назначенном пользователе - только для администраторов */}
-                {currentUser?.role === 'admin' &&
+                {canManageTasks &&
                   task.assignedToSpecificUser && (
                     <Typography
                       variant='caption'
@@ -596,7 +609,7 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
           </Box>
 
           {/* Выбор сотрудника для назначения задачи - только для администраторов */}
-          {currentUser?.role === 'admin' && (
+          {canManageTasks && (
             <FormControl fullWidth sx={{ mb: 2 }}>
               <InputLabel>Назначить конкретному сотруднику</InputLabel>
               <Select

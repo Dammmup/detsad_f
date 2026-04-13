@@ -42,6 +42,7 @@ interface Props {
     onAddFine: (fine: { amount: number; reason: string; type: 'manual' }) => void;
     onDeleteFine?: (fineId: string) => void;
     staffName: string;
+    canEdit?: boolean;
 }
 
 const FinesDetailsDialog: React.FC<Props> = ({
@@ -51,6 +52,7 @@ const FinesDetailsDialog: React.FC<Props> = ({
     onAddFine,
     onDeleteFine,
     staffName,
+    canEdit,
 }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -58,6 +60,7 @@ const FinesDetailsDialog: React.FC<Props> = ({
     const [newFine, setNewFine] = useState({ amount: '', reason: '' });
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [fineToDelete, setFineToDelete] = useState<{ index: number; amount: number } | null>(null);
+    const canEditFines = canEdit ?? true;
 
     const handleDeleteClick = (index: number, amount: number) => {
         console.log('🗑️ [FinesDetailsDialog] handleDeleteClick called:', { index, amount });
@@ -121,19 +124,21 @@ const FinesDetailsDialog: React.FC<Props> = ({
                             Всего Вычетов: <span style={{ color: '#d32f2f', fontWeight: 'bold' }}>{totalFines.toLocaleString()} тг</span>
                         </Typography>
                     </Box>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={<AddCircleOutlineIcon />}
-                        onClick={() => setShowAddForm(!showAddForm)}
-                        size={isMobile ? 'small' : 'medium'}
-                    >
-                        {showAddForm ? 'Отмена' : 'Добавить'}
-                    </Button>
+                    {canEditFines && (
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<AddCircleOutlineIcon />}
+                            onClick={() => setShowAddForm(!showAddForm)}
+                            size={isMobile ? 'small' : 'medium'}
+                        >
+                            {showAddForm ? 'Отмена' : 'Добавить'}
+                        </Button>
+                    )}
                 </DialogTitle>
 
                 <DialogContent dividers sx={{ minHeight: '60vh' }}>
-                    {showAddForm && (
+                    {showAddForm && canEditFines && (
                         <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'grey.50', border: '1px solid #eee', borderRadius: 2 }}>
                             <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Новый Вычет</Typography>
                             <Box sx={{
@@ -194,7 +199,7 @@ const FinesDetailsDialog: React.FC<Props> = ({
                                             <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'error.main' }}>
                                                 -{fine.amount.toLocaleString()} ₸
                                             </Typography>
-                                            {fine.type === 'manual' && onDeleteFine && (
+                                            {fine.type === 'manual' && onDeleteFine && canEditFines && (
                                                 <IconButton
                                                     size="small"
                                                     color="error"
@@ -247,7 +252,7 @@ const FinesDetailsDialog: React.FC<Props> = ({
                                                 -{fine.amount.toLocaleString()}
                                             </TableCell>
                                             <TableCell align="center">
-                                                {fine.type === 'manual' && onDeleteFine ? (
+                                                {fine.type === 'manual' && onDeleteFine && canEditFines ? (
                                                     <IconButton
                                                         size="small"
                                                         color="error"

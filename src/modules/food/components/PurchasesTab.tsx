@@ -3,7 +3,7 @@ import {
     Box, Typography, Paper, Button, TextField, Dialog, DialogTitle,
     DialogContent, DialogActions, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, IconButton, Checkbox,
-    Grid, CircularProgress, Card, CardContent, Chip
+    Grid, CircularProgress, Card, CardContent, Chip, Alert
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, ShoppingCart } from '@mui/icons-material';
 import { Product, getProducts } from '../services/products';
@@ -11,6 +11,7 @@ import { ProductPurchase, getProductPurchases, createProductPurchase, deleteProd
 import { showSnackbar } from '../../../shared/components/Snackbar';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
+import { useAuth } from '../../../app/context/AuthContext';
 
 interface SelectedProduct {
     product: Product;
@@ -21,6 +22,11 @@ interface SelectedProduct {
 }
 
 const PurchasesTab: React.FC = () => {
+    const { user: currentUser } = useAuth();
+    const role = currentUser?.role;
+    const canViewPurchases = role === 'admin' || role === 'manager' || role === 'director' || role === 'cook';
+    const canManagePurchases = role === 'admin' || role === 'manager';
+
     const [purchases, setPurchases] = useState<ProductPurchase[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(false);
@@ -34,6 +40,11 @@ const PurchasesTab: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     const loadData = async () => {
+        if (!canViewPurchases) {
+            setPurchases([]);
+            setProducts([]);
+            return;
+        }
         try {
             setLoading(true);
             const [purchasesData, productsData] = await Promise.all([
@@ -49,7 +60,7 @@ const PurchasesTab: React.FC = () => {
         }
     };
 
-    useEffect(() => { loadData(); }, []);
+    useEffect(() => { loadData(); }, [canViewPurchases]);
 
     // Общая сумма расходов за выбранную дату
     const filteredPurchases = useMemo(() => {
@@ -139,6 +150,10 @@ const PurchasesTab: React.FC = () => {
     };
 
     const handleCreateBatch = async () => {
+        if (!canManagePurchases) {
+            setError('Недостаточно прав для добавления закупок');
+            return;
+        }
         if (selectedProducts.length === 0) {
             setError('Выберите хотя бы один продукт');
             return;
@@ -182,6 +197,10 @@ const PurchasesTab: React.FC = () => {
     };
 
     const handleDelete = async (id: string) => {
+        if (!canManagePurchases) {
+            showSnackbar({ message: 'Недостаточно прав для удаления закупок', type: 'error' });
+            return;
+        }
         if (!window.confirm('Удалить запись о закупке?')) return;
         try {
             await deleteProductPurchase(id);
@@ -204,6 +223,11 @@ const PurchasesTab: React.FC = () => {
 
     return (
         <Box sx={{ px: 3 }}>
+            {!canViewPurchases && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                    Недостаточно прав для просмотра закупок продуктов.
+                </Alert>
+            )}
             {/* Карточка с общей суммой */}
             <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
                 <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -234,9 +258,11 @@ const PurchasesTab: React.FC = () => {
                         Записей за день: {filteredPurchases.length}
                     </Typography>
                 </Box>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={openDialog}>
-                    Добавить закупку
-                </Button>
+                {canManagePurchases && (
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={openDialog}>
+                        Добавить закупку
+                    </Button>
+                )}
             </Box>
 
             {loading ? (
@@ -271,9 +297,11 @@ const PurchasesTab: React.FC = () => {
                                         <TableCell align="right"><strong>{p.totalPrice?.toLocaleString()} ₸</strong></TableCell>
                                         <TableCell>{p.supplier}</TableCell>
                                         <TableCell align="center">
-                                            <IconButton size="small" color="error" onClick={() => handleDelete(p._id || p.id || '')}>
-                                                <DeleteIcon fontSize="small" />
-                                            </IconButton>
+                                            {canManagePurchases && (
+                                                <IconButton size="small" color="error" onClick={() => handleDelete(p._id || p.id || '')}>
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 );
@@ -437,13 +465,15 @@ const PurchasesTab: React.FC = () => {
                         Итого: {selectedTotal.toLocaleString()} ₸
                     </Typography>
                     <Button onClick={() => setDialogOpen(false)}>Отмена</Button>
-                    <Button
-                        variant="contained"
-                        onClick={handleCreateBatch}
-                        disabled={selectedProducts.length === 0 || loading}
-                    >
-                        {loading ? <CircularProgress size={20} /> : `Добавить (${selectedProducts.length})`}
-                    </Button>
+                    {canManagePurchases && (
+                        <Button
+                            variant="contained"
+                            onClick={handleCreateBatch}
+                            disabled={selectedProducts.length === 0 || loading}
+                        >
+                            {loading ? <CircularProgress size={20} /> : `Добавить (${selectedProducts.length})`}
+                        </Button>
+                    )}
                 </DialogActions>
             </Dialog>
         </Box>

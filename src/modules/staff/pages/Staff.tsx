@@ -152,6 +152,7 @@ const StaffRow = React.memo(({
   index: number;
   isExternal?: boolean;
 }) => {
+  const isAdmin = currentUser?.role === 'admin';
   return (
     <TableRow key={member.id || member._id}>
       <TableCell style={{ fontWeight: 'bold', width: 50 }}>{index + 1}</TableCell>
@@ -213,16 +214,20 @@ const StaffRow = React.memo(({
       )}
       <TableCell align='right'>
         <AuditLogButton entityType="staff" entityId={member._id || member.id} entityName={member.fullName || member.name} />
-        <Tooltip title='Редактировать'>
-          <IconButton onClick={() => handleOpenModal(member)}>
-            <Edit />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title='Удалить'>
-          <IconButton onClick={() => handleDelete(member)}>
-            <Delete color='error' />
-          </IconButton>
-        </Tooltip>
+        {isAdmin && (
+          <>
+            <Tooltip title='Редактировать'>
+              <IconButton onClick={() => handleOpenModal(member)}>
+                <Edit />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title='Удалить'>
+              <IconButton onClick={() => handleDelete(member)}>
+                <Delete color='error' />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
       </TableCell>
     </TableRow>
   );
@@ -236,6 +241,7 @@ const StaffCard = React.memo(({
   translateRole
 }: any) => {
   const isExternal = member.type === 'external' || member.isExternal;
+  const isAdmin = currentUser?.role === 'admin';
 
   return (
     <Paper sx={{ mb: 2, p: 2, borderRadius: 2, boxShadow: 1, border: '1px solid #eee' }}>
@@ -291,14 +297,16 @@ const StaffCard = React.memo(({
 
       <Box display="flex" justifyContent="space-between" alignItems="center" pt={1.5} sx={{ borderTop: '1px solid #f0f0f0' }}>
         <AuditLogButton entityType="staff" entityId={member._id || member.id} entityName={member.fullName || member.name} />
-        <Box display="flex" gap={1}>
-          <IconButton size="small" onClick={() => handleOpenModal(member)} color="primary">
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton size="small" onClick={() => handleDelete(member)} color="error">
-            <Delete fontSize="small" />
-          </IconButton>
-        </Box>
+        {isAdmin && (
+          <Box display="flex" gap={1}>
+            <IconButton size="small" onClick={() => handleOpenModal(member)} color="primary">
+              <Edit fontSize="small" />
+            </IconButton>
+            <IconButton size="small" onClick={() => handleDelete(member)} color="error">
+              <Delete fontSize="small" />
+            </IconButton>
+          </Box>
+        )}
       </Box>
     </Paper>
   );
@@ -347,6 +355,7 @@ const Staff = () => {
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [activeTab, setActiveTab] = useState<'active' | 'inactive' | 'external'>('active');
   const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin';
 
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
@@ -592,22 +601,24 @@ const Staff = () => {
               onExport={handleExport}
             />
           </Box>
-          <Button
-            variant='contained'
-            color='primary'
-            fullWidth={isMobile}
-            startIcon={<Add />}
-            onClick={() => {
-              if (activeTab === 'external') {
-                setForm({ ...defaultForm, role: 'tenant' as UserRole });
-                setModalOpen(true);
-              } else {
-                handleOpenModal();
-              }
-            }}
-          >
-            {activeTab === 'external' ? 'Добавить специалиста' : 'Добавить сотрудника'}
-          </Button>
+          {isAdmin && (
+            <Button
+              variant='contained'
+              color='primary'
+              fullWidth={isMobile}
+              startIcon={<Add />}
+              onClick={() => {
+                if (activeTab === 'external') {
+                  setForm({ ...defaultForm, role: 'tenant' as UserRole });
+                  setModalOpen(true);
+                } else {
+                  handleOpenModal();
+                }
+              }}
+            >
+              {activeTab === 'external' ? 'Добавить специалиста' : 'Добавить сотрудника'}
+            </Button>
+          )}
         </Box>
 
         {/* Поиск и фильтры */}
@@ -972,19 +983,21 @@ const Staff = () => {
               {/* Поля для штатных сотрудников (только если не вкладка external) */}
               {activeTab !== 'external' && (
                 <>
-                  <Grid item xs={12} md={6}>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={form.allowToSeePayroll || false}
-                          onChange={(e) =>
-                            setForm({ ...form, allowToSeePayroll: e.target.checked })
-                          }
-                        />
-                      }
-                      label='Разрешить просмотр зарплаты'
-                    />
-                  </Grid>
+                  {isAdmin && (
+                    <Grid item xs={12} md={6}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={form.allowToSeePayroll || false}
+                            onChange={(e) =>
+                              setForm({ ...form, allowToSeePayroll: e.target.checked })
+                            }
+                          />
+                        }
+                        label='Разрешить просмотр зарплаты'
+                      />
+                    </Grid>
+                  )}
 
                   {/* Индивидуальные доступы */}
                   {currentUser?.role === 'admin' && (

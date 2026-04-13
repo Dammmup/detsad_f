@@ -89,6 +89,7 @@ const RentReport: React.FC<Props> = ({ userId }) => {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [rows, setRows] = useState<RentRow[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const isAdmin = currentUser?.role === 'admin';
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<RentRow>>({});
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -133,7 +134,7 @@ const RentReport: React.FC<Props> = ({ userId }) => {
           period: selectedMonth,
         };
 
-        if (currentUserData && currentUserData.role !== 'admin') {
+        if (currentUserData && !['admin', 'manager'].includes(currentUserData.role)) {
           params.userId = currentUserData.id;
         } else if (userId) {
           params.userId = userId;
@@ -583,7 +584,7 @@ const RentReport: React.FC<Props> = ({ userId }) => {
             </Box>
           </Card>
 
-          {currentUser?.role === 'admin' && (
+          {isAdmin && (
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
               <Button variant='contained' startIcon={generating ? <CircularProgress size={20} /> : <EditIcon />} onClick={handleGenerateRentSheets} disabled={generating}>
                 {generating ? 'Генерация...' : 'Сгенерировать'}
@@ -746,43 +747,58 @@ const RentReport: React.FC<Props> = ({ userId }) => {
                           </Box>
                         ) : (
                           <Box sx={{ display: 'flex' }}>
-                            <IconButton color='primary' onClick={() => handleEditClick(r)}>
-                              <EditIcon />
-                            </IconButton>
-                            <Tooltip title="Мгновенная оплата">
-                              <IconButton 
-                                color='success' 
-                                onClick={() => handleInstantPayment(r)}
-                                disabled={r.paidAmount >= r.amount}
-                              >
-                                <PaymentsIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Сбросить оплату">
-                              <IconButton 
-                                color='warning' 
-                                onClick={() => handleResetPayment(r)}
-                                disabled={r.paidAmount <= 0 && r.status !== 'paid'}
-                              >
-                                <ResetIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Просмотр квитанции">
-                              <IconButton onClick={() => {
-                                setSelectedReceiptData({
-                                  ...r,
-                                  period: selectedMonthLabel,
-                                  id: r._id || r.tenantId
-                                });
-                                setReceiptDialogOpen(true);
-                              }}>
-                                <VisibilityIcon />
-                              </IconButton>
-                            </Tooltip>
-                            {currentUser?.role === 'admin' && (
-                              <IconButton color='error' onClick={() => handleDeleteClick(r)}>
-                                <CloseIcon />
-                              </IconButton>
+                            {isAdmin ? (
+                              <>
+                                <IconButton color='primary' onClick={() => handleEditClick(r)}>
+                                  <EditIcon />
+                                </IconButton>
+                                <Tooltip title="Мгновенная оплата">
+                                  <IconButton 
+                                    color='success' 
+                                    onClick={() => handleInstantPayment(r)}
+                                    disabled={r.paidAmount >= r.amount}
+                                  >
+                                    <PaymentsIcon />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Сбросить оплату">
+                                  <IconButton 
+                                    color='warning' 
+                                    onClick={() => handleResetPayment(r)}
+                                    disabled={r.paidAmount <= 0 && r.status !== 'paid'}
+                                  >
+                                    <ResetIcon />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Просмотр квитанции">
+                                  <IconButton onClick={() => {
+                                    setSelectedReceiptData({
+                                      ...r,
+                                      period: selectedMonthLabel,
+                                      id: r._id || r.tenantId
+                                    });
+                                    setReceiptDialogOpen(true);
+                                  }}>
+                                    <VisibilityIcon />
+                                  </IconButton>
+                                </Tooltip>
+                                <IconButton color='error' onClick={() => handleDeleteClick(r)}>
+                                  <CloseIcon />
+                                </IconButton>
+                              </>
+                            ) : (
+                              <Tooltip title="Просмотр квитанции">
+                                <IconButton onClick={() => {
+                                  setSelectedReceiptData({
+                                    ...r,
+                                    period: selectedMonthLabel,
+                                    id: r._id || r.tenantId
+                                  });
+                                  setReceiptDialogOpen(true);
+                                }}>
+                                  <VisibilityIcon />
+                                </IconButton>
+                              </Tooltip>
                             )}
                           </Box>
                         )}

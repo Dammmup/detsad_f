@@ -41,7 +41,7 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = React.memo(() =>
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const isAdmin = currentUser?.role === 'admin';
+  const canManageSchedules = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
 
 
   useEffect(() => {
@@ -60,7 +60,7 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = React.memo(() =>
           endDate: todayStr,
         };
 
-        if (!isAdmin) {
+        if (!canManageSchedules) {
           filters.staffId = currentUser.id;
         }
 
@@ -149,7 +149,7 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = React.memo(() =>
     };
 
     fetchTodaySchedule();
-  }, [currentUser, currentDate, isAdmin]);
+  }, [currentUser, currentDate, canManageSchedules]);
 
   const getStatusChip = (shift: ShiftWithAttendance) => {
     switch (shift.status) {
@@ -270,7 +270,7 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = React.memo(() =>
             }}
           >
             <Typography color='text.secondary'>
-              {isAdmin ? 'Нет смен на сегодня' : 'У вас нет смены сегодня'}
+              {canManageSchedules ? 'Нет смен на сегодня' : 'У вас нет смены сегодня'}
             </Typography>
           </Box>
         ) : (

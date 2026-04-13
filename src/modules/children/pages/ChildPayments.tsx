@@ -65,7 +65,8 @@ const PaymentRow = React.memo(({
   onOpenModal,
   onDelete,
   getPaymentStatusColor,
-  index
+  index,
+  canManage,
 }: any) => {
   const handlePaidClick = useCallback(() => onMarkAsPaid(payment._id), [payment._id, onMarkAsPaid]);
   const handleKaspiPaidClick = useCallback(() => onMarkAsPaid(payment._id, 'kaspi'), [payment._id, onMarkAsPaid]);
@@ -89,7 +90,8 @@ const PaymentRow = React.memo(({
       <TableCell sx={{ p: isMobile ? 1 : 2, fontWeight: 'bold', width: 40 }}>{index + 1}</TableCell>
       <TableCell sx={{ p: isMobile ? 1 : 2, textAlign: 'center', width: 120 }}>
         <Box display="flex" gap={0.5} justifyContent="center">
-          {payment.status === 'paid' ? (
+          {canManage ? (
+            payment.status === 'paid' ? (
             <Tooltip title="Отменить оплату">
               <IconButton
                 size="small"
@@ -134,6 +136,8 @@ const PaymentRow = React.memo(({
                 </IconButton>
               </Tooltip>
             </>
+          )) : (
+            <Typography variant="caption" color="text.secondary">-</Typography>
           )}
         </Box>
       </TableCell>
@@ -207,12 +211,16 @@ const PaymentRow = React.memo(({
       </TableCell>
       <TableCell align="right" sx={{ p: isMobile ? 0.5 : 1, width: 80 }}>
         <Box display="flex" justifyContent="flex-end" gap={0.5}>
-          <IconButton size="small" onClick={handleEditClick} color="primary">
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton size="small" onClick={handleDeleteClick} color="error">
-            <Delete fontSize="small" />
-          </IconButton>
+          {canManage && (
+            <>
+              <IconButton size="small" onClick={handleEditClick} color="primary">
+                <Edit fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={handleDeleteClick} color="error">
+                <Delete fontSize="small" />
+              </IconButton>
+            </>
+          )}
         </Box>
       </TableCell>
     </TableRow>
@@ -229,7 +237,8 @@ const PaymentCard = React.memo(({
   onOpenModal,
   onDelete,
   getPaymentStatusColor,
-  index
+  index,
+  canManage,
 }: any) => {
   const handleCancelClick = useCallback(() => onCancelPayment(payment._id), [payment._id, onCancelPayment]);
   const handleKaspiPaidClick = useCallback(() => onMarkAsPaid(payment._id, 'kaspi'), [payment._id, onMarkAsPaid]);
@@ -306,28 +315,36 @@ const PaymentCard = React.memo(({
 
       <Box display="flex" justifyContent="space-between" alignItems="center" pt={1} sx={{ borderTop: '1px solid #f0f0f0' }}>
         <Box display="flex" gap={1}>
-          {payment.status === 'paid' ? (
-            <IconButton size="small" onClick={handleCancelClick} sx={{ color: 'warning.main', border: '1px solid currentColor' }}>
-              <Refresh fontSize="small" />
-            </IconButton>
+          {canManage ? (
+            payment.status === 'paid' ? (
+              <IconButton size="small" onClick={handleCancelClick} sx={{ color: 'warning.main', border: '1px solid currentColor' }}>
+                <Refresh fontSize="small" />
+              </IconButton>
+            ) : (
+              <>
+                <IconButton size="small" onClick={handleKaspiPaidClick} sx={{ p: 0.5, border: '1px solid #efefef' }}>
+                  <img src="/templates/kaspi.svg" alt="" style={{ width: 20 }} />
+                </IconButton>
+                <IconButton size="small" onClick={handleCashPaidClick} sx={{ p: 0.5, border: '1px solid #efefef' }}>
+                  <img src="/templates/cash.svg" alt="" style={{ width: 20 }} />
+                </IconButton>
+              </>
+            )
           ) : (
-            <>
-              <IconButton size="small" onClick={handleKaspiPaidClick} sx={{ p: 0.5, border: '1px solid #efefef' }}>
-                <img src="/templates/kaspi.svg" alt="" style={{ width: 20 }} />
-              </IconButton>
-              <IconButton size="small" onClick={handleCashPaidClick} sx={{ p: 0.5, border: '1px solid #efefef' }}>
-                <img src="/templates/cash.svg" alt="" style={{ width: 20 }} />
-              </IconButton>
-            </>
+            <Typography variant="caption" color="text.secondary">-</Typography>
           )}
         </Box>
         <Box display="flex" gap={0.5}>
-          <IconButton size="small" onClick={handleEditClick} color="primary">
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton size="small" onClick={handleDeleteClick} color="error">
-            <Delete fontSize="small" />
-          </IconButton>
+          {canManage && (
+            <>
+              <IconButton size="small" onClick={handleEditClick} color="primary">
+                <Edit fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={handleDeleteClick} color="error">
+                <Delete fontSize="small" />
+              </IconButton>
+            </>
+          )}
         </Box>
       </Box>
     </Paper>
@@ -336,6 +353,8 @@ const PaymentCard = React.memo(({
 
 const ChildPayments: React.FC = () => {
   const { user: currentUser } = useAuth();
+  const role = currentUser?.role;
+  const canManagePayments = role === 'admin' || role === 'manager' || role === 'director';
   const { currentDate } = useDate();
   const { children, fetchChildren } = useChildren();
   const { groups, fetchGroups } = useGroups();
@@ -401,6 +420,11 @@ const ChildPayments: React.FC = () => {
   }, []);
 
   const fetchPayments = useCallback(async () => {
+    if (!canManagePayments) {
+      setPayments([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -412,9 +436,13 @@ const ChildPayments: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentDate]);
+  }, [currentDate, canManagePayments]);
 
   const handleGeneratePayments = useCallback(async () => {
+    if (!canManagePayments) {
+      setError('Недостаточно прав для управления оплатами');
+      return;
+    }
     setIsGenerating(true);
     setError(null);
     try {
@@ -425,7 +453,7 @@ const ChildPayments: React.FC = () => {
     } finally {
       setIsGenerating(false);
     }
-  }, [currentDate, fetchPayments]);
+  }, [currentDate, fetchPayments, canManagePayments]);
 
   useEffect(() => {
     fetchChildren();
@@ -485,6 +513,10 @@ const ChildPayments: React.FC = () => {
   const { items: sortedPayments, requestSort, sortConfig } = useSort(processedPayments);
 
   const handleMarkAsPaid = useCallback(async (paymentId: string, paymentType: 'kaspi' | 'cash' = 'kaspi') => {
+    if (!canManagePayments) {
+      setSnackbar({ open: true, message: 'Недостаточно прав для изменения оплат' });
+      return;
+    }
     try {
       const payment = payments.find(p => p._id === paymentId);
       if (!payment) return;
@@ -499,9 +531,13 @@ const ChildPayments: React.FC = () => {
     } catch (e: any) {
       setError(e?.message || 'Ошибка обновления статуса');
     }
-  }, [payments, fetchPayments]);
+  }, [payments, fetchPayments, canManagePayments]);
 
   const handleCancelPayment = useCallback(async (paymentId: string) => {
+    if (!canManagePayments) {
+      setSnackbar({ open: true, message: 'Недостаточно прав для изменения оплат' });
+      return;
+    }
     try {
       await childPaymentApi.update(paymentId, {
         status: 'active',
@@ -512,9 +548,13 @@ const ChildPayments: React.FC = () => {
     } catch (e: any) {
       setError(e?.message || 'Ошибка отмены оплаты');
     }
-  }, [fetchPayments]);
+  }, [fetchPayments, canManagePayments]);
 
   const handleOpenModal = useCallback((payment?: IChildPayment) => {
+    if (!canManagePayments) {
+      setSnackbar({ open: true, message: 'Недостаточно прав для управления оплатами' });
+      return;
+    }
     if (payment) {
       setEditingPayment(payment);
       const childIdValue = typeof payment.childId === 'object' ? (payment.childId as any)._id : payment.childId;
@@ -551,7 +591,7 @@ const ChildPayments: React.FC = () => {
       });
     }
     setModalOpen(true);
-  }, [childrenMap]);
+  }, [childrenMap, canManagePayments]);
 
   // Автоматический перенос переплаты в новое поле "Переплата"
   useEffect(() => {
@@ -570,6 +610,10 @@ const ChildPayments: React.FC = () => {
   }, []);
 
   const handleSavePayment = useCallback(async () => {
+    if (!canManagePayments) {
+      setSnackbar({ open: true, message: 'Недостаточно прав для управления оплатами' });
+      return;
+    }
     try {
       if (editingPayment) {
         await childPaymentApi.update(editingPayment._id, {
@@ -587,9 +631,13 @@ const ChildPayments: React.FC = () => {
     } catch (e: any) {
       setError(e?.message || 'Ошибка сохранения оплаты');
     }
-  }, [editingPayment, newPayment, fetchPayments, handleCloseModal]);
+  }, [editingPayment, newPayment, fetchPayments, handleCloseModal, canManagePayments]);
 
   const handleDelete = useCallback(async (id: string) => {
+    if (!canManagePayments) {
+      setSnackbar({ open: true, message: 'Недостаточно прав для удаления оплат' });
+      return;
+    }
     if (!window.confirm('Удалить запись оплаты?')) return;
     try {
       await childPaymentApi.deleteItem(id);
@@ -597,9 +645,13 @@ const ChildPayments: React.FC = () => {
     } catch (e: any) {
       setError(e?.message || 'Ошибка удаления оплаты');
     }
-  }, [fetchPayments]);
+  }, [fetchPayments, canManagePayments]);
 
   const handleExport = async () => {
+    if (!canManagePayments) {
+      setSnackbar({ open: true, message: 'Недостаточно прав для экспорта оплат' });
+      return;
+    }
     await exportData('child-payments', 'xlsx', {
       monthPeriod: moment(currentDate).format('YYYY-MM'),
       name: nameFilter,
@@ -610,6 +662,10 @@ const ChildPayments: React.FC = () => {
   };
 
   const handleImportChildPayments = async () => {
+    if (!canManagePayments) {
+      setSnackbar({ open: true, message: 'Недостаточно прав для импорта оплат' });
+      return;
+    }
     try {
       setIsImporting(true);
       const year = moment(currentDate).year();
@@ -634,14 +690,22 @@ const ChildPayments: React.FC = () => {
   const [showInitialTooltip, setShowInitialTooltip] = useState(false);
 
   useEffect(() => {
+    if (!canManagePayments) {
+      return;
+    }
     setShowInitialTooltip(true);
     const timer = setTimeout(() => setShowInitialTooltip(false), 4000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [canManagePayments]);
 
   return (
     <Box>
       <DateNavigator />
+      {!canManagePayments && (
+        <Alert severity="info" sx={{ mt: 2 }}>
+          Доступ к управлению оплатами ограничен для вашей роли.
+        </Alert>
+      )}
       <Snackbar
         open={showInitialTooltip}
         message='Нажмите на кнопку для отметки оплаты'
@@ -674,47 +738,53 @@ const ChildPayments: React.FC = () => {
         <Box display="flex" gap={1} flexWrap="wrap" width={isMobile ? '100%' : 'auto'}>
           <Box display="flex" gap={1} width="100%" justifyContent={isMobile ? 'space-between' : 'flex-start'}>
             <AuditLogButton entityType="childPayment" />
-            <Button
-              variant='contained'
-              startIcon={<Add />}
-              onClick={() => handleOpenModal()}
-              fullWidth={isMobile}
-              size={isMobile ? "medium" : "medium"}
-              sx={{ flexGrow: isMobile ? 1 : 0 }}
-            >
-              Добавить
-            </Button>
+            {canManagePayments && (
+              <Button
+                variant='contained'
+                startIcon={<Add />}
+                onClick={() => handleOpenModal()}
+                fullWidth={isMobile}
+                size={isMobile ? "medium" : "medium"}
+                sx={{ flexGrow: isMobile ? 1 : 0 }}
+              >
+                Добавить
+              </Button>
+            )}
           </Box>
           <Box display="flex" gap={1} width="100%" flexWrap={isMobile ? 'nowrap' : 'wrap'} overflow={isMobile ? 'auto' : 'visible'} sx={{ pb: isMobile ? 1 : 0 }}>
-            <Button
-              variant='outlined'
-              size="small"
-              startIcon={isImporting ? <CircularProgress size={16} /> : <FileUpload />}
-              onClick={handleImportChildPayments}
-              disabled={isImporting || loading}
-              sx={{ minWidth: isMobile ? 'fit-content' : 'auto', whiteSpace: 'nowrap' }}
-            >
-              Импорт
-            </Button>
-            <Button
-              variant='outlined'
-              size="small"
-              color='secondary'
-              startIcon={isGenerating ? <CircularProgress size={16} /> : <Refresh />}
-              onClick={handleGeneratePayments}
-              disabled={isGenerating || loading}
-              sx={{ minWidth: isMobile ? 'fit-content' : 'auto', whiteSpace: 'nowrap' }}
-            >
-              Обновить
-            </Button>
-            <Button 
-              variant="outlined" 
-              size="small" 
-              onClick={handleExport}
-              sx={{ minWidth: isMobile ? 'fit-content' : 'auto' }}
-            >
-              Экспорт
-            </Button>
+            {canManagePayments && (
+              <>
+                <Button
+                  variant='outlined'
+                  size="small"
+                  startIcon={isImporting ? <CircularProgress size={16} /> : <FileUpload />}
+                  onClick={handleImportChildPayments}
+                  disabled={isImporting || loading}
+                  sx={{ minWidth: isMobile ? 'fit-content' : 'auto', whiteSpace: 'nowrap' }}
+                >
+                  Импорт
+                </Button>
+                <Button
+                  variant='outlined'
+                  size="small"
+                  color='secondary'
+                  startIcon={isGenerating ? <CircularProgress size={16} /> : <Refresh />}
+                  onClick={handleGeneratePayments}
+                  disabled={isGenerating || loading}
+                  sx={{ minWidth: isMobile ? 'fit-content' : 'auto', whiteSpace: 'nowrap' }}
+                >
+                  Обновить
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  size="small" 
+                  onClick={handleExport}
+                  sx={{ minWidth: isMobile ? 'fit-content' : 'auto' }}
+                >
+                  Экспорт
+                </Button>
+              </>
+            )}
           </Box>
         </Box>
       </Box>
@@ -851,6 +921,7 @@ const ChildPayments: React.FC = () => {
                       onDelete={handleDelete}
                       getPaymentStatusColor={getPaymentStatusColor}
                       index={index}
+                      canManage={canManagePayments}
                     />
                   );
                 })}
@@ -951,6 +1022,7 @@ const ChildPayments: React.FC = () => {
                         onDelete={handleDelete}
                         getPaymentStatusColor={getPaymentStatusColor}
                         index={index}
+                        canManage={canManagePayments}
                       />
                     );
                   })}
@@ -1078,7 +1150,7 @@ const ChildPayments: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseModal}>Отмена</Button>
-          {editingPayment && editingPayment.status !== 'paid' && (
+          {canManagePayments && editingPayment && editingPayment.status !== 'paid' && (
             <Button
               onClick={async () => {
                 await handleMarkAsPaid(editingPayment._id);
@@ -1090,7 +1162,9 @@ const ChildPayments: React.FC = () => {
               Мгновенная оплата
             </Button>
           )}
-          <Button onClick={handleSavePayment} variant='contained' color="primary">Сохранить</Button>
+          {canManagePayments && (
+            <Button onClick={handleSavePayment} variant='contained' color="primary">Сохранить</Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

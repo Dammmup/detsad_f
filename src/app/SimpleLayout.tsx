@@ -352,7 +352,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route 
               path='salary' 
               element={
-                userRole === 'admin' ? (
+                ['admin', 'manager'].includes(userRole) ? (
                   <ReportsSalary />
                 ) : (
                   <ReportsSalary personalOnly={true} />

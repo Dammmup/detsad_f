@@ -21,6 +21,7 @@ import {
   InputLabel,
   Select,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   perishableBrakApi,
@@ -32,6 +33,7 @@ import { exportData } from '../../../shared/utils/exportUtils';
 import { formatDate } from '../../../shared/utils/format';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useAuth } from '../../../app/context/AuthContext';
 
 const defaultForm: Partial<PerishableBrak> = {
   inspectionDate: new Date().toISOString().split('T')[0],
@@ -49,6 +51,10 @@ const defaultForm: Partial<PerishableBrak> = {
 
 const PerishableBrakPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role;
+  const canManageBrak = role === 'admin' || role === 'manager' || role === 'doctor' || role === 'nurse';
+
   const [rows, setRows] = useState<PerishableBrak[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -58,6 +64,10 @@ const PerishableBrakPage: React.FC = () => {
   const [editId, setEditId] = useState<string | undefined>();
 
   const fetchRows = async () => {
+    if (!canManageBrak) {
+      setRows([]);
+      return;
+    }
     setLoading(true);
     try {
       const data = await perishableBrakApi.getAll();
@@ -68,6 +78,10 @@ const PerishableBrakPage: React.FC = () => {
   };
 
   const fetchProducts = async () => {
+    if (!canManageBrak) {
+      setProducts([]);
+      return;
+    }
     setProductsLoading(true);
     try {
       const data = await getProducts();
@@ -80,7 +94,7 @@ const PerishableBrakPage: React.FC = () => {
   useEffect(() => {
     fetchRows();
     fetchProducts();
-  }, []);
+  }, [canManageBrak]);
 
   const handleOpen = (row?: PerishableBrak) => {
     if (row) {
@@ -126,6 +140,7 @@ const PerishableBrakPage: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (!canManageBrak) return;
     setLoading(true);
     try {
       const payload: Partial<PerishableBrak> = {
@@ -150,6 +165,7 @@ const PerishableBrakPage: React.FC = () => {
   };
 
   const handleDelete = async (id?: string) => {
+    if (!canManageBrak) return;
     if (!id) return;
     if (!window.confirm('Вы уверены, что хотите удалить эту запись?')) return;
     setLoading(true);
@@ -181,21 +197,30 @@ const PerishableBrakPage: React.FC = () => {
       <Typography variant='h4' gutterBottom>
         Бракераж скоропортящейся продукции и полуфабрикатов
       </Typography>
+      {!canManageBrak && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Недостаточно прав для работы с журналом бракеража.
+        </Alert>
+      )}
       <Stack direction='row' spacing={2} mb={2}>
-        <Button
-          variant='contained'
-          color='primary'
-          onClick={() => handleOpen()}
-          disabled={loading}
-        >
-          Добавить запись
-        </Button>
-        <ExportButton
-          exportTypes={[
-            { value: 'perishable-brak', label: 'Бракераж скоропортящихся' },
-          ]}
-          onExport={handleExport}
-        />
+        {canManageBrak && (
+          <Button
+            variant='contained'
+            color='primary'
+            onClick={() => handleOpen()}
+            disabled={loading}
+          >
+            Добавить запись
+          </Button>
+        )}
+        {canManageBrak && (
+          <ExportButton
+            exportTypes={[
+              { value: 'perishable-brak', label: 'Бракераж скоропортящихся' },
+            ]}
+            onExport={handleExport}
+          />
+        )}
       </Stack>
       <Paper sx={{ p: 2, mb: 2, overflowX: 'auto' }}>
         <Table size="small">
@@ -258,18 +283,20 @@ const PerishableBrakPage: React.FC = () => {
                     {(row.inspector as any)?.fullName || 'Система'}
                   </TableCell>
                   <TableCell>
-                    <Stack direction='row' spacing={1}>
-                      <Button size='small' onClick={() => handleOpen(row)}>
-                        Ред.
-                      </Button>
-                      <Button
-                        size='small'
-                        color='error'
-                        onClick={() => handleDelete(row._id)}
-                      >
-                        Удал.
-                      </Button>
-                    </Stack>
+                    {canManageBrak && (
+                      <Stack direction='row' spacing={1}>
+                        <Button size='small' onClick={() => handleOpen(row)}>
+                          Ред.
+                        </Button>
+                        <Button
+                          size='small'
+                          color='error'
+                          onClick={() => handleDelete(row._id)}
+                        >
+                          Удал.
+                        </Button>
+                      </Stack>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -410,9 +437,11 @@ const PerishableBrakPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Отмена</Button>
-          <Button onClick={handleSave} variant='contained' disabled={loading || !form.productName}>
-            {loading ? 'Сохранение...' : 'Сохранить'}
-          </Button>
+          {canManageBrak && (
+            <Button onClick={handleSave} variant='contained' disabled={loading || !form.productName}>
+              {loading ? 'Сохранение...' : 'Сохранить'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

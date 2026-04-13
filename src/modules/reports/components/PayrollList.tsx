@@ -114,6 +114,9 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   const { staff } = useStaff();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isAdmin = user?.role === UserRole.admin;
+  const isManager = user?.role === UserRole.manager;
+  const canManagePayroll = isAdmin || isManager;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasNoAccess, setHasNoAccess] = useState(false);
@@ -515,6 +518,11 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   };
 
   const handleAddFine = async (fineData: { amount: number; reason: string; type: 'manual' }) => {
+    if (!isAdmin) {
+      setSnackbarMessage('Только администратор может добавлять вычеты');
+      setSnackbarOpen(true);
+      return;
+    }
     if (!currentFinePayrollId) return;
 
     try {
@@ -556,6 +564,11 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   };
 
   const handleDeleteFine = async (fineIndex: string) => {
+    if (!isAdmin) {
+      setSnackbarMessage('Только администратор может удалять вычеты');
+      setSnackbarOpen(true);
+      return;
+    }
     console.log('🗑️ [ReportsSalary] handleDeleteFine called with fineIndex:', fineIndex);
     console.log('🗑️ [ReportsSalary] currentFinePayrollId:', currentFinePayrollId);
 
@@ -597,12 +610,22 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   };
 
   const handleOpenRateDialog = () => {
+    if (!isAdmin) {
+      setSnackbarMessage('Только администратор может менять ставку штрафа');
+      setSnackbarOpen(true);
+      return;
+    }
     setNewRate(globalPenaltyRate);
     setNewPenaltyType(penaltyType);
     setRateDialogOpen(true);
   };
 
   const handleSaveRate = async () => {
+    if (!isAdmin) {
+      setSnackbarMessage('Только администратор может менять ставку штрафа');
+      setSnackbarOpen(true);
+      return;
+    }
     try {
       const settings = await getKindergartenSettings();
       if (settings) {
@@ -947,21 +970,29 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                   </Box>
                 </Card>
 
-                {user?.id && (user?.role === 'admin' || user?.role === 'manager') && (
+                {user?.id && canManagePayroll && (
                   <Box sx={{ display: 'flex', gap: { xs: 1, md: 2 }, flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <Tooltip title="Сгенерировать расчетные листы за выбранный период">
-                      <Button variant='contained' startIcon={<EditIcon />} onClick={handleOpenConfirmDialog} disabled={generating} size={isMobile ? 'small' : 'medium'}>Сгенерировать</Button>
-                    </Tooltip>
-                    <Tooltip title="Обновить все расчетные листы на основе текущих данных">
-                      <Button variant='outlined' startIcon={<RefreshIcon />} onClick={handleRefreshPayrolls} disabled={refreshing} size={isMobile ? 'small' : 'medium'}>Обновить всё</Button>
-                    </Tooltip>
-                    <Tooltip title="Импортировать данные из Excel файла">
-                      <Button variant='outlined' color='secondary' startIcon={<FileUploadIcon />} onClick={handleImportPayrolls} disabled={importing} size={isMobile ? 'small' : 'medium'}>Импорт</Button>
-                    </Tooltip>
+                    {isAdmin && (
+                      <Tooltip title="Сгенерировать расчетные листы за выбранный период">
+                        <Button variant='contained' startIcon={<EditIcon />} onClick={handleOpenConfirmDialog} disabled={generating} size={isMobile ? 'small' : 'medium'}>Сгенерировать</Button>
+                      </Tooltip>
+                    )}
+                    {isAdmin && (
+                      <Tooltip title="Обновить все расчетные листы на основе текущих данных">
+                        <Button variant='outlined' startIcon={<RefreshIcon />} onClick={handleRefreshPayrolls} disabled={refreshing} size={isMobile ? 'small' : 'medium'}>Обновить всё</Button>
+                      </Tooltip>
+                    )}
+                    {isAdmin && (
+                      <Tooltip title="Импортировать данные из Excel файла">
+                        <Button variant='outlined' color='secondary' startIcon={<FileUploadIcon />} onClick={handleImportPayrolls} disabled={importing} size={isMobile ? 'small' : 'medium'}>Импорт</Button>
+                      </Tooltip>
+                    )}
 
-                    <Tooltip title={`Настроить ставку штрафа за опоздания (${globalPenaltyRate} тг)`}>
-                      <Button variant='outlined' onClick={handleOpenRateDialog} size={isMobile ? 'small' : 'medium'}>Ставка: {globalPenaltyRate} ₸</Button>
-                    </Tooltip>
+                    {isAdmin && (
+                      <Tooltip title={`Настроить ставку штрафа за опоздания (${globalPenaltyRate} тг)`}>
+                        <Button variant='outlined' onClick={handleOpenRateDialog} size={isMobile ? 'small' : 'medium'}>Ставка: {globalPenaltyRate} ₸</Button>
+                      </Tooltip>
+                    )}
                     <Tooltip title="Экспортировать данные в формате XLSX">
                       <Button variant='contained' color='success' startIcon={<VisibilityIcon />} onClick={handleExportToExcel} size={isMobile ? 'small' : 'medium'}>Экспорт XLSX</Button>
                     </Tooltip>
@@ -1333,7 +1364,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
               </>
             )}
 
-            <FinesDetailsDialog open={fineDialogOpen} onClose={() => setFineDialogOpen(false)} fines={currentFines} onAddFine={handleAddFine} onDeleteFine={handleDeleteFine} staffName={currentFineStaffName} />
+            <FinesDetailsDialog open={fineDialogOpen} onClose={() => setFineDialogOpen(false)} fines={currentFines} onAddFine={handleAddFine} onDeleteFine={handleDeleteFine} staffName={currentFineStaffName} canEdit={isAdmin} />
             <PayrollTotalDialog
               open={totalDialogOpen}
               onClose={() => setTotalDialogOpen(false)}

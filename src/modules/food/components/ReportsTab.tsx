@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
     Box, Typography, Paper, TextField, Grid, Table, TableBody, TableCell,
-    TableContainer, TableHead, TableRow, Card, CardContent, CircularProgress, Chip
+    TableContainer, TableHead, TableRow, Card, CardContent, CircularProgress, Chip, Alert
 } from '@mui/material';
 import { showSnackbar } from '../../../shared/components/Snackbar';
 import { getConsumptionReport, getSummaryReport, ConsumptionReportItem, SummaryReport } from '../services/productReports';
+import { useAuth } from '../../../app/context/AuthContext';
 
 const CATEGORY_LABELS: Record<string, string> = {
     dairy: 'Молочные', meat: 'Мясо', vegetables: 'Овощи', fruits: 'Фрукты',
@@ -12,6 +13,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const ReportsTab: React.FC = () => {
+    const { user: currentUser } = useAuth();
+    const role = currentUser?.role;
+    const canViewReports = role === 'admin' || role === 'manager';
+
     const [loading, setLoading] = useState(false);
     const [startDate, setStartDate] = useState(() => {
         const d = new Date();
@@ -23,6 +28,11 @@ const ReportsTab: React.FC = () => {
     const [summary, setSummary] = useState<SummaryReport | null>(null);
 
     const loadReports = async () => {
+        if (!canViewReports) {
+            setConsumption([]);
+            setSummary(null);
+            return;
+        }
         try {
             setLoading(true);
             const [consumptionData, summaryData] = await Promise.all([
@@ -38,10 +48,15 @@ const ReportsTab: React.FC = () => {
         }
     };
 
-    useEffect(() => { loadReports(); }, [startDate, endDate]);
+    useEffect(() => { loadReports(); }, [startDate, endDate, canViewReports]);
 
     return (
         <Box sx={{ px: 3 }}>
+            {!canViewReports && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                    Недостаточно прав для просмотра отчетов по продуктам.
+                </Alert>
+            )}
             <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={12} sm={6} md={3}>
                     <TextField fullWidth type="date" label="С" value={startDate} onChange={(e) => setStartDate(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />

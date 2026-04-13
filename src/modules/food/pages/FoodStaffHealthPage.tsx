@@ -23,6 +23,7 @@ import {
   Switch,
   Chip,
   IconButton,
+  Alert,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -36,6 +37,7 @@ import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useAuth } from '../../../app/context/AuthContext';
 
 const defaultForm: Partial<FoodStaffDailyLog> = {
   date: new Date().toISOString().slice(0, 10),
@@ -56,8 +58,15 @@ const FoodStaffHealthPage: React.FC = () => {
   const [form, setForm] = useState<Partial<FoodStaffDailyLog>>(defaultForm);
   const [editId, setEditId] = useState<string | undefined>();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role;
+  const canManageHealth = role === 'admin' || role === 'manager' || role === 'doctor' || role === 'nurse';
 
   const fetchData = async () => {
+    if (!canManageHealth) {
+      setRows([]);
+      return;
+    }
     setLoading(true);
     try {
       const [logs, staff] = await Promise.all([
@@ -76,7 +85,7 @@ const FoodStaffHealthPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [canManageHealth]);
 
   const handleOpen = (row?: FoodStaffDailyLog) => {
     if (row) {
@@ -108,6 +117,7 @@ const FoodStaffHealthPage: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (!canManageHealth) return;
     setLoading(true);
     try {
       if (editId) {
@@ -125,6 +135,7 @@ const FoodStaffHealthPage: React.FC = () => {
   };
 
   const handleDelete = async (id?: string) => {
+    if (!canManageHealth) return;
     if (!id || !window.confirm('Удалить эту запись?')) return;
     setLoading(true);
     try {
@@ -155,21 +166,30 @@ const FoodStaffHealthPage: React.FC = () => {
       <Typography variant='h4' gutterBottom>
         Журнал регистрации состояния здоровья работников пищеблока
       </Typography>
+      {!canManageHealth && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Недостаточно прав для работы с журналом здоровья персонала пищеблока.
+        </Alert>
+      )}
 
       <Stack direction='row' spacing={2} mb={2}>
-        <Button
-          variant='contained'
-          color='primary'
-          onClick={() => handleOpen()}
-        >
-          Новый осмотр
-        </Button>
-        <ExportButton
-          exportTypes={[
-            { value: 'food-staff-daily-log', label: 'Журнал здоровья (ежедневный)' },
-          ]}
-          onExport={handleExport}
-        />
+        {canManageHealth && (
+          <Button
+            variant='contained'
+            color='primary'
+            onClick={() => handleOpen()}
+          >
+            Новый осмотр
+          </Button>
+        )}
+        {canManageHealth && (
+          <ExportButton
+            exportTypes={[
+              { value: 'food-staff-daily-log', label: 'Журнал здоровья (ежедневный)' },
+            ]}
+            onExport={handleExport}
+          />
+        )}
       </Stack>
 
       <Paper sx={{ p: 2, mb: 2, overflowX: 'auto' }}>
@@ -227,18 +247,20 @@ const FoodStaffHealthPage: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  <Stack direction='row' spacing={0.5}>
-                    <IconButton size='small' onClick={() => handleOpen(row)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size='small'
-                      color='error'
-                      onClick={() => handleDelete(row._id)}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Stack>
+                  {canManageHealth && (
+                    <Stack direction='row' spacing={0.5}>
+                      <IconButton size='small' onClick={() => handleOpen(row)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size='small'
+                        color='error'
+                        onClick={() => handleDelete(row._id)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -319,9 +341,11 @@ const FoodStaffHealthPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Отмена</Button>
-          <Button onClick={handleSave} variant='contained' disabled={loading || !form.staffId}>
-            Сохранить
-          </Button>
+          {canManageHealth && (
+            <Button onClick={handleSave} variant='contained' disabled={loading || !form.staffId}>
+              Сохранить
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

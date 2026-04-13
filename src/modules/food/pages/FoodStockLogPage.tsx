@@ -15,12 +15,14 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Alert,
 } from '@mui/material';
 import { foodStockLogApi, FoodStockLog } from '../services/foodStockLog';
 import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useAuth } from '../../../app/context/AuthContext';
 
 const defaultForm: FoodStockLog = {
   date: '',
@@ -35,6 +37,10 @@ const defaultForm: FoodStockLog = {
 
 const FoodStockLogPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role;
+  const canManageStockLog = role === 'admin' || role === 'manager' || role === 'doctor' || role === 'nurse';
+
   const [rows, setRows] = useState<FoodStockLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -42,6 +48,10 @@ const FoodStockLogPage: React.FC = () => {
   const [editId, setEditId] = useState<string | undefined>();
 
   const fetchRows = async () => {
+    if (!canManageStockLog) {
+      setRows([]);
+      return;
+    }
     setLoading(true);
     try {
       const data = await foodStockLogApi.getAll();
@@ -53,7 +63,7 @@ const FoodStockLogPage: React.FC = () => {
 
   useEffect(() => {
     fetchRows();
-  }, []);
+  }, [canManageStockLog]);
 
   const handleOpen = (row?: FoodStockLog) => {
     if (row) {
@@ -77,6 +87,7 @@ const FoodStockLogPage: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (!canManageStockLog) return;
     setLoading(true);
     try {
       if (editId) {
@@ -92,6 +103,7 @@ const FoodStockLogPage: React.FC = () => {
   };
 
   const handleDelete = async (id?: string) => {
+    if (!canManageStockLog) return;
     if (!id) return;
     setLoading(true);
     try {
@@ -122,20 +134,29 @@ const FoodStockLogPage: React.FC = () => {
       <Typography variant='h4' gutterBottom>
         Журнал учета приходов, расходов и остатков ежедневных продуктов
       </Typography>
+      {!canManageStockLog && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Недостаточно прав для работы с журналом учета продуктов.
+        </Alert>
+      )}
       <Stack direction='row' spacing={2} mb={2}>
-        <Button
-          variant='contained'
-          color='primary'
-          onClick={() => handleOpen()}
-        >
-          Добавить запись
-        </Button>
-        <ExportButton
-          exportTypes={[
-            { value: 'food-stock-log', label: 'Журнал учета продуктов' },
-          ]}
-          onExport={handleExport}
-        />
+        {canManageStockLog && (
+          <Button
+            variant='contained'
+            color='primary'
+            onClick={() => handleOpen()}
+          >
+            Добавить запись
+          </Button>
+        )}
+        {canManageStockLog && (
+          <ExportButton
+            exportTypes={[
+              { value: 'food-stock-log', label: 'Журнал учета продуктов' },
+            ]}
+            onExport={handleExport}
+          />
+        )}
       </Stack>
       <Paper sx={{ p: 2, mb: 2 }}>
         <Table>
@@ -160,18 +181,20 @@ const FoodStockLogPage: React.FC = () => {
                 <TableCell>{row.responsible}</TableCell>
                 <TableCell>{row.notes}</TableCell>
                 <TableCell>
-                  <Stack direction='row' spacing={1}>
-                    <Button size='small' onClick={() => handleOpen(row)}>
-                      Редактировать
-                    </Button>
-                    <Button
-                      size='small'
-                      color='error'
-                      onClick={() => handleDelete(row._id)}
-                    >
-                      Удалить
-                    </Button>
-                  </Stack>
+                  {canManageStockLog && (
+                    <Stack direction='row' spacing={1}>
+                      <Button size='small' onClick={() => handleOpen(row)}>
+                        Редактировать
+                      </Button>
+                      <Button
+                        size='small'
+                        color='error'
+                        onClick={() => handleDelete(row._id)}
+                      >
+                        Удалить
+                      </Button>
+                    </Stack>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -233,9 +256,11 @@ const FoodStockLogPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Отмена</Button>
-          <Button onClick={handleSave} variant='contained' disabled={loading}>
-            Сохранить
-          </Button>
+          {canManageStockLog && (
+            <Button onClick={handleSave} variant='contained' disabled={loading}>
+              Сохранить
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

@@ -54,6 +54,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
   child,
 }) => {
   const { user: currentUser } = useAuth();
+  const canManagePayments = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
   const { createChild, updateChild } = useChildren();
   const { groups, fetchGroups } = useGroups();
   const [form, setForm] = useState<Partial<User> & { paymentAmount?: number }>(defaultForm);
@@ -327,7 +328,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
           variant='outlined'
         />
 
-        {currentUser?.role === 'admin' && (
+        {canManagePayments && (
           <TextField
             margin='dense'
             name='paymentAmount'

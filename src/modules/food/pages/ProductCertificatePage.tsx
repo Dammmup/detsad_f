@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Alert,
 } from '@mui/material';
 import {
   productCertificateApi,
@@ -24,6 +25,7 @@ import ExportButton from '../../../shared/components/ExportButton';
 import { exportData } from '../../../shared/utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useAuth } from '../../../app/context/AuthContext';
 
 const defaultForm: ProductCertificate = {
   date: '',
@@ -36,6 +38,10 @@ const defaultForm: ProductCertificate = {
 
 
 const ProductCertificatePage: React.FC = () => {
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role;
+  const canManageCertificates = role === 'admin' || role === 'manager' || role === 'doctor' || role === 'nurse';
+
   const [rows, setRows] = useState<ProductCertificate[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -43,6 +49,10 @@ const ProductCertificatePage: React.FC = () => {
   const [editId, setEditId] = useState<string | undefined>();
 
   const fetchRows = async () => {
+    if (!canManageCertificates) {
+      setRows([]);
+      return;
+    }
     setLoading(true);
     try {
       const data = await productCertificateApi.getAll();
@@ -54,7 +64,7 @@ const ProductCertificatePage: React.FC = () => {
 
   useEffect(() => {
     fetchRows();
-  }, []);
+  }, [canManageCertificates]);
 
   const handleOpen = (row?: ProductCertificate) => {
     if (row) {
@@ -78,6 +88,7 @@ const ProductCertificatePage: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (!canManageCertificates) return;
     setLoading(true);
     try {
       if (editId) {
@@ -93,6 +104,7 @@ const ProductCertificatePage: React.FC = () => {
   };
 
   const handleDelete = async (id?: string) => {
+    if (!canManageCertificates) return;
     if (!id) return;
     setLoading(true);
     try {
@@ -116,20 +128,29 @@ const ProductCertificatePage: React.FC = () => {
         <Typography variant='h4' gutterBottom>
           Журнал регистрации сертификатов годности продуктов питания
         </Typography>
+        {!canManageCertificates && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Недостаточно прав для работы с журналом сертификатов.
+          </Alert>
+        )}
         <Stack direction='row' spacing={2} mb={2}>
-          <Button
-            variant='contained'
-            color='primary'
-            onClick={() => handleOpen()}
-          >
-            Добавить запись
-          </Button>
-          <ExportButton
-            exportTypes={[
-              { value: 'product-certificate', label: 'Сертификаты продуктов' },
-            ]}
-            onExport={handleExport}
-          />
+          {canManageCertificates && (
+            <Button
+              variant='contained'
+              color='primary'
+              onClick={() => handleOpen()}
+            >
+              Добавить запись
+            </Button>
+          )}
+          {canManageCertificates && (
+            <ExportButton
+              exportTypes={[
+                { value: 'product-certificate', label: 'Сертификаты продуктов' },
+              ]}
+              onExport={handleExport}
+            />
+          )}
         </Stack>
         <Paper sx={{ p: 2, mb: 2 }}>
           <TableHead>
@@ -153,18 +174,20 @@ const ProductCertificatePage: React.FC = () => {
                 <TableCell>{row.expiry}</TableCell>
                 <TableCell>{row.notes}</TableCell>
                 <TableCell>
-                  <Stack direction='row' spacing={1}>
-                    <Button size='small' onClick={() => handleOpen(row)}>
-                      Редактировать
-                    </Button>
-                    <Button
-                      size='small'
-                      color='error'
-                      onClick={() => handleDelete(row._id)}
-                    >
-                      Удалить
-                    </Button>
-                  </Stack>
+                  {canManageCertificates && (
+                    <Stack direction='row' spacing={1}>
+                      <Button size='small' onClick={() => handleOpen(row)}>
+                        Редактировать
+                      </Button>
+                      <Button
+                        size='small'
+                        color='error'
+                        onClick={() => handleDelete(row._id)}
+                      >
+                        Удалить
+                      </Button>
+                    </Stack>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -226,9 +249,11 @@ const ProductCertificatePage: React.FC = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose}>Отмена</Button>
-            <Button onClick={handleSave} variant='contained' disabled={loading}>
-              Сохранить
-            </Button>
+            {canManageCertificates && (
+              <Button onClick={handleSave} variant='contained' disabled={loading}>
+                Сохранить
+              </Button>
+            )}
           </DialogActions>
         </Dialog>
       </Box>

@@ -56,6 +56,7 @@ import { exportData } from '../../../shared/utils/exportUtils';
 
 import { useDate } from '../../../app/context/DateContext';
 import DateNavigator from '../../../shared/components/DateNavigator';
+import { useAuth } from '../../../app/context/AuthContext';
 
 
 import {
@@ -120,11 +121,14 @@ const isWeekend = (date: Date): boolean => {
 const DAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 // Вспомогательный компонент для чипа смены, чтобы избежать инлайновых функций
-const ShiftChip = React.memo(({ shift, displayStatus, onEdit }: any) => {
+const ShiftChip = React.memo(({ shift, displayStatus, onEdit, canEdit }: any) => {
   const handleClick = useCallback((e: React.MouseEvent) => {
+    if (!canEdit) {
+      return;
+    }
     e.stopPropagation();
     onEdit(shift);
-  }, [shift, onEdit]);
+  }, [shift, onEdit, canEdit]);
 
   return (
     <Chip
@@ -132,7 +136,7 @@ const ShiftChip = React.memo(({ shift, displayStatus, onEdit }: any) => {
       size='small'
       color={STATUS_COLORS[displayStatus] || 'default'}
       sx={{ fontSize: '0.65rem' }}
-      onClick={handleClick}
+      onClick={canEdit ? handleClick : undefined}
     />
   );
 });
@@ -147,12 +151,16 @@ const ScheduleCell = React.memo(({
   weekend,
   onCellClick,
   onEditShift,
+  canEdit,
 }: any) => {
   const dateStr = moment(date).format('YYYY-MM-DD');
 
   const handleClick = useCallback(() => {
+    if (!canEdit) {
+      return;
+    }
     onCellClick(staffId, dateStr);
-  }, [onCellClick, staffId, dateStr]);
+  }, [onCellClick, staffId, dateStr, canEdit]);
 
   return (
     <TableCell
@@ -163,8 +171,8 @@ const ScheduleCell = React.memo(({
         border: '1px solid #e0e0e0',
         width: '120px',
         minHeight: '80px',
-        cursor: 'pointer',
-        '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' }
+        cursor: canEdit ? 'pointer' : 'default',
+        '&:hover': { backgroundColor: canEdit ? 'rgba(0,0,0,0.04)' : 'inherit' }
       }}
       onClick={handleClick}
     >
@@ -194,6 +202,7 @@ const ScheduleCell = React.memo(({
               shift={shift}
               displayStatus={displayStatus}
               onEdit={onEditShift}
+              canEdit={canEdit}
             />
           );
         })}
@@ -234,14 +243,19 @@ const ScheduleRow = React.memo(({
   ROLE_COLORS,
   ROLE_LABELS,
   index,
+  canSelect,
+  canEdit,
 }: any) => {
   const staffId = staffMember.id || staffMember._id;
   if (!staffId) return null;
   const isSelected = selectedStaff.includes(staffId);
 
   const handleToggle = useCallback(() => {
+    if (!canSelect) {
+      return;
+    }
     onStaffToggle(staffId);
-  }, [onStaffToggle, staffId]);
+  }, [onStaffToggle, staffId, canSelect]);
 
   // Группируем данные сотрудника по датам для быстрого доступа внутри строки
   const shiftsByDate = useMemo(() => {
@@ -273,10 +287,10 @@ const ScheduleRow = React.memo(({
         <Box
           display='flex'
           alignItems='center'
-          sx={{ cursor: 'pointer' }}
+          sx={{ cursor: canSelect ? 'pointer' : 'default' }}
           onClick={handleToggle}
         >
-          <Checkbox size='small' checked={isSelected} />
+          <Checkbox size='small' checked={isSelected} disabled={!canSelect} />
           <Avatar src={staffMember.photo} sx={{ width: 24, height: 24, mr: 1 }}>
             {staffMember.fullName?.charAt(0)}
           </Avatar>
@@ -307,6 +321,7 @@ const ScheduleRow = React.memo(({
             weekend={weekend}
             onCellClick={onCellClick}
             onEditShift={onEditShift}
+            canEdit={canEdit}
           />
         );
       })}
@@ -320,6 +335,9 @@ const ScheduleRow = React.memo(({
 const StaffSchedule: React.FC = () => {
   const { enqueueSnackbar } = useSnackbar();
   const { currentDate } = useDate();
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role;
+  const canManageSchedule = role === 'admin' || role === 'manager';
 
   useEffect(() => {
     moment.locale('ru');
@@ -485,6 +503,10 @@ const StaffSchedule: React.FC = () => {
 
 
   const assignFiveTwoSchedule = async () => {
+    if (!canManageSchedule) {
+      enqueueSnackbar('Недостаточно прав для управления графиком', { variant: 'error' });
+      return;
+    }
     try {
       setLoading(true);
       const monthStart = moment(currentDate).startOf('month');
@@ -618,6 +640,10 @@ const StaffSchedule: React.FC = () => {
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManageSchedule) {
+      enqueueSnackbar('Недостаточно прав для управления графиком', { variant: 'error' });
+      return;
+    }
     if (assignmentType === 'single' && !validateForm()) return;
     if (assignmentType === 'period' && (!formData.startDate || !formData.endDate)) {
       enqueueSnackbar('Выберите период', { variant: 'error' });
@@ -754,9 +780,13 @@ const StaffSchedule: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [assignmentType, validateForm, formData, selectedStaff, staff, editingShift, assignmentAction, shifts, currentDate, enqueueSnackbar, handleCloseModal]);
+  }, [assignmentType, validateForm, formData, selectedStaff, staff, editingShift, assignmentAction, shifts, currentDate, enqueueSnackbar, handleCloseModal, canManageSchedule]);
 
   const handleEditShift = useCallback((shift: Shift) => {
+    if (!canManageSchedule) {
+      enqueueSnackbar('Недостаточно прав для управления графиком', { variant: 'error' });
+      return;
+    }
     const sId = typeof shift.staffId === 'string' ? shift.staffId : (shift.staffId as any)?._id;
     setFormData({
       userId: sId || '',
@@ -769,7 +799,7 @@ const StaffSchedule: React.FC = () => {
     });
     setEditingShift(shift);
     setModalOpen(true);
-  }, []);
+  }, [enqueueSnackbar, canManageSchedule]);
 
 
   const weekStart = moment(currentDate).startOf('isoWeek');
@@ -782,6 +812,9 @@ const StaffSchedule: React.FC = () => {
   }
 
   const handleCellClick = useCallback((staffId: string, dateStr: string) => {
+    if (!canManageSchedule) {
+      return;
+    }
     const staffMember = staff.find((s) => (s.id || s._id) === staffId);
     setFormData((prev: any) => ({
       ...prev,
@@ -790,7 +823,7 @@ const StaffSchedule: React.FC = () => {
       date: dateStr,
     }));
     setModalOpen(true);
-  }, [staff]);
+  }, [staff, canManageSchedule]);
 
   const handleStaffToggle = useCallback((staffId: string) => {
     setSelectedStaff(prev =>
@@ -866,6 +899,7 @@ const StaffSchedule: React.FC = () => {
                     exportTypes={[{ value: 'staff-schedule', label: 'График смен' }]}
                     onExport={handleExport}
                   />
+                  {canManageSchedule && (
                   <Button
                     variant='contained'
                     color='primary'
@@ -901,6 +935,7 @@ const StaffSchedule: React.FC = () => {
                   >
                     Удалить смены
                   </Button>
+                  )}
                 </Box>
               </Box>
             }
@@ -1016,6 +1051,8 @@ const StaffSchedule: React.FC = () => {
                       isWeekend={isWeekend}
                       ROLE_COLORS={ROLE_COLORS}
                       ROLE_LABELS={ROLE_LABELS}
+                      canSelect={canManageSchedule}
+                      canEdit={canManageSchedule}
                     />
                   ))}
 
@@ -1205,6 +1242,10 @@ const StaffSchedule: React.FC = () => {
               {editingShift && (
                 <Button
                   onClick={async () => {
+                    if (!canManageSchedule) {
+                      enqueueSnackbar('Недостаточно прав для управления графиком', { variant: 'error' });
+                      return;
+                    }
                     const id = editingShift.id || editingShift._id;
                     if (id && window.confirm('Удалить смену?')) {
                       await deleteShift(id);
@@ -1216,19 +1257,22 @@ const StaffSchedule: React.FC = () => {
                     }
                   }}
                   color="error"
+                  disabled={!canManageSchedule}
                 >
                   Удалить
                 </Button>
               )}
               <Button onClick={handleCloseModal}>Отмена</Button>
-              <Button
-                type='submit'
-                variant='contained'
-                color={assignmentAction === 'delete' ? 'error' : 'primary'}
-                disabled={loading}
-              >
-                {assignmentAction === 'delete' ? 'Удалить' : (editingShift ? 'Сохранить' : 'Применить')}
-              </Button>
+              {canManageSchedule && (
+                <Button
+                  type='submit'
+                  variant='contained'
+                  color={assignmentAction === 'delete' ? 'error' : 'primary'}
+                  disabled={loading}
+                >
+                  {assignmentAction === 'delete' ? 'Удалить' : (editingShift ? 'Сохранить' : 'Применить')}
+                </Button>
+              )}
             </DialogActions>
           </form>
         </Dialog>

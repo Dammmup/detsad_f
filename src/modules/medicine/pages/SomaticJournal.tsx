@@ -47,6 +47,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { showSnackbar } from '../../../shared/components/Snackbar';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
+import { useAuth } from '../../../app/context/AuthContext';
 
 // Helper function to format dates
 const formatDate = (date: Date | string | undefined | null): string => {
@@ -56,6 +57,8 @@ const formatDate = (date: Date | string | undefined | null): string => {
 
 export default function SomaticJournal() {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const canManageMedical = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
   const [records, setRecords] = useState<SomaticRecord[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,6 +167,10 @@ export default function SomaticJournal() {
 
 
   const handleDelete = async (id: string) => {
+    if (!canManageMedical) {
+      showSnackbar({ message: 'Недостаточно прав для удаления записи', type: 'error' });
+      return;
+    }
     setLoading(true);
     try {
       await deleteSomaticRecord(id);
@@ -359,13 +366,15 @@ export default function SomaticJournal() {
                 <TableCell>{r.days || ''}</TableCell>
                 <TableCell>{r.notes}</TableCell>
                 <TableCell>
-                  <Button
-                    color='error'
-                    size='small'
-                    onClick={() => handleDelete(r.id || r._id as any)}
-                  >
-                    Удалить
-                  </Button>
+                  {canManageMedical && (
+                    <Button
+                      color='error'
+                      size='small'
+                      onClick={() => handleDelete(r.id || r._id as any)}
+                    >
+                      Удалить
+                    </Button>
+                  )}
                   {/* Для редактирования можно добавить отдельную кнопку/диалог */}
                 </TableCell>
               </TableRow>

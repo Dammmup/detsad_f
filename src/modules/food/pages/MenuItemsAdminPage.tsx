@@ -21,6 +21,7 @@ import {
   CircularProgress,
   Switch,
   FormControlLabel,
+  Alert,
 } from '@mui/material';
 import {
   getMenuItems,
@@ -32,6 +33,7 @@ import { MenuItem as MenuItemType } from '../types/menuItem';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 import { showSnackbar } from '../../../shared/components/Snackbar';
+import { useAuth } from '../../../app/context/AuthContext';
 
 const MEALS = ['Завтрак', 'Обед', 'Полдник', 'Ужин'];
 const GROUPS = [
@@ -44,6 +46,13 @@ const GROUPS = [
 ];
 
 export default function MenuItemsAdminPage() {
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role;
+  const isAdmin = role === 'admin';
+  const isManager = role === 'manager';
+  const isCook = role === 'cook';
+  const canManageMenuItems = isAdmin || isManager || isCook;
+
   const [items, setItems] = useState<MenuItemType[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -65,6 +74,10 @@ export default function MenuItemsAdminPage() {
   };
 
   const handleSave = async () => {
+    if (!canManageMenuItems) {
+      showSnackbar({ message: 'Недостаточно прав для изменения справочника блюд', type: 'error' });
+      return;
+    }
     setLoading(true);
     try {
       if (editItem?._id) {
@@ -87,6 +100,10 @@ export default function MenuItemsAdminPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canManageMenuItems) {
+      showSnackbar({ message: 'Недостаточно прав для удаления блюд', type: 'error' });
+      return;
+    }
     setLoading(true);
     try {
       await deleteMenuItem(id);
@@ -103,16 +120,23 @@ export default function MenuItemsAdminPage() {
       <Typography variant='h4' gutterBottom>
         Справочник детских блюд
       </Typography>
-      <Button
-        variant='contained'
-        onClick={() => {
-          setEditItem({});
-          setModalOpen(true);
-        }}
-        sx={{ mb: 2 }}
-      >
-        Добавить блюдо
-      </Button>
+      {!canManageMenuItems && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Недостаточно прав для изменения справочника блюд.
+        </Alert>
+      )}
+      {canManageMenuItems && (
+        <Button
+          variant='contained'
+          onClick={() => {
+            setEditItem({});
+            setModalOpen(true);
+          }}
+          sx={{ mb: 2 }}
+        >
+          Добавить блюдо
+        </Button>
+      )}
       <Paper sx={{ p: 2, mb: 2 }}>
         <Table size='small' sx={{ minWidth: 900, overflowX: 'auto' }}>
           <TableHead>
@@ -149,22 +173,26 @@ export default function MenuItemsAdminPage() {
                 </TableCell>
                 <TableCell>{i.notes}</TableCell>
                 <TableCell>
-                  <Button
-                    size='small'
-                    onClick={() => {
-                      setEditItem(i);
-                      setModalOpen(true);
-                    }}
-                  >
-                    Редактировать
-                  </Button>
-                  <Button
-                    size='small'
-                    color='error'
-                    onClick={() => i._id && handleDelete(i._id)}
-                  >
-                    Удалить
-                  </Button>
+                  {canManageMenuItems && (
+                    <>
+                      <Button
+                        size='small'
+                        onClick={() => {
+                          setEditItem(i);
+                          setModalOpen(true);
+                        }}
+                      >
+                        Редактировать
+                      </Button>
+                      <Button
+                        size='small'
+                        color='error'
+                        onClick={() => i._id && handleDelete(i._id)}
+                      >
+                        Удалить
+                      </Button>
+                    </>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -276,9 +304,11 @@ export default function MenuItemsAdminPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setModalOpen(false)}>Отмена</Button>
-          <Button onClick={handleSave} variant='contained'>
-            Сохранить
-          </Button>
+          {canManageMenuItems && (
+            <Button onClick={handleSave} variant='contained'>
+              Сохранить
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
       {loading && (
