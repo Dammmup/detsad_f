@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
     Paper,
     Typography,
@@ -39,6 +39,7 @@ import {
 } from '@mui/icons-material';
 import moment from 'moment';
 import { useDate } from '../../../app/context/DateContext';
+import { useAuth } from '../../../app/context/AuthContext';
 import { getUsers } from '../../staff/services/userService';
 import childrenApi from '../../children/services/children';
 import { getGroups } from '../../children/services/groups';
@@ -103,37 +104,46 @@ const GROUP_COLORS = [
 
 const Statistics: React.FC = () => {
     const { currentDate } = useDate();
+    const { user: currentUser } = useAuth();
+    const role = currentUser?.role || '';
+    const canViewStatistics = ['admin', 'manager', 'director'].includes(role);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const requestIdRef = useRef(0);
 
     const [staffStats, setStaffStats] = useState<StaffStats | null>(null);
     const [childrenStats, setChildrenStats] = useState<ChildrenStats | null>(null);
     const [financeStats, setFinanceStats] = useState<FinanceStats | null>(null);
     const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
 
-    useEffect(() => {
-        loadStatistics();
+    const periodInfo = useMemo(() => {
+        const date = moment(currentDate);
+        return {
+            startOfMonth: date.startOf('month').format('YYYY-MM-DD'),
+            endOfMonth: date.endOf('month').format('YYYY-MM-DD'),
+            period: date.format('YYYY-MM'),
+            label: date.format('MMMM YYYY'),
+        };
     }, [currentDate]);
 
-    const loadStatistics = async () => {
+    const loadStatistics = useCallback(async () => {
+        const requestId = ++requestIdRef.current;
         setLoading(true);
         setError(null);
 
         try {
-            const startOfMonth = moment(currentDate).startOf('month').format('YYYY-MM-DD');
-            const endOfMonth = moment(currentDate).endOf('month').format('YYYY-MM-DD');
-            const period = moment(currentDate).format('YYYY-MM');
 
             // Загружаем данные
             const [users, children, groups, staffAttendanceRes, childAttendance, payrolls, shifts] = await Promise.all([
                 getUsers(),
                 childrenApi.getAll(),
                 getGroups(),
-                staffAttendanceApi.getAll({ startDate: startOfMonth, endDate: endOfMonth }).catch(() => ({ data: [] })),
-                getChildAttendance({ startDate: startOfMonth, endDate: endOfMonth }).catch(() => []),
-                getPayrollsByUsers({ period }).catch(() => []),
-                shiftsApi.getAll({ startDate: startOfMonth, endDate: endOfMonth }).catch(() => []),
+                staffAttendanceApi.getAll({ startDate: periodInfo.startOfMonth, endDate: periodInfo.endOfMonth }).catch(() => ({ data: [] })),
+                getChildAttendance({ startDate: periodInfo.startOfMonth, endDate: periodInfo.endOfMonth }).catch(() => []),
+                getPayrollsByUsers({ period: periodInfo.period }).catch(() => []),
+                shiftsApi.getAll({ startDate: periodInfo.startOfMonth, endDate: periodInfo.endOfMonth }).catch(() => []),
             ]);
+            if (requestId !== requestIdRef.current) return;
             const staffAttendance = Array.isArray(staffAttendanceRes) ? staffAttendanceRes : (staffAttendanceRes?.data || []);
 
             // Статистика сотрудников
@@ -266,6 +276,7 @@ const Statistics: React.FC = () => {
             const totalDaysWorked = Object.values(userAttendanceMap).reduce((sum, s) => sum + s.daysWorked, 0);
             const avgAttendanceRate = totalAttendanceDays > 0 ? Math.round((totalDaysWorked / totalAttendanceDays) * 100) : 100;
 
+            if (requestId !== requestIdRef.current) return;
             setStaffStats({
                 totalStaff: activeUsers.length,
                 byRole,
@@ -334,6 +345,7 @@ const Statistics: React.FC = () => {
                 .sort((a, b) => a.rate - b.rate)
                 .slice(0, 5);
 
+            if (requestId !== requestIdRef.current) return;
             setChildrenStats({
                 totalChildren: activeChildren.length,
                 byGroup,
@@ -347,6 +359,7 @@ const Statistics: React.FC = () => {
             const totalBonuses = (payrolls as any[]).reduce((sum: number, p: any) => sum + (p.bonusAmount || 0), 0);
             const totalPenalties = (payrolls as any[]).reduce((sum: number, p: any) => sum + (p.penaltyAmount || 0), 0);
 
+            if (requestId !== requestIdRef.current) return;
             setFinanceStats({
                 totalSalaryFund,
                 avgSalary,
@@ -386,6 +399,7 @@ const Statistics: React.FC = () => {
                 };
             }).sort((a, b) => b.rate - a.rate);
 
+            if (requestId !== requestIdRef.current) return;
             setAttendanceStats({
                 avgChildAttendance,
                 avgStaffAttendance: avgAttendanceRate,
@@ -400,16 +414,38 @@ const Statistics: React.FC = () => {
             });
 
         } catch (err: any) {
+            if (requestId !== requestIdRef.current) return;
             console.error('Error loading statistics:', err);
             setError(err.message || 'Ошибка загрузки статистики');
         } finally {
-            setLoading(false);
+            if (requestId === requestIdRef.current) {
+                setLoading(false);
+            }
         }
-    };
+    }, [periodInfo]);
 
-    const formatCurrency = (amount: number) => {
+    const formatCurrency = useCallback((amount: number) => {
         return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'KZT', maximumFractionDigits: 0 }).format(amount);
-    };
+    }, [periodInfo]);
+
+    useEffect(() => {
+        if (!canViewStatistics) {
+            setLoading(false);
+            setError(null);
+            return;
+        }
+        loadStatistics();
+    }, [canViewStatistics, loadStatistics]);
+
+    if (!canViewStatistics) {
+        return (
+            <Paper sx={{ p: 3, m: 2 }}>
+                <Alert severity="error">
+                    Недостаточно прав для просмотра статистики.
+                </Alert>
+            </Paper>
+        );
+    }
 
     if (loading) {
         return (

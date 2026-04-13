@@ -47,7 +47,9 @@ import { useAuth } from '../../../app/context/AuthContext';
 export default function MantouxJournal() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
-  const canManageMedical = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
+  const role = currentUser?.role || '';
+  const canViewMedical = ['admin', 'manager', 'director', 'doctor', 'nurse'].includes(role);
+  const canManageMedical = ['admin', 'manager', 'director'].includes(role);
   const [records, setRecords] = useState<MantouxRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +67,10 @@ export default function MantouxJournal() {
   }, [records]);
 
   useEffect(() => {
+    if (!canViewMedical) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     Promise.all([
       childrenApi.getAll().then((children) => {
@@ -72,7 +78,7 @@ export default function MantouxJournal() {
       }),
       getMantouxRecords().then(setRecords),
     ]).finally(() => setLoading(false));
-  }, []);
+  }, [canViewMedical]);
 
 
   const filteredRecords = useMemo(() => {
@@ -84,6 +90,10 @@ export default function MantouxJournal() {
 
 
   const handleAdd = async () => {
+    if (!canViewMedical) {
+      setError('Недостаточно прав для добавления записей');
+      return;
+    }
     if (newRecord.reactionSize === undefined || newRecord.reactionSize === null) { setError('Укажите размер реакции'); return; }
     if (!newRecord.reactionType) { setError('Выберите тип реакции'); return; }
     if (!newRecord.injectionSite) { setError('Укажите место инъекции'); return; }
@@ -132,6 +142,10 @@ export default function MantouxJournal() {
 
 
   const handleExport = () => {
+    if (!canViewMedical) {
+      setError('Недостаточно прав для экспорта данных');
+      return;
+    }
     const doc = new Document({
       sections: [
         {
@@ -207,6 +221,11 @@ export default function MantouxJournal() {
   };
 
   return (
+    !canViewMedical ? (
+      <Box sx={{ p: { xs: 1, md: 3 } }}>
+        <FormErrorAlert error={'Доступ к журналам медкабинета ограничен для вашей роли.'} onClose={() => {}} />
+      </Box>
+    ) : (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
       <Button 
         startIcon={<ArrowBackIcon />} 
@@ -220,12 +239,16 @@ export default function MantouxJournal() {
         Журнал регистрации проб Манту
       </Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
-        <Button variant='contained' onClick={() => setModalOpen(true)}>
-          Новая запись
-        </Button>
-        <Button variant='outlined' onClick={handleExport}>
-          Экспорт в Word
-        </Button>
+        {canViewMedical && (
+          <>
+            <Button variant='contained' onClick={() => setModalOpen(true)}>
+              Новая запись
+            </Button>
+            <Button variant='outlined' onClick={handleExport}>
+              Экспорт в Word
+            </Button>
+          </>
+        )}
         <TextField
           label='Поиск по ФИО'
           value={search}
@@ -413,14 +436,17 @@ export default function MantouxJournal() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setModalOpen(false)}>Отмена</Button>
-          <Button onClick={handleAdd} variant='contained'>
-            Сохранить
-          </Button>
+          {canViewMedical && (
+            <Button onClick={handleAdd} variant='contained'>
+              Сохранить
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
       {loading && (
         <CircularProgress sx={{ position: 'fixed', top: '50%', left: '50%' }} />
       )}
     </Box>
+    )
   );
 }

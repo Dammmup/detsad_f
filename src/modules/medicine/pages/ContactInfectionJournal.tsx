@@ -16,6 +16,7 @@ import {
   DialogActions,
   MenuItem,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import { getUsers } from '../../staff/services/userService';
 import childrenApi from '../../children/services/children';
@@ -38,7 +39,9 @@ import { useAuth } from '../../../app/context/AuthContext';
 export default function ContactInfectionJournal() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
-  const canManageMedical = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
+  const role = currentUser?.role || '';
+  const canViewMedical = ['admin', 'manager', 'director', 'doctor', 'nurse'].includes(role);
+  const canManageMedical = ['admin', 'manager', 'director'].includes(role);
   const [records, setRecords] = useState<ContactInfectionRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,9 +51,13 @@ export default function ContactInfectionJournal() {
   );
   const [search, setSearch] = useState('');
   const [group, setGroup] = useState('');
-  const [error, setError] = useState<string|null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!canViewMedical) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     Promise.all([
       childrenApi.getAll().then((children) => {
@@ -58,7 +65,7 @@ export default function ContactInfectionJournal() {
       }),
       getContactInfectionRecords().then(setRecords),
     ]).finally(() => setLoading(false));
-  }, []);
+  }, [canViewMedical]);
 
   const filteredRecords = useMemo(() => {
     let filtered = [...records];
@@ -71,6 +78,10 @@ export default function ContactInfectionJournal() {
   }, [records, search, group]);
 
   const handleAdd = async () => {
+    if (!canViewMedical) {
+      showSnackbar({ message: 'Недостаточно прав для добавления записей', type: 'error' });
+      return;
+    }
     if (!newRecord.childId || !newRecord.fio || !newRecord.date) {
       setError('Заполните обязательные поля');
       return;
@@ -132,157 +143,167 @@ export default function ContactInfectionJournal() {
   };
 
   return (
-    <Box sx={{ p: { xs: 1, md: 3 } }}>
-      <Button 
-        startIcon={<ArrowBackIcon />} 
-        onClick={() => navigate('/app/med')}
-        variant="outlined"
-        sx={{ mb: 2 }}
-      >
-        Назад к журналам
-      </Button>
-      <Typography variant='h5' gutterBottom>
-        Журнал учета контактов с острыми инфекционными заболеваниями
-      </Typography>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
-        <Button variant='contained' onClick={() => setModalOpen(true)}>
-          Новая запись
+    !canViewMedical ? (
+      <Box sx={{ p: { xs: 1, md: 3 } }}>
+        <Alert severity="info">Доступ к журналам медкабинета ограничен для вашей роли.</Alert>
+      </Box>
+    ) : (
+      <Box sx={{ p: { xs: 1, md: 3 } }}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/app/med')}
+          variant="outlined"
+          sx={{ mb: 2 }}
+        >
+          Назад к журналам
         </Button>
-        <ExportButton
-          exportTypes={[{ value: 'contact-infection-journal', label: 'Журнал контактов с инфекциями' }]}
-          onExport={async (_type, fmt) => {
-            await exportData('contact-infection-journal', fmt, { records: filteredRecords });
-          }}
-        />
-        <TextField
-          label='Поиск по ФИО'
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          size='small'
-          sx={{ minWidth: 180 }}
-        />
-        <TextField
-          label='Группа'
-          value={group}
-          onChange={(e) => setGroup(e.target.value)}
-          size='small'
-          sx={{ minWidth: 120 }}
-        />
-        <Button onClick={handleClearFilters}>Очистить фильтры</Button>
-      </Stack>
-      <Table size='small' sx={{ minWidth: 900, overflowX: 'auto' }}>
-        <TableHead>
-          <TableRow>
-            <TableCell>№</TableCell>
-            <TableCell>ФИО</TableCell>
-            <TableCell>Дата рождения</TableCell>
-            <TableCell>Дата</TableCell>
-            <TableCell>Тип инфекции</TableCell>
-            <TableCell>Примечания</TableCell>
-            <TableCell>Действия</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {filteredRecords.map((r, idx) => {
-            const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
-            const fio = r.fio || childInfo?.fullName || '';
-            const birthdate = r.birthdate || (childInfo?.birthday ? new Date(childInfo.birthday).toLocaleDateString('ru-RU') : '');
-            return (
-              <TableRow key={r.id || r._id}>
-                <TableCell>{idx + 1}</TableCell>
-                <TableCell>{fio}</TableCell>
-                <TableCell>{birthdate}</TableCell>
-                <TableCell>{typeof r.date === 'string' ? new Date(r.date).toLocaleDateString('ru-RU') : r.date?.toLocaleDateString?.('ru-RU') || ''}</TableCell>
-                <TableCell>{r.infectionType || '-'}</TableCell>
-                <TableCell>{r.notes || '-'}</TableCell>
-                <TableCell>
-                  {canManageMedical && (
-                    <Button
-                      color='error'
-                      size='small'
-                      onClick={() => handleDelete(r.id || r._id || '')}
-                    >
-                      Удалить
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-      <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
-        <DialogTitle>Новая запись</DialogTitle>
-        <DialogContent>
-          <FormErrorAlert error={error} onClose={() => setError(null)} />
-          <TextField
-            select
-            label='Ребенок'
-            value={newRecord.childId || ''}
-            onChange={(e) => handleChildSelect(e.target.value)}
-            fullWidth
-            margin='dense'
-          >
-            <MenuItem value=''>—</MenuItem>
-            {users.map((child) => (
-              <MenuItem
-                key={child.id || child._id}
-                value={child.id || child._id}
-              >
-                {child.fullName}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            label='Дата'
-            type='date'
-            value={newRecord.date || ''}
-            onChange={(e) =>
-              setNewRecord((r) => ({ ...r, date: e.target.value }))
-            }
-            fullWidth
-            margin='dense'
-            InputLabelProps={{ shrink: true }}
+        <Typography variant='h5' gutterBottom>
+          Журнал учета контактов с острыми инфекционными заболеваниями
+        </Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
+          {canViewMedical && (
+            <Button variant='contained' onClick={() => setModalOpen(true)}>
+              Новая запись
+            </Button>
+          )}
+          <ExportButton
+            exportTypes={[{ value: 'contact-infection-journal', label: 'Журнал контактов с инфекциями' }]}
+            onExport={async (_type, fmt) => {
+              await exportData('contact-infection-journal', fmt, { records: filteredRecords });
+            }}
           />
           <TextField
-            label='Симптомы'
-            value={Array.isArray(newRecord.symptoms) ? newRecord.symptoms.join(', ') : (newRecord.symptoms || '')}
-            onChange={(e) =>
-              setNewRecord((r) => ({ ...r, symptoms: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))
-            }
-            helperText='Через запятую'
-            fullWidth
-            margin='dense'
+            label='Поиск по ФИО'
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            size='small'
+            sx={{ minWidth: 180 }}
           />
           <TextField
-            label='Стул'
-            value={newRecord.stool || ''}
-            onChange={(e) =>
-              setNewRecord((r) => ({ ...r, stool: e.target.value }))
-            }
-            fullWidth
-            margin='dense'
+            label='Группа'
+            value={group}
+            onChange={(e) => setGroup(e.target.value)}
+            size='small'
+            sx={{ minWidth: 120 }}
           />
-          <TextField
-            label='Примечания'
-            value={newRecord.notes || ''}
-            onChange={(e) =>
-              setNewRecord((r) => ({ ...r, notes: e.target.value }))
-            }
-            fullWidth
-            margin='dense'
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setModalOpen(false)}>Отмена</Button>
-          <Button onClick={handleAdd} variant='contained'>
-            Сохранить
-          </Button>
-        </DialogActions>
-      </Dialog>
-      {loading && (
-        <CircularProgress sx={{ position: 'fixed', top: '50%', left: '50%' }} />
-      )}
-    </Box>
+          <Button onClick={handleClearFilters}>Очистить фильтры</Button>
+        </Stack>
+        <Table size='small' sx={{ minWidth: 900, overflowX: 'auto' }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>№</TableCell>
+              <TableCell>ФИО</TableCell>
+              <TableCell>Дата рождения</TableCell>
+              <TableCell>Дата</TableCell>
+              <TableCell>Тип инфекции</TableCell>
+              <TableCell>Примечания</TableCell>
+              <TableCell>Действия</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredRecords.map((r, idx) => {
+              const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
+              const fio = r.fio || childInfo?.fullName || '';
+              const birthdate = r.birthdate || (childInfo?.birthday ? new Date(childInfo.birthday).toLocaleDateString('ru-RU') : '');
+              return (
+                <TableRow key={r.id || r._id}>
+                  <TableCell>{idx + 1}</TableCell>
+                  <TableCell>{fio}</TableCell>
+                  <TableCell>{birthdate}</TableCell>
+                  <TableCell>{typeof r.date === 'string' ? new Date(r.date).toLocaleDateString('ru-RU') : r.date?.toLocaleDateString?.('ru-RU') || ''}</TableCell>
+                  <TableCell>{r.infectionType || '-'}</TableCell>
+                  <TableCell>{r.notes || '-'}</TableCell>
+                  <TableCell>
+                    {canManageMedical && (
+                      <Button
+                        color='error'
+                        size='small'
+                        onClick={() => handleDelete(r.id || r._id || '')}
+                      >
+                        Удалить
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+        <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
+          <DialogTitle>Новая запись</DialogTitle>
+          <DialogContent>
+            <FormErrorAlert error={error} onClose={() => setError(null)} />
+            <TextField
+              select
+              label='Ребенок'
+              value={newRecord.childId || ''}
+              onChange={(e) => handleChildSelect(e.target.value)}
+              fullWidth
+              margin='dense'
+            >
+              <MenuItem value=''>—</MenuItem>
+              {users.map((child) => (
+                <MenuItem
+                  key={child.id || child._id}
+                  value={child.id || child._id}
+                >
+                  {child.fullName}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label='Дата'
+              type='date'
+              value={newRecord.date || ''}
+              onChange={(e) =>
+                setNewRecord((r) => ({ ...r, date: e.target.value }))
+              }
+              fullWidth
+              margin='dense'
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label='Симптомы'
+              value={Array.isArray(newRecord.symptoms) ? newRecord.symptoms.join(', ') : (newRecord.symptoms || '')}
+              onChange={(e) =>
+                setNewRecord((r) => ({ ...r, symptoms: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))
+              }
+              helperText='Через запятую'
+              fullWidth
+              margin='dense'
+            />
+            <TextField
+              label='Стул'
+              value={newRecord.stool || ''}
+              onChange={(e) =>
+                setNewRecord((r) => ({ ...r, stool: e.target.value }))
+              }
+              fullWidth
+              margin='dense'
+            />
+            <TextField
+              label='Примечания'
+              value={newRecord.notes || ''}
+              onChange={(e) =>
+                setNewRecord((r) => ({ ...r, notes: e.target.value }))
+              }
+              fullWidth
+              margin='dense'
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setModalOpen(false)}>Отмена</Button>
+            {canViewMedical && (
+              <Button onClick={handleAdd} variant='contained'>
+                Сохранить
+              </Button>
+            )}
+          </DialogActions>
+        </Dialog>
+        {loading && (
+          <CircularProgress sx={{ position: 'fixed', top: '50%', left: '50%' }} />
+        )}
+      </Box>
+    )
   );
 }

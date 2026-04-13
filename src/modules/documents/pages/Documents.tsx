@@ -61,6 +61,7 @@ import {
   downloadDocument,
 } from '../services/documents';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
+import { useAuth } from '../../../app/context/AuthContext';
 
 
 const roleTranslations: Record<string, string> = {
@@ -111,6 +112,9 @@ const getFileIcon = (fileName: string) => {
 };
 
 export const Documents = () => {
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role || '';
+  const canManageDocuments = ['admin', 'manager', 'teacher', 'assistant'].includes(role);
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [filteredDocuments, setFilteredDocuments] = useState<DocumentType[]>(
     [],
@@ -216,6 +220,10 @@ export const Documents = () => {
   ]);
 
   const handleOpenDialog = (document?: DocumentType) => {
+    if (!canManageDocuments) {
+      setError('Недостаточно прав для управления документами');
+      return;
+    }
     setCurrentDocument(
       document || {
         title: '',
@@ -236,6 +244,10 @@ export const Documents = () => {
   };
 
   const handleSaveDocument = async () => {
+    if (!canManageDocuments) {
+      setError('Недостаточно прав для управления документами');
+      return;
+    }
     if (!currentDocument) return;
 
     try {
@@ -290,6 +302,10 @@ export const Documents = () => {
   };
 
   const handleDeleteDocument = async (id: string) => {
+    if (!canManageDocuments) {
+      setError('Недостаточно прав для удаления документов');
+      return;
+    }
     if (window.confirm('Удалить документ?')) {
       try {
         await deleteDocument(id);
@@ -371,15 +387,17 @@ export const Documents = () => {
         </Typography>
         <Box>
           <AuditLogButton entityType="document" />
-          <Button
-            variant='contained'
-            color='primary'
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-            sx={{ ml: 1 }}
-          >
-            Добавить документ
-          </Button>
+          {canManageDocuments && (
+            <Button
+              variant='contained'
+              color='primary'
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenDialog()}
+              sx={{ ml: 1 }}
+            >
+              Добавить документ
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -615,35 +633,39 @@ export const Documents = () => {
                           <DownloadIcon fontSize='small' />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title='Редактировать'>
-                        <IconButton
-                          size='small'
-                          onClick={() => handleOpenDialog(document)}
-                        >
-                          <EditIcon fontSize='small' />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title='Удалить'>
-                        <IconButton
-                          size='small'
-                          onClick={() => {
-                            const docId = document.id || document._id;
-                            if (docId) {
-                              handleDeleteDocument(docId);
-                            } else {
-                              console.error(
-                                'Document ID is missing for delete',
-                              );
-                              setError(
-                                'Не удалось удалить документ: отсутствует ID',
-                              );
-                            }
-                          }}
-                          color='error'
-                        >
-                          <DeleteIcon fontSize='small' />
-                        </IconButton>
-                      </Tooltip>
+                      {canManageDocuments && (
+                        <>
+                          <Tooltip title='Редактировать'>
+                            <IconButton
+                              size='small'
+                              onClick={() => handleOpenDialog(document)}
+                            >
+                              <EditIcon fontSize='small' />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title='Удалить'>
+                            <IconButton
+                              size='small'
+                              onClick={() => {
+                                const docId = document.id || document._id;
+                                if (docId) {
+                                  handleDeleteDocument(docId);
+                                } else {
+                                  console.error(
+                                    'Document ID is missing for delete',
+                                  );
+                                  setError(
+                                    'Не удалось удалить документ: отсутствует ID',
+                                  );
+                                }
+                              }}
+                              color='error'
+                            >
+                              <DeleteIcon fontSize='small' />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -658,16 +680,18 @@ export const Documents = () => {
             <Typography variant='body2' color='text.secondary' mt={1}>
               Создайте документ из шаблона или загрузите новый файл
             </Typography>
-            <Box mt={2}>
-              <Button
-                variant='contained'
-                color='primary'
-                startIcon={<AddIcon />}
-                onClick={() => handleOpenDialog()}
-              >
-                Добавить документ
-              </Button>
-            </Box>
+            {canManageDocuments && (
+              <Box mt={2}>
+                <Button
+                  variant='contained'
+                  color='primary'
+                  startIcon={<AddIcon />}
+                  onClick={() => handleOpenDialog()}
+                >
+                  Добавить документ
+                </Button>
+              </Box>
+            )}
           </Box>
         )}
         <TablePagination
@@ -854,13 +878,15 @@ export const Documents = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Отмена</Button>
-          <Button
-            onClick={handleSaveDocument}
-            variant='contained'
-            color='primary'
-          >
-            Сохранить
-          </Button>
+          {canManageDocuments && (
+            <Button
+              onClick={handleSaveDocument}
+              variant='contained'
+              color='primary'
+            >
+              Сохранить
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

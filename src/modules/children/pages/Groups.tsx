@@ -122,6 +122,7 @@ const Groups = () => {
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
   const isAdminOrManager = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
+  const canViewSensitiveChildren = isAdminOrManager;
 
   // Стабильные ссылки на функции контекста - удалено дублирование
 
@@ -180,6 +181,10 @@ const Groups = () => {
   }, [isLoggedIn, currentUser, authLoading, fetchGroupsInternal]);
 
   const handleOpenModal = (group?: GroupInternal) => {
+    if (!isAdminOrManager) {
+      showSnackbar({ message: 'Недостаточно прав для управления группами', type: 'error' });
+      return;
+    }
     if (group) {
       setForm({
         id: group.id,
@@ -237,6 +242,10 @@ const Groups = () => {
 
 
   const handleSave = async () => {
+    if (!isAdminOrManager) {
+      setSaveError('Недостаточно прав для сохранения группы');
+      return;
+    }
     setSaving(true);
     try {
 
@@ -271,6 +280,10 @@ const Groups = () => {
 
 
   const handleDelete = async (id: string) => {
+    if (!isAdminOrManager) {
+      showSnackbar({ message: 'Недостаточно прав для удаления группы', type: 'error' });
+      return;
+    }
     if (!id) return;
     if (!window.confirm('Удалить группу?')) return;
     setSaving(true);
@@ -369,7 +382,11 @@ const Groups = () => {
     if (!groupState?.expanded) return null;
 
     const childSearch = (childSearchTerms[groupId] || '').toLowerCase();
-    const filteredChildren = (groupState.children || []).filter(child => {
+    const visibleChildren = canViewSensitiveChildren
+      ? (groupState.children || [])
+      : (groupState.children || []).map(child => ({ ...child, parentName: '', parentPhone: '' }));
+
+    const filteredChildren = (visibleChildren || []).filter(child => {
       const name = child.fullName.toLowerCase();
       // Исключаем итоговые строки (регистронезависимо)
       if (name.includes('итого') || name.includes('всего')) {
@@ -676,7 +693,7 @@ const Groups = () => {
             onClick={handleSave}
             variant='contained'
             color='primary'
-            disabled={saving || !form.name}
+            disabled={saving || !form.name || !isAdminOrManager}
           >
             {editId ? 'Сохранить' : 'Добавить'}
           </Button>

@@ -11,8 +11,8 @@ import {
 interface YandexMapProps {
   center: { lat: number; lng: number };
   radius: number;
-  onRadiusChange: (radius: number) => void;
-  onCenterChange: (center: { lat: number; lng: number }) => void;
+  onRadiusChange?: (radius: number) => void;
+  onCenterChange?: (center: { lat: number; lng: number }) => void;
   apiKey: string;
 }
 
@@ -25,21 +25,21 @@ const YandexMap: React.FC<YandexMapProps> = ({
 }) => {
   const handleDragEnd = (e: any) => {
     const newCoords = e.get('target').geometry.getCoordinates();
-    if (newCoords) {
+    if (newCoords && onCenterChange) {
       onCenterChange({ lat: newCoords[0], lng: newCoords[1] });
     }
   };
 
   const handleMapClick = (e: any) => {
     const coords = e.get('coords');
-    if (coords) {
+    if (coords && onCenterChange) {
       onCenterChange({ lat: coords[0], lng: coords[1] });
     }
   };
 
   const handleRadiusSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
-    if (!isNaN(value) && value > 0) {
+    if (!isNaN(value) && value > 0 && onRadiusChange) {
       onRadiusChange(value);
     }
   };
@@ -75,7 +75,7 @@ const YandexMap: React.FC<YandexMapProps> = ({
           <Circle
             geometry={[[center.lat, center.lng], radius]}
             options={{
-              draggable: true,
+              draggable: !!onCenterChange,
               fillColor: '#00FF00',
               fillOpacity: 0.3,
               strokeColor: '#00FF00',

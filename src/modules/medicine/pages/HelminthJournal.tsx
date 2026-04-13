@@ -70,7 +70,9 @@ const YEARS = Array.from({ length: CURRENT_YEAR - 2018 }, (_, i) =>
 export default function HelminthJournal() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
-  const canManageMedical = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
+  const role = currentUser?.role || '';
+  const canViewMedical = ['admin', 'manager', 'director', 'doctor', 'nurse'].includes(role);
+  const canManageMedical = ['admin', 'manager', 'director'].includes(role);
   const [records, setRecords] = useState<HelminthRecord[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,6 +90,10 @@ export default function HelminthJournal() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
+    if (!canViewMedical) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [childrenData, recordsData] = await Promise.all([
@@ -105,7 +111,7 @@ export default function HelminthJournal() {
 
   React.useEffect(() => {
     fetchData();
-  }, []);
+  }, [canViewMedical]);
 
   const filteredRecords = useMemo(() => {
     let filtered = [...records];
@@ -130,6 +136,10 @@ export default function HelminthJournal() {
   }, [filteredRecords]);
 
   const handleAdd = async () => {
+    if (!canViewMedical) {
+      setError('Недостаточно прав для добавления записей');
+      return;
+    }
     try {
       if (
         !newRecord.childId ||
@@ -195,6 +205,10 @@ export default function HelminthJournal() {
   };
 
   const handleExport = () => {
+    if (!canViewMedical) {
+      setError('Недостаточно прав для экспорта данных');
+      return;
+    }
     const doc = new Document({
       sections: [
         {
@@ -258,6 +272,11 @@ export default function HelminthJournal() {
   };
 
   return (
+    !canViewMedical ? (
+      <Box sx={{ p: { xs: 1, md: 3 } }}>
+        <FormErrorAlert error={'Доступ к журналам медкабинета ограничен для вашей роли.'} onClose={() => {}} />
+      </Box>
+    ) : (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
       <Button 
         startIcon={<ArrowBackIcon />} 
@@ -272,12 +291,16 @@ export default function HelminthJournal() {
       </Typography>
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3} alignItems="center">
-        <Button variant='contained' onClick={() => setModalOpen(true)} startIcon={<Person />}>
-          Новая запись
-        </Button>
-        <Button variant='outlined' onClick={handleExport}>
-          Экспорт
-        </Button>
+        {canViewMedical && (
+          <>
+            <Button variant='contained' onClick={() => setModalOpen(true)} startIcon={<Person />}>
+              Новая запись
+            </Button>
+            <Button variant='outlined' onClick={handleExport}>
+              Экспорт
+            </Button>
+          </>
+        )}
 
         <Box sx={{ flexGrow: 1 }} />
 
@@ -479,9 +502,11 @@ export default function HelminthJournal() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setModalOpen(false)}>Отмена</Button>
-          <Button onClick={handleAdd} variant='contained' disabled={loading}>
-            {loading ? 'Сохранение...' : 'Сохранить'}
-          </Button>
+          {canViewMedical && (
+            <Button onClick={handleAdd} variant='contained' disabled={loading}>
+              {loading ? 'Сохранение...' : 'Сохранить'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
@@ -489,5 +514,6 @@ export default function HelminthJournal() {
         <CircularProgress sx={{ position: 'fixed', top: '50%', left: '50%', zIndex: 9999 }} />
       )}
     </Box>
+    )
   );
 }

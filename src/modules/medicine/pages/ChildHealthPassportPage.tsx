@@ -20,6 +20,7 @@ import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useAuth } from '../../../app/context/AuthContext';
 
 
 interface ChildPassportForm {
@@ -43,6 +44,9 @@ interface ChildPassportForm {
 
 export default function ChildHealthPassportPage() {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role || '';
+  const canViewMedical = ['admin', 'manager', 'director', 'doctor', 'nurse'].includes(role);
   const [selectedId, setSelectedId] = React.useState('');
   const [children, setChildren] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -68,6 +72,10 @@ export default function ChildHealthPassportPage() {
   });
 
   React.useEffect(() => {
+    if (!canViewMedical) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     childrenApi
       .getAll()
@@ -75,7 +83,7 @@ export default function ChildHealthPassportPage() {
         setChildren(children as any);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [canViewMedical]);
 
 
   React.useEffect(() => {
@@ -120,6 +128,10 @@ export default function ChildHealthPassportPage() {
   }, [selectedId, children]);
 
   const handleSave = async () => {
+    if (!canViewMedical) {
+      setError('Недостаточно прав для сохранения данных');
+      return;
+    }
     if (!selectedId) {
       setError('Выберите ребенка');
       return;
@@ -161,6 +173,10 @@ export default function ChildHealthPassportPage() {
 
 
   const handleExport = () => {
+    if (!canViewMedical) {
+      setError('Недостаточно прав для экспорта данных');
+      return;
+    }
     const doc = new Document({
       sections: [
         {
@@ -227,6 +243,11 @@ export default function ChildHealthPassportPage() {
   };
 
   return (
+    !canViewMedical ? (
+      <Box sx={{ p: { xs: 1, md: 3 } }}>
+        <FormErrorAlert error={'Доступ к журналам медкабинета ограничен для вашей роли.'} onClose={() => {}} />
+      </Box>
+    ) : (
     <Box sx={{ p: { xs: 1, md: 3 }, maxWidth: 700, mx: 'auto' }}>
       <Button 
         startIcon={<ArrowBackIcon />} 
@@ -421,5 +442,6 @@ export default function ChildHealthPassportPage() {
         </Stack>
       </Paper>
     </Box>
+    )
   );
 }

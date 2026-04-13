@@ -25,6 +25,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { showSnackbar } from '../../../shared/components/Snackbar';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
+import { useAuth } from '../../../app/context/AuthContext';
 const defaultForm: DetergentLog = {
   date: '',
   detergent: '',
@@ -37,6 +38,10 @@ const defaultForm: DetergentLog = {
 
 const DetergentLogPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role || '';
+  const canViewMedical = ['admin', 'manager', 'director', 'doctor', 'nurse'].includes(role);
+  const canManageMedical = ['admin', 'manager', 'director'].includes(role);
   const [rows, setRows] = useState<DetergentLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -45,6 +50,10 @@ const DetergentLogPage: React.FC = () => {
   const [error, setError] = useState<string|null>(null);
 
   const fetchRows = async () => {
+    if (!canViewMedical) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const data = await detergentLogApi.getAll();
@@ -56,9 +65,13 @@ const DetergentLogPage: React.FC = () => {
 
   useEffect(() => {
     fetchRows();
-  }, []);
+  }, [canViewMedical]);
 
   const handleOpen = (row?: DetergentLog) => {
+    if (!canViewMedical) {
+      setError('Недостаточно прав для редактирования');
+      return;
+    }
     if (row) {
       setForm(row);
       setEditId(row._id);
@@ -81,6 +94,10 @@ const DetergentLogPage: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (!canViewMedical) {
+      setError('Недостаточно прав для сохранения');
+      return;
+    }
     setLoading(true);
     try {
       if (editId) {
@@ -99,6 +116,10 @@ const DetergentLogPage: React.FC = () => {
   };
 
   const handleDelete = async (id?: string) => {
+    if (!canManageMedical) {
+      showSnackbar({ message: 'Недостаточно прав для удаления', type: 'error' });
+      return;
+    }
     if (!id) return;
     setLoading(true);
     try {
@@ -116,10 +137,19 @@ const DetergentLogPage: React.FC = () => {
     exportType: string,
     exportFormat: 'xlsx',
   ) => {
+    if (!canViewMedical) {
+      showSnackbar({ message: 'Недостаточно прав для экспорта', type: 'error' });
+      return;
+    }
     await exportData('detergent-log', exportFormat, { rows });
   };
 
   return (
+    !canViewMedical ? (
+      <Box p={3}>
+        <FormErrorAlert error={'Доступ к журналам медкабинета ограничен для вашей роли.'} onClose={() => {}} />
+      </Box>
+    ) : (
     <Box p={3}>
       <Button
         startIcon={<ArrowBackIcon />}
@@ -133,19 +163,23 @@ const DetergentLogPage: React.FC = () => {
         Журнал учета моющих средств
       </Typography>
       <Stack direction='row' spacing={2} mb={2}>
-        <Button
-          variant='contained'
-          color='primary'
-          onClick={() => handleOpen()}
-        >
-          Добавить запись
-        </Button>
-        <ExportButton
-          exportTypes={[
-            { value: 'detergent-log', label: 'Журнал учета моющих средств' },
-          ]}
-          onExport={handleExport}
-        />
+        {canViewMedical && (
+          <>
+            <Button
+              variant='contained'
+              color='primary'
+              onClick={() => handleOpen()}
+            >
+              Добавить запись
+            </Button>
+            <ExportButton
+              exportTypes={[
+                { value: 'detergent-log', label: 'Журнал учета моющих средств' },
+              ]}
+              onExport={handleExport}
+            />
+          </>
+        )}
       </Stack>
       <Paper sx={{ p: 2, mb: 2 }}>
         <Table>
@@ -169,16 +203,20 @@ const DetergentLogPage: React.FC = () => {
                 <TableCell>{row.notes}</TableCell>
                 <TableCell>
                   <Stack direction='row' spacing={1}>
-                    <Button size='small' onClick={() => handleOpen(row)}>
-                      Редактировать
-                    </Button>
-                    <Button
-                      size='small'
-                      color='error'
-                      onClick={() => handleDelete(row._id)}
-                    >
-                      Удалить
-                    </Button>
+                    {canViewMedical && (
+                      <Button size='small' onClick={() => handleOpen(row)}>
+                        Редактировать
+                      </Button>
+                    )}
+                    {canManageMedical && (
+                      <Button
+                        size='small'
+                        color='error'
+                        onClick={() => handleDelete(row._id)}
+                      >
+                        Удалить
+                      </Button>
+                    )}
                   </Stack>
                 </TableCell>
               </TableRow>
@@ -235,12 +273,15 @@ const DetergentLogPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Отмена</Button>
-          <Button onClick={handleSave} variant='contained' disabled={loading}>
-            Сохранить
-          </Button>
+          {canViewMedical && (
+            <Button onClick={handleSave} variant='contained' disabled={loading}>
+              Сохранить
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>
+    )
   );
 };
 

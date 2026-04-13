@@ -63,8 +63,22 @@ import {
 import MainEventsSettings from '../components/MainEventsSettings';
 import PushService from '../../../shared/services/pushService';
 import Integration1CSettingsTab from '../components/Integration1CSettingsTab';
+import { useAuth } from '../../../app/context/AuthContext';
 
 const Settings: React.FC = () => {
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role || '';
+  const canViewKindergarten = ['admin', 'manager', 'director'].includes(role);
+  const canManageKindergarten = role === 'admin';
+  const canViewNotifications = role === 'admin';
+  const canManageNotifications = role === 'admin';
+  const canViewSecurity = role === 'admin';
+  const canManageSecurity = role === 'admin';
+  const canViewGeolocation = true;
+  const canManageGeolocation = role === 'admin';
+  const canViewUsers = role === 'admin';
+  const canManageUsers = role === 'admin';
+  const canViewIntegration1C = role === 'admin';
 
   const [kindergartenSettings, setKindergartenSettings] =
     useState<KindergartenSettings | null>(null);
@@ -105,7 +119,7 @@ const Settings: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [role]);
 
 
   const fetchData = async () => {
@@ -116,11 +130,11 @@ const Settings: React.FC = () => {
 
       const [kindergarten, notifications, security, geolocation, usersData] =
         await Promise.all([
-          getKindergartenSettings(),
-          getNotificationSettings(),
-          getSecuritySettings(),
-          getGeolocationSettings(),
-          getAllUsers(),
+          canViewKindergarten ? getKindergartenSettings() : Promise.resolve(null),
+          canViewNotifications ? getNotificationSettings() : Promise.resolve(null),
+          canViewSecurity ? getSecuritySettings() : Promise.resolve(null),
+          canViewGeolocation ? getGeolocationSettings() : Promise.resolve(null),
+          canViewUsers ? getAllUsers() : Promise.resolve([]),
         ]);
 
       setKindergartenSettings(kindergarten);
@@ -144,6 +158,10 @@ const Settings: React.FC = () => {
 
 
   const handleSaveKindergartenSettings = async () => {
+    if (!canManageKindergarten) {
+      setError('Недостаточно прав для сохранения настроек детского сада');
+      return;
+    }
     if (!kindergartenSettings) return;
 
     setLoading(true);
@@ -162,6 +180,10 @@ const Settings: React.FC = () => {
 
 
   const handleSaveNotificationSettings = async () => {
+    if (!canManageNotifications) {
+      setError('Недостаточно прав для сохранения настроек уведомлений');
+      return;
+    }
     if (!notificationSettings) return;
 
     setLoading(true);
@@ -180,6 +202,10 @@ const Settings: React.FC = () => {
 
 
   const handleSaveSecuritySettings = async () => {
+    if (!canManageSecurity) {
+      setError('Недостаточно прав для сохранения настроек безопасности');
+      return;
+    }
     if (!securitySettings) return;
 
     setLoading(true);
@@ -197,6 +223,10 @@ const Settings: React.FC = () => {
 
 
   const handleSaveGeolocationSettings = async () => {
+    if (!canManageGeolocation) {
+      setError('Недостаточно прав для сохранения настроек геолокации');
+      return;
+    }
     if (!geolocationSettings) return;
 
     setLoading(true);
@@ -256,6 +286,10 @@ const Settings: React.FC = () => {
 
 
   const handleSaveUser = async () => {
+    if (!canManageUsers) {
+      setError('Недостаточно прав для управления пользователями');
+      return;
+    }
 
     if (!validateUserForm()) {
       return;
@@ -298,6 +332,10 @@ const Settings: React.FC = () => {
 
 
   const handleDeleteUser = async (id: string) => {
+    if (!canManageUsers) {
+      setError('Недостаточно прав для удаления пользователей');
+      return;
+    }
     if (!window.confirm('Вы уверены, что хотите удалить этого пользователя?')) {
       return;
     }
@@ -316,6 +354,10 @@ const Settings: React.FC = () => {
 
 
   const handleEditUser = (user: User) => {
+    if (!canManageUsers) {
+      setError('Недостаточно прав для редактирования пользователей');
+      return;
+    }
     setSelectedUser(user);
     setUserForm(user);
     setUserDialogOpen(true);
@@ -383,7 +425,10 @@ const Settings: React.FC = () => {
       </Tabs>
 
       {/* Содержимое вкладок */}
-      {tabValue === 0 && kindergartenSettings && (
+      {tabValue === 0 && (
+        !canViewKindergarten ? (
+          <Alert severity="info">Доступ к настройкам детского сада ограничен для вашей роли.</Alert>
+        ) : kindergartenSettings && (
         <Card>
           <CardContent>
             <Typography variant='h6' gutterBottom>
@@ -600,6 +645,7 @@ const Settings: React.FC = () => {
                   color='primary'
                   startIcon={<Save />}
                   onClick={handleSaveKindergartenSettings}
+                  disabled={!canManageKindergarten}
                 >
                   Сохранить настройки
                 </Button>
@@ -607,9 +653,13 @@ const Settings: React.FC = () => {
             </Grid>
           </CardContent>
         </Card>
+        )
       )}
 
-      {tabValue === 1 && notificationSettings && (
+      {tabValue === 1 && (
+        !canViewNotifications ? (
+          <Alert severity="info">Доступ к настройкам уведомлений доступен только администратору.</Alert>
+        ) : notificationSettings && (
         <Card>
           <CardContent>
             <Typography variant='h6' gutterBottom>
@@ -789,6 +839,7 @@ const Settings: React.FC = () => {
                   color='primary'
                   startIcon={<Save />}
                   onClick={handleSaveNotificationSettings}
+                  disabled={!canManageNotifications}
                 >
                   Сохранить настройки
                 </Button>
@@ -796,9 +847,13 @@ const Settings: React.FC = () => {
             </Grid>
           </CardContent>
         </Card>
+        )
       )}
 
-      {tabValue === 2 && securitySettings && (
+      {tabValue === 2 && (
+        !canViewSecurity ? (
+          <Alert severity="info">Доступ к настройкам безопасности доступен только администратору.</Alert>
+        ) : securitySettings && (
         <Card>
           <CardContent>
             <Typography variant='h6' gutterBottom>
@@ -908,6 +963,7 @@ const Settings: React.FC = () => {
                   color='primary'
                   startIcon={<Save />}
                   onClick={handleSaveSecuritySettings}
+                  disabled={!canManageSecurity}
                 >
                   Сохранить настройки
                 </Button>
@@ -915,9 +971,13 @@ const Settings: React.FC = () => {
             </Grid>
           </CardContent>
         </Card>
+        )
       )}
 
-      {tabValue === 3 && geolocationSettings && (
+      {tabValue === 3 && (
+        !canViewGeolocation ? (
+          <Alert severity="info">Доступ к настройкам геолокации ограничен.</Alert>
+        ) : geolocationSettings && (
         <Card>
           <CardContent>
             <Typography variant='h6' gutterBottom>
@@ -1012,13 +1072,13 @@ const Settings: React.FC = () => {
                           ?.longitude || 71.4704,
                     }}
                     radius={geolocationSettings.radius || 100}
-                    onRadiusChange={(radius) =>
+                    onRadiusChange={canManageGeolocation ? (radius) =>
                       setGeolocationSettings({
                         ...geolocationSettings,
                         radius: radius,
                       })
-                    }
-                    onCenterChange={(center) =>
+                    : undefined}
+                    onCenterChange={canManageGeolocation ? (center) =>
                       setGeolocationSettings({
                         ...geolocationSettings,
                         ...(geolocationSettings as GeolocationSettings),
@@ -1027,7 +1087,7 @@ const Settings: React.FC = () => {
                           longitude: center.lng,
                         },
                       })
-                    }
+                    : undefined}
                     apiKey={
                       (geolocationSettings as GeolocationSettings)
                         .yandexApiKey || ''
@@ -1059,6 +1119,7 @@ const Settings: React.FC = () => {
                   color='primary'
                   startIcon={<Save />}
                   onClick={handleSaveGeolocationSettings}
+                  disabled={!canManageGeolocation}
                 >
                   Сохранить настройки
                 </Button>
@@ -1066,11 +1127,15 @@ const Settings: React.FC = () => {
             </Grid>
           </CardContent>
         </Card>
+        )
       )}
 
       {tabValue === 4 && <MainEventsSettings />}
 
       {tabValue === 5 && (
+        !canViewUsers ? (
+          <Alert severity="info">Доступ к управлению пользователями доступен только администратору.</Alert>
+        ) : (
         <Card>
           <CardContent>
             <Box
@@ -1080,25 +1145,27 @@ const Settings: React.FC = () => {
               mb={2}
             >
               <Typography variant='h6'>Управление пользователями</Typography>
-              <Button
-                variant='contained'
-                color='primary'
-                startIcon={<Add />}
-                onClick={() => {
-                  setSelectedUser(null);
-                  setUserForm({
-                    username: '',
-                    email: '',
-                    fullName: '',
-                    role: 'staff',
-                    isActive: true,
-                    permissions: [],
-                  });
-                  setUserDialogOpen(true);
-                }}
-              >
-                Добавить пользователя
-              </Button>
+              {canManageUsers && (
+                <Button
+                  variant='contained'
+                  color='primary'
+                  startIcon={<Add />}
+                  onClick={() => {
+                    setSelectedUser(null);
+                    setUserForm({
+                      username: '',
+                      email: '',
+                      fullName: '',
+                      role: 'staff',
+                      isActive: true,
+                      permissions: [],
+                    });
+                    setUserDialogOpen(true);
+                  }}
+                >
+                  Добавить пользователя
+                </Button>
+              )}
             </Box>
 
             <Table>
@@ -1139,22 +1206,26 @@ const Settings: React.FC = () => {
                         : 'Никогда'}
                     </TableCell>
                     <TableCell>
-                      <Tooltip title='Редактировать'>
-                        <IconButton
-                          size='small'
-                          onClick={() => handleEditUser(user)}
-                        >
-                          <Edit fontSize='small' />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title='Удалить'>
-                        <IconButton
-                          size='small'
-                          onClick={() => handleDeleteUser(user.id || '')}
-                        >
-                          <Delete fontSize='small' color='error' />
-                        </IconButton>
-                      </Tooltip>
+                      {canManageUsers && (
+                        <>
+                          <Tooltip title='Редактировать'>
+                            <IconButton
+                              size='small'
+                              onClick={() => handleEditUser(user)}
+                            >
+                              <Edit fontSize='small' />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title='Удалить'>
+                            <IconButton
+                              size='small'
+                              onClick={() => handleDeleteUser(user.id || '')}
+                            >
+                              <Delete fontSize='small' color='error' />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1162,6 +1233,7 @@ const Settings: React.FC = () => {
             </Table>
           </CardContent>
         </Card>
+        )
       )}
 
       {/* Диалог создания/редактирования пользователя */}
@@ -1251,19 +1323,25 @@ const Settings: React.FC = () => {
           </Grid>
         </DialogContent>
 
-        <DialogActions>
-          <Button onClick={() => setUserDialogOpen(false)}>Отмена</Button>
+      <DialogActions>
+        <Button onClick={() => setUserDialogOpen(false)}>Отмена</Button>
+        {canManageUsers && (
           <Button onClick={handleSaveUser} variant='contained' color='primary'>
             {selectedUser ? 'Сохранить' : 'Добавить'}
           </Button>
-        </DialogActions>
-      </Dialog>
+        )}
+      </DialogActions>
+    </Dialog>
 
       {/* Вкладка 6: Интеграция 1С */}
       {tabValue === 6 && (
+        !canViewIntegration1C ? (
+          <Alert severity="info">Доступ к настройкам интеграции 1С доступен только администратору.</Alert>
+        ) : (
         <Box sx={{ mt: 3 }}>
           <Integration1CSettingsTab />
         </Box>
+        )
       )}
     </Paper>
   );

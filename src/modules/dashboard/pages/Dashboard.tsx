@@ -36,12 +36,11 @@ const Dashboard = () => {
     'success',
   );
 
+  const role = currentUser?.role || '';
   const showAttendanceButton = currentUser && currentUser.role !== 'admin';
-  const canViewReports = currentUser && ['admin', 'manager', 'director'].includes(currentUser.role);
-  const canViewFinancialStats = currentUser && ['admin', 'director'].includes(currentUser.role);
-  const canManageChildren =
-    currentUser &&
-    ['admin', 'manager', 'director', 'owner', 'teacher', 'assistant'].includes(currentUser.role);
+  const canViewReports = ['admin', 'manager', 'director'].includes(role);
+  const canViewFinancialStats = ['admin', 'director'].includes(role);
+  const canManageChildren = ['admin', 'manager', 'director'].includes(role);
 
   const handleAttendanceStatusChange = () => {
 

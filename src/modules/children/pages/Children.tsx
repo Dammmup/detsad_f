@@ -48,28 +48,31 @@ const ChildRow = React.memo(({
   child,
   index,
   isMobile,
-  currentUser,
   getGroupColor,
   handleOpenModal,
   handleDelete,
   groups,
   onGroupChange,
   isAdmin,
+  canManageChildren,
+  canDeleteChildren,
+  canViewSensitiveChildren,
 }: {
   child: Child;
   index: number;
   isMobile: boolean;
-  currentUser: any;
   getGroupColor: (id: string) => string;
   handleOpenModal: (child: Child) => void;
   handleDelete: (id: string) => void;
   groups: Group[];
   onGroupChange: (childId: string, groupId: string) => void;
   isAdmin: boolean;
+  canManageChildren: boolean;
+  canDeleteChildren: boolean;
+  canViewSensitiveChildren: boolean;
 }) => {
   const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
   const groupColor = childGroupId ? getGroupColor(childGroupId) : '#B0B0B0';
-  const canDeleteChildren = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
 
   return (
     <TableRow
@@ -92,14 +95,19 @@ const ChildRow = React.memo(({
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>
         {child.birthday ? new Date(child.birthday).toISOString().split('T')[0] : ''}
       </TableCell>
-      <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.parentPhone}</TableCell>
-      <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.iin}</TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+        {canViewSensitiveChildren ? child.parentPhone : '—'}
+      </TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+        {canViewSensitiveChildren ? child.iin : '—'}
+      </TableCell>
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>
         <Select
           size='small'
           value={childGroupId || ''}
           onChange={(e) => onGroupChange(child.id || (child._id as string), e.target.value as string)}
           displayEmpty
+          disabled={!canManageChildren}
           sx={{ minWidth: 140, fontSize: '0.85rem' }}
         >
           <MenuItem value=''><em>Не указана</em></MenuItem>
@@ -124,16 +132,19 @@ const ChildRow = React.memo(({
       <TableCell sx={{ p: isMobile ? 1 : 2 }}>{child.active ? 'Активен' : 'Неактивен'}</TableCell>
       <TableCell align='right' sx={{ p: isMobile ? 1 : 2 }}>
         <AuditLogButton entityType="child" entityId={child._id} entityName={child.fullName} />
-        <IconButton size={isMobile ? 'small' : 'medium'} onClick={() => handleOpenModal(child)}>
-          <Edit fontSize={isMobile ? 'small' : 'medium'} />
-        </IconButton>
-        <IconButton
-          size={isMobile ? 'small' : 'medium'}
-          onClick={() => handleDelete(child.id || (child._id as string))}
-          sx={{ visibility: canDeleteChildren ? 'visible' : 'hidden' }}
-        >
-          <Delete fontSize={isMobile ? 'small' : 'medium'} />
-        </IconButton>
+        {canManageChildren && (
+          <IconButton size={isMobile ? 'small' : 'medium'} onClick={() => handleOpenModal(child)}>
+            <Edit fontSize={isMobile ? 'small' : 'medium'} />
+          </IconButton>
+        )}
+        {canDeleteChildren && (
+          <IconButton
+            size={isMobile ? 'small' : 'medium'}
+            onClick={() => handleDelete(child.id || (child._id as string))}
+          >
+            <Delete fontSize={isMobile ? 'small' : 'medium'} />
+          </IconButton>
+        )}
       </TableCell>
     </TableRow>
   );
@@ -147,6 +158,9 @@ const ChildCard = React.memo(({
   groups,
   onGroupChange,
   isAdmin,
+  canManageChildren,
+  canDeleteChildren,
+  canViewSensitiveChildren,
 }: any) => {
   const childGroupId = typeof child.groupId === 'object' ? child.groupId?._id : child.groupId;
   const groupColor = childGroupId ? getGroupColor(childGroupId) : '#B0B0B0';
@@ -186,7 +200,9 @@ const ChildCard = React.memo(({
         </Box>
         <Box>
           <Typography variant="caption" color="textSecondary" display="block">Телефон</Typography>
-          <Typography variant="body2">{child.parentPhone || '-'}</Typography>
+          <Typography variant="body2">
+            {canViewSensitiveChildren ? (child.parentPhone || '-') : '—'}
+          </Typography>
         </Box>
         {isAdmin && (
           <Box>
@@ -206,6 +222,7 @@ const ChildCard = React.memo(({
           value={childGroupId || ''}
           onChange={(e) => onGroupChange(child.id || (child._id as string), e.target.value as string)}
           displayEmpty
+          disabled={!canManageChildren}
           sx={{ fontSize: '0.85rem' }}
         >
           <MenuItem value=''><em>Не указана</em></MenuItem>
@@ -225,10 +242,12 @@ const ChildCard = React.memo(({
       <Box display="flex" justifyContent="space-between" alignItems="center" pt={1.5} sx={{ borderTop: '1px solid #f0f0f0' }}>
         <AuditLogButton entityType="child" entityId={child._id} entityName={child.fullName} />
         <Box display="flex" gap={1}>
-          <IconButton size="small" onClick={() => handleOpenModal(child)} color="primary">
-            <Edit fontSize="small" />
-          </IconButton>
-          {isAdmin && (
+          {canManageChildren && (
+            <IconButton size="small" onClick={() => handleOpenModal(child)} color="primary">
+              <Edit fontSize="small" />
+            </IconButton>
+          )}
+          {canDeleteChildren && (
             <IconButton size="small" onClick={() => handleDelete(child.id || (child._id as string))} color="error">
               <Delete fontSize="small" />
             </IconButton>
@@ -241,8 +260,12 @@ const ChildCard = React.memo(({
 
 const Children: React.FC = () => {
   const { user: currentUser } = useAuth();
-  const canManagePayments = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
-  const canExportChildren = ['admin', 'manager', 'director', 'teacher'].includes(currentUser?.role || '');
+  const role = currentUser?.role || '';
+  const canManagePayments = ['admin', 'manager', 'director'].includes(role);
+  const canExportChildren = ['admin', 'manager', 'director', 'teacher'].includes(role);
+  const canManageChildren = ['admin', 'manager', 'director'].includes(role);
+  const canDeleteChildren = ['admin', 'manager', 'director'].includes(role);
+  const canViewSensitiveChildren = ['admin', 'manager', 'director'].includes(role);
   const { 
     children: allChildren, 
     loading: childrenLoading, 
@@ -323,8 +346,18 @@ const Children: React.FC = () => {
     return allChildren;
   }, [allChildren, groups, currentUser]);
 
+  const visibleChildren = useMemo(() => {
+    if (canViewSensitiveChildren) return childrenForUser;
+    return childrenForUser.map((child) => ({
+      ...child,
+      parentPhone: '',
+      iin: '',
+      parentName: '',
+    }));
+  }, [childrenForUser, canViewSensitiveChildren]);
+
   const filteredChildren = useMemo(() => {
-    let result = [...childrenForUser];
+    let result = [...visibleChildren];
     if (activeFilter === 'active') {
       result = result.filter((child) => child.active !== false);
     } else {
@@ -349,9 +382,13 @@ const Children: React.FC = () => {
   const { items: sortedChildren, requestSort, sortConfig } = useSort(filteredChildren);
 
   const handleOpenModal = useCallback((child?: Child) => {
+    if (!canManageChildren) {
+      setSnackbar({ open: true, message: 'Недостаточно прав для управления детьми', severity: 'error' });
+      return;
+    }
     setEditingChild(child || null);
     setModalOpen(true);
-  }, []);
+  }, [canManageChildren]);
 
   const handleCloseModal = useCallback(() => {
     setModalOpen(false);
@@ -359,6 +396,10 @@ const Children: React.FC = () => {
   }, []);
 
   const handleDelete = useCallback(async (id?: string) => {
+    if (!canDeleteChildren) {
+      setSnackbar({ open: true, message: 'Недостаточно прав для удаления детей', severity: 'error' });
+      return;
+    }
     if (!id) return;
     if (!window.confirm('Удалить ребёнка?')) return;
     try {
@@ -366,16 +407,20 @@ const Children: React.FC = () => {
     } catch (e: any) {
       // Error is already set in context, but we can add local handling if needed
     }
-  }, [deleteChild]);
+  }, [deleteChild, canDeleteChildren]);
 
   const handleGroupChange = useCallback(async (childId: string, groupId: string) => {
+    if (!canManageChildren) {
+      setSnackbar({ open: true, message: 'Недостаточно прав для изменения группы', severity: 'error' });
+      return;
+    }
     try {
       await updateChild(childId, { groupId } as any);
       setSnackbar({ open: true, message: 'Группа обновлена', severity: 'success' });
     } catch (e: any) {
       setSnackbar({ open: true, message: e?.message || 'Ошибка обновления группы', severity: 'error' });
     }
-  }, [updateChild]);
+  }, [updateChild, canManageChildren]);
 
   const handleExport = useCallback(async (_exportType: string, exportFormat: 'xlsx') => {
     setIsExporting(true);
@@ -454,9 +499,11 @@ const Children: React.FC = () => {
               </Button>
             </Tooltip>
           )}
-          <Button variant='contained' startIcon={<Add />} onClick={() => handleOpenModal()} sx={{ width: isMobile ? '100%' : 'auto' }}>
+          {canManageChildren && (
+            <Button variant='contained' startIcon={<Add />} onClick={() => handleOpenModal()} sx={{ width: isMobile ? '100%' : 'auto' }}>
             Добавить ребёнка
-          </Button>
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -577,6 +624,9 @@ const Children: React.FC = () => {
                 groups={groups}
                 onGroupChange={handleGroupChange}
                 isAdmin={canManagePayments}
+                canManageChildren={canManageChildren}
+                canDeleteChildren={canDeleteChildren}
+                canViewSensitiveChildren={canViewSensitiveChildren}
               />
             ))}
           </Box>
@@ -639,13 +689,15 @@ const Children: React.FC = () => {
                     child={child}
                     index={index}
                     isMobile={isMobile}
-                    currentUser={currentUser}
                     getGroupColor={getGroupColor}
                     handleOpenModal={handleOpenModal}
                     handleDelete={handleDelete}
                     groups={groups}
                     onGroupChange={handleGroupChange}
                     isAdmin={canManagePayments}
+                    canManageChildren={canManageChildren}
+                    canDeleteChildren={canDeleteChildren}
+                    canViewSensitiveChildren={canViewSensitiveChildren}
                   />
                 ))}
               </TableBody>

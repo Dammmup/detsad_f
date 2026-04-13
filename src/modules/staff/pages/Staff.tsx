@@ -137,22 +137,21 @@ const defaultForm: StaffMember = {
 
 const StaffRow = React.memo(({
   member,
-  currentUser,
   translateRole,
   handleOpenModal,
   handleDelete,
   index,
-  isExternal
+  isExternal,
+  isAdmin,
 }: {
   member: any;
-  currentUser: any;
   translateRole: (role: string) => string;
   handleOpenModal: (member: StaffMember) => void;
   handleDelete: (member: StaffMember) => void;
   index: number;
   isExternal?: boolean;
+  isAdmin: boolean;
 }) => {
-  const isAdmin = currentUser?.role === 'admin';
   return (
     <TableRow key={member.id || member._id}>
       <TableCell style={{ fontWeight: 'bold', width: 50 }}>{index + 1}</TableCell>
@@ -187,7 +186,7 @@ const StaffRow = React.memo(({
       </TableCell>
       {!isExternal && (
         <>
-          {currentUser?.role === 'admin' ? (
+          {isAdmin ? (
             <TableCell>{member.initialPassword || '—'}</TableCell>
           ) : (
             <TableCell>—</TableCell>
@@ -237,11 +236,11 @@ const StaffCard = React.memo(({
   member,
   handleOpenModal,
   handleDelete,
-  currentUser,
-  translateRole
+  translateRole,
+  canViewSensitiveStaffFields,
+  isAdmin
 }: any) => {
   const isExternal = member.type === 'external' || member.isExternal;
-  const isAdmin = currentUser?.role === 'admin';
 
   return (
     <Paper sx={{ mb: 2, p: 2, borderRadius: 2, boxShadow: 1, border: '1px solid #eee' }}>
@@ -273,19 +272,23 @@ const StaffCard = React.memo(({
       <Box display="grid" gridTemplateColumns="1fr 1fr" gap={1} mb={2}>
         <Box>
           <Typography variant="caption" color="textSecondary" display="block">Телефон</Typography>
-          <Typography variant="body2">{member.phone || '-'}</Typography>
+          <Typography variant="body2">{canViewSensitiveStaffFields ? (member.phone || '-') : '—'}</Typography>
         </Box>
         <Box>
           <Typography variant="caption" color="textSecondary" display="block">Email</Typography>
-          <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>{member.email || '-'}</Typography>
+          <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+            {canViewSensitiveStaffFields ? (member.email || '-') : '—'}
+          </Typography>
         </Box>
         {!isExternal && (
           <>
             <Box>
               <Typography variant="caption" color="textSecondary" display="block">ИИН</Typography>
-              <Typography variant="body2">{member.iin || '-'}</Typography>
+              <Typography variant="body2">
+                {canViewSensitiveStaffFields ? (member.iin || '-') : '—'}
+              </Typography>
             </Box>
-            {currentUser?.role === 'admin' && (
+            {isAdmin && (
               <Box>
                 <Typography variant="caption" color="textSecondary" display="block">Пароль</Typography>
                 <Typography variant="body2">{member.initialPassword || '-'}</Typography>
@@ -355,7 +358,9 @@ const Staff = () => {
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [activeTab, setActiveTab] = useState<'active' | 'inactive' | 'external'>('active');
   const { user: currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'admin';
+  const role = currentUser?.role || '';
+  const isAdmin = role === 'admin';
+  const canViewSensitiveStaffFields = ['admin', 'manager', 'director'].includes(role);
 
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
@@ -420,9 +425,23 @@ const Staff = () => {
     return filtered;
   }, [allStaff, externalSpecialists, searchTerm, filterRole, activeTab]);
 
-  const { items: sortedStaff, requestSort, sortConfig } = useSort(filteredStaff);
+  const visibleStaff = useMemo(() => {
+    if (canViewSensitiveStaffFields) return filteredStaff;
+    return filteredStaff.map((member: any) => ({
+      ...member,
+      phone: '',
+      email: '',
+      iin: '',
+    }));
+  }, [filteredStaff, canViewSensitiveStaffFields]);
+
+  const { items: sortedStaff, requestSort, sortConfig } = useSort(visibleStaff);
 
   const handleOpenModal = useCallback((member?: any) => {
+    if (!isAdmin) {
+      showSnackbar({ message: 'Недостаточно прав для управления сотрудниками', type: 'error' });
+      return;
+    }
     if (member && !member.fullName && member.name) {
       member.fullName = member.name;
     }
@@ -430,7 +449,7 @@ const Staff = () => {
     setEditId(member?.id || member?._id || null);
     setModalOpen(true);
     setSaveError(null);
-  }, []);
+  }, [isAdmin]);
 
   const handleCloseModal = useCallback(() => {
     setModalOpen(false);
@@ -504,6 +523,10 @@ const Staff = () => {
   };
 
   const handleSave = async () => {
+    if (!isAdmin) {
+      setSaveError('Недостаточно прав для сохранения сотрудников');
+      return;
+    }
     if (!validateForm()) return;
     setSaving(true);
     try {
@@ -546,6 +569,10 @@ const Staff = () => {
   };
 
   const handleDelete = useCallback(async (member: any) => {
+    if (!isAdmin) {
+      showSnackbar({ message: 'Недостаточно прав для удаления сотрудников', type: 'error' });
+      return;
+    }
     const id = member.id || member._id;
     if (!id) return;
     if (!window.confirm('Вы уверены, что хотите удалить эту запись?')) return;
@@ -561,7 +588,7 @@ const Staff = () => {
     } finally {
       setSaving(false);
     }
-  }, [deleteUser, deleteExternalSpecialist, activeTab]);
+  }, [deleteUser, deleteExternalSpecialist, activeTab, isAdmin]);
 
   const handleExport = async (
     exportType: string,
@@ -735,14 +762,15 @@ const Staff = () => {
             ) : isMobile ? (
               <Box mt={2}>
                 {sortedStaff.map((member) => (
-                  <StaffCard
-                    key={member.id || member._id}
-                    member={member}
-                    currentUser={currentUser}
-                    translateRole={translateRole}
-                    handleOpenModal={handleOpenModal}
-                    handleDelete={handleDelete}
-                  />
+                    <StaffCard
+                      key={member.id || member._id}
+                      member={member}
+                      translateRole={translateRole}
+                      handleOpenModal={handleOpenModal}
+                      handleDelete={handleDelete}
+                      canViewSensitiveStaffFields={canViewSensitiveStaffFields}
+                      isAdmin={isAdmin}
+                    />
                 ))}
               </Box>
             ) : (
@@ -794,12 +822,12 @@ const Staff = () => {
                       <StaffRow
                         key={member.id || member._id}
                         member={member}
-                        currentUser={currentUser}
                         translateRole={translateRole}
                         handleOpenModal={handleOpenModal}
                         handleDelete={handleDelete}
                         index={index}
                         isExternal={activeTab === 'external'}
+                        isAdmin={isAdmin}
                       />
                     )) : (
                       <TableRow>
@@ -1105,11 +1133,11 @@ const Staff = () => {
               Отмена
             </Button>
             <Button
-              onClick={handleSave}
-              color='primary'
-              variant='contained'
-              disabled={saving}
-            >
+            onClick={handleSave}
+            color='primary'
+            variant='contained'
+            disabled={saving || !isAdmin}
+          >
               {editId ? 'Сохранить' : 'Добавить'}
             </Button>
           </DialogActions>

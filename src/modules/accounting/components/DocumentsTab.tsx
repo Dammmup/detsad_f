@@ -11,6 +11,7 @@ import accountingApi, { IAccountingDocument } from '../services/accountingApi';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import { showSnackbar } from '../../../shared/components/Snackbar';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
+import { useAuth } from '../../../app/context/AuthContext';
 
 const TYPE_LABELS: Record<string, string> = {
   child_payment: 'Оплата родителя',
@@ -28,6 +29,9 @@ const STATUS_COLORS: Record<string, 'success' | 'default' | 'error'> = {
 };
 
 const DocumentsTab: React.FC = () => {
+  const { user } = useAuth();
+  const role = user?.role || '';
+  const canManageDocuments = role === 'admin';
   const [docs, setDocs] = useState<IAccountingDocument[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +64,10 @@ const DocumentsTab: React.FC = () => {
   const fmt = (n: number) => n.toLocaleString('ru-RU');
 
   const handleReverse = async () => {
+    if (!canManageDocuments) {
+      showSnackbar({ message: 'Недостаточно прав для сторнирования документов', type: 'error' });
+      return;
+    }
     if (!reverseDocId || !reverseReason.trim()) return;
     setReversing(true);
     try {
@@ -158,7 +166,7 @@ const DocumentsTab: React.FC = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    {doc.status === 'posted' && (
+                    {canManageDocuments && doc.status === 'posted' && (
                       <Tooltip title="Сторно">
                         <IconButton
                           size="small"
@@ -199,7 +207,7 @@ const DocumentsTab: React.FC = () => {
             variant="contained"
             color="error"
             onClick={handleReverse}
-            disabled={reversing || !reverseReason.trim()}
+            disabled={reversing || !reverseReason.trim() || !canManageDocuments}
           >
             {reversing ? 'Сторнирование...' : 'Сторнировать'}
           </Button>

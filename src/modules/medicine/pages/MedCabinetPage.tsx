@@ -7,13 +7,18 @@ import {
   Paper,
   Button,
   Stack,
+  Alert,
 } from '@mui/material';
 import { medJournals, MedJournalType } from './medJournals.config';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../app/context/AuthContext';
 
 export default function MedCabinetPage() {
   const [tab, setTab] = React.useState<MedJournalType>('children');
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role || '';
+  const canViewMedical = ['admin', 'manager', 'director', 'doctor', 'nurse'].includes(role);
 
   const handleTabChange = (_: React.SyntheticEvent, value: MedJournalType) => {
     setTab(value);
@@ -29,6 +34,12 @@ export default function MedCabinetPage() {
       <Typography variant='h4' gutterBottom>
         Медицинский кабинет
       </Typography>
+      {!canViewMedical && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Доступ к журналам медкабинета ограничен для вашей роли.
+        </Alert>
+      )}
+      {canViewMedical && (
       <Paper sx={{ mb: 2 }}>
         <Tabs
           value={tab}
@@ -43,8 +54,9 @@ export default function MedCabinetPage() {
           ))}
         </Tabs>
       </Paper>
+      )}
       <Stack spacing={2}>
-        {filteredJournals.map((journal) => (
+        {canViewMedical && filteredJournals.map((journal) => (
           <Button
             key={journal.id}
             variant='outlined'

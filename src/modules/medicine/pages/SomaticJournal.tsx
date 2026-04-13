@@ -58,7 +58,9 @@ const formatDate = (date: Date | string | undefined | null): string => {
 export default function SomaticJournal() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
-  const canManageMedical = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
+  const role = currentUser?.role || '';
+  const canViewMedical = ['admin', 'manager', 'director', 'doctor', 'nurse'].includes(role);
+  const canManageMedical = ['admin', 'manager', 'director'].includes(role);
   const [records, setRecords] = useState<SomaticRecord[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,12 +74,16 @@ export default function SomaticJournal() {
   const [newRecord, setNewRecord] = useState<Partial<SomaticRecord>>({});
 
   useEffect(() => {
+    if (!canViewMedical) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     Promise.all([
       childrenApi.getAll().then(setChildren),
       getSomaticRecords().then(setRecords),
     ]).finally(() => setLoading(false));
-  }, []);
+  }, [canViewMedical]);
 
 
   const filteredRecords = useMemo(() => {
@@ -127,6 +133,10 @@ export default function SomaticJournal() {
 
 
   const handleAdd = async () => {
+    if (!canViewMedical) {
+      setError('Недостаточно прав для добавления записей');
+      return;
+    }
     if (
       !newRecord.childId ||
       !newRecord.fio ||
@@ -185,6 +195,10 @@ export default function SomaticJournal() {
 
 
   const handleExport = () => {
+    if (!canViewMedical) {
+      setError('Недостаточно прав для экспорта данных');
+      return;
+    }
     const doc = new Document({
       sections: [
         {
@@ -261,6 +275,11 @@ export default function SomaticJournal() {
   };
 
   return (
+    !canViewMedical ? (
+      <Box sx={{ p: { xs: 1, md: 3 } }}>
+        <FormErrorAlert error={'Доступ к журналам медкабинета ограничен для вашей роли.'} onClose={() => {}} />
+      </Box>
+    ) : (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
       <Button 
         startIcon={<ArrowBackIcon />} 
@@ -274,12 +293,16 @@ export default function SomaticJournal() {
         Журнал соматической заболеваемости
       </Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
-        <Button variant='contained' onClick={() => setModalOpen(true)}>
-          Новая запись
-        </Button>
-        <Button variant='outlined' onClick={handleExport}>
-          Экспорт
-        </Button>
+        {canViewMedical && (
+          <>
+            <Button variant='contained' onClick={() => setModalOpen(true)}>
+              Новая запись
+            </Button>
+            <Button variant='outlined' onClick={handleExport}>
+              Экспорт
+            </Button>
+          </>
+        )}
         <TextField
           label='Поиск по ФИО'
           value={search}
@@ -458,14 +481,17 @@ export default function SomaticJournal() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setModalOpen(false)}>Отмена</Button>
-          <Button onClick={handleAdd} variant='contained'>
-            Сохранить
-          </Button>
+          {canViewMedical && (
+            <Button onClick={handleAdd} variant='contained'>
+              Сохранить
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
       {loading && (
         <CircularProgress sx={{ position: 'fixed', top: '50%', left: '50%' }} />
       )}
     </Box>
+    )
   );
 }

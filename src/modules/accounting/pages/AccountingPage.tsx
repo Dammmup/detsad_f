@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Box, Typography, Tabs, Tab, Paper, Button
+  Box, Typography, Tabs, Tab, Paper, Button, Alert
 } from '@mui/material';
 import { showSnackbar } from '../../../shared/components/Snackbar';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
@@ -17,6 +17,7 @@ import AccountCardTab from '../components/AccountCardTab';
 import DocumentsTab from '../components/DocumentsTab';
 import ReconciliationTab from '../components/ReconciliationTab';
 import accountingApi from '../services/accountingApi';
+import { useAuth } from '../../../app/context/AuthContext';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -33,6 +34,10 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 }
 
 const AccountingPage: React.FC = () => {
+  const { user: currentUser } = useAuth();
+  const role = currentUser?.role || '';
+  const canViewAccounting = ['admin', 'manager', 'director'].includes(role);
+  const canManageAccounting = role === 'admin';
   const [tab, setTab] = useState(0);
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
 
@@ -44,6 +49,10 @@ const AccountingPage: React.FC = () => {
   const [retroLoading, setRetroLoading] = useState(false);
 
   const handleSeed = async () => {
+    if (!canManageAccounting) {
+      showSnackbar({ message: 'Недостаточно прав для инициализации плана счетов', type: 'error' });
+      return;
+    }
     try {
       const result = await accountingApi.seedAccounts();
       showSnackbar({ message: result.message, type: 'success' });
@@ -53,6 +62,10 @@ const AccountingPage: React.FC = () => {
   };
 
   const handleRetroGenerate = async () => {
+    if (!canManageAccounting) {
+      showSnackbar({ message: 'Недостаточно прав для ретро-генерации', type: 'error' });
+      return;
+    }
     setRetroLoading(true);
     try {
       const result = await accountingApi.retroGenerate();
@@ -70,10 +83,18 @@ const AccountingPage: React.FC = () => {
 
   return (
     <Box>
+      {!canViewAccounting && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Недостаточно прав для доступа к бухгалтерии.
+        </Alert>
+      )}
+      {canViewAccounting && (
+        <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
         <Typography variant="h5" fontWeight={600}>
           Бухгалтерия
         </Typography>
+        {canManageAccounting && (
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="contained"
@@ -94,6 +115,7 @@ const AccountingPage: React.FC = () => {
             Инит. план счетов
           </Button>
         </Box>
+        )}
       </Box>
 
       <Paper variant="outlined" sx={{ mb: 0 }}>
@@ -128,6 +150,8 @@ const AccountingPage: React.FC = () => {
         <DocumentsTab />
       </TabPanel>
 
+        </>
+      )}
     </Box>
   );
 };

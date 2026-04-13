@@ -54,7 +54,10 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
   child,
 }) => {
   const { user: currentUser } = useAuth();
-  const canManagePayments = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
+  const role = currentUser?.role || '';
+  const canManagePayments = ['admin', 'manager', 'director'].includes(role);
+  const canManageChildren = ['admin', 'manager', 'director'].includes(role);
+  const canViewSensitiveChildren = ['admin', 'manager', 'director'].includes(role);
   const { createChild, updateChild } = useChildren();
   const { groups, fetchGroups } = useGroups();
   const [form, setForm] = useState<Partial<User> & { paymentAmount?: number }>(defaultForm);
@@ -101,6 +104,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canManageChildren) return;
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
@@ -121,6 +125,10 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
   };
 
   const handleSave = async () => {
+    if (!canManageChildren) {
+      setError('Недостаточно прав для сохранения данных ребенка');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -205,6 +213,11 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
       </DialogTitle>
       <DialogContent sx={{ pt: 3 }}>
         <FormErrorAlert error={error} onClose={() => setError(null)} />
+        {!canManageChildren && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Недостаточно прав для изменения данных ребенка.
+          </Alert>
+        )}
 
         {/* Фотография */}
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
@@ -225,10 +238,11 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
               id='photo-upload'
               type='file'
               style={{ display: 'none' }}
+              disabled={!canManageChildren}
               onChange={handlePhotoChange}
             />
             <label htmlFor='photo-upload'>
-              <Button variant='outlined' component='span' size='small'>
+              <Button variant='outlined' component='span' size='small' disabled={!canManageChildren}>
                 Загрузить фото
               </Button>
             </label>
@@ -241,6 +255,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
           label='ФИО'
           value={form.fullName}
           onChange={handleChange}
+          disabled={!canManageChildren}
           fullWidth
           required
           sx={{ mb: 2 }}
@@ -254,18 +269,22 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
           type='date'
           value={form.birthday ? String(form.birthday).slice(0, 10) : ''}
           onChange={handleChange}
+          disabled={!canManageChildren}
           fullWidth
           InputLabelProps={{ shrink: true }}
           sx={{ mb: 2 }}
           variant='outlined'
         />
 
+        {canViewSensitiveChildren && (
+          <>
         <TextField
           margin='dense'
           name='parentPhone'
           label='Телефон родителя'
           value={form.parentPhone}
           onChange={handleChange}
+          disabled={!canManageChildren}
           fullWidth
           sx={{ mb: 2 }}
           variant='outlined'
@@ -277,10 +296,13 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
           label='ИИН'
           value={form.iin}
           onChange={handleChange}
+          disabled={!canManageChildren}
           fullWidth
           sx={{ mb: 2 }}
           variant='outlined'
         />
+          </>
+        )}
 
         <FormControl fullWidth margin='dense' sx={{ mb: 2 }}>
           <InputLabel>Группа</InputLabel>
@@ -292,6 +314,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
                 : form.groupId || ''
             }
             onChange={handleSelectChange}
+            disabled={!canManageChildren}
             label='Группа'
             variant='outlined'
             displayEmpty
@@ -317,18 +340,21 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
           </Select>
         </FormControl>
 
+        {canViewSensitiveChildren && (
         <TextField
           margin='dense'
           name='parentName'
           label='ФИО родителя'
           value={form.parentName}
           onChange={handleChange}
+          disabled={!canManageChildren}
           fullWidth
           sx={{ mb: 2 }}
           variant='outlined'
         />
+        )}
 
-        {canManagePayments && (
+        {canManagePayments && canViewSensitiveChildren && (
           <TextField
             margin='dense'
             name='paymentAmount'
@@ -336,6 +362,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
             type='number'
             value={form.paymentAmount === 0 ? '' : form.paymentAmount}
             onChange={(e) => setForm({ ...form, paymentAmount: e.target.value === '' ? 0 : Number(e.target.value) })}
+            disabled={!canManageChildren}
             fullWidth
             sx={{ mb: 2 }}
             variant='outlined'
@@ -351,6 +378,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
           label='Заметки'
           value={form.notes}
           onChange={handleChange}
+          disabled={!canManageChildren}
           fullWidth
           multiline
           rows={3}
@@ -383,7 +411,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
         <Button
           onClick={handleSave}
           variant='contained'
-          disabled={saving}
+          disabled={saving || !canManageChildren}
           sx={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             padding: '10px 24px',

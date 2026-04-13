@@ -12,6 +12,7 @@ import accountingApi, { ITrialBalanceResponse, ISyncStatus } from '../services/a
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import { showSnackbar } from '../../../shared/components/Snackbar';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
+import { useAuth } from '../../../app/context/AuthContext';
 
 interface CheckResult {
   name: string;
@@ -21,6 +22,9 @@ interface CheckResult {
 }
 
 const ReconciliationTab: React.FC = () => {
+  const { user } = useAuth();
+  const role = user?.role || '';
+  const canManageAccounting = role === 'admin';
   const [results, setResults] = useState<CheckResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,6 +164,10 @@ const ReconciliationTab: React.FC = () => {
   }, [from, to]);
 
   const handleSync = async () => {
+    if (!canManageAccounting) {
+      showSnackbar({ message: 'Недостаточно прав для синхронизации', type: 'error' });
+      return;
+    }
     setSyncing(true);
     try {
       await accountingApi.triggerSync();
@@ -200,7 +208,7 @@ const ReconciliationTab: React.FC = () => {
         >
           {loading ? 'Проверка...' : 'Запустить сверку'}
         </Button>
-        {syncStatus?.supabaseConfigured && (
+        {syncStatus?.supabaseConfigured && canManageAccounting && (
           <Button
             variant="outlined"
             startIcon={<SyncIcon />}
