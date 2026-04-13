@@ -900,7 +900,8 @@ const StaffSchedule: React.FC = () => {
                     onExport={handleExport}
                   />
                   {canManageSchedule && (
-                  <Button
+                    <>
+                      <Button
                     variant='contained'
                     color='primary'
                     startIcon={<AddIcon />}
@@ -935,7 +936,8 @@ const StaffSchedule: React.FC = () => {
                   >
                     Удалить смены
                   </Button>
-                  )}
+                </>
+              )}
                 </Box>
               </Box>
             }
