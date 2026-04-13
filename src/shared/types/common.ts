@@ -7,6 +7,9 @@ export type ID = string;
 export enum UserRole {
   admin = 'admin',
   manager = 'manager',
+  director = 'director',
+  doctor = 'doctor',
+  owner = 'owner',
   teacher = 'teacher',
   assistant = 'assistant',
   nurse = 'nurse',
@@ -16,6 +19,7 @@ export enum UserRole {
   psychologist = 'psychologist',
   music_teacher = 'music_teacher',
   physical_teacher = 'physical_teacher',
+  physical_education = 'physical_education',
   staff = 'staff',
   parent = 'parent',
   child = 'child',

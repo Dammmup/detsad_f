@@ -36,6 +36,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [logoutInProgress, setLogoutInProgress] = useState(false);
 
+  const sanitizeUser = (userData: User): User => {
+    const {
+      initialPassword,
+      password,
+      passwordHash,
+      telegramLinkCode,
+      ...safeUser
+    } = userData as any;
+
+    return safeUser as User;
+  };
+
   const checkAuthStatus = async () => {
     setLoading(true);
 
@@ -65,11 +77,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 
   const handleLogin = (userData: User, token: string) => {
+    const safeUser = sanitizeUser(userData);
+
     clearGroupsCache();
-    setUser(userData);
+    setUser(safeUser);
     setIsLoggedIn(true);
 
-    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('user', JSON.stringify(safeUser));
     if (token) {
       localStorage.setItem('auth_token', token);
     }

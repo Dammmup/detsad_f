@@ -55,9 +55,8 @@ const AIChat: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Проверяем, является ли пользователь админом
   const currentUser = getCurrentUser();
-  const isAdmin = currentUser?.role === 'admin';
+  const hasAiAccess = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
 
   // Показываем приветственное сообщение при открытии чата
   useEffect(() => {
@@ -79,8 +78,8 @@ const AIChat: React.FC = () => {
   }, [isOpen, messages.length]);
 
   const toggleChat = () => {
-    if (!isAdmin) {
-      setAccessError('AI-ассистент доступен только для администраторов');
+    if (!hasAiAccess) {
+      setAccessError('AI-ассистент доступен только для управленческих ролей');
       setTimeout(() => setAccessError(null), 3000);
       return;
     }
@@ -243,8 +242,7 @@ const AIChat: React.FC = () => {
     }
   };
 
-  // Не показываем кнопку для не-админов
-  if (!isAdmin) {
+  if (!hasAiAccess) {
     return null;
   }
 

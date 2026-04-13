@@ -126,7 +126,7 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = React.me
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  const canManageEvents = user?.role === 'admin' || user?.role === 'manager';
+  const canManageEvents = ['admin', 'manager', 'director'].includes(user?.role || '');
 
   const fetchData = useCallback(async () => {
     setLoading(true);

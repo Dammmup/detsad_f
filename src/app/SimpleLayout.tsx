@@ -147,7 +147,7 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
 
   const currentUser = getCurrentUser();
   const userRole = currentUser?.role || 'staff';
-  const isAdminOrManager = userRole === 'admin' || userRole === 'manager';
+  const isAdminOrManager = ['admin', 'manager', 'director'].includes(userRole);
   const hasMedAccess = isAdminOrManager || ['doctor', 'nurse'].includes(userRole);
 
   return (
@@ -360,10 +360,10 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
               } 
             />
             <Route path='rent' element={isAdminOrManager ? <ReportsRent /> : <Navigate to="/app/dashboard" />} />
-            <Route path='accounting' element={userRole === 'admin' ? <AccountingPage /> : <Navigate to="/app/dashboard" />} />
+            <Route path='accounting' element={isAdminOrManager ? <AccountingPage /> : <Navigate to="/app/dashboard" />} />
 
             {/* Статистика */}
-            <Route path='statistics' element={userRole === 'admin' ? <Statistics /> : <Navigate to="/app/dashboard" />} />
+            <Route path='statistics' element={isAdminOrManager ? <Statistics /> : <Navigate to="/app/dashboard" />} />
 
             {/* Организация/Настройки */}
             <Route path='groups' element={<Groups />} />

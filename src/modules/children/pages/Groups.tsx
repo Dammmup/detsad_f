@@ -121,7 +121,7 @@ const Groups = () => {
   }>({});
 
   const { user: currentUser, isLoggedIn, loading: authLoading } = useAuth();
-  const isAdminOrManager = currentUser?.role === 'admin' || currentUser?.role === 'manager';
+  const isAdminOrManager = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
 
   // Стабильные ссылки на функции контекста - удалено дублирование
 

@@ -44,6 +44,7 @@ const ProfilePage: React.FC = () => {
     photo: '',
   });
   const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
@@ -201,9 +202,10 @@ const ProfilePage: React.FC = () => {
         id: updatedUser._id,
         active: updatedUser.active,
       };
+      const { initialPassword, password, passwordHash, telegramLinkCode, ...safeAuthData } = authData as any;
 
-      localStorage.setItem('user', JSON.stringify(authData));
-      setUser(authData);
+      localStorage.setItem('user', JSON.stringify(safeAuthData));
+      setUser(safeAuthData);
 
       setSuccess('Профиль успешно обновлен');
       setIsEditing(false);
@@ -233,26 +235,28 @@ const ProfilePage: React.FC = () => {
 
       if (user) {
 
-        const updateData = {
-          initialPassword: passwordForm.newPassword,
-        };
+        const result: any = await usersApi.changePassword(user.id as any, {
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+          confirmPassword: passwordForm.confirmPassword,
+        });
 
-        const updatedUser = await updateUser(user.id as any, updateData);
-
-
-        const authData = {
-          ...updatedUser,
-          id: updatedUser._id,
-          active: updatedUser.active,
-        };
-
-        localStorage.setItem('user', JSON.stringify(authData));
-        setUser(authData);
+        if (result?.user) {
+          const authData = {
+            ...result.user,
+            id: result.user._id || result.user.id,
+            active: result.user.active,
+          };
+          const { initialPassword, password, passwordHash, telegramLinkCode, ...safeAuthData } = authData as any;
+          localStorage.setItem('user', JSON.stringify(safeAuthData));
+          setUser(safeAuthData);
+        }
 
         setSuccess('Пароль успешно изменен');
 
 
         setPasswordForm({
+          currentPassword: '',
           newPassword: '',
           confirmPassword: '',
         });
@@ -387,25 +391,6 @@ const ProfilePage: React.FC = () => {
           </Grid>
         </Grid>
 
-        {/* Отображение начального пароля в режиме просмотра */}
-        {!isEditing && user?.initialPassword && (
-          <>
-            <Divider sx={{ my: 2 }} />
-            <Grid container spacing={2}>
-              <Grid item xs={4}>
-                <Typography variant='body2' color='textSecondary'>
-                  Начальный пароль:
-                </Typography>
-              </Grid>
-              <Grid item xs={8}>
-                <Typography variant='body1' sx={{ wordBreak: 'break-all' }}>
-                  {user.initialPassword}
-                </Typography>
-              </Grid>
-            </Grid>
-          </>
-        )}
-
         {isEditing ? (
           <>
             <Divider sx={{ my: 3 }} />
@@ -413,6 +398,17 @@ const ProfilePage: React.FC = () => {
               Изменение пароля
             </Typography>
             <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label='Текущий пароль'
+                  name='currentPassword'
+                  type='password'
+                  value={passwordForm.currentPassword}
+                  onChange={handlePasswordChange}
+                  margin='normal'
+                />
+              </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth

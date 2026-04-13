@@ -15,6 +15,10 @@ class UserApiClient extends BaseCrudApiClient<User> {
   async generateTelegramLinkCode(id: string) {
     return this.post<{ telegramLinkCode: string }>(`${this.endpoint}/${id}/generate-telegram-code`);
   }
+
+  async changePassword(id: string, data: { currentPassword?: string; newPassword: string; confirmPassword: string }) {
+    return this.post(`${this.endpoint}/${id}/change-password`, data);
+  }
 }
 
 export const userApi = new UserApiClient();
@@ -33,6 +37,7 @@ export const usersApi = {
   updatePayrollSettings: (id: string, data: { salary?: number; salaryType?: string }) => userApi.updatePayrollSettings(id, data),
   updateAllowToSeePayroll: (id: string, allowToSeePayroll: boolean) => userApi.updateAllowToSeePayroll(id, allowToSeePayroll),
   generateTelegramLinkCode: (id: string) => userApi.generateTelegramLinkCode(id),
+  changePassword: (id: string, data: { currentPassword?: string; newPassword: string; confirmPassword: string }) => userApi.changePassword(id, data),
 };
 
 export default userApi;

@@ -2,6 +2,17 @@ import { BaseApiClient } from '../../../shared/utils/api';
 import { LoginCredentials, AuthResponse, User } from '../../../shared/types/common';
 
 class AuthApiClient extends BaseApiClient {
+  private sanitizeUser(user: User): User {
+    const {
+      initialPassword,
+      password,
+      passwordHash,
+      telegramLinkCode,
+      ...safeUser
+    } = user as any;
+
+    return safeUser as User;
+  }
 
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
@@ -35,7 +46,6 @@ class AuthApiClient extends BaseApiClient {
           parentName: response.user.parentName,
           parentPhone: response.user.parentPhone,
           email: response.user.email,
-          initialPassword: response.user.initialPassword,
           salary: response.user.salary,
           salaryType: response.user.salaryType,
           shiftRate: response.user.shiftRate,
@@ -80,7 +90,7 @@ class AuthApiClient extends BaseApiClient {
         return null;
       }
 
-      return JSON.parse(userStr);
+      return this.sanitizeUser(JSON.parse(userStr));
     } catch (error) {
       console.error('Ошибка получения текущего пользователя:', error);
       return null;
@@ -131,24 +141,22 @@ class AuthApiClient extends BaseApiClient {
       const response = await this.get('/api/auth/validate');
 
 
-      if (
-        response &&
-        typeof response === 'object' &&
-        response.data !== undefined &&
-        response.data.valid !== undefined
-      ) {
-        if (response.data.valid && response.data.user) {
+      if (response && typeof response === 'object' && 'valid' in response) {
+        const validation = response as { valid?: boolean; user?: Partial<User> };
+
+        if (validation.valid && validation.user) {
           // Обновляем данные пользователя в localStorage, если они пришли
           const currentUser = this.getCurrentUser();
           if (currentUser) {
-            const updatedUser = { ...currentUser, ...response.data.user };
+            const updatedUser = this.sanitizeUser({ ...currentUser, ...validation.user } as User);
             localStorage.setItem('user', JSON.stringify(updatedUser));
           }
         }
-        return response.data.valid === true;
+
+        return validation.valid === true;
       }
 
-      return true;
+      return false;
     } catch (error) {
       console.warn('Токен недействителен:', error);
       return false;
@@ -161,7 +169,7 @@ class AuthApiClient extends BaseApiClient {
 
   private saveAuthData(authData: AuthResponse): void {
 
-    localStorage.setItem('user', JSON.stringify(authData.user));
+    localStorage.setItem('user', JSON.stringify(this.sanitizeUser(authData.user)));
     if (authData.token) {
       localStorage.setItem('auth_token', authData.token);
     }

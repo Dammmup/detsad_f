@@ -171,7 +171,7 @@ const ReportsWidget: React.FC = () => {
   };
 
 
-  const isAdminOrManager = authUser?.role === 'admin' || authUser?.role === 'manager';
+  const isAdminOrManager = ['admin', 'manager', 'director'].includes(authUser?.role || '');
 
   return (
     <Card

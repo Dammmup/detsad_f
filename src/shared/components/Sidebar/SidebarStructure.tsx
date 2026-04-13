@@ -80,7 +80,7 @@ const sidebarStructure: SidebarItem[] = [
       {
         id: 'children-payments',
         label: 'Оплаты за посещение',
-        visibleFor: ['admin', 'manager'],
+        visibleFor: ['admin', 'manager', 'director'],
         link: '/app/children/payments',
         icon: <AssessmentIcon />,
       }
@@ -90,7 +90,7 @@ const sidebarStructure: SidebarItem[] = [
     id: 'staff',
     label: 'Сотрудники',
     icon: <PeopleIcon />,
-    visibleFor: ['admin', 'manager'],
+    visibleFor: ['admin', 'manager', 'director'],
     children: [
       {
         id: 'staff-list',
@@ -123,7 +123,7 @@ const sidebarStructure: SidebarItem[] = [
   {
     id: 'rent',
     label: 'Аренда',
-    visibleFor: ['admin', 'manager'],
+    visibleFor: ['admin', 'manager', 'director'],
     link: '/app/rent',
     icon: <AssessmentIcon />,
   },
@@ -132,7 +132,7 @@ const sidebarStructure: SidebarItem[] = [
     label: 'Документы',
     icon: <InsertDriveFileIcon />,
     link: '/app/documents',
-    visibleFor: ['admin', 'manager', 'psychologist'],
+    visibleFor: ['admin', 'manager', 'director', 'psychologist'],
   },
 
   {
@@ -140,20 +140,20 @@ const sidebarStructure: SidebarItem[] = [
     label: 'Бухгалтерия',
     icon: <AccountBalanceIcon />,
     link: '/app/accounting',
-    visibleFor: ['admin'],
+    visibleFor: ['admin', 'manager', 'director'],
   },
   {
     id: 'statistics',
     label: 'Статистика',
     icon: <AnalyticsIcon />,
     link: '/app/statistics',
-    visibleFor: ['admin'],
+    visibleFor: ['admin', 'manager', 'director'],
   },
   {
     id: 'organization',
     label: 'Организация',
     icon: <SettingsIcon />,
-    visibleFor: ['admin', 'manager'],
+    visibleFor: ['admin', 'manager', 'director'],
     children: [
       {
         id: 'organization-cyclogram',
@@ -175,14 +175,14 @@ const sidebarStructure: SidebarItem[] = [
     label: 'Учёт продуктов',
     link: '/app/food/products',
     icon: <AssessmentIcon />,
-    visibleFor: ['admin', 'cook'],
+    visibleFor: ['admin', 'manager', 'director', 'cook'],
   },
   {
     id: 'food-calendar',
     label: 'Календарь меню',
     link: '/app/food/calendar',
     icon: <CalendarViewWeekIcon />,
-    visibleFor: ['admin', 'cook'],
+    visibleFor: ['admin', 'manager', 'director', 'cook'],
   },
   medicalSidebarSection,
 ];
