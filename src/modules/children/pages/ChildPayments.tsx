@@ -172,7 +172,7 @@ const PaymentRow = React.memo(({
         <Chip label={groupName} size="small" variant="outlined" sx={{ maxWidth: 110 }} />
       </TableCell>
       <TableCell sx={{ p: isMobile ? 0.5 : 1, whiteSpace: 'nowrap' }}>
-        {moment(payment.period.start).format('DD.MM')} - {moment(payment.period.end).format('DD.MM.YY')}
+        {moment(payment.period.start).format('DD.MM.YY')} - {moment(payment.period.end).format('DD.MM.YY')}
       </TableCell>
       <TableCell sx={{ p: isMobile ? 1 : 2, fontWeight: 'bold' }}>
         <Typography variant="body2" color="success.main" fontWeight="bold">
@@ -272,7 +272,7 @@ const PaymentCard = React.memo(({
         <Box>
           <Typography variant="caption" color="textSecondary" display="block">Период</Typography>
           <Typography variant="caption" fontWeight="medium">
-            {moment(payment.period.start).format('DD.MM')} - {moment(payment.period.end).format('DD.MM')}
+            {moment(payment.period.start).format('DD.MM.YY')} - {moment(payment.period.end).format('DD.MM.YY')}
           </Typography>
         </Box>
         <Box textAlign="right">
