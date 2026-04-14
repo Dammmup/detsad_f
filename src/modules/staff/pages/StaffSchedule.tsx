@@ -244,36 +244,39 @@ const ScheduleRow = React.memo(({
   canEdit,
 }: any) => {
   const staffId = staffMember.id || staffMember._id;
-  if (!staffId) return null;
-  const isSelected = selectedStaff.includes(staffId);
-
-  const handleToggle = useCallback(() => {
-    if (!canSelect) {
-      return;
-    }
-    onStaffToggle(staffId);
-  }, [onStaffToggle, staffId, canSelect]);
+  const isSelected = selectedStaff.includes(staffId || '');
 
   // Группируем данные сотрудника по датам для быстрого доступа внутри строки
   const shiftsByDate = useMemo(() => {
     const map = new Map<string, any[]>();
+    if (!staffId) return map;
     staffShifts.forEach((s: any) => {
       const dStr = moment(s.date).format('YYYY-MM-DD');
       if (!map.has(dStr)) map.set(dStr, []);
       map.get(dStr)!.push(s);
     });
     return map;
-  }, [staffShifts]);
+  }, [staffShifts, staffId]);
 
   const attendanceByDate = useMemo(() => {
     const map = new Map<string, any[]>();
+    if (!staffId) return map;
     staffAttendance.forEach((r: any) => {
       const dStr = moment(r.date).format('YYYY-MM-DD');
       if (!map.has(dStr)) map.set(dStr, []);
       map.get(dStr)!.push(r);
     });
     return map;
-  }, [staffAttendance]);
+  }, [staffAttendance, staffId]);
+
+  const handleToggle = useCallback(() => {
+    if (!canSelect || !staffId) {
+      return;
+    }
+    onStaffToggle(staffId);
+  }, [onStaffToggle, staffId, canSelect]);
+
+  if (!staffId) return null;
 
   return (
     <TableRow key={staffId} sx={{ backgroundColor: isSelected ? 'action.selected' : 'inherit' }}>
@@ -367,7 +370,7 @@ const StaffSchedule: React.FC = () => {
   const [shifts, setShifts] = useState<any[]>([]);
 
   const staff = useMemo(() => {
-    return allStaff.filter((u: any) => STAFF_ROLES.includes(u.role));
+    return allStaff.filter((u: any) => STAFF_ROLES.includes(u.role) && (u.id || u._id));
   }, [allStaff]);
 
   const staffById = useMemo(() => {
