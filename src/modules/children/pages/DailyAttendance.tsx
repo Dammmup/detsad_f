@@ -41,6 +41,7 @@ import {
     bulkSaveChildAttendance,
     ChildAttendanceRecord,
 } from '../services/childAttendance';
+import { Child } from '../services/children';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 
 // Таймер автосохранения (в миллисекундах)
@@ -125,6 +126,21 @@ const DailyAttendance: React.FC = () => {
             return childGroupId === String(selectedGroupId);
         });
     }, [allChildren, selectedGroupId]);
+
+    const childById = useMemo(() => {
+        const map = new Map<string, Child>();
+        children.forEach((child: any) => {
+            const id = String(child.id || child._id || '');
+            if (id) map.set(id, child);
+        });
+        return map;
+    }, [children]);
+
+    const statusLabelById = useMemo(() => {
+        const map = new Map<string, string>();
+        ATTENDANCE_STATUSES.forEach((status) => map.set(status.id, status.label));
+        return map;
+    }, []);
 
     // Функция автосохранения накопленных изменений
     const flushPendingChanges = useCallback(async () => {
@@ -254,8 +270,8 @@ const DailyAttendance: React.FC = () => {
             [childId]: { ...prev[childId], childId, date: dateStr, status } as ChildAttendanceRecord,
         }));
 
-        const childName = children.find(c => (c.id || (c as any)._id) === childId)?.fullName || 'Ребенок';
-        const statusLabel = ATTENDANCE_STATUSES.find(s => s.id === status)?.label || status;
+        const childName = childById.get(childId)?.fullName || 'Ребенок';
+        const statusLabel = statusLabelById.get(status) || status;
         enqueueSnackbar(`${childName}: ${statusLabel} (в очереди на сохранение)`, { variant: 'info', autoHideDuration: 1500 });
     };
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Box, Typography, Tabs, Tab, Paper, Button, Alert
 } from '@mui/material';
@@ -41,10 +41,10 @@ const AccountingPage: React.FC = () => {
   const [tab, setTab] = useState(0);
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
 
-  const handleSelectAccount = (code: string) => {
+  const handleSelectAccount = useCallback((code: string) => {
     setSelectedAccount(code);
     setTab(2); // Switch to Account Card tab
-  };
+  }, []);
 
   const [retroLoading, setRetroLoading] = useState(false);
 

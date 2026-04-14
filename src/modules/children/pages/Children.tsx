@@ -318,6 +318,15 @@ const Children: React.FC = () => {
     return groupIndex !== -1 ? colors[groupIndex % colors.length] : '#B0B0B0';
   }, [groups]);
 
+  const groupById = useMemo(() => {
+    const map = new Map<string, Group>();
+    groups.forEach((g) => {
+      if (g._id) map.set(String(g._id), g);
+      if ((g as any).id) map.set(String((g as any).id), g as Group);
+    });
+    return map;
+  }, [groups]);
+
   useEffect(() => {
     fetchGroups();
     fetchChildren();
@@ -378,6 +387,13 @@ const Children: React.FC = () => {
     }
     return result;
   }, [childrenForUser, nameFilter, groupFilter, activeFilter]);
+
+  const summaryStats = useMemo(() => ({
+    total: filteredChildren.length,
+    withGroup: filteredChildren.filter((c) => c.groupId).length,
+    withoutGroup: filteredChildren.filter((c) => !c.groupId).length,
+    active: filteredChildren.filter((c) => c.active !== false).length,
+  }), [filteredChildren]);
 
   const { items: sortedChildren, requestSort, sortConfig } = useSort(filteredChildren);
 
@@ -540,13 +556,13 @@ const Children: React.FC = () => {
                 {selected.length === 0 ? 'Все группы' : selected.map((value) => (
                   <Chip
                     key={value}
-                    label={groups.find(g => g._id === value)?.name || value}
+                    label={groupById.get(value)?.name || value}
                     size="small"
                     onDelete={() => setGroupFilter(groupFilter.filter((id) => id !== value))}
                     onMouseDown={(e) => e.stopPropagation()}
                     avatar={
                       <Avatar sx={{ bgcolor: getGroupColor(value) }}>
-                        {groups.find(g => g._id === value)?.name?.charAt(0)}
+                        {groupById.get(value)?.name?.charAt(0)}
                       </Avatar>
                     }
                   />
@@ -594,19 +610,19 @@ const Children: React.FC = () => {
         <Box display='flex' flexWrap='wrap' gap={2} mb={2} p={2} sx={{ backgroundColor: '#f9f9f9', borderRadius: 1, border: '1px solid #e0e0e0' }}>
           <Box flex='1 1 200px' p={2} sx={{ backgroundColor: '#E8F5E9', borderRadius: 1, borderLeft: '4px solid #4CAF50' }}>
             <Typography variant='h6' color='textSecondary'>Всего детей</Typography>
-            <Typography variant='h4' color='success.main'>{filteredChildren.length}</Typography>
+            <Typography variant='h4' color='success.main'>{summaryStats.total}</Typography>
           </Box>
           <Box flex='1 1 200px' p={2} sx={{ backgroundColor: '#FFF3E0', borderRadius: 1, borderLeft: '4px solid #FFC107' }}>
             <Typography variant='h6' color='textSecondary'>С группой</Typography>
-            <Typography variant='h4' color='warning.main'>{filteredChildren.filter((c) => c.groupId).length}</Typography>
+            <Typography variant='h4' color='warning.main'>{summaryStats.withGroup}</Typography>
           </Box>
           <Box flex='1 1 200px' p={2} sx={{ backgroundColor: '#FFEBEE', borderRadius: 1, borderLeft: '4px solid #F44336' }}>
             <Typography variant='h6' color='textSecondary'>Без группы</Typography>
-            <Typography variant='h4' color='error.main'>{filteredChildren.filter((c) => !c.groupId).length}</Typography>
+            <Typography variant='h4' color='error.main'>{summaryStats.withoutGroup}</Typography>
           </Box>
           <Box flex='1 1 200px' p={2} sx={{ backgroundColor: '#E0E0E0', borderRadius: 1, borderLeft: '4px solid #9E9E9E' }}>
             <Typography variant='h6' color='textSecondary'>Активных</Typography>
-            <Typography variant='h4' color='textPrimary'>{filteredChildren.filter((c) => c.active !== false).length}</Typography>
+            <Typography variant='h4' color='textPrimary'>{summaryStats.active}</Typography>
           </Box>
         </Box>
       )}

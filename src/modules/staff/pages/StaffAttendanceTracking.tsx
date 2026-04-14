@@ -619,7 +619,7 @@ const StaffAttendanceTracking: React.FC = () => {
   }, [fetchStaff]);
 
 
-  const availableRoles = Object.values(ROLE_TRANSLATIONS).sort();
+  const availableRoles = useMemo(() => Object.values(ROLE_TRANSLATIONS).sort(), []);
 
 
   const handleFilterRoleChange = (event: SelectChangeEvent<string[]>) => {
@@ -629,12 +629,10 @@ const StaffAttendanceTracking: React.FC = () => {
 
   const getStaffName = useCallback(
     (staffId: string) => {
-      const staff = staffList.find(
-        (s) => s.id === staffId || s._id === staffId,
-      );
+      const staff = staffMap.get(String(staffId));
       return staff?.fullName || 'Неизвестно';
     },
-    [staffList],
+    [staffMap],
   );
 
   const isMobile = useMediaQuery('(max-width:900px)');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -87,21 +87,24 @@ const AttendanceBulkModal: React.FC<AttendanceBulkModalProps> = ({
     }
   }, [open, groupId, fetchChildren]);
 
-  const handleChildToggle = (childId: string) => {
+  const childIds = useMemo(() => children.map((child) => child.id!), [children]);
+  const allSelected = selectedChildren.length > 0 && selectedChildren.length === childIds.length;
+
+  const handleChildToggle = useCallback((childId: string) => {
     if (selectedChildren.includes(childId)) {
       setSelectedChildren(selectedChildren.filter((id) => id !== childId));
     } else {
       setSelectedChildren([...selectedChildren, childId]);
     }
-  };
+  }, [selectedChildren]);
 
-  const handleSelectAllChildren = () => {
-    if (selectedChildren.length === children.length) {
+  const handleSelectAllChildren = useCallback(() => {
+    if (allSelected) {
       setSelectedChildren([]);
     } else {
-      setSelectedChildren(children.map((child) => child.id!));
+      setSelectedChildren(childIds);
     }
-  };
+  }, [allSelected, childIds]);
 
   const handleDateRangeChange = () => {
     if (dateRange.start && dateRange.end) {

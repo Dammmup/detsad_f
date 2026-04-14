@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -51,7 +51,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
     }
   }, [event, selectedDate, open]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!title || !date) return;
 
     setLoading(true);
@@ -68,9 +68,9 @@ const EventDialog: React.FC<EventDialogProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [title, date, description, type, onSave, onClose]);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!event?._id && !event?.id) return;
     
     setLoading(true);
@@ -84,7 +84,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [event, onDelete, onClose]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>

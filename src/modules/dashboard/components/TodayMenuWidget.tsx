@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -44,7 +44,7 @@ const TodayMenuWidget: React.FC = React.memo(() => {
     fetchMenu();
   }, []);
 
-  const getMealIcon = (mealType: MealType) => {
+  const getMealIcon = useCallback((mealType: MealType) => {
     switch (mealType) {
       case 'breakfast':
         return <FreeBreakfast color="primary" />;
@@ -57,7 +57,7 @@ const TodayMenuWidget: React.FC = React.memo(() => {
       default:
         return <RestaurantMenu />;
     }
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -79,7 +79,7 @@ const TodayMenuWidget: React.FC = React.memo(() => {
     );
   }
 
-  const mealTypes: MealType[] = ['breakfast', 'lunch', 'snack', 'dinner'];
+  const mealTypes = useMemo<MealType[]>(() => ['breakfast', 'lunch', 'snack', 'dinner'], []);
 
   return (
     <Card

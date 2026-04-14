@@ -393,6 +393,14 @@ const ChildPayments: React.FC = () => {
     return map;
   }, [children]);
 
+  const paymentsById = useMemo(() => {
+    const map = new Map<string, IChildPayment>();
+    payments.forEach((p) => {
+      if (p._id) map.set(p._id, p);
+    });
+    return map;
+  }, [payments]);
+
   const groupsMap = useMemo(() => {
     const map = new Map<string, Group>();
     groups.forEach(g => map.set(g._id || g.id || '', g));
@@ -518,7 +526,7 @@ const ChildPayments: React.FC = () => {
       return;
     }
     try {
-      const payment = payments.find(p => p._id === paymentId);
+      const payment = paymentsById.get(paymentId);
       if (!payment) return;
       const totalAmount = (payment.total || 0) + (payment.accruals || 0) - (payment.deductions || 0);
       await childPaymentApi.update(paymentId, {
@@ -531,7 +539,7 @@ const ChildPayments: React.FC = () => {
     } catch (e: any) {
       setError(e?.message || 'Ошибка обновления статуса');
     }
-  }, [payments, fetchPayments, canManagePayments]);
+  }, [paymentsById, fetchPayments, canManagePayments]);
 
   const handleCancelPayment = useCallback(async (paymentId: string) => {
     if (!canManagePayments) {

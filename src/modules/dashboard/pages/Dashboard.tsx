@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../../../app/context/AuthContext';
 import {
   Button,
   Typography,
   Box,
-  Container,
   Grid,
   Card,
   CardContent,
@@ -26,6 +25,15 @@ import TodayMenuWidget from '../components/TodayMenuWidget';
 import DateNavigator from '../../../shared/components/DateNavigator';
 import ReportsWidget from '../../reports/components/ReportsWidget';
 
+const rootSx = {
+  py: { xs: 2, sm: 4 },
+  px: { xs: 1, sm: 0 },
+  background:
+    'linear-gradient(135deg, rgba(245, 247, 250, 1) 0%, rgba(235, 240, 245, 1) 100%)',
+  minHeight: '100vh',
+  width: '100%',
+};
+
 const Dashboard = () => {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -36,69 +44,70 @@ const Dashboard = () => {
     'success',
   );
 
-  const role = currentUser?.role || '';
-  const showAttendanceButton = currentUser && currentUser.role !== 'admin';
-  const canViewReports = ['admin', 'manager', 'director'].includes(role);
-  const canViewFinancialStats = ['admin', 'director'].includes(role);
-  const canManageChildren = ['admin', 'manager', 'director'].includes(role);
+  const permissions = useMemo(() => {
+    const role = currentUser?.role || '';
+    return {
+      showAttendanceButton: !!currentUser && role !== 'admin',
+      canViewReports: ['admin', 'manager', 'director'].includes(role),
+      canViewFinancialStats: ['admin', 'director'].includes(role),
+      canManageChildren: ['admin', 'manager', 'director'].includes(role),
+    };
+  }, [currentUser]);
 
-  const handleAttendanceStatusChange = () => {
-
-
-
-  };
-
-  const handleOpenAttendancePage = () => {
+  const handleAttendanceStatusChange = useCallback(() => {}, []);
+  const handleOpenAttendancePage = useCallback(() => {
     navigate('/app/children/attendance');
-  };
+  }, [navigate]);
 
-  const handleAddChildModalClose = () => {
+  const handleAddChildModalClose = useCallback(() => {
     setAddChildModalOpen(false);
-  };
+  }, []);
 
-  const handleAddChildModalOpen = () => {
+  const handleAddChildModalOpen = useCallback(() => {
     setAddChildModalOpen(true);
-  };
+  }, []);
 
-  const handleChildSaved = () => {
+  const handleChildSaved = useCallback(() => {
     setSnackbarMessage('Ребёнок успешно добавлен');
     setSnackbarSeverity('success');
     setSnackbarOpen(true);
     setAddChildModalOpen(false);
-  };
+  }, []);
 
-  const handleCloseSnackbar = () => {
+  const handleCloseSnackbar = useCallback(() => {
     setSnackbarOpen(false);
-  };
+  }, []);
 
   const isMobile = useMediaQuery('(max-width:900px)');
+  const layoutSx = useMemo(
+    () => ({
+      display: isMobile ? 'block' : 'flex',
+      gap: 3,
+      height: isMobile ? 'auto' : 'calc(100vh - 200px)',
+    }),
+    [isMobile],
+  );
+  const rightColumnSx = useMemo(
+    () => ({
+      width: isMobile ? '100%' : 350,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2,
+    }),
+    [isMobile],
+  );
 
   return (
-    <Box
-      sx={{
-        py: { xs: 2, sm: 4 },
-        px: { xs: 1, sm: 0 },
-        background:
-          'linear-gradient(135deg, rgba(245, 247, 250, 1) 0%, rgba(235, 240, 245, 1) 100%)',
-        minHeight: '100vh',
-        width: '100%',
-      }}
-    >
+    <Box sx={rootSx}>
       <DateNavigator />
-      {canViewReports && <ReportsWidget />}
+      {permissions.canViewReports && <ReportsWidget />}
 
-      <Box
-        sx={{
-          display: isMobile ? 'block' : 'flex',
-          gap: 3,
-          height: isMobile ? 'auto' : 'calc(100vh - 200px)',
-        }}
-      >
+      <Box sx={layoutSx}>
         {/* Левая колонка с виджетами */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <Grid container spacing={3}>
             {/* Кнопка отметки прихода/ухода для сотрудников */}
-            {showAttendanceButton && (
+            {permissions.showAttendanceButton && (
               <Grid item xs={12} sm={6} md={6}>
                 <Card
                   sx={{
@@ -149,7 +158,7 @@ const Dashboard = () => {
             )}
 
             {/* Кнопка отметки детей */}
-            {canManageChildren && (
+            {permissions.canManageChildren && (
               <Grid item xs={12} sm={6} md={6}>
                 <Card
                   sx={{
@@ -227,7 +236,7 @@ const Dashboard = () => {
             )}
 
             {/* Кнопка добавления ребенка */}
-            {canManageChildren && (
+            {permissions.canManageChildren && (
               <Grid item xs={12} sm={6} md={6}>
                 <Card
                   sx={{
@@ -336,7 +345,7 @@ const Dashboard = () => {
           </Grid>
 
           {/* Виджет финансовой статистики - только для админов */}
-          {canViewFinancialStats && (
+          {permissions.canViewFinancialStats && (
             <Grid item xs={12} md={6}>
               <Card
                 sx={{
@@ -424,14 +433,7 @@ const Dashboard = () => {
         </Box>
 
         {/* Правая колонка - шторка уведомлений */}
-        <Box
-          sx={{
-            width: isMobile ? '100%' : 350,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-          }}
-        >
+        <Box sx={rightColumnSx}>
           <Box
             sx={{
               backgroundColor: '#f8f9fa',

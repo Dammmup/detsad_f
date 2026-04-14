@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -33,7 +33,53 @@ const AttendanceStatsWidget: React.FC<AttendanceStatsWidgetProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
-  const [chartData, setChartData] = useState<any[]>([]);
+
+  const chartData = useMemo(() => {
+    if (!stats) return [];
+    return [
+      {
+        name: 'Присутствия',
+        value: stats.byStatus.present || 0,
+        color: '#4caf50',
+      },
+      {
+        name: 'Отсутствия',
+        value: stats.byStatus.absent || 0,
+        color: '#f44336',
+      },
+      {
+        name: 'Опоздания',
+        value: stats.byStatus.late || 0,
+        color: '#ff9800',
+      },
+      {
+        name: 'Болеют',
+        value: stats.byStatus.sick || 0,
+        color: '#2196f3',
+      },
+      {
+        name: 'Отпуск',
+        value: stats.byStatus.vacation || 0,
+        color: '#9c27b0',
+      },
+    ];
+  }, [stats]);
+
+  const statusColorMap = useMemo<Record<string, string>>(() => ({
+    present: 'success',
+    absent: 'error',
+    late: 'warning',
+    sick: 'info',
+    vacation: 'primary',
+  }), []);
+
+  const statusLabelMap = useMemo<Record<string, string>>(() => ({
+    present: 'Присутствия',
+    absent: 'Отсутствия',
+    late: 'Опоздания',
+    sick: 'Болеют',
+    vacation: 'Отпуск',
+  }), []);
 
 
   useEffect(() => {
@@ -54,37 +100,6 @@ const AttendanceStatsWidget: React.FC<AttendanceStatsWidgetProps> = ({
         });
 
         setStats(statsData);
-
-
-        const chartDataArray = [
-          {
-            name: 'Присутствия',
-            value: statsData.byStatus.present || 0,
-            color: '#4caf50',
-          },
-          {
-            name: 'Отсутствия',
-            value: statsData.byStatus.absent || 0,
-            color: '#f44336',
-          },
-          {
-            name: 'Опоздания',
-            value: statsData.byStatus.late || 0,
-            color: '#ff9800',
-          },
-          {
-            name: 'Болеют',
-            value: statsData.byStatus.sick || 0,
-            color: '#2196f3',
-          },
-          {
-            name: 'Отпуск',
-            value: statsData.byStatus.vacation || 0,
-            color: '#9c27b0',
-          },
-        ];
-
-        setChartData(chartDataArray);
       } catch (err: any) {
         setError(err.message);
         console.error('Error fetching attendance stats:', err);
@@ -96,24 +111,9 @@ const AttendanceStatsWidget: React.FC<AttendanceStatsWidgetProps> = ({
     fetchAttendanceStats();
   }, [currentUser]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'present':
-        return 'success';
-      case 'absent':
-        return 'error';
-      case 'late':
-        return 'warning';
-      case 'sick':
-        return 'info';
-      case 'vacation':
-        return 'primary';
-      default:
-        return 'default';
-    }
-  };
+  // deprecated helpers removed
 
-  const getStatusLabel = (status: string) => {
+  /* const getStatusLabel = (status: string) => {
     switch (status) {
       case 'present':
         return 'Присутствия';
@@ -128,7 +128,7 @@ const AttendanceStatsWidget: React.FC<AttendanceStatsWidgetProps> = ({
       default:
         return status;
     }
-  };
+  }; */
 
   return (
     <Card
@@ -322,9 +322,9 @@ const AttendanceStatsWidget: React.FC<AttendanceStatsWidgetProps> = ({
                 {Object.entries(stats.byStatus).map(([status, count]) => (
                   <Chip
                     key={status}
-                    label={`${getStatusLabel(status)}: ${count}`}
+                    label={`${statusLabelMap[status] || status}: ${count}`}
                     size='small'
-                    color={getStatusColor(status) as any}
+                    color={(statusColorMap[status] || 'default') as any}
                     variant='outlined'
                   />
                 ))}

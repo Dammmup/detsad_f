@@ -275,18 +275,16 @@ const AttendanceRow = React.memo(({
           </IconButton>
         </Box>
       </TableCell>
-      {weekDays.map((day: Date) => {
-        const dateString = moment(day).format('YYYY-MM-DD');
-        const attendance = attendanceData[childId]?.[dateString];
-        const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+      {weekDays.map((day: { date: Date; iso: string; isWeekend: boolean; dayLabel: string; dateLabel: string; isToday: boolean }) => {
+        const attendance = attendanceData[childId]?.[day.iso];
 
         return (
           <AttendanceCell
-            key={dateString}
+            key={day.iso}
             child={child}
-            day={day}
+            day={day.date}
             attendance={attendance}
-            isWeekend={isWeekend}
+            isWeekend={day.isWeekend}
             onClick={onCellClick}
             canEdit={canEdit}
           />
@@ -341,9 +339,17 @@ const WeeklyAttendance: React.FC = () => {
 
   const weekDays = useMemo(() => {
     const start = moment(currentDate).startOf('isoWeek');
-    const days: Date[] = [];
+    const days: { date: Date; iso: string; isWeekend: boolean; dayLabel: string; dateLabel: string; isToday: boolean }[] = [];
     for (let i = 0; i < 7; i++) {
-      days.push(start.clone().add(i, 'day').toDate());
+      const day = start.clone().add(i, 'day');
+      days.push({
+        date: day.toDate(),
+        iso: day.format('YYYY-MM-DD'),
+        isWeekend: day.day() === 0 || day.day() === 6,
+        dayLabel: day.format('dd'),
+        dateLabel: day.format('D/MM'),
+        isToday: day.isSame(moment(), 'day'),
+      });
     }
     return days;
   }, [currentDate]);
@@ -636,14 +642,14 @@ const WeeklyAttendance: React.FC = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell>Ребенок</TableCell>
-                      {weekDays.map((day: Date) => (
-                        <TableCell key={day.toString()} align='center'>
+                      {weekDays.map((day) => (
+                        <TableCell key={day.iso} align='center'>
                           <Box sx={{
-                            backgroundColor: moment(day).isSame(moment(), 'day') ? 'primary.light' : 'inherit',
+                            backgroundColor: day.isToday ? 'primary.light' : 'inherit',
                             p: 0.5, borderRadius: 1
                           }}>
-                            <Box sx={{ fontWeight: 'bold' }}>{moment(day).format('dd')}</Box>
-                            <Box>{moment(day).format('D/MM')}</Box>
+                            <Box sx={{ fontWeight: 'bold' }}>{day.dayLabel}</Box>
+                            <Box>{day.dateLabel}</Box>
                           </Box>
                         </TableCell>
                       ))}

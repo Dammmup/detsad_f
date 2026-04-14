@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Table, TableHead, TableBody, TableRow, TableCell,
   TableContainer, Paper, CircularProgress, Alert, TextField, Button,
@@ -60,8 +60,9 @@ const DocumentsTab: React.FC = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString('ru-RU');
-  const fmt = (n: number) => n.toLocaleString('ru-RU');
+  const fmtDate = useCallback((d: string) => new Date(d).toLocaleDateString('ru-RU'), []);
+  const fmt = useCallback((n: number) => n.toLocaleString('ru-RU'), []);
+  const typeOptions = useMemo(() => Object.entries(TYPE_LABELS), []);
 
   const handleReverse = async () => {
     if (!canManageDocuments) {
@@ -90,7 +91,7 @@ const DocumentsTab: React.FC = () => {
           <InputLabel>Тип</InputLabel>
           <Select value={typeFilter} label="Тип" onChange={e => setTypeFilter(e.target.value)}>
             <MenuItem value="">Все типы</MenuItem>
-            {Object.entries(TYPE_LABELS).map(([k, v]) => (
+            {typeOptions.map(([k, v]) => (
               <MenuItem key={k} value={k}>{v}</MenuItem>
             ))}
           </Select>

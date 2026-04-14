@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -85,18 +85,24 @@ const ChildAttendanceDetailsDialog: React.FC<ChildAttendanceDetailsDialogProps> 
     }
   };
 
-  const stats = {
+  const stats = useMemo(() => ({
     total: records.length,
     present: records.filter(r => r.status === 'present').length,
     absent: records.filter(r => r.status === 'absent').length,
     sick: records.filter(r => r.status === 'sick').length,
     vacation: records.filter(r => r.status === 'vacation').length,
     late: records.filter(r => r.status === 'late').length,
-  };
+  }), [records]);
 
-  const attendanceRate = stats.total > 0 
-    ? Math.round((stats.present / stats.total) * 100) 
-    : 0;
+  const attendanceRate = useMemo(() => (
+    stats.total > 0 
+      ? Math.round((stats.present / stats.total) * 100) 
+      : 0
+  ), [stats]);
+
+  const dayNames = useMemo(() => (
+    ['Р’РѕСЃРєСЂРµСЃРµРЅСЊРµ', 'РџРѕРЅРµРґРµР»СЊРЅРёРє', 'Р’С‚РѕСЂРЅРёРє', 'РЎСЂРµРґР°', 'Р§РµС‚РІРµСЂРі', 'РџСЏС‚РЅРёС†Р°', 'РЎСѓР±Р±РѕС‚Р°']
+  ), []);
 
   return (
     <Dialog 

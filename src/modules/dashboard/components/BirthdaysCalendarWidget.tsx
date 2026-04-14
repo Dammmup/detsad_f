@@ -128,6 +128,37 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = React.me
 
   const canManageEvents = ['admin', 'manager', 'director'].includes(user?.role || '');
 
+  const birthdaysByMonthDay = useMemo(() => {
+    const map = new Map<string, Child[]>();
+    (children || []).forEach((child) => {
+      if (!child.birthday) return;
+      const birth = moment(child.birthday);
+      const key = birth.format('MM-DD');
+      const list = map.get(key) || [];
+      list.push(child);
+      map.set(key, list);
+    });
+    return map;
+  }, [children]);
+
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    (calendarEvents || []).forEach((event) => {
+      const dayStr = moment(event.date).format('YYYY-MM-DD');
+      const list = map.get(dayStr) || [];
+      list.push(event);
+      map.set(dayStr, list);
+    });
+    return map;
+  }, [calendarEvents]);
+
+  const workingDaysSet = useMemo(() => {
+    const workingDays = settings?.workingDays?.length ? settings.workingDays : ['1', '2', '3', '4', '5'];
+    return new Set(workingDays);
+  }, [settings]);
+
+  const holidaysSet = useMemo(() => new Set(settings?.holidays || []), [settings]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -170,31 +201,22 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = React.me
     return daysInMonth.map((dayDate) => {
       const currentDayMoment = moment(dayDate);
       const dayStr = currentDayMoment.format('YYYY-MM-DD');
+      const monthDayKey = currentDayMoment.format('MM-DD');
 
       // Дети с днем рождения
-      const childrenWithBirthday = Array.isArray(children) ? children.filter((child) => {
-        if (!child.birthday) return false;
-        const birth = moment(child.birthday);
-        return (
-          birth.date() === currentDayMoment.date() &&
-          birth.month() === currentDayMoment.month()
-        );
-      }) : [];
+      const childrenWithBirthday = birthdaysByMonthDay.get(monthDayKey) || [];
 
       // События этого дня
-      const dayEvents = Array.isArray(calendarEvents) ? calendarEvents.filter(e => 
-        moment(e.date).isSame(currentDayMoment, 'day')
-      ) : [];
+      const dayEvents = eventsByDay.get(dayStr) || [];
 
       // Проверка на выходной/праздник
       // 0 - Пн, 1 - Вт... 5 - Сб, 6 - Вс в ISO. Moment.js: 1 - Пн... 7 - Вс (isoWeekday)
       const dayOfWeek = currentDayMoment.isoWeekday().toString(); // "1" - "7"
       
       // Если настройки еще не загружены или список рабочих дней пуст, используем стандарт Пн-Пт (1-5)
-      const workingDays = settings?.workingDays?.length ? settings.workingDays : ['1', '2', '3', '4', '5'];
-      const isWeekend = !workingDays.includes(dayOfWeek);
+      const isWeekend = !workingDaysSet.has(dayOfWeek);
       
-      const isHolidayInSettings = settings?.holidays?.includes(dayStr);
+      const isHolidayInSettings = holidaysSet.has(dayStr);
       const isManualHoliday = dayEvents.some(e => e.type === 'holiday');
 
       return { 
@@ -204,7 +226,7 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = React.me
         isNonWorkingDay: isWeekend || isHolidayInSettings || isManualHoliday
       };
     });
-  }, [children, calendarEvents, settings, currentDate]);
+  }, [birthdaysByMonthDay, eventsByDay, workingDaysSet, holidaysSet, currentDate]);
 
   const startWeekDay = useMemo(() => (moment(currentDate).startOf('month').day() + 6) % 7, [currentDate]);
 

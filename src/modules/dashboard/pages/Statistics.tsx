@@ -464,7 +464,7 @@ const Statistics: React.FC = () => {
             {/* Заголовок */}
             <Box display='flex' justifyContent='space-between' alignItems='center' mb={3}>
                 <Typography variant='h5' display='flex' alignItems='center'>
-                    <Analytics sx={{ mr: 1 }} /> Статистика за {moment(currentDate).format('MMMM YYYY')}
+                    <Analytics sx={{ mr: 1 }} /> Статистика за {periodInfo.label}
                 </Typography>
             </Box>
 
@@ -783,7 +783,7 @@ const Statistics: React.FC = () => {
                     <Card sx={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', color: 'white' }}>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
-                                💰 Финансовая сводка за {moment(currentDate).format('MMMM YYYY')}
+                                💰 Финансовая сводка за {periodInfo.label}
                             </Typography>
                             <Grid container spacing={3}>
                                 <Grid item xs={6} md={3}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -53,12 +53,7 @@ const ProfilePage: React.FC = () => {
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
-  useEffect(() => {
-    loadUserProfile();
-    checkPushStatus();
-  }, []);
-
-  const checkPushStatus = async () => {
+  const checkPushStatus = useCallback(async () => {
     const ua = navigator.userAgent;
     const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
@@ -72,9 +67,9 @@ const ProfilePage: React.FC = () => {
 
     const permission = await PushService.checkPermission();
     setPushPermission(permission);
-  };
+  }, []);
 
-  const handleEnablePush = async () => {
+  const handleEnablePush = useCallback(async () => {
     setPushLoading(true);
     try {
       const granted = await PushService.requestPermission();
@@ -92,9 +87,9 @@ const ProfilePage: React.FC = () => {
     } finally {
       setPushLoading(false);
     }
-  };
+  }, []);
 
-  const handleTestPush = async () => {
+  const handleTestPush = useCallback(async () => {
     setPushLoading(true);
     try {
       await PushService.testPush();
@@ -106,9 +101,9 @@ const ProfilePage: React.FC = () => {
     } finally {
       setPushLoading(false);
     }
-  };
+  }, []);
 
-  const handleDisablePush = async () => {
+  const handleDisablePush = useCallback(async () => {
     setPushLoading(true);
     try {
       await PushService.unsubscribeUser();
@@ -121,9 +116,9 @@ const ProfilePage: React.FC = () => {
     } finally {
       setPushLoading(false);
     }
-  };
+  }, []);
 
-  const loadUserProfile = async () => {
+  const loadUserProfile = useCallback(async () => {
     try {
       const currentUser = getCurrentUser();
       if (currentUser) {
@@ -142,19 +137,24 @@ const ProfilePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    loadUserProfile();
+    checkPushStatus();
+  }, [loadUserProfile, checkPushStatus]);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setPasswordForm((prev) => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const reader = new FileReader();
       reader.onload = async (event) => {
@@ -177,7 +177,7 @@ const ProfilePage: React.FC = () => {
       };
       reader.readAsDataURL(e.target.files[0]);
     }
-  };
+  }, []);
 
   const handleSaveProfile = async () => {
     if (!user) return;

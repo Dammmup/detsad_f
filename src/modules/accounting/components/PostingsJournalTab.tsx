@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Table, TableHead, TableBody, TableRow, TableCell,
   TableContainer, Paper, CircularProgress, Alert, TextField, Button,
@@ -48,11 +48,12 @@ const PostingsJournalTab: React.FC = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString('ru-RU');
-  const fmt = (n: number) => n.toLocaleString('ru-RU');
-  const accLabel = (code: string) => ACCOUNT_NAMES[code] || code;
+  const fmtDate = useCallback((d: string) => new Date(d).toLocaleDateString('ru-RU'), []);
+  const fmt = useCallback((n: number) => n.toLocaleString('ru-RU'), []);
+  const accLabel = useCallback((code: string) => ACCOUNT_NAMES[code] || code, []);
 
-  const totalDebit = postings.reduce((s, p) => s + p.amount, 0);
+  const totalDebit = useMemo(() => postings.reduce((s, p) => s + p.amount, 0), [postings]);
+  const accountOptions = useMemo(() => Object.entries(ACCOUNT_NAMES), []);
 
   return (
     <Box>
@@ -71,7 +72,7 @@ const PostingsJournalTab: React.FC = () => {
           <InputLabel>Фильтр по счёту</InputLabel>
           <Select value={accountFilter} label="Фильтр по счёту" onChange={e => setAccountFilter(e.target.value)}>
             <MenuItem value="">Все счета</MenuItem>
-            {Object.entries(ACCOUNT_NAMES).map(([code, name]) => (
+            {accountOptions.map(([code, name]) => (
               <MenuItem key={code} value={code}>{code} — {name}</MenuItem>
             ))}
           </Select>

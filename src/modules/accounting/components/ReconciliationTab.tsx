@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Button, Card, CardContent, Alert, CircularProgress,
   TextField, Divider, Chip, List, ListItem, ListItemIcon, ListItemText
@@ -182,9 +182,11 @@ const ReconciliationTab: React.FC = () => {
     }
   };
 
-  const okCount = results.filter(r => r.status === 'ok').length;
-  const warnCount = results.filter(r => r.status === 'warning').length;
-  const errCount = results.filter(r => r.status === 'error').length;
+  const { okCount, warnCount, errCount } = useMemo(() => ({
+    okCount: results.filter(r => r.status === 'ok').length,
+    warnCount: results.filter(r => r.status === 'warning').length,
+    errCount: results.filter(r => r.status === 'error').length,
+  }), [results]);
 
   return (
     <Box>

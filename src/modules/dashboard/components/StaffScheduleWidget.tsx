@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -42,6 +42,14 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = React.memo(() =>
   const [error, setError] = useState<string | null>(null);
 
   const canManageSchedules = ['admin', 'manager', 'director'].includes(currentUser?.role || '');
+  const todayStr = useMemo(() => currentDate.toISOString().split('T')[0], [currentDate]);
+  const formattedToday = useMemo(() => (
+    currentDate.toLocaleDateString('ru-RU', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    })
+  ), [currentDate]);
 
 
   useEffect(() => {
@@ -51,10 +59,6 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = React.memo(() =>
       setLoading(true);
       setError(null);
       try {
-        const todayStr = currentDate.toISOString().split('T')[0];
-
-
-
         const filters: any = {
           startDate: todayStr,
           endDate: todayStr,
@@ -149,9 +153,9 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = React.memo(() =>
     };
 
     fetchTodaySchedule();
-  }, [currentUser, currentDate, canManageSchedules]);
+  }, [currentUser, todayStr, canManageSchedules]);
 
-  const getStatusChip = (shift: ShiftWithAttendance) => {
+  const getStatusChip = useCallback((shift: ShiftWithAttendance) => {
     switch (shift.status) {
       case 'checked_out':
         return (
@@ -187,15 +191,7 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = React.memo(() =>
           />
         );
     }
-  };
-
-  const formatToday = () => {
-    return currentDate.toLocaleDateString('ru-RU', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-    });
-  };
+  }, []);
 
   return (
     <Card
@@ -231,7 +227,7 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = React.memo(() =>
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            {formatToday()}
+            {formattedToday}
           </Typography>
           <Chip
             label={`${shifts.length} ${shifts.length === 1 ? 'смена' : shifts.length < 5 ? 'смены' : 'смен'}`}

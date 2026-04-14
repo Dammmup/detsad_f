@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Table, TableHead, TableBody, TableRow, TableCell,
   TableContainer, Paper, CircularProgress, Alert, TextField, Button, Chip
@@ -35,9 +35,9 @@ const TrialBalanceTab: React.FC<Props> = ({ onSelectAccount }) => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const fmt = (n: number) => n.toLocaleString('ru-RU', { minimumFractionDigits: 0 });
+  const fmt = useCallback((n: number) => n.toLocaleString('ru-RU', { minimumFractionDigits: 0 }), []);
 
-  const isBalanced = data ? data.totals.debit === data.totals.credit : true;
+  const isBalanced = useMemo(() => (data ? data.totals.debit === data.totals.credit : true), [data]);
 
   return (
     <Box>
