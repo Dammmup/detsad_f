@@ -369,8 +369,8 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path='groups' element={<Groups />} />
             <Route path='cyclogram' element={<Cyclogram />} />
             <Route path='settings' element={userRole === 'admin' ? <Settings /> : <Navigate to="/app/dashboard" />} />
-            <Route path='food/products' element={isAdminOrManager || userRole === 'cook' ? <ProductAccountingPage /> : <Navigate to="/app/dashboard" />} />
-            <Route path='food/calendar' element={isAdminOrManager || userRole === 'cook' ? <MenuCalendarPage /> : <Navigate to="/app/dashboard" />} />
+            <Route path='food/products' element={isAdminOrManager || userRole === 'cook' || userRole === 'nurse' ? <ProductAccountingPage /> : <Navigate to="/app/dashboard" />} />
+            <Route path='food/calendar' element={isAdminOrManager || userRole === 'cook' || userRole === 'nurse' ? <MenuCalendarPage /> : <Navigate to="/app/dashboard" />} />
             <Route path='med/menu-admin' element={isAdminOrManager ? <MenuItemsAdminPage /> : <Navigate to="/app/dashboard" />} />
 
             {/* Медицинский кабинет и журналы */}

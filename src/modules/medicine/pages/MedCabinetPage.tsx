@@ -10,15 +10,25 @@ import {
   Alert,
 } from '@mui/material';
 import { medJournals, MedJournalType } from './medJournals.config';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../app/context/AuthContext';
+import { useEffect } from 'react';
 
 export default function MedCabinetPage() {
-  const [tab, setTab] = React.useState<MedJournalType>('children');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = (searchParams.get('tab') as MedJournalType) || 'children';
+  const [tab, setTab] = React.useState<MedJournalType>(initialTab);
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const role = currentUser?.role || '';
   const canViewMedical = ['admin', 'manager', 'director', 'doctor', 'nurse'].includes(role);
+
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab') as MedJournalType;
+    if (tabFromUrl && tabFromUrl !== tab) {
+      setTab(tabFromUrl);
+    }
+  }, [searchParams, tab]);
 
   const handleTabChange = (_: React.SyntheticEvent, value: MedJournalType) => {
     setTab(value);

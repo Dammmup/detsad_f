@@ -14,6 +14,7 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import TodayIcon from '@mui/icons-material/Today';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import RestaurantIcon from '@mui/icons-material/Restaurant';
 
 export interface SidebarItem {
   id: string;
@@ -171,18 +172,30 @@ const sidebarStructure: SidebarItem[] = [
     ],
   },
   {
-    id: 'food-products',
-    label: 'Учёт продуктов',
-    link: '/app/food/products',
-    icon: <AssessmentIcon />,
-    visibleFor: ['admin', 'manager', 'director', 'cook'],
-  },
-  {
-    id: 'food-calendar',
-    label: 'Календарь меню',
-    link: '/app/food/calendar',
-    icon: <CalendarViewWeekIcon />,
-    visibleFor: ['admin', 'manager', 'director', 'cook'],
+    id: 'food-kitchen',
+    label: 'Пищеблок',
+    icon: <RestaurantIcon />,
+    visibleFor: ['admin', 'manager', 'director', 'cook', 'nurse'],
+    children: [
+      {
+        id: 'food-products',
+        label: 'Учёт продуктов',
+        link: '/app/food/products',
+        icon: <AssessmentIcon />,
+      },
+      {
+        id: 'food-calendar',
+        label: 'Календарь меню',
+        link: '/app/food/calendar',
+        icon: <CalendarViewWeekIcon />,
+      },
+      {
+        id: 'food-journals',
+        label: 'Журналы пищеблока',
+        link: '/app/med?tab=food',
+        icon: <InsertDriveFileIcon />,
+      },
+    ],
   },
   medicalSidebarSection,
 ];
@@ -200,7 +213,7 @@ export const getFilteredSidebarStructure = (
       if (item.id === 'children' && accessControls.canSeeChildren !== undefined && accessControls.canSeeChildren !== null) {
         return accessControls.canSeeChildren;
       }
-      if ((item.id === 'food-products' || item.id === 'food-calendar') && accessControls.canSeeFood !== undefined && accessControls.canSeeFood !== null) {
+      if ((item.id === 'food-products' || item.id === 'food-calendar' || item.id === 'food-kitchen') && accessControls.canSeeFood !== undefined && accessControls.canSeeFood !== null) {
         return accessControls.canSeeFood;
       }
       if (item.id === 'rent' && accessControls.canSeeRent !== undefined && accessControls.canSeeRent !== null) {
