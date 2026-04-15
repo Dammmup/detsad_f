@@ -59,6 +59,8 @@ const TodayMenuWidget: React.FC = React.memo(() => {
     }
   }, []);
 
+  const mealTypes = useMemo<MealType[]>(() => ['breakfast', 'lunch', 'snack', 'dinner'], []);
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -78,8 +80,6 @@ const TodayMenuWidget: React.FC = React.memo(() => {
       </Box>
     );
   }
-
-  const mealTypes = useMemo<MealType[]>(() => ['breakfast', 'lunch', 'snack', 'dinner'], []);
 
   return (
     <Card
