@@ -14,6 +14,23 @@ export const MAX_RETRIES = 3;
 export const delay: DelayFunction = (ms = RETRY_DELAY) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+const inFlightGetRequests = new Map<string, Promise<any>>();
+
+const getAuthTokenSnapshot = (): string => {
+  if (typeof localStorage === 'undefined') return '';
+  return localStorage.getItem('auth_token') || '';
+};
+
+const createGetRequestKey = (
+  url: string,
+  config?: AxiosRequestConfig,
+): string => JSON.stringify({
+  url,
+  params: config?.params || null,
+  responseType: config?.responseType || null,
+  token: getAuthTokenSnapshot(),
+});
+
 export const handleApiError: ErrorHandler = (error: any, context = '') => {
   let message = 'Произошла ошибка при выполнении запроса';
   const status = error.response?.status;
@@ -151,12 +168,24 @@ export class BaseApiClient {
     url: string,
     config?: AxiosRequestConfig,
   ): Promise<T> {
-    try {
-      const response: AxiosResponse<T> = await this.api.get(url, config);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `GET ${url}`);
+    const requestKey = createGetRequestKey(url, config);
+    const existingRequest = inFlightGetRequests.get(requestKey);
+    if (existingRequest) {
+      return existingRequest as Promise<T>;
     }
+
+    const request = this.api
+      .get<T>(url, config)
+      .then((response: AxiosResponse<T>) => response.data)
+      .catch((error) => {
+        throw this.handleError(error, `GET ${url}`);
+      })
+      .finally(() => {
+        inFlightGetRequests.delete(requestKey);
+      });
+
+    inFlightGetRequests.set(requestKey, request);
+    return request;
   }
 
   protected async post<T = any>(

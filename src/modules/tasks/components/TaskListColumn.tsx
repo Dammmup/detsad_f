@@ -56,38 +56,59 @@ const TaskListColumn: React.FC<TaskListColumnProps> = ({ onTaskChange }) => {
   const [users, setUsers] = useState<any[]>([]);
 
 
+  const currentUserId = currentUser?.id;
+
   useEffect(() => {
-    const fetchTasks = async () => {
-      if (!currentUser) return;
+    if (!currentUserId) return;
 
-      setLoading(true);
-      setError(null);
+    let cancelled = false;
+    const fetchTasks = async (retryCount = 0) => {
+      if (retryCount === 0) {
+        setLoading(true);
+        setError(null);
+      }
       try {
-
         const taskList: any = await getTaskList({});
         const tasksArray = Array.isArray(taskList) ? taskList : (taskList?.items || taskList?.data || []);
-        setTasks(tasksArray);
+        if (!cancelled) setTasks(tasksArray);
       } catch (err: any) {
+        if (cancelled) return;
+        if (retryCount < 1 && err?.response?.status === 500) {
+          setTimeout(() => { if (!cancelled) fetchTasks(retryCount + 1); }, 2000);
+          return;
+        }
         setError(err.message);
         console.error('Error fetching tasks:', err);
       } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchUsers = async () => {
-      try {
-        const userList = await getUsers();
-        setUsers(userList);
-      } catch (err: any) {
-        console.error('Error fetching users:', err);
-      } finally {
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchTasks();
+    return () => { cancelled = true; };
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!showAddTaskDialog || !canManageTasks || users.length > 0) return;
+
+    let cancelled = false;
+    const fetchUsers = async (retryCount = 0) => {
+      try {
+        const userList = await getUsers();
+        if (!cancelled) setUsers(userList);
+      } catch (err: any) {
+        if (cancelled) return;
+        if (retryCount < 1 && err?.response?.status === 500) {
+          setTimeout(() => { if (!cancelled) fetchUsers(retryCount + 1); }, 2000);
+          return;
+        }
+        console.error('Error fetching users:', err);
+      }
+    };
+
     fetchUsers();
-  }, [currentUser]);
+    return () => { cancelled = true; };
+  }, [showAddTaskDialog, canManageTasks, users.length]);
 
   useEffect(() => {
     // Обновляем бейдж при изменении списка задач

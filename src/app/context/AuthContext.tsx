@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
 
-  const handleLogin = (userData: User, token: string) => {
+  const handleLogin = useCallback((userData: User, token: string) => {
     const safeUser = sanitizeUser(userData);
 
     clearGroupsCache();
@@ -87,12 +87,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (token) {
       localStorage.setItem('auth_token', token);
     }
+  }, []);
 
 
-  };
-
-
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
 
     if (logoutInProgress) {
       return;
@@ -124,7 +122,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setLogoutInProgress(false);
     }
-  };
+  }, [logoutInProgress]);
 
   const checkAuth = useCallback(async (): Promise<boolean> => {
     try {
@@ -132,10 +130,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const authenticated = await isAuthenticated();
 
       if (currentUser && authenticated) {
-        if (!user) {
-          setUser(currentUser);
-          setIsLoggedIn(true);
-        }
+        setUser(prev => prev ? prev : currentUser);
+        setIsLoggedIn(prev => prev ? prev : true);
         return true;
       }
 
@@ -147,7 +143,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Ошибка проверки авторизации:', error);
       return false;
     }
-  }, [user]);
+  }, []);
 
   const value = useMemo(() => ({
     user,
@@ -185,6 +181,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   useEffect(() => {
     const verifyAuth = async () => {
       if (loading) return;
+      if (isLoggedIn) {
+        setChecking(false);
+        return;
+      }
 
       const authValid = await checkAuth();
 
@@ -196,7 +196,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     };
 
     verifyAuth();
-  }, [loading, checkAuth, navigate]);
+  }, [loading, isLoggedIn, checkAuth, navigate]);
 
 
   if (loading && checking) {

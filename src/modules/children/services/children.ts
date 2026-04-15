@@ -4,6 +4,10 @@ import { Child, ID } from '../../../shared/types/common';
 class ChildrenApiClient extends BaseCrudApiClient<Child> {
   protected endpoint = '/children';
 
+  async getBirthdaysView(): Promise<Child[]> {
+    return this.getAll({ view: 'birthdays' });
+  }
+
   /**
    * Генерация недостающих платежей для детей
    * @param date - опциональная дата для генерации за определенный месяц

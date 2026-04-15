@@ -159,15 +159,17 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = React.me
 
   const holidaysSet = useMemo(() => new Set(settings?.holidays || []), [settings]);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const fetchData = useCallback(async (retryCount = 0) => {
+    if (retryCount === 0) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const startOfMonth = moment(currentDate).startOf('month').toISOString();
       const endOfMonth = moment(currentDate).endOf('month').toISOString();
 
       const [childrenList, eventsList, settingsData] = await Promise.all([
-        childrenApi.getAll(),
+        childrenApi.getBirthdaysView(),
         calendarEventsApi.getAll({ startDate: startOfMonth, endDate: endOfMonth }),
         getKindergartenSettings()
       ]);
@@ -176,6 +178,10 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = React.me
       setCalendarEvents(eventsList);
       setSettings(settingsData);
     } catch (err: any) {
+      if (retryCount < 1 && (err?.response?.status === 500 || err?.message?.includes('500'))) {
+        setTimeout(() => fetchData(retryCount + 1), 2000);
+        return;
+      }
       setError(err.message || 'Ошибка загрузки данных');
       console.error('Error fetching calendar data:', err);
     } finally {

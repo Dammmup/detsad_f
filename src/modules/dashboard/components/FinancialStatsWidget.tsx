@@ -38,13 +38,18 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = React.memo(({
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
 
+  const userId = currentUser?.id;
+  const currentMonth = currentDate.getFullYear() * 12 + currentDate.getMonth();
 
   useEffect(() => {
-    const fetchFinancialStats = async () => {
-      if (!currentUser) return;
+    if (!userId) return;
 
-      setLoading(true);
-      setError(null);
+    let cancelled = false;
+    const fetchFinancialStats = async (retryCount = 0) => {
+      if (retryCount === 0) {
+        setLoading(true);
+        setError(null);
+      }
       try {
         const startDate = new Date(
           currentDate.getFullYear(),
@@ -57,7 +62,6 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = React.memo(({
           0,
         );
 
-        // Форматируем даты в локальном часовом поясе YYYY-MM-DD
         const formatDate = (date: Date) => {
           const year = date.getFullYear();
           const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -69,14 +73,19 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = React.memo(({
           params: {
             startDate: formatDate(startDate),
             endDate: formatDate(endDate),
-            userId: currentUser.id,
+            userId,
           },
         });
 
-        const statsData = response.data;
-
-        setStats(statsData);
+        if (!cancelled) {
+          setStats(response.data);
+        }
       } catch (err: any) {
+        if (cancelled) return;
+        if (retryCount < 1 && err?.response?.status === 500) {
+          setTimeout(() => { if (!cancelled) fetchFinancialStats(retryCount + 1); }, 2000);
+          return;
+        }
         let friendlyError = err.message;
         if (
           friendlyError &&
@@ -89,12 +98,13 @@ const FinancialStatsWidget: React.FC<FinancialStatsWidgetProps> = React.memo(({
         setError(friendlyError);
         console.error('Error fetching financial stats:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchFinancialStats();
-  }, [currentUser, currentDate]);
+    return () => { cancelled = true; };
+  }, [userId, currentMonth]);
 
   const chartData = useMemo(() => {
     if (!stats) return [];

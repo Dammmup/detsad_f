@@ -68,19 +68,24 @@ const StaffScheduleWidget: React.FC<StaffScheduleWidgetProps> = React.memo(() =>
           filters.staffId = currentUser.id;
         }
 
-        const shiftList = await shiftsApi.getAll(filters);
-
-
-        let attendanceRecords: any[] = [];
-        try {
-          const attendanceResponse = await staffAttendanceTrackingService.getAllRecords({
+        const attendanceRequest = staffAttendanceTrackingService.getAllRecords({
             startDate: todayStr,
             endDate: todayStr,
+          })
+          .catch((e) => {
+            console.warn('Could not load attendance records:', e);
+            return null;
           });
+
+        const [shiftList, attendanceResponse] = await Promise.all([
+          shiftsApi.getAll(filters),
+          attendanceRequest
+        ]);
+
+        let attendanceRecords: any[] = [];
+        if (attendanceResponse) {
           const rawRecords = attendanceResponse?.data || attendanceResponse || [];
           attendanceRecords = Array.isArray(rawRecords) ? rawRecords : (rawRecords?.items || rawRecords?.data || []);
-        } catch (e) {
-          console.warn('Could not load attendance records:', e);
         }
 
 
