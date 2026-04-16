@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -136,26 +136,24 @@ export const Documents = () => {
   const [filterRole, setFilterRole] = useState<string[]>([]);
   const [filterName, setFilterName] = useState<string>('');
 
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const documentsData = await getDocuments();
+      setDocuments(documentsData.items || documentsData);
+      setFilteredDocuments(documentsData.items || documentsData);
+      setError(null);
+    } catch (error) {
+      console.error('Ошибка загрузки данных:', error);
+      setError('Не удалось загрузить данные документов');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-
-
-        const documentsData = await getDocuments();
-        setDocuments(documentsData.items || documentsData);
-        setFilteredDocuments(documentsData.items || documentsData);
-      } catch (error) {
-        console.error('Ошибка загрузки данных:', error);
-        setError('Не удалось загрузить данные документов');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-  }, []);
+  }, [fetchData]);
 
 
   useEffect(() => {
@@ -367,8 +365,8 @@ export const Documents = () => {
         <Alert severity='error' sx={{ mb: 2 }}>
           {error}
         </Alert>
-        <Button variant='contained' onClick={() => window.location.reload()}>
-          Обновить страницу
+        <Button variant='contained' onClick={() => fetchData()}>
+          Обновить данные
         </Button>
       </Box>
     );

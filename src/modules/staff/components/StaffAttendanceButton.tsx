@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Button, 
   CircularProgress, 
@@ -91,46 +91,46 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
     fetchSettings();
   }, []);
 
-  useEffect(() => {
-    const fetchShiftStatus = async () => {
-      if (!currentUser || !currentUser.id) return;
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const shifts = await getStaffShifts({
-          staffId: currentUser.id,
-          startDate: today,
-          endDate: today,
-        });
-        const myShift = shifts.find((s) => {
-
-          if (
-            typeof s.staffId === 'object' &&
-            s.staffId !== null &&
-            '_id' in s.staffId
-          ) {
-            return (s.staffId as any)._id === currentUser.id;
-          }
-          return s.staffId === currentUser.id;
-        });
-        if (myShift) {
-          setStatus(
-            myShift.status as
-            | 'scheduled'
-            | 'in_progress'
-            | 'completed'
-            | 'late'
-            | 'pending_approval',
-          );
-        } else {
-          setStatus('no_record');
+  const fetchShiftStatus = useCallback(async () => {
+    if (!currentUser || !currentUser.id) return;
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const shifts = await getStaffShifts({
+        staffId: currentUser.id,
+        startDate: today,
+        endDate: today,
+      });
+      const myShift = shifts.find((s) => {
+        if (
+          typeof s.staffId === 'object' &&
+          s.staffId !== null &&
+          '_id' in s.staffId
+        ) {
+          return (s.staffId as any)._id === currentUser.id;
         }
-      } catch (error) {
-        console.error('Error fetching shift status:', error);
-        setStatus('error');
+        return s.staffId === currentUser.id;
+      });
+      if (myShift) {
+        setStatus(
+          myShift.status as
+          | 'scheduled'
+          | 'in_progress'
+          | 'completed'
+          | 'late'
+          | 'pending_approval',
+        );
+      } else {
+        setStatus('no_record');
       }
-    };
+    } catch (error) {
+      console.error('Error fetching shift status:', error);
+      setStatus('error');
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     fetchShiftStatus();
-  }, [currentUser, onStatusChange]);
+  }, [fetchShiftStatus, onStatusChange]);
 
   useEffect(() => {
     settingsService
@@ -600,7 +600,10 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 1 }}>
           <Button 
-            onClick={() => window.location.reload()} 
+            onClick={() => {
+              setGeoErrorOpen(false);
+              fetchShiftStatus();
+            }} 
             variant="contained" 
             fullWidth
             sx={{ 

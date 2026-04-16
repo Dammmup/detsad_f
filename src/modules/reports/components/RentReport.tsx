@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -106,104 +106,97 @@ const RentReport: React.FC<Props> = ({ userId }) => {
 
   const selectedMonthLabel = new Date(selectedMonth + '-01').toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
 
-  useEffect(() => {
-    let mounted = true;
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { getCurrentUser } = await import('../../staff/services/auth');
+      const { getRents } = await import('../services/reports');
 
-    const load = async () => {
-      setLoading(true);
-      setError(null);
+      let currentUserData = null;
       try {
-        const { getCurrentUser } = await import('../../staff/services/auth');
-        const { getRents } = await import('../services/reports');
-
-        let currentUserData = null;
-        try {
-          const userData = getCurrentUser();
-          if (userData) {
-            currentUserData = {
-              id: userData.id || userData._id,
-              role: userData.role || 'staff',
-            };
-            setCurrentUser(currentUserData);
-          }
-        } catch (userError) {
-          console.error('Ошибка получения данных пользователя:', userError);
+        const userData = getCurrentUser();
+        if (userData) {
+          currentUserData = {
+            id: userData.id || userData._id,
+            role: userData.role || 'staff',
+          };
+          setCurrentUser(currentUserData);
         }
-
-        const params: any = {
-          period: selectedMonth,
-        };
-
-        if (currentUserData && !['admin', 'manager'].includes(currentUserData.role)) {
-          params.userId = currentUserData.id;
-        } else if (userId) {
-          params.userId = userId;
-        }
-
-
-        const rentsData = await getRents(params);
-
-        if (!mounted) return;
-        const data = (rentsData?.data || rentsData || []) as any[];
-
-        const summaryData: Summary = {
-          totalTenants: data.length,
-          totalAmount: data.reduce((sum: number, p: any) => {
-            const amount = p.amount || p.accruals || 0;
-            return sum + (typeof amount === 'number' ? amount : 0);
-          }, 0),
-          totalReceivable: data.reduce((sum: number, p: any) => {
-            const amount = p.amount || p.accruals || 0;
-            const paid = p.paidAmount || 0;
-            const receivable = Math.max(0, (typeof amount === 'number' ? amount : 0) - (typeof paid === 'number' ? paid : 0));
-            return sum + receivable;
-          }, 0),
-          totalDebt: data.reduce((sum: number, p: any) => {
-            const amount = p.amount || p.accruals || 0;
-            const paid = p.paidAmount || 0;
-            const debt = p.debt !== undefined && p.debt !== 0 ? p.debt : ((typeof paid === 'number' && typeof amount === 'number' && paid < amount) ? amount - paid : 0);
-            return sum + debt;
-          }, 0),
-          totalOverpayment: data.reduce((sum: number, p: any) => {
-            const amount = p.amount || p.accruals || 0;
-            const paid = p.paidAmount || 0;
-            const overpayment = p.overpayment !== undefined && p.overpayment !== 0 ? p.overpayment : ((typeof paid === 'number' && typeof amount === 'number' && paid > amount) ? paid - amount : 0);
-            return sum + overpayment;
-          }, 0),
-        };
-        setSummary(summaryData);
-        setRows(
-          data.map((p: any) => {
-            const amount = typeof p.amount === 'number' ? p.amount : (typeof p.accruals === 'number' ? p.accruals : 0);
-            const paidAmount = Math.max(
-              0,
-              typeof p.paidAmount === 'number' ? p.paidAmount : (typeof p.accruals === 'number' && typeof p.total === 'number' ? p.accruals - p.total : 0)
-            );
-            return {
-              tenantName: p.tenantId?.fullName || p.tenantId?.name || 'Неизвестно',
-              amount,
-              paidAmount,
-              debt: p.debt !== undefined ? p.debt : ((typeof paidAmount === 'number' && typeof amount === 'number' && paidAmount < amount) ? amount - paidAmount : 0),
-              overpayment: p.overpayment !== undefined ? p.overpayment : ((typeof paidAmount === 'number' && typeof amount === 'number' && paidAmount > amount) ? paidAmount - amount : 0),
-              accruals: typeof p.accruals === 'number' ? p.accruals : (typeof p.amount === 'number' ? p.amount : 0),
-              status: p.status && p.status !== 'draft' ? p.status : 'active',
-              tenantId: p.tenantId?._id || p.tenantId?.id || p.tenantId || '',
-              _id: p._id || undefined,
-              paymentDate: p.paymentDate || undefined,
-            };
-          }),
-        );
-      } catch (e: any) {
-        if (mounted) setError(e?.message || 'Ошибка загрузки аренды');
-      } finally {
-        if (mounted) setLoading(false);
+      } catch (userError) {
+        console.error('Ошибка получения данных пользователя:', userError);
       }
-    };
-    load();
-    return () => {
-      mounted = false;
-    };
+
+      const params: any = {
+        period: selectedMonth,
+      };
+
+      if (currentUserData && !['admin', 'manager'].includes(currentUserData.role)) {
+        params.userId = currentUserData.id;
+      } else if (userId) {
+        params.userId = userId;
+      }
+
+      const rentsData = await getRents(params);
+      const data = (rentsData?.data || rentsData || []) as any[];
+
+      const summaryData: Summary = {
+        totalTenants: data.length,
+        totalAmount: data.reduce((sum: number, p: any) => {
+          const amount = p.amount || p.accruals || 0;
+          return sum + (typeof amount === 'number' ? amount : 0);
+        }, 0),
+        totalReceivable: data.reduce((sum: number, p: any) => {
+          const amount = p.amount || p.accruals || 0;
+          const paid = p.paidAmount || 0;
+          const receivable = Math.max(0, (typeof amount === 'number' ? amount : 0) - (typeof paid === 'number' ? paid : 0));
+          return sum + receivable;
+        }, 0),
+        totalDebt: data.reduce((sum: number, p: any) => {
+          const amount = p.amount || p.accruals || 0;
+          const paid = p.paidAmount || 0;
+          const debt = p.debt !== undefined && p.debt !== 0 ? p.debt : ((typeof paid === 'number' && typeof amount === 'number' && paid < amount) ? amount - paid : 0);
+          return sum + debt;
+        }, 0),
+        totalOverpayment: data.reduce((sum: number, p: any) => {
+          const amount = p.amount || p.accruals || 0;
+          const paid = p.paidAmount || 0;
+          const overpayment = p.overpayment !== undefined && p.overpayment !== 0 ? p.overpayment : ((typeof paid === 'number' && typeof amount === 'number' && paid > amount) ? paid - amount : 0);
+          return sum + overpayment;
+        }, 0),
+      };
+      setSummary(summaryData);
+      setRows(
+        data.map((p: any) => {
+          const amount = typeof p.amount === 'number' ? p.amount : (typeof p.accruals === 'number' ? p.accruals : 0);
+          const paidAmount = Math.max(
+            0,
+            typeof p.paidAmount === 'number' ? p.paidAmount : (typeof p.accruals === 'number' && typeof p.total === 'number' ? p.accruals - p.total : 0)
+          );
+          return {
+            tenantName: p.tenantId?.fullName || p.tenantId?.name || 'Неизвестно',
+            amount,
+            paidAmount,
+            debt: p.debt !== undefined ? p.debt : ((typeof paidAmount === 'number' && typeof amount === 'number' && paidAmount < amount) ? amount - paidAmount : 0),
+            overpayment: p.overpayment !== undefined ? p.overpayment : ((typeof paidAmount === 'number' && typeof amount === 'number' && paidAmount > amount) ? paidAmount - amount : 0),
+            accruals: typeof p.accruals === 'number' ? p.accruals : (typeof p.amount === 'number' ? p.amount : 0),
+            status: p.status && p.status !== 'draft' ? p.status : 'active',
+            tenantId: p.tenantId?._id || p.tenantId?.id || p.tenantId || '',
+            _id: p._id || undefined,
+            paymentDate: p.paymentDate || undefined,
+          };
+        }),
+      );
+    } catch (e: any) {
+      setError(e?.message || 'Ошибка загрузки аренды');
+    } finally {
+      setLoading(false);
+    }
   }, [userId, selectedMonth]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleEditClick = (row: RentRow) => {
     setEditingId(row.tenantId);
@@ -504,7 +497,7 @@ const RentReport: React.FC<Props> = ({ userId }) => {
       });
       setSnackbarMessage('Арендные листы успешно сгенерированы');
       setSnackbarOpen(true);
-      window.location.reload();
+      await fetchData();
     } catch (error: any) {
       console.error('Error generating rent sheets:', error);
       setSnackbarMessage(error?.message || 'Ошибка генерации арендных листов');
@@ -608,7 +601,6 @@ const RentReport: React.FC<Props> = ({ userId }) => {
             onSuccess={(specialist) => {
               setSnackbarMessage(`Специалист ${specialist.name} добавлен`);
               setSnackbarOpen(true);
-              // Можно добавить обновление списка если это необходимо, но список арендаторов обновляется в селекторе
             }}
           />
 
@@ -735,41 +727,58 @@ const RentReport: React.FC<Props> = ({ userId }) => {
                             />
                           )}
                         </TableCell>
-                      <TableCell>
-                        {editingId === r.tenantId ? (
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton color='success' onClick={() => handleSaveClick(r.tenantId)}>
-                              <SaveIcon />
-                            </IconButton>
-                            <IconButton onClick={handleCancelClick}>
-                              <CancelIcon />
-                            </IconButton>
-                          </Box>
-                        ) : (
-                          <Box sx={{ display: 'flex' }}>
-                            {isAdmin ? (
-                              <>
-                                <IconButton color='primary' onClick={() => handleEditClick(r)}>
-                                  <EditIcon />
-                                </IconButton>
-                                <Tooltip title="Мгновенная оплата">
-                                  <IconButton 
-                                    color='success' 
-                                    onClick={() => handleInstantPayment(r)}
-                                    disabled={r.paidAmount >= r.amount}
-                                  >
-                                    <PaymentsIcon />
+                        <TableCell>
+                          {editingId === r.tenantId ? (
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <IconButton color='success' onClick={() => handleSaveClick(r.tenantId)}>
+                                <SaveIcon />
+                              </IconButton>
+                              <IconButton onClick={handleCancelClick}>
+                                <CancelIcon />
+                              </IconButton>
+                            </Box>
+                          ) : (
+                            <Box sx={{ display: 'flex' }}>
+                              {isAdmin ? (
+                                <>
+                                  <IconButton color='primary' onClick={() => handleEditClick(r)}>
+                                    <EditIcon />
                                   </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Сбросить оплату">
-                                  <IconButton 
-                                    color='warning' 
-                                    onClick={() => handleResetPayment(r)}
-                                    disabled={r.paidAmount <= 0 && r.status !== 'paid'}
-                                  >
-                                    <ResetIcon />
+                                  <Tooltip title="Мгновенная оплата">
+                                    <IconButton 
+                                      color='success' 
+                                      onClick={() => handleInstantPayment(r)}
+                                      disabled={r.paidAmount >= r.amount}
+                                    >
+                                      <PaymentsIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Сбросить оплату">
+                                    <IconButton 
+                                      color='warning' 
+                                      onClick={() => handleResetPayment(r)}
+                                      disabled={r.paidAmount <= 0 && r.status !== 'paid'}
+                                    >
+                                      <ResetIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Просмотр квитанции">
+                                    <IconButton onClick={() => {
+                                      setSelectedReceiptData({
+                                        ...r,
+                                        period: selectedMonthLabel,
+                                        id: r._id || r.tenantId
+                                      });
+                                      setReceiptDialogOpen(true);
+                                    }}>
+                                      <VisibilityIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <IconButton color='error' onClick={() => handleDeleteClick(r)}>
+                                    <CloseIcon />
                                   </IconButton>
-                                </Tooltip>
+                                </>
+                              ) : (
                                 <Tooltip title="Просмотр квитанции">
                                   <IconButton onClick={() => {
                                     setSelectedReceiptData({
@@ -782,43 +791,26 @@ const RentReport: React.FC<Props> = ({ userId }) => {
                                     <VisibilityIcon />
                                   </IconButton>
                                 </Tooltip>
-                                <IconButton color='error' onClick={() => handleDeleteClick(r)}>
-                                  <CloseIcon />
-                                </IconButton>
-                              </>
-                            ) : (
-                              <Tooltip title="Просмотр квитанции">
-                                <IconButton onClick={() => {
-                                  setSelectedReceiptData({
-                                    ...r,
-                                    period: selectedMonthLabel,
-                                    id: r._id || r.tenantId
-                                  });
-                                  setReceiptDialogOpen(true);
-                                }}>
-                                  <VisibilityIcon />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                          </Box>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Box>
-          </CardContent>
-        </Card>
+                              )}
+                            </Box>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
       </Box>
-    </Box>
 
-    <RentReceiptDialog
-      open={receiptDialogOpen}
-      onClose={() => setReceiptDialogOpen(false)}
-      data={selectedReceiptData}
-    />
-  </>
+      <RentReceiptDialog
+        open={receiptDialogOpen}
+        onClose={() => setReceiptDialogOpen(false)}
+        data={selectedReceiptData}
+      />
+    </>
   );
 };
 
