@@ -67,6 +67,7 @@ import FinesDetailsDialog from './FinesDetailsDialog';
 import PayrollTotalDialog from './PayrollTotalDialog';
 import { exportData } from '../../../shared/utils/exportUtils';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
+import DateNavigator from '../../../shared/components/DateNavigator';
 
 interface Props {
   userId?: string;
@@ -907,7 +908,10 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
               <Typography variant={isMobile ? 'h5' : 'h3'} sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>Расчетные листы</Typography>
               <Typography variant={isMobile ? 'body2' : 'h6'} sx={{ color: 'text.secondary', fontWeight: 'medium' }}>Управление зарплатами за {selectedMonthLabel}</Typography>
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
-                <AuditLogButton entityType="payroll" />
+                <DateNavigator viewType="month" />
+                <Box sx={{ ml: 2 }}>
+                  <AuditLogButton entityType="payroll" />
+                </Box>
               </Box>
             </Box>
 
