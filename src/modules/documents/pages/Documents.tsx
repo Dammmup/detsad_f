@@ -50,7 +50,7 @@ import PdfIcon from '@mui/icons-material/PictureAsPdf';
 import ExcelIcon from '@mui/icons-material/TableChart';
 import FileIcon from '@mui/icons-material/InsertDriveFile';
 
-import moment from 'moment/min/moment-with-locales'; ';
+import moment from 'moment/min/moment-with-locales';
 import { Document as DocumentType } from '../../../shared/types/documents';
 import { getStatusColor } from '../../../shared/utils/format';
 import {

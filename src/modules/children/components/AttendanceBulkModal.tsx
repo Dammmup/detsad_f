@@ -23,7 +23,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 
-import moment from 'moment/min/moment-with-locales'; ';
+import moment from 'moment/min/moment-with-locales';
 import childrenApi, { Child } from '../services/children';
 import { bulkSaveChildAttendance } from '../services/childAttendance';
 

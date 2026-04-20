@@ -12,8 +12,7 @@ import {
   Typography,
 } from '@mui/material';
 import { CalendarEvent, CalendarEventType, CalendarEventCreate } from '../../../shared/types/calendar';
-
-
+import moment from 'moment/min/moment-with-locales';
 interface EventDialogProps {
   open: boolean;
   onClose: () => void;

@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Event as EventIcon } from '@mui/icons-material';
 
-import moment from 'moment/min/moment-with-locales'; ';
+import moment from 'moment/min/moment-with-locales';
 import { useDate } from '../../../app/context/DateContext';
 import { useAuth } from '../../../app/context/AuthContext';
 import { Child } from '../../../shared/types/common';
