@@ -251,7 +251,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
 
 
 
-        const allowedStartRange = shiftStartInMinutes - 30;
+        const allowedStartRange = shiftStartInMinutes - 120;
         const allowedEndRange = shiftEndInMinutes + 30;
 
         if (
@@ -264,7 +264,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
             const hours = Math.floor(minutesUntilStart / 60);
             const minutes = minutesUntilStart % 60;
             setSnackbarMessage(
-              `Отметка прихода возможна за 30 минут до начала смены. Смена начинается в ${startStr}, можно отмечаться с ${String(Math.floor(allowedStartRange / 60)).padStart(2, '0')}:${String(allowedStartRange % 60).padStart(2, '0')}. Осталось ${hours}ч ${minutes}м.`,
+              `Отметка прихода возможна за 2 часа до начала смены. Смена начинается в ${startStr}, можно отмечаться с ${String(Math.floor(allowedStartRange / 60)).padStart(2, '0')}:${String(allowedStartRange % 60).padStart(2, '0')}. Осталось ${hours}ч ${minutes}м.`,
             );
           } else {
             const minutesAfterEnd = currentTimeInMinutes - allowedEndRange;
@@ -407,7 +407,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
 
 
 
-        const allowedStartRange = shiftStartInMinutes - 30;
+        const allowedStartRange = shiftStartInMinutes - 120;
         const allowedEndRange = shiftEndInMinutes + 30;
 
         if (

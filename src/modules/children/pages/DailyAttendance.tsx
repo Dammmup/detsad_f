@@ -123,7 +123,11 @@ const DailyAttendance: React.FC = () => {
             const childGroupId = typeof groupRef === 'object' && groupRef !== null
                 ? String((groupRef as any)._id || (groupRef as any).id || '')
                 : String(groupRef || '');
-            return childGroupId === String(selectedGroupId);
+            
+            // Фильтруем служебные записи типа "Итого детей"
+            const isSummaryRecord = child.fullName?.startsWith('Итого');
+            
+            return childGroupId === String(selectedGroupId) && !isSummaryRecord;
         });
     }, [allChildren, selectedGroupId]);
 
