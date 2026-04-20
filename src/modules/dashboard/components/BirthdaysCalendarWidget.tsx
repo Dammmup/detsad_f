@@ -13,8 +13,8 @@ import {
   IconButton,
 } from '@mui/material';
 import { Add as AddIcon, Event as EventIcon } from '@mui/icons-material';
-import moment from 'moment';
-import 'moment/locale/ru';
+
+import moment from 'moment/min/moment-with-locales'; ';
 import { useDate } from '../../../app/context/DateContext';
 import { useAuth } from '../../../app/context/AuthContext';
 import { Child } from '../../../shared/types/common';
@@ -218,15 +218,15 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = React.me
       // Проверка на выходной/праздник
       // 0 - Пн, 1 - Вт... 5 - Сб, 6 - Вс в ISO. Moment.js: 1 - Пн... 7 - Вс (isoWeekday)
       const dayOfWeek = currentDayMoment.isoWeekday().toString(); // "1" - "7"
-      
+
       // Если настройки еще не загружены или список рабочих дней пуст, используем стандарт Пн-Пт (1-5)
       const isWeekend = !workingDaysSet.has(dayOfWeek);
-      
+
       const isHolidayInSettings = holidaysSet.has(dayStr);
       const isManualHoliday = dayEvents.some(e => e.type === 'holiday');
 
-      return { 
-        day: dayDate, 
+      return {
+        day: dayDate,
         children: childrenWithBirthday,
         events: dayEvents,
         isNonWorkingDay: isWeekend || isHolidayInSettings || isManualHoliday
@@ -238,7 +238,7 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = React.me
 
   const handleDayClick = (dayDate: Date, existingEvent?: CalendarEvent) => {
     if (!canManageEvents) return;
-    
+
     if (existingEvent) {
       setSelectedEvent(existingEvent);
       setSelectedDate(null);
@@ -375,7 +375,7 @@ const BirthdaysCalendarWidget: React.FC<BirthdaysCalendarWidgetProps> = React.me
                           >
                             {moment(day).format('D')}
                           </Typography>
-                          
+
                           {canManageEvents && !dayEvents.length && (
                             <AddIcon sx={{ fontSize: 14, opacity: 0, '.MuiPaper-root:hover &': { opacity: 0.5 } }} />
                           )}

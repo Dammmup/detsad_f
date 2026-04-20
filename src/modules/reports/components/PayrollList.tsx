@@ -1,6 +1,5 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import moment from 'moment';
-import 'moment/locale/ru';
+﻿import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import moment from 'moment/min/moment-with-locales';
 import { useDate } from '../../../app/context/DateContext';
 import {
   Box,
@@ -718,7 +717,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             return (
               <Box sx={{ p: 4, textAlign: 'center', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#f5f7fa' }}>
                 <Typography variant="h6" color="textSecondary" sx={{ mb: 2 }}>Нет данных о зарплате за этот период</Typography>
-                
+
               </Box>
             );
           }
@@ -734,7 +733,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
               overflowY: 'auto'
             }}>
               <Box sx={{ mb: 4, width: '100%', maxWidth: 400 }}>
-                
+
               </Box>
 
               <Box sx={{
@@ -901,18 +900,19 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             </Box>
           );
         })()
-      ) : (
+      ) : (<>
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+          <DateNavigator viewType="month" />
+
+        </Box>
         <Box sx={{ minHeight: '100vh', background: '#f5f7fa', p: { xs: 1, sm: 2, md: 3 }, width: '100%' }}>
+
           <Box sx={{ maxWidth: '1400px', mx: 'auto', display: 'flex', flexDirection: 'column', gap: { xs: 2, md: 3 } }}>
+
             <Box sx={{ textAlign: 'center', mb: { xs: 2, md: 3 } }}>
               <Typography variant={isMobile ? 'h5' : 'h3'} sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>Расчетные листы</Typography>
               <Typography variant={isMobile ? 'body2' : 'h6'} sx={{ color: 'text.secondary', fontWeight: 'medium' }}>Управление зарплатами за {selectedMonthLabel}</Typography>
-              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
-                <DateNavigator viewType="month" />
-                <Box sx={{ ml: 2 }}>
-                  <AuditLogButton entityType="payroll" />
-                </Box>
-              </Box>
+
             </Box>
 
             {!personalOnly && (
@@ -940,6 +940,9 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
 
                 {user?.id && canManagePayroll && (
                   <Box sx={{ display: 'flex', gap: { xs: 1, md: 2 }, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <Box sx={{ ml: 2 }}>
+                      <AuditLogButton entityType="payroll" />
+                    </Box>
                     {isAdmin && (
                       <Tooltip title="Сгенерировать расчетные листы за выбранный период">
                         <Button variant='contained' startIcon={<EditIcon />} onClick={handleOpenConfirmDialog} disabled={generating} size={isMobile ? 'small' : 'medium'}>Сгенерировать</Button>
@@ -961,6 +964,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                         <Button variant='outlined' onClick={handleOpenRateDialog} size={isMobile ? 'small' : 'medium'}>Ставка: {globalPenaltyRate} ₸</Button>
                       </Tooltip>
                     )}
+
                     <Tooltip title="Экспортировать данные в формате XLSX">
                       <Button variant='contained' color='success' startIcon={<VisibilityIcon />} onClick={handleExportToExcel} size={isMobile ? 'small' : 'medium'}>Экспорт XLSX</Button>
                     </Tooltip>
@@ -1172,13 +1176,13 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                                 </TableCell>
                                 <TableCell>
                                   {editingId === r.staffId ? (
-                                    <TextField 
-                                      type='number' 
-                                      size='small' 
-                                      value={editData.bonuses === 0 ? '' : (editData.bonuses ?? r.bonuses)} 
-                                      onChange={(e) => handleInputChange('bonuses', e.target.value === '' ? 0 : Number(e.target.value))} 
-                                      sx={{ width: '100px' }} 
-                                      inputProps={{ style: { textAlign: 'right' }, min: 0 }} 
+                                    <TextField
+                                      type='number'
+                                      size='small'
+                                      value={editData.bonuses === 0 ? '' : (editData.bonuses ?? r.bonuses)}
+                                      onChange={(e) => handleInputChange('bonuses', e.target.value === '' ? 0 : Number(e.target.value))}
+                                      sx={{ width: '100px' }}
+                                      inputProps={{ style: { textAlign: 'right' }, min: 0 }}
                                     />
                                   ) : (
                                     <Typography variant='body2' color='success.main'>+{r.bonuses?.toLocaleString() || '0'}</Typography>
@@ -1186,13 +1190,13 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                                 </TableCell>
                                 <TableCell>
                                   {editingId === r.staffId ? (
-                                    <TextField 
-                                      type='number' 
-                                      size='small' 
-                                      value={editData.advance === 0 ? '' : (editData.advance ?? r.advance)} 
-                                      onChange={(e) => handleInputChange('advance', e.target.value === '' ? 0 : Number(e.target.value))} 
-                                      sx={{ width: '100px' }} 
-                                      inputProps={{ style: { textAlign: 'right' }, min: 0 }} 
+                                    <TextField
+                                      type='number'
+                                      size='small'
+                                      value={editData.advance === 0 ? '' : (editData.advance ?? r.advance)}
+                                      onChange={(e) => handleInputChange('advance', e.target.value === '' ? 0 : Number(e.target.value))}
+                                      sx={{ width: '100px' }}
+                                      inputProps={{ style: { textAlign: 'right' }, min: 0 }}
                                     />
                                   ) : (
                                     <Typography variant='body2' sx={{ color: '#e65100' }}>-{r.advance?.toLocaleString() || '0'}</Typography>
@@ -1200,13 +1204,13 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                                 </TableCell>
                                 <TableCell>
                                   {editingId === r.staffId ? (
-                                    <TextField 
-                                      type='number' 
-                                      size='small' 
-                                      value={editData.penalties === 0 ? '' : (editData.penalties ?? r.penalties)} 
-                                      onChange={(e) => handleInputChange('penalties', e.target.value === '' ? 0 : Number(e.target.value))} 
-                                      sx={{ width: '100px' }} 
-                                      inputProps={{ style: { textAlign: 'right' }, min: 0 }} 
+                                    <TextField
+                                      type='number'
+                                      size='small'
+                                      value={editData.penalties === 0 ? '' : (editData.penalties ?? r.penalties)}
+                                      onChange={(e) => handleInputChange('penalties', e.target.value === '' ? 0 : Number(e.target.value))}
+                                      sx={{ width: '100px' }}
+                                      inputProps={{ style: { textAlign: 'right' }, min: 0 }}
                                     />
                                   ) : (
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
@@ -1398,6 +1402,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             </Dialog>
           </Box>
         </Box>
+      </>
       )
       }
     </>

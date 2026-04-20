@@ -21,7 +21,7 @@ import { useAuth } from '../../../app/context/AuthContext';
 import { useChildren } from '../../../app/context/ChildrenContext';
 import { useGroups } from '../../../app/context/GroupsContext';
 import childPaymentApi from '../services/childPayment';
-import moment from 'moment';
+import moment from 'moment/min/moment-with-locales';
 import { getErrorMessage } from '../../../shared/utils/errorUtils';
 import FormErrorAlert from '../../../shared/components/FormErrorAlert';
 import { compressImage } from '../../../shared/utils/imageUtils';
@@ -148,15 +148,15 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
 
       if (child && child.id) {
         await updateChild(child.id, childData);
-        
+
         // Синхронизация с платежами за текущий месяц
         try {
           const currentMonth = moment().format('YYYY-MM');
-          const payments = await childPaymentApi.getAll({ 
+          const payments = await childPaymentApi.getAll({
             childId: child.id,
-            monthPeriod: currentMonth 
+            monthPeriod: currentMonth
           });
-          
+
           const activePayment = payments.find(p => p.status !== 'paid');
           if (activePayment && activePayment.amount !== childData.paymentAmount) {
             await childPaymentApi.update(activePayment._id, {
@@ -278,29 +278,29 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
 
         {canViewSensitiveChildren && (
           <>
-        <TextField
-          margin='dense'
-          name='parentPhone'
-          label='Телефон родителя'
-          value={form.parentPhone}
-          onChange={handleChange}
-          disabled={!canManageChildren}
-          fullWidth
-          sx={{ mb: 2 }}
-          variant='outlined'
-        />
+            <TextField
+              margin='dense'
+              name='parentPhone'
+              label='Телефон родителя'
+              value={form.parentPhone}
+              onChange={handleChange}
+              disabled={!canManageChildren}
+              fullWidth
+              sx={{ mb: 2 }}
+              variant='outlined'
+            />
 
-        <TextField
-          margin='dense'
-          name='iin'
-          label='ИИН'
-          value={form.iin}
-          onChange={handleChange}
-          disabled={!canManageChildren}
-          fullWidth
-          sx={{ mb: 2 }}
-          variant='outlined'
-        />
+            <TextField
+              margin='dense'
+              name='iin'
+              label='ИИН'
+              value={form.iin}
+              onChange={handleChange}
+              disabled={!canManageChildren}
+              fullWidth
+              sx={{ mb: 2 }}
+              variant='outlined'
+            />
           </>
         )}
 
@@ -341,17 +341,17 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
         </FormControl>
 
         {canViewSensitiveChildren && (
-        <TextField
-          margin='dense'
-          name='parentName'
-          label='ФИО родителя'
-          value={form.parentName}
-          onChange={handleChange}
-          disabled={!canManageChildren}
-          fullWidth
-          sx={{ mb: 2 }}
-          variant='outlined'
-        />
+          <TextField
+            margin='dense'
+            name='parentName'
+            label='ФИО родителя'
+            value={form.parentName}
+            onChange={handleChange}
+            disabled={!canManageChildren}
+            fullWidth
+            sx={{ mb: 2 }}
+            variant='outlined'
+          />
         )}
 
         {canManagePayments && canViewSensitiveChildren && (

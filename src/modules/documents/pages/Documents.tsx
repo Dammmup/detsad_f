@@ -49,8 +49,8 @@ import { formatFileSize } from '../../../shared/utils/format';
 import PdfIcon from '@mui/icons-material/PictureAsPdf';
 import ExcelIcon from '@mui/icons-material/TableChart';
 import FileIcon from '@mui/icons-material/InsertDriveFile';
-import moment from 'moment';
-import 'moment/locale/ru';
+
+import moment from 'moment/min/moment-with-locales'; ';
 import { Document as DocumentType } from '../../../shared/types/documents';
 import { getStatusColor } from '../../../shared/utils/format';
 import {
@@ -478,10 +478,10 @@ export const Documents = () => {
                 renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {selected.length === 0 ? 'Все должности' : selected.map((value) => (
-                      <Chip 
-                        key={value} 
-                        label={value} 
-                        size='small' 
+                      <Chip
+                        key={value}
+                        label={value}
+                        size='small'
                         onDelete={() => setFilterRole(filterRole.filter(v => v !== value))}
                         onMouseDown={(e) => e.stopPropagation()}
                       />

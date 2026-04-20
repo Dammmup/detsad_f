@@ -20,7 +20,8 @@ import {
   FormControlLabel,
   CircularProgress,
 } from '@mui/material';
-import moment from 'moment'; // Import moment
+// Import moment
+import moment from 'moment/min/moment-with-locales';
 import { getUsers } from '../../staff/services/userService';
 import childrenApi from '../../children/services/children';
 import { User, Child } from '../../../shared/types/common';
@@ -70,7 +71,7 @@ export default function SomaticJournal() {
   const [toDate, setToDate] = useState('');
   const [onlyCurrentYear, setOnlyCurrentYear] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [error, setError] = useState<string|null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [newRecord, setNewRecord] = useState<Partial<SomaticRecord>>({});
 
   useEffect(() => {
@@ -277,221 +278,221 @@ export default function SomaticJournal() {
   return (
     !canViewMedical ? (
       <Box sx={{ p: { xs: 1, md: 3 } }}>
-        <FormErrorAlert error={'Доступ к журналам медкабинета ограничен для вашей роли.'} onClose={() => {}} />
+        <FormErrorAlert error={'Доступ к журналам медкабинета ограничен для вашей роли.'} onClose={() => { }} />
       </Box>
     ) : (
-    <Box sx={{ p: { xs: 1, md: 3 } }}>
-      <Button 
-        startIcon={<ArrowBackIcon />} 
-        onClick={() => navigate('/app/med')}
-        variant="outlined"
-        sx={{ mb: 2 }}
-      >
-        Назад к журналам
-      </Button>
-      <Typography variant='h5' gutterBottom>
-        Журнал соматической заболеваемости
-      </Typography>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
-        {canViewMedical && (
-          <>
-            <Button variant='contained' onClick={() => setModalOpen(true)}>
-              Новая запись
-            </Button>
-            <Button variant='outlined' onClick={handleExport}>
-              Экспорт
-            </Button>
-          </>
-        )}
-        <TextField
-          label='Поиск по ФИО'
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          size='small'
-          sx={{ minWidth: 200 }}
-        />
-        <TextField
-          label='Диагноз'
-          value={diagnosisFilter}
-          onChange={(e) => setDiagnosisFilter(e.target.value)}
-          size='small'
-          sx={{ minWidth: 180 }}
-        />
-        <TextField
-          label='С какого числа'
-          type='date'
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          size='small'
-          sx={{ minWidth: 160 }}
-          InputLabelProps={{ shrink: true }}
-        />
-        <TextField
-          label='По какое число'
-          type='date'
-          value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-          size='small'
-          sx={{ minWidth: 160 }}
-          InputLabelProps={{ shrink: true }}
-        />
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={onlyCurrentYear}
-              onChange={(e) => setOnlyCurrentYear(e.target.checked)}
-            />
-          }
-          label='Только текущий год'
-        />
-        <Button onClick={handleClearFilters}>Очистить фильтры</Button>
-      </Stack>
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography>Всего записей: {stats.total}</Typography>
-        <Typography>Всего дней: {stats.totalDays}</Typography>
-      </Paper>
-      <Table size='small' sx={{ minWidth: 900, overflowX: 'auto' }}>
-        <TableHead>
-          <TableRow>
-            <TableCell>№</TableCell>
-            <TableCell>ФИО</TableCell>
-            <TableCell>Дата рождения</TableCell>
-            <TableCell>Адрес</TableCell>
-            <TableCell>Диагноз</TableCell>
-            <TableCell>С даты</TableCell>
-            <TableCell>По дату</TableCell>
-            <TableCell>Всего дней</TableCell>
-            <TableCell>Примечания</TableCell>
-            <TableCell>Действия</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {filteredRecords.map((r, idx) => {
-            // Get child info from populated childId or use legacy fields
-            const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
-            const fio = r.fio || childInfo?.fullName || '';
-            const birthdate = formatDate(r.birthdate || childInfo?.birthday); // Formatted for display
-            // Format dates
-            const dateStr = formatDate(r.date); // Formatted for display
-            const fromDateStr = formatDate(r.fromDate) || dateStr; // Formatted for display
-            const toDateStr = formatDate(r.toDate) || dateStr; // Formatted for display
-            const address = r.address || childInfo?.address || '';
-
-            return (
-              <TableRow key={r.id || r._id}>
-                <TableCell>{idx + 1}</TableCell>
-                <TableCell>{fio}</TableCell>
-                <TableCell>{birthdate}</TableCell>
-                <TableCell>{address}</TableCell>
-                <TableCell>{r.diagnosis}</TableCell>
-                <TableCell>{fromDateStr}</TableCell>
-                <TableCell>{toDateStr}</TableCell>
-                <TableCell>{r.days || ''}</TableCell>
-                <TableCell>{r.notes}</TableCell>
-                <TableCell>
-                  {canManageMedical && (
-                    <Button
-                      color='error'
-                      size='small'
-                      onClick={() => handleDelete(r.id || r._id as any)}
-                    >
-                      Удалить
-                    </Button>
-                  )}
-                  {/* Для редактирования можно добавить отдельную кнопку/диалог */}
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-      <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
-        <DialogTitle>Новая запись</DialogTitle>
-        <DialogContent>
-          <FormErrorAlert error={error} onClose={() => setError(null)} />
+      <Box sx={{ p: { xs: 1, md: 3 } }}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/app/med')}
+          variant="outlined"
+          sx={{ mb: 2 }}
+        >
+          Назад к журналам
+        </Button>
+        <Typography variant='h5' gutterBottom>
+          Журнал соматической заболеваемости
+        </Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
+          {canViewMedical && (
+            <>
+              <Button variant='contained' onClick={() => setModalOpen(true)}>
+                Новая запись
+              </Button>
+              <Button variant='outlined' onClick={handleExport}>
+                Экспорт
+              </Button>
+            </>
+          )}
           <TextField
-            select
-            label='Ребенок'
-            value={newRecord.childId || ''}
-            onChange={(e) => handleChildSelect(e.target.value)}
-            fullWidth
-            margin='dense'
-          >
-            <MenuItem value=''>—</MenuItem>
-            {children.map((child) => (
-              <MenuItem
-                key={child.id || child._id}
-                value={child.id || child._id}
-              >
-                {child.fullName}
-              </MenuItem>
-            ))}
-          </TextField>
+            label='Поиск по ФИО'
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            size='small'
+            sx={{ minWidth: 200 }}
+          />
           <TextField
             label='Диагноз'
-            value={newRecord.diagnosis || ''}
-            onChange={(e) =>
-              setNewRecord((r) => ({ ...r, diagnosis: e.target.value }))
-            }
-            fullWidth
-            margin='dense'
+            value={diagnosisFilter}
+            onChange={(e) => setDiagnosisFilter(e.target.value)}
+            size='small'
+            sx={{ minWidth: 180 }}
           />
           <TextField
-            label='Лечение'
-            value={newRecord.treatment || ''}
-            onChange={(e) =>
-              setNewRecord((r) => ({ ...r, treatment: e.target.value }))
-            }
-            fullWidth
-            margin='dense'
-            multiline
-            rows={2}
-          />
-          <TextField
-            label='С даты'
+            label='С какого числа'
             type='date'
-            value={newRecord.fromDate || ''}
-            onChange={(e) =>
-              setNewRecord((r) => ({ ...r, fromDate: e.target.value }))
-            }
-            fullWidth
-            margin='dense'
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            size='small'
+            sx={{ minWidth: 160 }}
             InputLabelProps={{ shrink: true }}
           />
           <TextField
-            label='По дату'
+            label='По какое число'
             type='date'
-            value={newRecord.toDate || ''}
-            onChange={(e) =>
-              setNewRecord((r) => ({ ...r, toDate: e.target.value }))
-            }
-            fullWidth
-            margin='dense'
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            size='small'
+            sx={{ minWidth: 160 }}
             InputLabelProps={{ shrink: true }}
           />
-          <TextField
-            label='Примечания'
-            value={newRecord.notes || ''}
-            onChange={(e) =>
-              setNewRecord((r) => ({ ...r, notes: e.target.value }))
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={onlyCurrentYear}
+                onChange={(e) => setOnlyCurrentYear(e.target.checked)}
+              />
             }
-            fullWidth
-            margin='dense'
+            label='Только текущий год'
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setModalOpen(false)}>Отмена</Button>
-          {canViewMedical && (
-            <Button onClick={handleAdd} variant='contained'>
-              Сохранить
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
-      {loading && (
-        <CircularProgress sx={{ position: 'fixed', top: '50%', left: '50%' }} />
-      )}
-    </Box>
+          <Button onClick={handleClearFilters}>Очистить фильтры</Button>
+        </Stack>
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography>Всего записей: {stats.total}</Typography>
+          <Typography>Всего дней: {stats.totalDays}</Typography>
+        </Paper>
+        <Table size='small' sx={{ minWidth: 900, overflowX: 'auto' }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>№</TableCell>
+              <TableCell>ФИО</TableCell>
+              <TableCell>Дата рождения</TableCell>
+              <TableCell>Адрес</TableCell>
+              <TableCell>Диагноз</TableCell>
+              <TableCell>С даты</TableCell>
+              <TableCell>По дату</TableCell>
+              <TableCell>Всего дней</TableCell>
+              <TableCell>Примечания</TableCell>
+              <TableCell>Действия</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredRecords.map((r, idx) => {
+              // Get child info from populated childId or use legacy fields
+              const childInfo = r.childId && typeof r.childId === 'object' ? r.childId as any : null;
+              const fio = r.fio || childInfo?.fullName || '';
+              const birthdate = formatDate(r.birthdate || childInfo?.birthday); // Formatted for display
+              // Format dates
+              const dateStr = formatDate(r.date); // Formatted for display
+              const fromDateStr = formatDate(r.fromDate) || dateStr; // Formatted for display
+              const toDateStr = formatDate(r.toDate) || dateStr; // Formatted for display
+              const address = r.address || childInfo?.address || '';
+
+              return (
+                <TableRow key={r.id || r._id}>
+                  <TableCell>{idx + 1}</TableCell>
+                  <TableCell>{fio}</TableCell>
+                  <TableCell>{birthdate}</TableCell>
+                  <TableCell>{address}</TableCell>
+                  <TableCell>{r.diagnosis}</TableCell>
+                  <TableCell>{fromDateStr}</TableCell>
+                  <TableCell>{toDateStr}</TableCell>
+                  <TableCell>{r.days || ''}</TableCell>
+                  <TableCell>{r.notes}</TableCell>
+                  <TableCell>
+                    {canManageMedical && (
+                      <Button
+                        color='error'
+                        size='small'
+                        onClick={() => handleDelete(r.id || r._id as any)}
+                      >
+                        Удалить
+                      </Button>
+                    )}
+                    {/* Для редактирования можно добавить отдельную кнопку/диалог */}
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+        <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
+          <DialogTitle>Новая запись</DialogTitle>
+          <DialogContent>
+            <FormErrorAlert error={error} onClose={() => setError(null)} />
+            <TextField
+              select
+              label='Ребенок'
+              value={newRecord.childId || ''}
+              onChange={(e) => handleChildSelect(e.target.value)}
+              fullWidth
+              margin='dense'
+            >
+              <MenuItem value=''>—</MenuItem>
+              {children.map((child) => (
+                <MenuItem
+                  key={child.id || child._id}
+                  value={child.id || child._id}
+                >
+                  {child.fullName}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label='Диагноз'
+              value={newRecord.diagnosis || ''}
+              onChange={(e) =>
+                setNewRecord((r) => ({ ...r, diagnosis: e.target.value }))
+              }
+              fullWidth
+              margin='dense'
+            />
+            <TextField
+              label='Лечение'
+              value={newRecord.treatment || ''}
+              onChange={(e) =>
+                setNewRecord((r) => ({ ...r, treatment: e.target.value }))
+              }
+              fullWidth
+              margin='dense'
+              multiline
+              rows={2}
+            />
+            <TextField
+              label='С даты'
+              type='date'
+              value={newRecord.fromDate || ''}
+              onChange={(e) =>
+                setNewRecord((r) => ({ ...r, fromDate: e.target.value }))
+              }
+              fullWidth
+              margin='dense'
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label='По дату'
+              type='date'
+              value={newRecord.toDate || ''}
+              onChange={(e) =>
+                setNewRecord((r) => ({ ...r, toDate: e.target.value }))
+              }
+              fullWidth
+              margin='dense'
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label='Примечания'
+              value={newRecord.notes || ''}
+              onChange={(e) =>
+                setNewRecord((r) => ({ ...r, notes: e.target.value }))
+              }
+              fullWidth
+              margin='dense'
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setModalOpen(false)}>Отмена</Button>
+            {canViewMedical && (
+              <Button onClick={handleAdd} variant='contained'>
+                Сохранить
+              </Button>
+            )}
+          </DialogActions>
+        </Dialog>
+        {loading && (
+          <CircularProgress sx={{ position: 'fixed', top: '50%', left: '50%' }} />
+        )}
+      </Box>
     )
   );
 }

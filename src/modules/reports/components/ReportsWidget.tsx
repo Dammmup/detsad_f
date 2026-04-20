@@ -18,7 +18,7 @@ import {
   LocalGroceryStore,
   AccessTime,
 } from '@mui/icons-material';
-import moment from 'moment';
+import moment from 'moment/min/moment-with-locales';
 import { useDate } from '../../../app/context/DateContext';
 import { useAuth } from '../../../app/context/AuthContext';
 import { generatePayrollSheets } from '../../staff/services/payroll';

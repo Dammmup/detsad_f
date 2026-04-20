@@ -3,8 +3,8 @@ import { Box, Typography, Paper } from '@mui/material';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { CalendarPicker } from '@mui/x-date-pickers';
-import moment, { Moment } from 'moment';
-import 'moment/locale/ru'; // Import Russian locale for Moment.js
+import { Moment } from 'moment';
+import moment from 'moment/min/moment-with-locales'; // Import Russian locale for Moment.js
 
 const MenuCalendarPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Moment | null>(moment());

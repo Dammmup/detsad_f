@@ -59,8 +59,8 @@ import {
   ArrowUpward,
   ArrowDownward,
 } from '@mui/icons-material';
-import moment from 'moment';
-import 'moment/locale/ru';
+
+import moment from 'moment/min/moment-with-locales';
 import { useDate } from '../../../app/context/DateContext';
 import { useStaff } from '../../../app/context/StaffContext';
 import shiftsApi from '../services/shifts';
@@ -308,16 +308,16 @@ const AttendanceCard = React.memo(({
   );
 });
 
-const StaffAttendanceRow = React.memo(({ 
-  record, 
-  selected, 
-  onSelect, 
-  onEdit, 
-  onDelete, 
-  getStaffName, 
-  formatTime, 
-  formatCurrency, 
-  STATUS_TEXT, 
+const StaffAttendanceRow = React.memo(({
+  record,
+  selected,
+  onSelect,
+  onEdit,
+  onDelete,
+  getStaffName,
+  formatTime,
+  formatCurrency,
+  STATUS_TEXT,
   STATUS_COLORS,
   index,
   staffMap,
@@ -386,7 +386,7 @@ const StaffAttendanceRow = React.memo(({
                 arrow
               >
                 <Box component="span" sx={{ cursor: 'help', display: 'inline-flex', alignItems: 'center' }}>
-                    <Computer sx={{ fontSize: 16, color: 'secondary.main' }} />
+                  <Computer sx={{ fontSize: 16, color: 'secondary.main' }} />
                 </Box>
               </Tooltip>
             )}
@@ -465,7 +465,7 @@ const StaffAttendanceTracking: React.FC = () => {
   const canViewRecords = ['admin', 'manager', 'doctor', 'nurse', 'teacher', 'substitute', 'assistant'].includes(role || '');
   const canManageRecords = ['admin', 'manager', 'doctor', 'nurse'].includes(role || '');
   const canBulkUpdate = ['admin', 'manager'].includes(role || '');
-  
+
   // 1. Все стейты в начале
   const { staff: allStaff, fetchStaff } = useStaff();
   const [allRawRecords, setAllRawRecords] = useState<TimeRecord[]>([]);
@@ -1222,12 +1222,12 @@ const StaffAttendanceTracking: React.FC = () => {
     try {
       const monthStart = moment(selectedDate).startOf('month').format('YYYY-MM-DD');
       const monthEnd = moment(selectedDate).endOf('month').format('YYYY-MM-DD');
-      
+
       let exportFilters: any = {
         startDate: monthStart,
         endDate: monthEnd
       };
-      
+
       if (selectedStaff !== 'all') exportFilters.staffId = selectedStaff;
 
       await exportData('staff-attendance-tracking', 'xlsx', exportFilters);
@@ -1470,9 +1470,9 @@ const StaffAttendanceTracking: React.FC = () => {
                 label={<Typography variant="body2">Выбрать все</Typography>}
               />
               {sortConfig.key && (
-                <Chip 
-                  label={`Сортировка: ${sortConfig.key === '_staffName' ? 'Имя' : 'Дата'}`} 
-                  size="small" 
+                <Chip
+                  label={`Сортировка: ${sortConfig.key === '_staffName' ? 'Имя' : 'Дата'}`}
+                  size="small"
                   onDelete={() => requestSort(sortConfig.key as any)}
                   deleteIcon={sortConfig.direction === 'asc' ? <ArrowUpward /> : <ArrowDownward />}
                 />
@@ -1671,12 +1671,12 @@ const StaffAttendanceTracking: React.FC = () => {
 
       <Paper sx={{ p: isMobile ? 1 : 2, mb: 2 }}>
         {viewMode === 'day' && <DateNavigator />}
-        <Box 
-          display='flex' 
-          flexDirection={isMobile ? 'column' : 'row'} 
-          flexWrap='wrap' 
-          gap={2} 
-          alignItems={isMobile ? 'stretch' : 'center'} 
+        <Box
+          display='flex'
+          flexDirection={isMobile ? 'column' : 'row'}
+          flexWrap='wrap'
+          gap={2}
+          alignItems={isMobile ? 'stretch' : 'center'}
           p={isMobile ? 1 : 2}
         >
           <ToggleButtonGroup
@@ -1782,10 +1782,10 @@ const StaffAttendanceTracking: React.FC = () => {
                 renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {selected.length === 0 ? 'Все должности' : selected.map((value) => (
-                      <Chip 
-                        key={value} 
-                        label={value} 
-                        size='small' 
+                      <Chip
+                        key={value}
+                        label={value}
+                        size='small'
                         onDelete={() => setFilterRole(filterRole.filter(v => v !== value))}
                         onMouseDown={(e) => e.stopPropagation()}
                       />

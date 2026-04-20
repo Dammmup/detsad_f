@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import moment from 'moment';
-import 'moment/locale/ru';
+import moment from 'moment/min/moment-with-locales';
 
 moment.locale('ru');
 import { useSnackbar } from 'notistack';

@@ -1,8 +1,7 @@
 import React from 'react';
 import { useDate } from '../../app/context/DateContext';
 import { Button, Typography, Box } from '@mui/material';
-import moment from 'moment';
-import 'moment/locale/ru';
+import moment from 'moment/min/moment-with-locales';
 import { useAuth } from '../../app/context/AuthContext';
 import { UserRole } from '../types/common';
 

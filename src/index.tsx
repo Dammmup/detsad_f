@@ -19,13 +19,13 @@ import { setupAxios } from './shared/api/axiosSetup';
 // Initialize Axios
 setupAxios();
 
-import moment from 'moment';
-import 'moment/locale/ru';
+import moment from 'moment/min/moment-with-locales';
 moment.updateLocale('ru', {
   week: {
     dow: 1, // Monday is the first day of the week.
   }
 });
+moment.locale('ru');
 
 const rootElement = document.getElementById('root');
 if (rootElement) {

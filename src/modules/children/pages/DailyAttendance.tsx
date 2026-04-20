@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import moment from 'moment';
-import 'moment/locale/ru';
+
+import moment from 'moment/min/moment-with-locales';;
 
 moment.locale('ru');
 import {
@@ -83,7 +83,7 @@ const DailyAttendance: React.FC = () => {
     const { enqueueSnackbar } = useSnackbar();
     const role = currentUser?.role;
     const canEditAttendance = role === 'admin' || role === 'teacher' || role === 'assistant';
-    
+
     const { groups: groupsList, loading: groupsLoading, fetchGroups } = useGroups();
     const { children: allChildren, loading: childrenLoading, fetchChildren } = useChildren();
 
@@ -95,7 +95,7 @@ const DailyAttendance: React.FC = () => {
         }
         return groupsList.filter((g) => isUserAssignedToGroup(g, uid));
     }, [groupsList, currentUser]);
-    
+
     const [saving, setSaving] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState(moment());
     const [selectedGroupId, setSelectedGroupId] = useState<string>('');
@@ -114,9 +114,9 @@ const DailyAttendance: React.FC = () => {
     const isAdmin = ['admin', 'manager', 'director', 'owner'].includes(currentUser?.role || '');
     const canChangeDate = isAdmin;
 
-    const group = useMemo(() => 
-        visibleGroups.find(g => (g.id || g._id) === selectedGroupId), 
-    [visibleGroups, selectedGroupId]);
+    const group = useMemo(() =>
+        visibleGroups.find(g => (g.id || g._id) === selectedGroupId),
+        [visibleGroups, selectedGroupId]);
 
     const children = useMemo(() => {
         if (!selectedGroupId) return [];
@@ -125,10 +125,10 @@ const DailyAttendance: React.FC = () => {
             const childGroupId = typeof groupRef === 'object' && groupRef !== null
                 ? String((groupRef as any)._id || (groupRef as any).id || '')
                 : String(groupRef || '');
-            
+
             // Фильтруем служебные записи типа "Итого детей"
             const isSummaryRecord = child.fullName?.startsWith('Итого');
-            
+
             return childGroupId === String(selectedGroupId) && !isSummaryRecord;
         });
     }, [allChildren, selectedGroupId]);
@@ -397,26 +397,26 @@ const DailyAttendance: React.FC = () => {
                         )}
                     </Box>
                     {canChangeDate && (
-                    <Box display="flex" alignItems="center" bgcolor="white" borderRadius={3} p={0.5} boxShadow={1}>
-                        <IconButton onClick={() => changeDate(-1)} size="small">
-                            <ChevronLeftIcon />
-                        </IconButton>
-                        <Box px={2} textAlign="center" minWidth="120px">
-                            <Typography variant="subtitle2" fontWeight="bold">
-                                {isToday ? 'Сегодня' : selectedDate.format('DD MMMM')}
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary">
-                                {selectedDate.format('dddd')}
-                            </Typography>
+                        <Box display="flex" alignItems="center" bgcolor="white" borderRadius={3} p={0.5} boxShadow={1}>
+                            <IconButton onClick={() => changeDate(-1)} size="small">
+                                <ChevronLeftIcon />
+                            </IconButton>
+                            <Box px={2} textAlign="center" minWidth="120px">
+                                <Typography variant="subtitle2" fontWeight="bold">
+                                    {isToday ? 'Сегодня' : selectedDate.format('DD MMMM')}
+                                </Typography>
+                                <Typography variant="caption" color="textSecondary">
+                                    {selectedDate.format('dddd')}
+                                </Typography>
+                            </Box>
+                            <IconButton
+                                onClick={() => changeDate(1)}
+                                size="small"
+                                disabled={isToday}
+                            >
+                                <ChevronRightIcon />
+                            </IconButton>
                         </Box>
-                        <IconButton
-                            onClick={() => changeDate(1)}
-                            size="small"
-                            disabled={isToday}
-                        >
-                            <ChevronRightIcon />
-                        </IconButton>
-                    </Box>
                     )}
                 </Box>
             </Paper>

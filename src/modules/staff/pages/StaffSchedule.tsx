@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import moment from 'moment';
-import 'moment/locale/ru';
+
+import moment from 'moment/min/moment-with-locales';
 import { useSnackbar } from 'notistack';
 import {
   Box,
@@ -758,516 +758,516 @@ const StaffSchedule: React.FC = () => {
     }
   }, [assignmentType, formData, selectedStaff, staffById, editingShift, assignmentAction, shifts, currentDate, enqueueSnackbar, handleCloseModal, validateForm, canManageSchedule]);
 
-const handleEditShift = useCallback((shift: Shift) => {
-  if (!canManageSchedule) {
-    enqueueSnackbar('Недостаточно прав для управления графиком', { variant: 'error' });
-    return;
-  }
-  const sId = typeof shift.staffId === 'string' ? shift.staffId : (shift.staffId as any)?._id;
-  setFormData({
-    userId: sId || '',
-    staffId: sId || '',
-    staffName: shift.staffName || '',
-    date: moment(shift.date).format('YYYY-MM-DD'),
-    status: shift.status,
-    notes: shift.notes || '',
-    alternativeStaffId: shift.alternativeStaffId || '',
-  });
-  setEditingShift(shift);
-  setModalOpen(true);
-}, [enqueueSnackbar, canManageSchedule]);
-
-
-const weekDays = useMemo(() => {
-  const weekStart = moment(currentDate).startOf('isoWeek');
-  const weekEnd = moment(currentDate).endOf('isoWeek');
-  const days: Date[] = [];
-  const day = weekStart.clone();
-  while (day.isSameOrBefore(weekEnd)) {
-    days.push(day.toDate());
-    day.add(1, 'day');
-  }
-  return days;
-}, [currentDate]);
-
-const weekDaysMeta = useMemo(() => {
-  return weekDays.map((date) => {
-    const dateStr = moment(date).format('YYYY-MM-DD');
-    const isHoliday = holidays.includes(dateStr);
-    const isWorkingSat = workingSaturdays.includes(dateStr);
-    const weekend = isWeekend(date) && !isWorkingSat;
-    return {
-      date,
-      dateStr,
-      isHoliday,
-      weekend,
-      dayName: DAY_NAMES[(date.getDay() + 6) % 7],
-      dayNumber: moment(date).format('D'),
-    };
-  });
-}, [weekDays, holidays, workingSaturdays]);
-
-const handleCellClick = useCallback((staffId: string, dateStr: string) => {
-  if (!canManageSchedule) {
-    return;
-  }
-  const staffMember = staffById.get(String(staffId));
-  setFormData((prev: any) => ({
-    ...prev,
-    staffId,
-    staffName: staffMember?.fullName || '',
-    date: dateStr,
-  }));
-  setModalOpen(true);
-}, [staffById, canManageSchedule]);
-
-const handleStaffToggle = useCallback((staffId: string) => {
-  setSelectedStaff(prev =>
-    prev.includes(staffId) ? prev.filter(id => id !== staffId) : [...prev, staffId]
-  );
-}, []);
-
-const handleEditShiftCallback = useCallback((shift: any) => {
-  handleEditShift(shift);
-}, [handleEditShift]);
-
-const getShiftsForDay = useCallback((staffId: string, date: Date) => {
-  const compareDate = moment(date).format('YYYY-MM-DD');
-  return shifts.filter((shift) => {
+  const handleEditShift = useCallback((shift: Shift) => {
+    if (!canManageSchedule) {
+      enqueueSnackbar('Недостаточно прав для управления графиком', { variant: 'error' });
+      return;
+    }
     const sId = typeof shift.staffId === 'string' ? shift.staffId : (shift.staffId as any)?._id;
-    const sDate = moment(shift.date).format('YYYY-MM-DD');
-    return sId === staffId && sDate === compareDate;
-  });
-}, [shifts]);
+    setFormData({
+      userId: sId || '',
+      staffId: sId || '',
+      staffName: shift.staffName || '',
+      date: moment(shift.date).format('YYYY-MM-DD'),
+      status: shift.status,
+      notes: shift.notes || '',
+      alternativeStaffId: shift.alternativeStaffId || '',
+    });
+    setEditingShift(shift);
+    setModalOpen(true);
+  }, [enqueueSnackbar, canManageSchedule]);
 
-// Функция для вычисления "отображаемого" статуса на основе данных посещаемости
-const getDisplayStatus = (shift: any, attendanceRecord: any): ShiftStatus => {
-  if (attendanceRecord) {
-    // Если есть и приход и уход - смена завершена
-    if (attendanceRecord.actualStart && attendanceRecord.actualEnd) {
-      const lateMin = attendanceRecord.lateMinutes || 0;
-      // Если опоздание >= 15 минут, показываем как "Опоздание"
-      if (lateMin >= 15) {
-        return ShiftStatus.late;
-      }
-      return ShiftStatus.completed;
+
+  const weekDays = useMemo(() => {
+    const weekStart = moment(currentDate).startOf('isoWeek');
+    const weekEnd = moment(currentDate).endOf('isoWeek');
+    const days: Date[] = [];
+    const day = weekStart.clone();
+    while (day.isSameOrBefore(weekEnd)) {
+      days.push(day.toDate());
+      day.add(1, 'day');
     }
-    // Если есть только приход - в процессе или опоздание
-    if (attendanceRecord.actualStart && !attendanceRecord.actualEnd) {
-      const lateMin = attendanceRecord.lateMinutes || 0;
-      if (lateMin >= 15) {
-        return ShiftStatus.late;
-      }
-      return ShiftStatus.in_progress;
+    return days;
+  }, [currentDate]);
+
+  const weekDaysMeta = useMemo(() => {
+    return weekDays.map((date) => {
+      const dateStr = moment(date).format('YYYY-MM-DD');
+      const isHoliday = holidays.includes(dateStr);
+      const isWorkingSat = workingSaturdays.includes(dateStr);
+      const weekend = isWeekend(date) && !isWorkingSat;
+      return {
+        date,
+        dateStr,
+        isHoliday,
+        weekend,
+        dayName: DAY_NAMES[(date.getDay() + 6) % 7],
+        dayNumber: moment(date).format('D'),
+      };
+    });
+  }, [weekDays, holidays, workingSaturdays]);
+
+  const handleCellClick = useCallback((staffId: string, dateStr: string) => {
+    if (!canManageSchedule) {
+      return;
     }
+    const staffMember = staffById.get(String(staffId));
+    setFormData((prev: any) => ({
+      ...prev,
+      staffId,
+      staffName: staffMember?.fullName || '',
+      date: dateStr,
+    }));
+    setModalOpen(true);
+  }, [staffById, canManageSchedule]);
+
+  const handleStaffToggle = useCallback((staffId: string) => {
+    setSelectedStaff(prev =>
+      prev.includes(staffId) ? prev.filter(id => id !== staffId) : [...prev, staffId]
+    );
+  }, []);
+
+  const handleEditShiftCallback = useCallback((shift: any) => {
+    handleEditShift(shift);
+  }, [handleEditShift]);
+
+  const getShiftsForDay = useCallback((staffId: string, date: Date) => {
+    const compareDate = moment(date).format('YYYY-MM-DD');
+    return shifts.filter((shift) => {
+      const sId = typeof shift.staffId === 'string' ? shift.staffId : (shift.staffId as any)?._id;
+      const sDate = moment(shift.date).format('YYYY-MM-DD');
+      return sId === staffId && sDate === compareDate;
+    });
+  }, [shifts]);
+
+  // Функция для вычисления "отображаемого" статуса на основе данных посещаемости
+  const getDisplayStatus = (shift: any, attendanceRecord: any): ShiftStatus => {
+    if (attendanceRecord) {
+      // Если есть и приход и уход - смена завершена
+      if (attendanceRecord.actualStart && attendanceRecord.actualEnd) {
+        const lateMin = attendanceRecord.lateMinutes || 0;
+        // Если опоздание >= 15 минут, показываем как "Опоздание"
+        if (lateMin >= 15) {
+          return ShiftStatus.late;
+        }
+        return ShiftStatus.completed;
+      }
+      // Если есть только приход - в процессе или опоздание
+      if (attendanceRecord.actualStart && !attendanceRecord.actualEnd) {
+        const lateMin = attendanceRecord.lateMinutes || 0;
+        if (lateMin >= 15) {
+          return ShiftStatus.late;
+        }
+        return ShiftStatus.in_progress;
+      }
+    }
+    // Если нет данных посещаемости - берём статус из смены
+    return shift.status as ShiftStatus;
+  };
+
+  if (loading && shifts.length === 0 && staff.length === 0) {
+    return (
+      <Box display='flex' justifyContent='center' alignItems='center' minHeight='200px'>
+        <CircularProgress />
+      </Box>
+    );
   }
-  // Если нет данных посещаемости - берём статус из смены
-  return shift.status as ShiftStatus;
-};
 
-if (loading && shifts.length === 0 && staff.length === 0) {
+  if (error) {
+    return (
+      <Box p={3}>
+        <Typography color='error'>{error}</Typography>
+      </Box>
+    );
+  }
+
   return (
-    <Box display='flex' justifyContent='center' alignItems='center' minHeight='200px'>
-      <CircularProgress />
-    </Box>
-  );
-}
-
-if (error) {
-  return (
-    <Box p={3}>
-      <Typography color='error'>{error}</Typography>
-    </Box>
-  );
-}
-
-return (
-  <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale="ru">
-    <Box p={3}>
-      <Card>
-        <CardHeader
-          title={
-            <Box display='flex' justifyContent='space-between' alignItems='center'>
-              <Typography variant='h5'>График смен</Typography>
-              <Box>
-                <AuditLogButton entityType="staffShift" />
-                <ExportButton
-                  exportTypes={[{ value: 'staff-schedule', label: 'График смен' }]}
-                  onExport={handleExport}
-                />
-                {canManageSchedule && (
-                  <>
-                    <Button
-                      variant='contained'
-                      color='primary'
-                      startIcon={<AddIcon />}
-                      onClick={() => setModalOpen(true)}
-                      sx={{ ml: 2 }}
-                    >
-                      Добавить смену
-                    </Button>
-                    <Button
-                      variant='contained'
-                      color='secondary'
-                      sx={{ ml: 2 }}
-                      onClick={() => {
-                        if (selectedStaff.length === 0) {
-                          enqueueSnackbar('Пожалуйста, выберите сотрудников', { variant: 'warning' });
-                          return;
-                        }
-                        assignFiveTwoSchedule();
-                      }}
-                    >
-                      Назначить график 5/2
-                    </Button>
-                    <Button
-                      variant='contained'
-                      color='error'
-                      sx={{ ml: 2 }}
-                      startIcon={<DeleteIcon />}
-                      onClick={() => {
-                        setAssignmentAction('delete');
-                        setModalOpen(true);
-                      }}
-                    >
-                      Удалить смены
-                    </Button>
-                  </>
-                )}
-              </Box>
-            </Box>
-          }
-        />
-        <Divider />
-        <CardContent>
-          <DateNavigator viewType="week" />
-
-          <Box display='flex' flexWrap='wrap' gap={2} alignItems='center' mb={3}>
-            <TextField
-              placeholder='Поиск по имени...'
-              variant='outlined'
-              size='small'
-              value={searchTerm}
-              onChange={handleSearchChange}
-              sx={{ flexGrow: 1, minWidth: '200px' }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position='start'>
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <FormControl size='small' sx={{ minWidth: '200px' }}>
-              <InputLabel id='role-filter-label'>Фильтр по должности</InputLabel>
-              <Select
-                labelId='role-filter-label'
-                multiple
-                value={filterRole}
-                onChange={handleFilterRoleChange}
-                input={<OutlinedInput label='Фильтр по должности' />}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.length === 0 ? 'Все должности' : selected.map((value) => (
-                      <Chip
-                        key={value}
-                        label={value}
-                        size='small'
-                        onDelete={() => setFilterRole(filterRole.filter(v => v !== value))}
-                        onMouseDown={(e) => e.stopPropagation()}
-                      />
-                    ))}
-                  </Box>
-                )}
-              >
-                <MenuItem value="">
-                  <em>Все должности</em>
-                </MenuItem>
-                {availableRoleLabels.map((role) => (
-                  <MenuItem key={role} value={role}>
-                    <Checkbox checked={filterRole.indexOf(role) > -1} />
-                    <ListItemText primary={role} />
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', width: '50px' }}>#</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>
-                    <TableSortLabel
-                      active={sortConfig.key === 'fullName'}
-                      direction={sortConfig.key === 'fullName' ? (sortConfig.direction || 'asc') : 'asc'}
-                      onClick={() => requestSort('fullName')}
-                    >
-                      Сотрудник
-                    </TableSortLabel>
-                  </TableCell>
-                  {weekDaysMeta.map((day) => (
-                    <TableCell
-                      key={day.dateStr}
-                      align='center'
-                      sx={{
-                        backgroundColor: day.isHoliday ? '#ffcdd2' : (day.weekend ? 'grey.100' : 'inherit'),
-                        color: day.isHoliday ? '#c62828' : 'inherit',
-                      }}
-                    >
-                      <Box>
-                        <Box>{day.dayName}</Box>
-                        <Box>{day.dayNumber}</Box>
-                      </Box>
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredStaff.map((staffMember, index) => (
-                  <ScheduleRow
-                    key={staffMember.id || staffMember._id}
-                    staffMember={staffMember}
-                    index={index + 1}
-                    weekDaysMeta={weekDaysMeta}
-                    staffShifts={shiftsByStaff.get(staffMember.id || staffMember._id || '') || []}
-                    staffAttendance={attendanceByStaff.get(staffMember.id || staffMember._id || '') || []}
-                    selectedStaff={selectedStaff}
-                    onStaffToggle={handleStaffToggle}
-                    onCellClick={handleCellClick}
-                    onEditShift={handleEditShiftCallback}
-                    ROLE_COLORS={ROLE_COLORS}
-                    ROLE_LABELS={ROLE_LABELS}
-                    canSelect={canManageSchedule}
-                    canEdit={canManageSchedule}
+    <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale="ru">
+      <Box p={3}>
+        <Card>
+          <CardHeader
+            title={
+              <Box display='flex' justifyContent='space-between' alignItems='center'>
+                <Typography variant='h5'>График смен</Typography>
+                <Box>
+                  <AuditLogButton entityType="staffShift" />
+                  <ExportButton
+                    exportTypes={[{ value: 'staff-schedule', label: 'График смен' }]}
+                    onExport={handleExport}
                   />
-                ))}
-
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-
-      {/* Shift Form Modal */}
-      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth='md' fullWidth>
-        <form onSubmit={handleSubmit}>
-          <DialogTitle>{editingShift ? 'Редактировать смену' : 'Назначить/Удалить смены'}</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              {!editingShift && (
-                <>
-                  <Grid item xs={12}>
-                    <Box display="flex" justifyContent="space-between" alignItems="center">
-                      <RadioGroup
-                        row
-                        value={assignmentType}
-                        onChange={(e) => setAssignmentType(e.target.value as any)}
+                  {canManageSchedule && (
+                    <>
+                      <Button
+                        variant='contained'
+                        color='primary'
+                        startIcon={<AddIcon />}
+                        onClick={() => setModalOpen(true)}
+                        sx={{ ml: 2 }}
                       >
-                        <FormControlLabel value="single" control={<Radio />} label="Один день" />
-                        <FormControlLabel value="period" control={<Radio />} label="Период" />
-                      </RadioGroup>
-
-                      <RadioGroup
-                        row
-                        value={assignmentAction}
-                        onChange={(e) => setAssignmentAction(e.target.value as any)}
-                      >
-                        <FormControlLabel value="create" control={<Radio color="primary" />} label="Назначить" />
-                        <FormControlLabel value="delete" control={<Radio color="error" />} label="Удалить" />
-                      </RadioGroup>
-                    </Box>
-                  </Grid>
-                  <Divider sx={{ width: '100%', my: 1 }} />
-                </>
-              )}
-
-              <Grid item xs={12}>
-                <FormControl fullWidth required>
-                  <InputLabel>Сотрудник(и)</InputLabel>
-                  <Select
-                    multiple={!editingShift && selectedStaff.length > 1}
-                    value={editingShift ? formData.staffId : (selectedStaff.length > 0 ? selectedStaff : (formData.staffId ? [formData.staffId] : []))}
-                    onChange={(e) => {
-                      if (editingShift) {
-                        handleStaffSelect(e as any);
-                      } else {
-                        const val = e.target.value;
-                        if (Array.isArray(val)) {
-                          setSelectedStaff(val);
-                        } else {
-                          handleStaffSelect(e as any);
-                          setSelectedStaff([val]);
-                        }
-                      }
-                    }}
-                    label='Сотрудник(и)'
-                    required
-                  >
-                    {staff.map((s) => (
-                      <MenuItem key={s.id || s._id} value={s.id || s._id}>
-                        {s.fullName} ({ROLE_LABELS[s.role as string] || s.role})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {assignmentType === 'single' || editingShift ? (
-                <Grid item xs={12} sm={6}>
-                  <DatePicker
-                    label='Дата смены'
-                    inputFormat='DD.MM.YYYY'
-                    value={moment(formData.date)}
-                    onChange={(date) => date && handleDateChange(date.toDate())}
-                    renderInput={(params) => <TextField {...params} fullWidth required />}
-                  />
-                </Grid>
-              ) : (
-                <>
-                  <Grid item xs={12} sm={6}>
-                    <DatePicker
-                      label='Начало периода'
-                      inputFormat='DD.MM.YYYY'
-                      value={moment(formData.startDate)}
-                      onChange={(date) => date && setFormData({ ...formData, startDate: date.format('YYYY-MM-DD') })}
-                      renderInput={(params) => <TextField {...params} fullWidth required />}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <DatePicker
-                      label='Конец периода'
-                      inputFormat='DD.MM.YYYY'
-                      value={moment(formData.endDate)}
-                      onChange={(date) => date && setFormData({ ...formData, endDate: date.format('YYYY-MM-DD') })}
-                      renderInput={(params) => <TextField {...params} fullWidth required />}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle2" gutterBottom>Дни недели:</Typography>
-                    <Box display="flex" flexWrap="wrap" gap={1}>
-                      {[
-                        { label: 'Пн', value: 1 },
-                        { label: 'Вт', value: 2 },
-                        { label: 'Ср', value: 3 },
-                        { label: 'Чт', value: 4 },
-                        { label: 'Пт', value: 5 },
-                        { label: 'Сб', value: 6 },
-                        { label: 'Вс', value: 0 },
-                      ].map((day) => (
-                        <FormControlLabel
-                          key={day.value}
-                          control={
-                            <Checkbox
-                              checked={formData.selectedDays?.includes(day.value)}
-                              onChange={(e) => {
-                                const currentDays = formData.selectedDays || [];
-                                const newDays = e.target.checked
-                                  ? [...currentDays, day.value]
-                                  : currentDays.filter((d: number) => d !== day.value);
-                                setFormData({ ...formData, selectedDays: newDays });
-                              }}
-                            />
+                        Добавить смену
+                      </Button>
+                      <Button
+                        variant='contained'
+                        color='secondary'
+                        sx={{ ml: 2 }}
+                        onClick={() => {
+                          if (selectedStaff.length === 0) {
+                            enqueueSnackbar('Пожалуйста, выберите сотрудников', { variant: 'warning' });
+                            return;
                           }
-                          label={day.label}
+                          assignFiveTwoSchedule();
+                        }}
+                      >
+                        Назначить график 5/2
+                      </Button>
+                      <Button
+                        variant='contained'
+                        color='error'
+                        sx={{ ml: 2 }}
+                        startIcon={<DeleteIcon />}
+                        onClick={() => {
+                          setAssignmentAction('delete');
+                          setModalOpen(true);
+                        }}
+                      >
+                        Удалить смены
+                      </Button>
+                    </>
+                  )}
+                </Box>
+              </Box>
+            }
+          />
+          <Divider />
+          <CardContent>
+            <DateNavigator viewType="week" />
+
+            <Box display='flex' flexWrap='wrap' gap={2} alignItems='center' mb={3}>
+              <TextField
+                placeholder='Поиск по имени...'
+                variant='outlined'
+                size='small'
+                value={searchTerm}
+                onChange={handleSearchChange}
+                sx={{ flexGrow: 1, minWidth: '200px' }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <FormControl size='small' sx={{ minWidth: '200px' }}>
+                <InputLabel id='role-filter-label'>Фильтр по должности</InputLabel>
+                <Select
+                  labelId='role-filter-label'
+                  multiple
+                  value={filterRole}
+                  onChange={handleFilterRoleChange}
+                  input={<OutlinedInput label='Фильтр по должности' />}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.length === 0 ? 'Все должности' : selected.map((value) => (
+                        <Chip
+                          key={value}
+                          label={value}
+                          size='small'
+                          onDelete={() => setFilterRole(filterRole.filter(v => v !== value))}
+                          onMouseDown={(e) => e.stopPropagation()}
                         />
                       ))}
                     </Box>
-                  </Grid>
-                </>
-              )}
+                  )}
+                >
+                  <MenuItem value="">
+                    <em>Все должности</em>
+                  </MenuItem>
+                  {availableRoleLabels.map((role) => (
+                    <MenuItem key={role} value={role}>
+                      <Checkbox checked={filterRole.indexOf(role) > -1} />
+                      <ListItemText primary={role} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
 
-              {assignmentAction === 'create' && (
-                <>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth required>
-                      <InputLabel>Статус</InputLabel>
-                      <Select
-                        name='status'
-                        value={formData.status}
-                        onChange={handleSelectChange}
-                        label='Статус'
-                        required
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', width: '50px' }}>#</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>
+                      <TableSortLabel
+                        active={sortConfig.key === 'fullName'}
+                        direction={sortConfig.key === 'fullName' ? (sortConfig.direction || 'asc') : 'asc'}
+                        onClick={() => requestSort('fullName')}
                       >
-                        <MenuItem value='scheduled'>Запланирована</MenuItem>
-                        <MenuItem value='completed'>Завершена</MenuItem>
-                        <MenuItem value='in_progress'>В процессе</MenuItem>
-                        <MenuItem value='late'>Опоздание</MenuItem>
-                        <MenuItem value='absent'>Отсутствует</MenuItem>
-                        <MenuItem value='vacation'>Отпуск</MenuItem>
-                        <MenuItem value='sick_leave'>Больничный</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label='Заметки'
-                      name='notes'
-                      value={formData.notes}
-                      onChange={handleInputChange}
-                      multiline
-                      rows={2}
+                        Сотрудник
+                      </TableSortLabel>
+                    </TableCell>
+                    {weekDaysMeta.map((day) => (
+                      <TableCell
+                        key={day.dateStr}
+                        align='center'
+                        sx={{
+                          backgroundColor: day.isHoliday ? '#ffcdd2' : (day.weekend ? 'grey.100' : 'inherit'),
+                          color: day.isHoliday ? '#c62828' : 'inherit',
+                        }}
+                      >
+                        <Box>
+                          <Box>{day.dayName}</Box>
+                          <Box>{day.dayNumber}</Box>
+                        </Box>
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredStaff.map((staffMember, index) => (
+                    <ScheduleRow
+                      key={staffMember.id || staffMember._id}
+                      staffMember={staffMember}
+                      index={index + 1}
+                      weekDaysMeta={weekDaysMeta}
+                      staffShifts={shiftsByStaff.get(staffMember.id || staffMember._id || '') || []}
+                      staffAttendance={attendanceByStaff.get(staffMember.id || staffMember._id || '') || []}
+                      selectedStaff={selectedStaff}
+                      onStaffToggle={handleStaffToggle}
+                      onCellClick={handleCellClick}
+                      onEditShift={handleEditShiftCallback}
+                      ROLE_COLORS={ROLE_COLORS}
+                      ROLE_LABELS={ROLE_LABELS}
+                      canSelect={canManageSchedule}
+                      canEdit={canManageSchedule}
+                    />
+                  ))}
+
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+
+        {/* Shift Form Modal */}
+        <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth='md' fullWidth>
+          <form onSubmit={handleSubmit}>
+            <DialogTitle>{editingShift ? 'Редактировать смену' : 'Назначить/Удалить смены'}</DialogTitle>
+            <DialogContent>
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                {!editingShift && (
+                  <>
+                    <Grid item xs={12}>
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <RadioGroup
+                          row
+                          value={assignmentType}
+                          onChange={(e) => setAssignmentType(e.target.value as any)}
+                        >
+                          <FormControlLabel value="single" control={<Radio />} label="Один день" />
+                          <FormControlLabel value="period" control={<Radio />} label="Период" />
+                        </RadioGroup>
+
+                        <RadioGroup
+                          row
+                          value={assignmentAction}
+                          onChange={(e) => setAssignmentAction(e.target.value as any)}
+                        >
+                          <FormControlLabel value="create" control={<Radio color="primary" />} label="Назначить" />
+                          <FormControlLabel value="delete" control={<Radio color="error" />} label="Удалить" />
+                        </RadioGroup>
+                      </Box>
+                    </Grid>
+                    <Divider sx={{ width: '100%', my: 1 }} />
+                  </>
+                )}
+
+                <Grid item xs={12}>
+                  <FormControl fullWidth required>
+                    <InputLabel>Сотрудник(и)</InputLabel>
+                    <Select
+                      multiple={!editingShift && selectedStaff.length > 1}
+                      value={editingShift ? formData.staffId : (selectedStaff.length > 0 ? selectedStaff : (formData.staffId ? [formData.staffId] : []))}
+                      onChange={(e) => {
+                        if (editingShift) {
+                          handleStaffSelect(e as any);
+                        } else {
+                          const val = e.target.value;
+                          if (Array.isArray(val)) {
+                            setSelectedStaff(val);
+                          } else {
+                            handleStaffSelect(e as any);
+                            setSelectedStaff([val]);
+                          }
+                        }
+                      }}
+                      label='Сотрудник(и)'
+                      required
+                    >
+                      {staff.map((s) => (
+                        <MenuItem key={s.id || s._id} value={s.id || s._id}>
+                          {s.fullName} ({ROLE_LABELS[s.role as string] || s.role})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {assignmentType === 'single' || editingShift ? (
+                  <Grid item xs={12} sm={6}>
+                    <DatePicker
+                      label='Дата смены'
+                      inputFormat='DD.MM.YYYY'
+                      value={moment(formData.date)}
+                      onChange={(date) => date && handleDateChange(date.toDate())}
+                      renderInput={(params) => <TextField {...params} fullWidth required />}
                     />
                   </Grid>
-                  <Grid item xs={12}>
-                    <FormControl fullWidth>
-                      <InputLabel>Альтернативный сотрудник</InputLabel>
-                      <Select name='alternativeStaffId' value={formData.alternativeStaffId || ''} onChange={handleSelectChange} label='Альтернативный сотрудник'>
-                        <MenuItem value=''>Нет альтернативного сотрудника</MenuItem>
-                        {staff.filter(s => s.role !== 'parent' && s.role !== 'child').map((s) => (
-                          <MenuItem key={s.id || s._id} value={s.id || s._id}>{s.fullName}</MenuItem>
+                ) : (
+                  <>
+                    <Grid item xs={12} sm={6}>
+                      <DatePicker
+                        label='Начало периода'
+                        inputFormat='DD.MM.YYYY'
+                        value={moment(formData.startDate)}
+                        onChange={(date) => date && setFormData({ ...formData, startDate: date.format('YYYY-MM-DD') })}
+                        renderInput={(params) => <TextField {...params} fullWidth required />}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <DatePicker
+                        label='Конец периода'
+                        inputFormat='DD.MM.YYYY'
+                        value={moment(formData.endDate)}
+                        onChange={(date) => date && setFormData({ ...formData, endDate: date.format('YYYY-MM-DD') })}
+                        renderInput={(params) => <TextField {...params} fullWidth required />}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" gutterBottom>Дни недели:</Typography>
+                      <Box display="flex" flexWrap="wrap" gap={1}>
+                        {[
+                          { label: 'Пн', value: 1 },
+                          { label: 'Вт', value: 2 },
+                          { label: 'Ср', value: 3 },
+                          { label: 'Чт', value: 4 },
+                          { label: 'Пт', value: 5 },
+                          { label: 'Сб', value: 6 },
+                          { label: 'Вс', value: 0 },
+                        ].map((day) => (
+                          <FormControlLabel
+                            key={day.value}
+                            control={
+                              <Checkbox
+                                checked={formData.selectedDays?.includes(day.value)}
+                                onChange={(e) => {
+                                  const currentDays = formData.selectedDays || [];
+                                  const newDays = e.target.checked
+                                    ? [...currentDays, day.value]
+                                    : currentDays.filter((d: number) => d !== day.value);
+                                  setFormData({ ...formData, selectedDays: newDays });
+                                }}
+                              />
+                            }
+                            label={day.label}
+                          />
                         ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </>
+                      </Box>
+                    </Grid>
+                  </>
+                )}
+
+                {assignmentAction === 'create' && (
+                  <>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth required>
+                        <InputLabel>Статус</InputLabel>
+                        <Select
+                          name='status'
+                          value={formData.status}
+                          onChange={handleSelectChange}
+                          label='Статус'
+                          required
+                        >
+                          <MenuItem value='scheduled'>Запланирована</MenuItem>
+                          <MenuItem value='completed'>Завершена</MenuItem>
+                          <MenuItem value='in_progress'>В процессе</MenuItem>
+                          <MenuItem value='late'>Опоздание</MenuItem>
+                          <MenuItem value='absent'>Отсутствует</MenuItem>
+                          <MenuItem value='vacation'>Отпуск</MenuItem>
+                          <MenuItem value='sick_leave'>Больничный</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label='Заметки'
+                        name='notes'
+                        value={formData.notes}
+                        onChange={handleInputChange}
+                        multiline
+                        rows={2}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FormControl fullWidth>
+                        <InputLabel>Альтернативный сотрудник</InputLabel>
+                        <Select name='alternativeStaffId' value={formData.alternativeStaffId || ''} onChange={handleSelectChange} label='Альтернативный сотрудник'>
+                          <MenuItem value=''>Нет альтернативного сотрудника</MenuItem>
+                          {staff.filter(s => s.role !== 'parent' && s.role !== 'child').map((s) => (
+                            <MenuItem key={s.id || s._id} value={s.id || s._id}>{s.fullName}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </>
+                )}
+              </Grid>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+              {editingShift && (
+                <Button
+                  onClick={async () => {
+                    if (!canManageSchedule) {
+                      enqueueSnackbar('Недостаточно прав для управления графиком', { variant: 'error' });
+                      return;
+                    }
+                    const id = editingShift.id || editingShift._id;
+                    if (id && window.confirm('Удалить смену?')) {
+                      await deleteShift(id);
+                      enqueueSnackbar('Смена удалена', { variant: 'success' });
+                      handleCloseModal();
+                      const weekStart = moment(currentDate).startOf('isoWeek');
+                      const weekEnd = moment(currentDate).endOf('isoWeek');
+                      setShifts(await getShifts(weekStart.format('YYYY-MM-DD'), weekEnd.format('YYYY-MM-DD')));
+                    }
+                  }}
+                  color="error"
+                  disabled={!canManageSchedule}
+                >
+                  Удалить
+                </Button>
               )}
-            </Grid>
-          </DialogContent>
-          <DialogActions sx={{ p: 2 }}>
-            {editingShift && (
-              <Button
-                onClick={async () => {
-                  if (!canManageSchedule) {
-                    enqueueSnackbar('Недостаточно прав для управления графиком', { variant: 'error' });
-                    return;
-                  }
-                  const id = editingShift.id || editingShift._id;
-                  if (id && window.confirm('Удалить смену?')) {
-                    await deleteShift(id);
-                    enqueueSnackbar('Смена удалена', { variant: 'success' });
-                    handleCloseModal();
-                    const weekStart = moment(currentDate).startOf('isoWeek');
-                    const weekEnd = moment(currentDate).endOf('isoWeek');
-                    setShifts(await getShifts(weekStart.format('YYYY-MM-DD'), weekEnd.format('YYYY-MM-DD')));
-                  }
-                }}
-                color="error"
-                disabled={!canManageSchedule}
-              >
-                Удалить
-              </Button>
-            )}
-            <Button onClick={handleCloseModal}>Отмена</Button>
-            {canManageSchedule && (
-              <Button
-                type='submit'
-                variant='contained'
-                color={assignmentAction === 'delete' ? 'error' : 'primary'}
-                disabled={loading}
-              >
-                {assignmentAction === 'delete' ? 'Удалить' : (editingShift ? 'Сохранить' : 'Применить')}
-              </Button>
-            )}
-          </DialogActions>
-        </form>
-      </Dialog>
-    </Box>
-  </LocalizationProvider >
-);
+              <Button onClick={handleCloseModal}>Отмена</Button>
+              {canManageSchedule && (
+                <Button
+                  type='submit'
+                  variant='contained'
+                  color={assignmentAction === 'delete' ? 'error' : 'primary'}
+                  disabled={loading}
+                >
+                  {assignmentAction === 'delete' ? 'Удалить' : (editingShift ? 'Сохранить' : 'Применить')}
+                </Button>
+              )}
+            </DialogActions>
+          </form>
+        </Dialog>
+      </Box>
+    </LocalizationProvider >
+  );
 };
 
 export default StaffSchedule;

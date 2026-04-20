@@ -12,7 +12,7 @@ import {
   Typography,
 } from '@mui/material';
 import { CalendarEvent, CalendarEventType, CalendarEventCreate } from '../../../shared/types/calendar';
-import moment from 'moment';
+
 
 interface EventDialogProps {
   open: boolean;
@@ -72,7 +72,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
 
   const handleDelete = useCallback(async () => {
     if (!event?._id && !event?.id) return;
-    
+
     setLoading(true);
     try {
       if (onDelete) {

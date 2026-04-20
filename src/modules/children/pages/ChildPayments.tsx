@@ -45,7 +45,7 @@ import { useChildren } from '../../../app/context/ChildrenContext';
 import { useGroups } from '../../../app/context/GroupsContext';
 import childPaymentApi from '../services/childPayment';
 import { IChildPayment, Child, Group } from '../../../shared/types/common';
-import moment from 'moment';
+import moment from 'moment/min/moment-with-locales';
 import { exportData } from '../../../shared/utils/exportUtils';
 
 import { importChildPayments } from '../../../shared/services/importService';
@@ -92,51 +92,51 @@ const PaymentRow = React.memo(({
         <Box display="flex" gap={0.5} justifyContent="center">
           {canManage ? (
             payment.status === 'paid' ? (
-            <Tooltip title="Отменить оплату">
-              <IconButton
-                size="small"
-                onClick={handleCancelClick}
-                sx={{
-                  bgcolor: 'warning.main',
-                  color: '#fff',
-                  '&:hover': { bgcolor: 'warning.dark' },
-                }}
-              >
-                <Refresh fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          ) : (
-            <>
-              <Tooltip title="Оплатить (Kaspi)">
+              <Tooltip title="Отменить оплату">
                 <IconButton
                   size="small"
-                  onClick={handleKaspiPaidClick}
+                  onClick={handleCancelClick}
                   sx={{
-                    p: 0.5,
-                    bgcolor: 'transparent',
-                    border: 'none',
-                    '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' },
+                    bgcolor: 'warning.main',
+                    color: '#fff',
+                    '&:hover': { bgcolor: 'warning.dark' },
                   }}
                 >
-                  <img src="/templates/kaspi.svg" alt="Kaspi" style={{ width: 28, height: 28 }} />
+                  <Refresh fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Оплатить (Наличные)">
-                <IconButton
-                  size="small"
-                  onClick={handleCashPaidClick}
-                  sx={{
-                    p: 0.5,
-                    bgcolor: 'transparent',
-                    border: 'none',
-                    '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' },
-                  }}
-                >
-                  <img src="/templates/cash.svg" alt="Cash" style={{ width: 28, height: 28 }} />
-                </IconButton>
-              </Tooltip>
-            </>
-          )) : (
+            ) : (
+              <>
+                <Tooltip title="Оплатить (Kaspi)">
+                  <IconButton
+                    size="small"
+                    onClick={handleKaspiPaidClick}
+                    sx={{
+                      p: 0.5,
+                      bgcolor: 'transparent',
+                      border: 'none',
+                      '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' },
+                    }}
+                  >
+                    <img src="/templates/kaspi.svg" alt="Kaspi" style={{ width: 28, height: 28 }} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Оплатить (Наличные)">
+                  <IconButton
+                    size="small"
+                    onClick={handleCashPaidClick}
+                    sx={{
+                      p: 0.5,
+                      bgcolor: 'transparent',
+                      border: 'none',
+                      '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' },
+                    }}
+                  >
+                    <img src="/templates/cash.svg" alt="Cash" style={{ width: 28, height: 28 }} />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )) : (
             <Typography variant="caption" color="text.secondary">-</Typography>
           )}
         </Box>
@@ -307,7 +307,7 @@ const PaymentCard = React.memo(({
           <Typography variant="caption">
             {payment.status === 'paid' ? (
               payment.paymentType === 'kaspi' ? 'Kaspi' :
-              payment.paymentType === 'cash' ? 'Наличные' : 'Не указан'
+                payment.paymentType === 'cash' ? 'Наличные' : 'Не указан'
             ) : '-'}
           </Typography>
         </Box>
@@ -492,14 +492,14 @@ const ChildPayments: React.FC = () => {
         if (!childId) return false;
         const child = childrenMap.get(childId);
         const matchesName = !search || (child?.fullName?.toLowerCase().includes(search));
-        
+
         const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
         const matchesGroup = groupFilter.length === 0 || groupFilter.includes(gId || '');
-        
+
         const matchesType = paymentTypeFilter === 'all' || payment.paymentType === paymentTypeFilter;
-        const matchesStatus = statusFilter === 'all' || 
+        const matchesStatus = statusFilter === 'all' ||
           (statusFilter === 'paid' ? payment.status === 'paid' : payment.status !== 'paid');
-        
+
         return matchesName && matchesGroup && matchesType && matchesStatus;
       })
       .map(p => {
@@ -734,11 +734,11 @@ const ChildPayments: React.FC = () => {
             Оплаты
           </Typography>
           {!loading && !error && (
-            <Chip 
-              label={sortedPayments.length} 
-              size="small" 
-              color="primary" 
-              variant="outlined" 
+            <Chip
+              label={sortedPayments.length}
+              size="small"
+              color="primary"
+              variant="outlined"
               sx={{ fontWeight: 'bold' }}
             />
           )}
@@ -783,9 +783,9 @@ const ChildPayments: React.FC = () => {
                 >
                   Обновить
                 </Button>
-                <Button 
-                  variant="outlined" 
-                  size="small" 
+                <Button
+                  variant="outlined"
+                  size="small"
                   onClick={handleExport}
                   sx={{ minWidth: isMobile ? 'fit-content' : 'auto' }}
                 >
@@ -811,9 +811,9 @@ const ChildPayments: React.FC = () => {
         alignItems={isMobile ? 'stretch' : 'center'}
         gap={isMobile ? 1.5 : 2}
         mb={2}
-        sx={{ 
-          p: isMobile ? 1.5 : 2, 
-          backgroundColor: '#f8f9fa', 
+        sx={{
+          p: isMobile ? 1.5 : 2,
+          backgroundColor: '#f8f9fa',
           borderRadius: 2,
           border: '1px solid #eee'
         }}
@@ -936,116 +936,116 @@ const ChildPayments: React.FC = () => {
               </Box>
             ) : (
               <TableContainer component={Paper} sx={{ mt: 2, boxShadow: 3, maxWidth: 1600, ml: 'auto', mr: 'auto', overflowX: 'auto' }}>
-              <Table size={isMobile ? 'small' : 'medium'} sx={{ width: '100%', tableLayout: 'fixed' }}>
-                <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold', width: 40, p: isMobile ? 0.5 : 1 }}>#</TableCell>
-                    <TableCell align='center' sx={{ fontWeight: 'bold', width: 100, p: isMobile ? 0.5 : 1 }}>Оплата</TableCell>
-                    <TableCell sx={{ p: isMobile ? 0.5 : 1 }}>
-                      <TableSortLabel
-                        active={sortConfig.key === '_childName'}
-                        direction={sortConfig.direction || 'asc'}
-                        onClick={() => requestSort('_childName')}
-                      >
-                        Ребенок
-                      </TableSortLabel>
-                    </TableCell>
-                    <TableCell sx={{ width: 120, p: isMobile ? 0.5 : 1 }}>
-                      <TableSortLabel
-                        active={sortConfig.key === '_groupName'}
-                        direction={sortConfig.direction || 'asc'}
-                        onClick={() => requestSort('_groupName')}
-                      >
-                        Группа
-                      </TableSortLabel>
-                    </TableCell>
-                    <TableCell sx={{ width: 160, p: isMobile ? 0.5 : 1 }}>
-                      <TableSortLabel
-                        active={sortConfig.key === '_periodStart'}
-                        direction={sortConfig.direction || 'asc'}
-                        onClick={() => requestSort('_periodStart')}
-                      >
-                        Период
-                      </TableSortLabel>
-                    </TableCell>
-                    <TableCell sx={{ width: 110, p: isMobile ? 0.5 : 1 }}>
-                      <TableSortLabel
-                        active={sortConfig.key === 'paidAmount'}
-                        direction={sortConfig.direction || 'asc'}
-                        onClick={() => requestSort('paidAmount')}
-                      >
-                        Оплачено
-                      </TableSortLabel>
-                    </TableCell>
-                    <TableCell sx={{ width: 110, p: isMobile ? 0.5 : 1 }}>
-                      <TableSortLabel
-                        active={sortConfig.key === '_debt'}
-                        direction={sortConfig.direction || 'asc'}
-                        onClick={() => requestSort('_debt')}
-                      >
-                        Долг
-                      </TableSortLabel>
-                    </TableCell>
-                    <TableCell sx={{ width: 120, p: isMobile ? 0.5 : 1 }}>
-                      <TableSortLabel
-                        active={sortConfig.key === '_overpayment'}
-                        direction={sortConfig.direction || 'asc'}
-                        onClick={() => requestSort('_overpayment')}
-                      >
-                        Переплата
-                      </TableSortLabel>
-                    </TableCell>
-                    <TableCell sx={{ width: 90, textAlign: 'center', p: isMobile ? 0.5 : 1 }}>Надбавки</TableCell>
-                    <TableCell sx={{ width: 90, textAlign: 'center', p: isMobile ? 0.5 : 1 }}>Вычеты</TableCell>
-                    <TableCell sx={{ width: 150, p: isMobile ? 0.5 : 1 }}>Комментарии</TableCell>
-                    <TableCell sx={{ width: 120, p: isMobile ? 0.5 : 1 }}>
-                      <TableSortLabel
-                        active={sortConfig.key === 'status'}
-                        direction={sortConfig.direction || 'asc'}
-                        onClick={() => requestSort('status')}
-                      >
-                        Статус
-                      </TableSortLabel>
-                    </TableCell>
-                    <TableCell align='right' sx={{ width: 90, p: isMobile ? 0.5 : 1 }}>Действия</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {sortedPayments.map((payment, index) => {
-                    const childId = typeof payment.childId === 'string' ? payment.childId : payment.childId?._id;
-                    const child = childrenMap.get(childId || '');
-                    const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
-                    const groupName = gId ? groupsMap.get(gId)?.name || 'Нет группы' : 'Нет группы';
+                <Table size={isMobile ? 'small' : 'medium'} sx={{ width: '100%', tableLayout: 'fixed' }}>
+                  <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold', width: 40, p: isMobile ? 0.5 : 1 }}>#</TableCell>
+                      <TableCell align='center' sx={{ fontWeight: 'bold', width: 100, p: isMobile ? 0.5 : 1 }}>Оплата</TableCell>
+                      <TableCell sx={{ p: isMobile ? 0.5 : 1 }}>
+                        <TableSortLabel
+                          active={sortConfig.key === '_childName'}
+                          direction={sortConfig.direction || 'asc'}
+                          onClick={() => requestSort('_childName')}
+                        >
+                          Ребенок
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ width: 120, p: isMobile ? 0.5 : 1 }}>
+                        <TableSortLabel
+                          active={sortConfig.key === '_groupName'}
+                          direction={sortConfig.direction || 'asc'}
+                          onClick={() => requestSort('_groupName')}
+                        >
+                          Группа
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ width: 160, p: isMobile ? 0.5 : 1 }}>
+                        <TableSortLabel
+                          active={sortConfig.key === '_periodStart'}
+                          direction={sortConfig.direction || 'asc'}
+                          onClick={() => requestSort('_periodStart')}
+                        >
+                          Период
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ width: 110, p: isMobile ? 0.5 : 1 }}>
+                        <TableSortLabel
+                          active={sortConfig.key === 'paidAmount'}
+                          direction={sortConfig.direction || 'asc'}
+                          onClick={() => requestSort('paidAmount')}
+                        >
+                          Оплачено
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ width: 110, p: isMobile ? 0.5 : 1 }}>
+                        <TableSortLabel
+                          active={sortConfig.key === '_debt'}
+                          direction={sortConfig.direction || 'asc'}
+                          onClick={() => requestSort('_debt')}
+                        >
+                          Долг
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ width: 120, p: isMobile ? 0.5 : 1 }}>
+                        <TableSortLabel
+                          active={sortConfig.key === '_overpayment'}
+                          direction={sortConfig.direction || 'asc'}
+                          onClick={() => requestSort('_overpayment')}
+                        >
+                          Переплата
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ width: 90, textAlign: 'center', p: isMobile ? 0.5 : 1 }}>Надбавки</TableCell>
+                      <TableCell sx={{ width: 90, textAlign: 'center', p: isMobile ? 0.5 : 1 }}>Вычеты</TableCell>
+                      <TableCell sx={{ width: 150, p: isMobile ? 0.5 : 1 }}>Комментарии</TableCell>
+                      <TableCell sx={{ width: 120, p: isMobile ? 0.5 : 1 }}>
+                        <TableSortLabel
+                          active={sortConfig.key === 'status'}
+                          direction={sortConfig.direction || 'asc'}
+                          onClick={() => requestSort('status')}
+                        >
+                          Статус
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell align='right' sx={{ width: 90, p: isMobile ? 0.5 : 1 }}>Действия</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {sortedPayments.map((payment, index) => {
+                      const childId = typeof payment.childId === 'string' ? payment.childId : payment.childId?._id;
+                      const child = childrenMap.get(childId || '');
+                      const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
+                      const groupName = gId ? groupsMap.get(gId)?.name || 'Нет группы' : 'Нет группы';
 
-                    return (
-                      <PaymentRow
-                        key={payment._id}
-                        payment={payment}
-                        child={child}
-                        groupName={groupName}
-                        isMobile={isMobile}
-                        onMarkAsPaid={handleMarkAsPaid}
-                        onCancelPayment={handleCancelPayment}
-                        onOpenModal={handleOpenModal}
-                        onDelete={handleDelete}
-                        getPaymentStatusColor={getPaymentStatusColor}
-                        index={index}
-                        canManage={canManagePayments}
-                      />
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )
-        ) : (
-          <Box mt={4} textAlign='center'>
-            <Typography variant='h6' color='text.secondary'>
-              Платежи не найдены
-            </Typography>
-          </Box>
-        )}
-      </Box>
+                      return (
+                        <PaymentRow
+                          key={payment._id}
+                          payment={payment}
+                          child={child}
+                          groupName={groupName}
+                          isMobile={isMobile}
+                          onMarkAsPaid={handleMarkAsPaid}
+                          onCancelPayment={handleCancelPayment}
+                          onOpenModal={handleOpenModal}
+                          onDelete={handleDelete}
+                          getPaymentStatusColor={getPaymentStatusColor}
+                          index={index}
+                          canManage={canManagePayments}
+                        />
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )
+          ) : (
+            <Box mt={4} textAlign='center'>
+              <Typography variant='h6' color='text.secondary'>
+                Платежи не найдены
+              </Typography>
+            </Box>
+          )}
+        </Box>
       )}
 
       <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth='sm' fullWidth>

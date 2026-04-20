@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import moment from 'moment';
+import moment from 'moment/min/moment-with-locales';
 import {
   Box,
   Typography,
@@ -182,9 +182,9 @@ const ChildCard = React.memo(({
           <Typography variant="caption" color="textSecondary" display="block">
             {child.iin || 'ИИН не указан'}
           </Typography>
-          <Chip 
-            label={child.active ? 'Активен' : 'Неактивен'} 
-            size="small" 
+          <Chip
+            label={child.active ? 'Активен' : 'Неактивен'}
+            size="small"
             color={child.active ? 'success' : 'default'}
             sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
           />
@@ -266,20 +266,20 @@ const Children: React.FC = () => {
   const canManageChildren = ['admin', 'manager', 'director'].includes(role);
   const canDeleteChildren = ['admin', 'manager', 'director'].includes(role);
   const canViewSensitiveChildren = ['admin', 'manager', 'director'].includes(role);
-  const { 
-    children: allChildren, 
-    loading: childrenLoading, 
-    error: childrenError, 
+  const {
+    children: allChildren,
+    loading: childrenLoading,
+    error: childrenError,
     fetchChildren,
     deleteChild,
     updateChild,
     generatePayments
   } = useChildren();
-  
-  const { 
-    groups, 
-    loading: groupsLoading, 
-    fetchGroups 
+
+  const {
+    groups,
+    loading: groupsLoading,
+    fetchGroups
   } = useGroups();
 
   const loading = childrenLoading || groupsLoading;
@@ -442,8 +442,8 @@ const Children: React.FC = () => {
     setIsExporting(true);
     setExportError(null);
     try {
-      await exportData('children', exportFormat, { 
-        name: nameFilter, 
+      await exportData('children', exportFormat, {
+        name: nameFilter,
         group: groupFilter,
         active: activeFilter === 'active'
       });
@@ -517,7 +517,7 @@ const Children: React.FC = () => {
           )}
           {canManageChildren && (
             <Button variant='contained' startIcon={<Add />} onClick={() => handleOpenModal()} sx={{ width: isMobile ? '100%' : 'auto' }}>
-            Добавить ребёнка
+              Добавить ребёнка
             </Button>
           )}
         </Box>
@@ -573,17 +573,17 @@ const Children: React.FC = () => {
             <MenuItem value="">
               <em>Все группы</em>
             </MenuItem>
-              {groups.map((group) => (
-                <MenuItem key={group._id} value={group._id}>
-                  <Checkbox checked={groupFilter.indexOf(group._id as string) > -1} />
-                  <Box display='flex' alignItems='center' gap={1}>
-                    <Avatar sx={{ width: 20, height: 20, bgcolor: getGroupColor(group._id as string), fontSize: '0.7rem' }}>
-                      {group.name.charAt(0)}
-                    </Avatar>
-                    {group.name}
-                  </Box>
-                </MenuItem>
-              ))}
+            {groups.map((group) => (
+              <MenuItem key={group._id} value={group._id}>
+                <Checkbox checked={groupFilter.indexOf(group._id as string) > -1} />
+                <Box display='flex' alignItems='center' gap={1}>
+                  <Avatar sx={{ width: 20, height: 20, bgcolor: getGroupColor(group._id as string), fontSize: '0.7rem' }}>
+                    {group.name.charAt(0)}
+                  </Avatar>
+                  {group.name}
+                </Box>
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
 
