@@ -366,7 +366,7 @@ const Children: React.FC = () => {
   }, [childrenForUser, canViewSensitiveChildren]);
 
   const filteredChildren = useMemo(() => {
-    let result = [...visibleChildren];
+    let result = visibleChildren.filter(child => !child.fullName?.startsWith('Итого'));
     if (activeFilter === 'active') {
       result = result.filter((child) => child.active !== false);
     } else {

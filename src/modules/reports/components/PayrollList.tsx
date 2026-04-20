@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useDate } from '../../../app/context/DateContext';
 import {
   Box,
   Card,
@@ -111,6 +112,7 @@ interface PayrollRow {
 
 const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   const { user } = useAuth();
+  const { currentDate } = useDate();
   const { staff } = useStaff();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -144,9 +146,8 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [generating, setGenerating] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(
-    `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
-  );
+  const selectedMonth = moment(currentDate).format('YYYY-MM');
+  const selectedMonthLabel = moment(currentDate).format('MMMM YYYY');
   const [fineDialogOpen, setFineDialogOpen] = useState(false);
   const [currentFinePayrollId, setCurrentFinePayrollId] = useState<string | null>(null);
   const [currentFineStaffName, setCurrentFineStaffName] = useState('');
@@ -259,7 +260,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     } finally {
       setLoading(false);
     }
-  }, [userId, selectedMonth, personalOnly, user, staffMap]);
+  }, [userId, currentDate, personalOnly, user, staffMap]);
 
   useEffect(() => {
     loadData();
@@ -720,14 +721,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             return (
               <Box sx={{ p: 4, textAlign: 'center', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#f5f7fa' }}>
                 <Typography variant="h6" color="textSecondary" sx={{ mb: 2 }}>Нет данных о зарплате за этот период</Typography>
-                <TextField
-                  label='Выбрать другой месяц'
-                  type='month'
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  size="small"
-                />
+                
               </Box>
             );
           }
@@ -743,25 +737,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
               overflowY: 'auto'
             }}>
               <Box sx={{ mb: 4, width: '100%', maxWidth: 400 }}>
-                <TextField
-                  label='ПЕРИОД / PERIOD'
-                  type='month'
-                  fullWidth
-                  size='small'
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    bgcolor: 'rgba(255,255,255,0.05)',
-                    borderRadius: 1,
-                    input: { color: 'white' },
-                    label: { color: 'rgba(255,255,255,0.5)' },
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
-                      '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
-                    }
-                  }}
-                />
+                
               </Box>
 
               <Box sx={{
@@ -935,14 +911,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
               <Typography variant={isMobile ? 'h5' : 'h3'} sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>Расчетные листы</Typography>
               <Typography variant={isMobile ? 'body2' : 'h6'} sx={{ color: 'text.secondary', fontWeight: 'medium' }}>Управление зарплатами за {selectedMonthLabel}</Typography>
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
-                <TextField
-                  label='Выберите месяц'
-                  type='month'
-                  size='small'
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
                 <AuditLogButton entityType="payroll" />
               </Box>
             </Box>

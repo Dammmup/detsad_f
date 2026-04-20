@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import moment from 'moment';
 import 'moment/locale/ru';
+
+moment.locale('ru');
 import { useSnackbar } from 'notistack';
 import {
   Box,
@@ -330,6 +332,7 @@ const WeeklyAttendance: React.FC = () => {
   const filteredChildren = useMemo(() => {
     if (!selectedGroup) return [];
     return children.filter((child) => {
+      if (child.fullName?.startsWith('Итого')) return false;
       const gId = typeof child.groupId === 'object' && child.groupId !== null
         ? (child.groupId as any)._id || (child.groupId as any).id
         : child.groupId;
@@ -485,14 +488,17 @@ const WeeklyAttendance: React.FC = () => {
       return;
     }
     if (type === 'children-attendance') {
-      const weekStart = moment(currentDate).startOf('isoWeek');
-      const weekEnd = moment(currentDate).endOf('isoWeek');
+      const monthStart = moment(currentDate).startOf('month');
+      const monthEnd = moment(currentDate).endOf('month');
+
+      const groupName = groups.find(g => (g.id || g._id) === selectedGroup)?.name || 'Группа';
+      const monthName = moment(currentDate).format('MMMM_YYYY');
 
       await exportData('children-attendance', 'xlsx', {
         groupId: selectedGroup,
-        startDate: weekStart.format('YYYY-MM-DD'),
-        endDate: weekEnd.format('YYYY-MM-DD'),
-      });
+        startDate: monthStart.format('YYYY-MM-DD'),
+        endDate: monthEnd.format('YYYY-MM-DD'),
+      }, `Посещаемость_${groupName}_${monthName}`);
     }
   };
 
