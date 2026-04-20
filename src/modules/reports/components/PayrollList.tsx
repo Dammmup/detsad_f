@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import moment from 'moment';
+import 'moment/locale/ru';
 import { useDate } from '../../../app/context/DateContext';
 import {
   Box,
@@ -648,12 +650,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
       setError(e.message || 'Ошибка обновления ставки');
     }
   };
-
-
-  const selectedMonthLabel = new Date(`${selectedMonth}-01`).toLocaleString(
-    'ru-RU',
-    { month: 'long', year: 'numeric' },
-  );
 
   if (loading) {
     return (
