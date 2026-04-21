@@ -167,6 +167,8 @@ export interface IChildPayment {
   accruals?: number;
   deductions?: number;
   overpayment?: number;
+  debt?: number;
+  carryOverBalance?: number;
   comments?: string;
   paidAmount?: number;
   paymentType?: 'none' | 'kaspi' | 'cash';

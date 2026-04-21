@@ -3,6 +3,35 @@ import { apiClient as api } from '../../../shared/utils/api';
 
 const API_BASE_URL = '/child-payments';
 
+export interface AttendanceRecalculationResult {
+  payment: IChildPayment;
+  calculation: {
+    childId: string;
+    childName: string;
+    periodStart: string;
+    periodEnd: string;
+    baseAmount: number;
+    carryOverBalance: number;
+    accruals: number;
+    paidAmount: number;
+    workingDays: number;
+    presentDays: number;
+    absentWorkingDays: number;
+    nonWorkingPresentDays: number;
+    dailyRate: number;
+    recalculatedAmount: number;
+    attendanceDeduction: number;
+    totalBeforeAttendance: number;
+    totalDue: number;
+    debt: number;
+    overpayment: number;
+    formula: string;
+    presentDates: string[];
+    absentDates: string[];
+    ignoredPresentDates: string[];
+  };
+}
+
 const childPaymentApi = {
   getAll: async (filters?: { monthPeriod?: string; childId?: string; status?: string }): Promise<IChildPayment[]> => {
     const params = new URLSearchParams();
@@ -33,12 +62,27 @@ const childPaymentApi = {
     return response.data;
   },
 
+  markAsPaid: async (id: string, paymentType: 'kaspi' | 'cash' | 'none' = 'kaspi'): Promise<IChildPayment> => {
+    const response = await api.post(`${API_BASE_URL}/${id}/pay`, { paymentType });
+    return response.data;
+  },
+
+  cancelPaid: async (id: string): Promise<IChildPayment> => {
+    const response = await api.post(`${API_BASE_URL}/${id}/cancel-paid`);
+    return response.data;
+  },
+
   deleteItem: async (id: string): Promise<void> => {
     await api.delete(`${API_BASE_URL}/${id}`);
   },
 
   generate: async (date: Date): Promise<any> => {
     const response = await api.post(`${API_BASE_URL}/generate`, { date });
+    return response.data;
+  },
+
+  recalculateAttendance: async (id: string): Promise<AttendanceRecalculationResult> => {
+    const response = await api.post(`${API_BASE_URL}/${id}/recalculate-attendance`);
     return response.data;
   },
 };

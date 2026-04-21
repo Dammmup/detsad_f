@@ -31,6 +31,8 @@ import {
   TableSortLabel,
   Checkbox,
   ListItemText,
+  LinearProgress,
+  Divider,
 } from '@mui/material';
 import {
   Add,
@@ -38,12 +40,17 @@ import {
   Delete,
   Refresh,
   FileUpload,
-  SpaceBar,
+  Calculate,
+  EventAvailable,
+  CalendarMonth,
+  AccountBalanceWallet,
+  Paid,
+  Notes,
 } from '@mui/icons-material';
 import { useDate } from '../../../app/context/DateContext';
 import { useChildren } from '../../../app/context/ChildrenContext';
 import { useGroups } from '../../../app/context/GroupsContext';
-import childPaymentApi from '../services/childPayment';
+import childPaymentApi, { AttendanceRecalculationResult } from '../services/childPayment';
 import { IChildPayment, Child, Group } from '../../../shared/types/common';
 import moment from 'moment/min/moment-with-locales';
 import { exportData } from '../../../shared/utils/exportUtils';
@@ -62,18 +69,21 @@ const PaymentRow = React.memo(({
   isMobile,
   onMarkAsPaid,
   onCancelPayment,
+  onRecalculateAttendance,
   onOpenModal,
   onDelete,
   getPaymentStatusColor,
   index,
   canManage,
+  recalculatingId,
 }: any) => {
-  const handlePaidClick = useCallback(() => onMarkAsPaid(payment._id), [payment._id, onMarkAsPaid]);
   const handleKaspiPaidClick = useCallback(() => onMarkAsPaid(payment._id, 'kaspi'), [payment._id, onMarkAsPaid]);
   const handleCashPaidClick = useCallback(() => onMarkAsPaid(payment._id, 'cash'), [payment._id, onMarkAsPaid]);
   const handleCancelClick = useCallback(() => onCancelPayment(payment._id), [payment._id, onCancelPayment]);
+  const handleRecalculateClick = useCallback(() => onRecalculateAttendance(payment._id), [payment._id, onRecalculateAttendance]);
   const handleEditClick = useCallback(() => onOpenModal(payment), [payment, onOpenModal]);
   const handleDeleteClick = useCallback(() => onDelete(payment._id), [payment._id, onDelete]);
+  const isRecalculating = recalculatingId === payment._id;
 
   const debt = useMemo(() =>
     Math.max(0, (payment.total + (payment.accruals || 0) - (payment.deductions || 0)) - (payment.paidAmount || 0)),
@@ -213,6 +223,13 @@ const PaymentRow = React.memo(({
         <Box display="flex" justifyContent="flex-end" gap={0.5}>
           {canManage && (
             <>
+              <Tooltip title="Перерасчет по посещаемости">
+                <span>
+                  <IconButton size="small" onClick={handleRecalculateClick} color="secondary" disabled={isRecalculating}>
+                    {isRecalculating ? <CircularProgress size={18} /> : <Calculate fontSize="small" />}
+                  </IconButton>
+                </span>
+              </Tooltip>
               <IconButton size="small" onClick={handleEditClick} color="primary">
                 <Edit fontSize="small" />
               </IconButton>
@@ -234,17 +251,21 @@ const PaymentCard = React.memo(({
   groupName,
   onMarkAsPaid,
   onCancelPayment,
+  onRecalculateAttendance,
   onOpenModal,
   onDelete,
   getPaymentStatusColor,
   index,
   canManage,
+  recalculatingId,
 }: any) => {
   const handleCancelClick = useCallback(() => onCancelPayment(payment._id), [payment._id, onCancelPayment]);
   const handleKaspiPaidClick = useCallback(() => onMarkAsPaid(payment._id, 'kaspi'), [payment._id, onMarkAsPaid]);
   const handleCashPaidClick = useCallback(() => onMarkAsPaid(payment._id, 'cash'), [payment._id, onMarkAsPaid]);
+  const handleRecalculateClick = useCallback(() => onRecalculateAttendance(payment._id), [payment._id, onRecalculateAttendance]);
   const handleEditClick = useCallback(() => onOpenModal(payment), [payment, onOpenModal]);
   const handleDeleteClick = useCallback(() => onDelete(payment._id), [payment._id, onDelete]);
+  const isRecalculating = recalculatingId === payment._id;
 
   const debt = useMemo(() =>
     Math.max(0, (payment.total + (payment.accruals || 0) - (payment.deductions || 0)) - (payment.paidAmount || 0)),
@@ -337,6 +358,9 @@ const PaymentCard = React.memo(({
         <Box display="flex" gap={0.5}>
           {canManage && (
             <>
+              <IconButton size="small" onClick={handleRecalculateClick} color="secondary" disabled={isRecalculating}>
+                {isRecalculating ? <CircularProgress size={18} /> : <Calculate fontSize="small" />}
+              </IconButton>
               <IconButton size="small" onClick={handleEditClick} color="primary">
                 <Edit fontSize="small" />
               </IconButton>
@@ -383,23 +407,17 @@ const ChildPayments: React.FC = () => {
   const [paymentTypeFilter, setPaymentTypeFilter] = useState<'all' | 'kaspi' | 'cash' | 'none'>('all');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [recalculatingId, setRecalculatingId] = useState<string | null>(null);
+  const [recalculationResult, setRecalculationResult] = useState<AttendanceRecalculationResult | null>(null);
+  const [recalculationOpen, setRecalculationOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const isMobile = useMediaQuery('(max-width:640px)');
-  const isTablet = useMediaQuery('(max-width:1100px)');
 
   const childrenMap = useMemo(() => {
     const map = new Map<string, Child>();
     children.forEach(c => map.set(c._id || c.id || '', c));
     return map;
   }, [children]);
-
-  const paymentsById = useMemo(() => {
-    const map = new Map<string, IChildPayment>();
-    payments.forEach((p) => {
-      if (p._id) map.set(p._id, p);
-    });
-    return map;
-  }, [payments]);
 
   const groupsMap = useMemo(() => {
     const map = new Map<string, Group>();
@@ -414,16 +432,6 @@ const ChildPayments: React.FC = () => {
       case 'active': return '#FFC107';
       case 'draft': return '#9E9E9E';
       default: return '#B0B0B0';
-    }
-  }, []);
-
-  const getStatusColor = useCallback((status: string) => {
-    switch (status) {
-      case 'paid': return 'success';
-      case 'overdue': return 'error';
-      case 'active': return 'warning';
-      case 'draft': return 'info';
-      default: return 'default';
     }
   }, []);
 
@@ -526,20 +534,13 @@ const ChildPayments: React.FC = () => {
       return;
     }
     try {
-      const payment = paymentsById.get(paymentId);
-      if (!payment) return;
-      const totalAmount = (payment.total || 0) + (payment.accruals || 0) - (payment.deductions || 0);
-      await childPaymentApi.update(paymentId, {
-        status: 'paid',
-        paidAmount: totalAmount,
-        paymentDate: new Date(),
-        paymentType: paymentType
-      });
-      fetchPayments();
+      const updated = await childPaymentApi.markAsPaid(paymentId, paymentType);
+      setPayments((prev) => prev.map((payment) => payment._id === paymentId ? updated : payment));
+      await fetchPayments();
     } catch (e: any) {
       setError(e?.message || 'Ошибка обновления статуса');
     }
-  }, [paymentsById, fetchPayments, canManagePayments]);
+  }, [fetchPayments, canManagePayments]);
 
   const handleCancelPayment = useCallback(async (paymentId: string) => {
     if (!canManagePayments) {
@@ -547,14 +548,30 @@ const ChildPayments: React.FC = () => {
       return;
     }
     try {
-      await childPaymentApi.update(paymentId, {
-        status: 'active',
-        paidAmount: 0,
-        paymentDate: undefined
-      });
-      fetchPayments();
+      const updated = await childPaymentApi.cancelPaid(paymentId);
+      setPayments((prev) => prev.map((payment) => payment._id === paymentId ? updated : payment));
+      await fetchPayments();
     } catch (e: any) {
       setError(e?.message || 'Ошибка отмены оплаты');
+    }
+  }, [fetchPayments, canManagePayments]);
+
+  const handleRecalculateAttendance = useCallback(async (paymentId: string) => {
+    if (!canManagePayments) {
+      setSnackbar({ open: true, message: 'Недостаточно прав для перерасчета оплаты' });
+      return;
+    }
+    try {
+      setRecalculatingId(paymentId);
+      const result = await childPaymentApi.recalculateAttendance(paymentId);
+      setRecalculationResult(result);
+      setRecalculationOpen(true);
+      await fetchPayments();
+      setSnackbar({ open: true, message: 'Перерасчет посещаемости выполнен' });
+    } catch (e: any) {
+      setSnackbar({ open: true, message: e?.message || 'Ошибка перерасчета посещаемости' });
+    } finally {
+      setRecalculatingId(null);
     }
   }, [fetchPayments, canManagePayments]);
 
@@ -705,6 +722,19 @@ const ChildPayments: React.FC = () => {
     const timer = setTimeout(() => setShowInitialTooltip(false), 4000);
     return () => clearTimeout(timer);
   }, [canManagePayments]);
+
+  const selectedChild = useMemo(() => childrenMap.get(newPayment.childId) || null, [childrenMap, newPayment.childId]);
+  const selectedChildGroupId = selectedChild
+    ? (typeof selectedChild.groupId === 'object' ? (selectedChild.groupId as any)._id || (selectedChild.groupId as any).id : selectedChild.groupId)
+    : '';
+  const selectedGroupName = selectedChildGroupId ? groupsMap.get(selectedChildGroupId)?.name || 'Без группы' : 'Без группы';
+  const netDue = (newPayment.total || 0) + (newPayment.accruals || 0) - (newPayment.deductions || 0);
+  const modalDebt = Math.max(0, netDue - (newPayment.paidAmount || 0));
+  const modalOverpayment = Math.max(0, (newPayment.paidAmount || 0) - netDue);
+  const periodLabel = newPayment.period.start && newPayment.period.end
+    ? `${moment(newPayment.period.start).format('DD.MM.YYYY')} - ${moment(newPayment.period.end).format('DD.MM.YYYY')}`
+    : 'Период не выбран';
+  const money = (value: number) => `${Number(value || 0).toLocaleString('ru-RU')} ₸`;
 
   return (
     <Box>
@@ -925,11 +955,13 @@ const ChildPayments: React.FC = () => {
                       groupName={groupName}
                       onMarkAsPaid={handleMarkAsPaid}
                       onCancelPayment={handleCancelPayment}
+                      onRecalculateAttendance={handleRecalculateAttendance}
                       onOpenModal={handleOpenModal}
                       onDelete={handleDelete}
                       getPaymentStatusColor={getPaymentStatusColor}
                       index={index}
                       canManage={canManagePayments}
+                      recalculatingId={recalculatingId}
                     />
                   );
                 })}
@@ -1007,7 +1039,7 @@ const ChildPayments: React.FC = () => {
                           Статус
                         </TableSortLabel>
                       </TableCell>
-                      <TableCell align='right' sx={{ width: 90, p: isMobile ? 0.5 : 1 }}>Действия</TableCell>
+                      <TableCell align='right' sx={{ width: 130, p: isMobile ? 0.5 : 1 }}>Действия</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1026,11 +1058,13 @@ const ChildPayments: React.FC = () => {
                           isMobile={isMobile}
                           onMarkAsPaid={handleMarkAsPaid}
                           onCancelPayment={handleCancelPayment}
+                          onRecalculateAttendance={handleRecalculateAttendance}
                           onOpenModal={handleOpenModal}
                           onDelete={handleDelete}
                           getPaymentStatusColor={getPaymentStatusColor}
                           index={index}
                           canManage={canManagePayments}
+                          recalculatingId={recalculatingId}
                         />
                       );
                     })}
@@ -1048,131 +1082,296 @@ const ChildPayments: React.FC = () => {
         </Box>
       )}
 
-      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth='sm' fullWidth>
-        <DialogTitle>{editingPayment ? 'Редактировать оплату' : 'Добавить оплату'}</DialogTitle>
-        <DialogContent>
-          <Box mt={2} display='flex' flexDirection='column' gap={2}>
-            <Autocomplete
-              options={children}
-              getOptionLabel={(option) => {
-                const gId = typeof option.groupId === 'object' ? (option.groupId as any)?._id : option.groupId;
-                const group = groupsMap.get(gId || '');
-                return `${option.fullName} (${group ? group.name : 'Без группы'})`;
-              }}
-              value={childrenMap.get(newPayment.childId) || null}
-              onChange={(_, newValue) => setNewPayment({ ...newPayment, childId: newValue?._id || '' })}
-              renderInput={(params) => <TextField {...params} label='Ребенок' variant='outlined' />}
-            />
-            <TextField
-              label='Начало периода'
-              type='date'
-              value={newPayment.period.start}
-              onChange={(e) => setNewPayment({ ...newPayment, period: { ...newPayment.period, start: e.target.value } })}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label='Конец периода'
-              type='date'
-              value={newPayment.period.end}
-              onChange={(e) => setNewPayment({ ...newPayment, period: { ...newPayment.period, end: e.target.value } })}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label='Сумма (Всего)'
-              type='number'
-              value={newPayment.total === 0 && !editingPayment ? '' : newPayment.total}
-              onChange={(e) => setNewPayment({ ...newPayment, total: e.target.value === '' ? 0 : Number(e.target.value) })}
-              disabled={currentUser?.role !== 'admin'}
-            />
-            <TextField
-              label='Оплачено'
-              type='number'
-              value={newPayment.paidAmount === 0 ? '' : newPayment.paidAmount}
-              onChange={(e) => setNewPayment({ ...newPayment, paidAmount: e.target.value === '' ? 0 : Number(e.target.value) })}
-              disabled={currentUser?.role !== 'admin'}
-            />
-            <TextField
-              label='Надбавки'
-              type='number'
-              value={newPayment.accruals === 0 ? '' : newPayment.accruals}
-              onChange={(e) => setNewPayment({ ...newPayment, accruals: e.target.value === '' ? 0 : Number(e.target.value) })}
-              disabled={currentUser?.role !== 'admin'}
-            />
-            <TextField
-              label='Переплата'
-              type='number'
-              value={newPayment.overpayment === 0 ? '' : newPayment.overpayment}
-              InputProps={{ readOnly: true }}
-            />
-            <TextField
-              label='Вычеты'
-              type='number'
-              value={newPayment.deductions === 0 ? '' : newPayment.deductions}
-              onChange={(e) => setNewPayment({ ...newPayment, deductions: e.target.value === '' ? 0 : Number(e.target.value) })}
-              disabled={currentUser?.role !== 'admin'}
-            />
-            <FormControl fullWidth>
-              <InputLabel>Тип оплаты</InputLabel>
-              <Select
-                value={newPayment.paymentType}
-                label="Тип оплаты"
-                onChange={(e) => setNewPayment({ ...newPayment, paymentType: e.target.value as any })}
-              >
-                <MenuItem value="none">Не указано</MenuItem>
-                <MenuItem value="kaspi">Kaspi</MenuItem>
-                <MenuItem value="cash">Наличные</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              label='Комментарии'
-              value={newPayment.comments}
-              onChange={(e) => setNewPayment({ ...newPayment, comments: e.target.value })}
-              multiline
-              rows={2}
-            />
-            <Box sx={{ p: 2, bgcolor: '#f0f7ff', borderRadius: 1, border: '1px solid #cce3ff' }}>
-              <Box display='flex' justifyContent='space-between' mb={1}>
-                <Typography variant='body2'>Итого к оплате (с учетом корректировок):</Typography>
-                <Typography variant='body2' fontWeight='bold'>
-                  {(newPayment.total + (newPayment.accruals || 0) - (newPayment.deductions || 0)).toLocaleString()} ₸
-                </Typography>
-              </Box>
-              <Box display='flex' justifyContent='space-between'>
-                <Typography variant='body2'>Баланс (Долг / Переплата):</Typography>
-                <Typography
-                  variant='body2'
-                  fontWeight='bold'
-                  color={(newPayment.total + (newPayment.accruals || 0) - (newPayment.deductions || 0) - newPayment.paidAmount) > 0 ? 'error.main' : ((newPayment.total + (newPayment.accruals || 0) - (newPayment.deductions || 0) - newPayment.paidAmount) < 0 ? 'info.main' : 'success.main')}
-                >
-                  {(() => {
-                    const net = (newPayment.total || 0) + (newPayment.accruals || 0) - (newPayment.deductions || 0);
-                    const paid = newPayment.paidAmount || 0;
-                    const debt = Math.max(0, net - paid);
-                    const over = Math.max(0, paid - net);
-                    return `Долг: ${debt.toLocaleString('ru-RU')} ₸ / Переплата: ${over.toLocaleString('ru-RU')} ₸`;
-                  })()}
-                </Typography>
-              </Box>
+      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth='md' fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box display="flex" alignItems="center" justifyContent="space-between" gap={2} flexWrap="wrap">
+            <Box>
+              <Typography variant="h6" fontWeight="bold">
+                {editingPayment ? 'Редактирование оплаты' : 'Новая оплата'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {periodLabel}
+              </Typography>
             </Box>
+            <Chip
+              label={newPayment.status === 'paid' ? 'Оплачено' : newPayment.status === 'draft' ? 'Черновик' : newPayment.status === 'overdue' ? 'Просрочено' : 'Активно'}
+              color={newPayment.status === 'paid' ? 'success' : newPayment.status === 'overdue' ? 'error' : 'warning'}
+              variant="outlined"
+            />
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+              <Box display="flex" alignItems="center" gap={1.5} mb={2}>
+                <Avatar src={selectedChild?.photo} sx={{ width: 44, height: 44 }}>
+                  {selectedChild?.fullName?.charAt(0)}
+                </Avatar>
+                <Box minWidth={0}>
+                  <Typography variant="subtitle1" fontWeight="bold" noWrap>
+                    {selectedChild?.fullName || 'Выберите ребенка'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedGroupName}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Autocomplete
+                options={children}
+                getOptionLabel={(option) => {
+                  const gId = typeof option.groupId === 'object' ? (option.groupId as any)?._id : option.groupId;
+                  const group = groupsMap.get(gId || '');
+                  return `${option.fullName} (${group ? group.name : 'Без группы'})`;
+                }}
+                value={selectedChild}
+                onChange={(_, newValue) => setNewPayment({ ...newPayment, childId: newValue?._id || '' })}
+                renderInput={(params) => <TextField {...params} label='Ребенок' variant='outlined' />}
+              />
+            </Paper>
+
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
+                <CalendarMonth color="primary" fontSize="small" />
+                <Typography variant="subtitle2" fontWeight="bold">Период расчетного листа</Typography>
+              </Box>
+              <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : '1fr 1fr'} gap={2}>
+                <TextField
+                  label='Начало периода'
+                  type='date'
+                  value={newPayment.period.start}
+                  onChange={(e) => setNewPayment({ ...newPayment, period: { ...newPayment.period, start: e.target.value } })}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+                <TextField
+                  label='Конец периода'
+                  type='date'
+                  value={newPayment.period.end}
+                  onChange={(e) => setNewPayment({ ...newPayment, period: { ...newPayment.period, end: e.target.value } })}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+              </Box>
+            </Paper>
+
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
+                <AccountBalanceWallet color="primary" fontSize="small" />
+                <Typography variant="subtitle2" fontWeight="bold">Суммы и корректировки</Typography>
+              </Box>
+              <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : 'repeat(2, 1fr)'} gap={2}>
+                <TextField
+                  label='Сумма оплаты'
+                  type='number'
+                  value={newPayment.total === 0 && !editingPayment ? '' : newPayment.total}
+                  onChange={(e) => setNewPayment({ ...newPayment, total: e.target.value === '' ? 0 : Number(e.target.value) })}
+                  disabled={currentUser?.role !== 'admin'}
+                  fullWidth
+                />
+                <TextField
+                  label='Оплачено'
+                  type='number'
+                  value={newPayment.paidAmount === 0 ? '' : newPayment.paidAmount}
+                  onChange={(e) => setNewPayment({ ...newPayment, paidAmount: e.target.value === '' ? 0 : Number(e.target.value) })}
+                  disabled={currentUser?.role !== 'admin'}
+                  fullWidth
+                />
+                <TextField
+                  label='Надбавки'
+                  type='number'
+                  value={newPayment.accruals === 0 ? '' : newPayment.accruals}
+                  onChange={(e) => setNewPayment({ ...newPayment, accruals: e.target.value === '' ? 0 : Number(e.target.value) })}
+                  disabled={currentUser?.role !== 'admin'}
+                  fullWidth
+                />
+                <TextField
+                  label='Вычеты'
+                  type='number'
+                  value={newPayment.deductions === 0 ? '' : newPayment.deductions}
+                  onChange={(e) => setNewPayment({ ...newPayment, deductions: e.target.value === '' ? 0 : Number(e.target.value) })}
+                  disabled={currentUser?.role !== 'admin'}
+                  fullWidth
+                />
+              </Box>
+            </Paper>
+
+            <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : 'repeat(3, 1fr)'} gap={1.5}>
+              {[
+                ['Итого к оплате', netDue, 'primary.main'],
+                ['Долг', modalDebt, 'error.main'],
+                ['Переплата', modalOverpayment, 'info.main'],
+              ].map(([label, value, color]) => (
+                <Paper key={label as string} variant="outlined" sx={{ p: 1.5, borderRadius: 1, bgcolor: '#f8fafc' }}>
+                  <Typography variant="caption" color="text.secondary">{label}</Typography>
+                  <Typography variant="h6" fontWeight="bold" color={color as string}>
+                    {money(Number(value))}
+                  </Typography>
+                </Paper>
+              ))}
+            </Box>
+
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+              <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : '220px 1fr'} gap={2}>
+                <FormControl fullWidth>
+                  <InputLabel>Тип оплаты</InputLabel>
+                  <Select
+                    value={newPayment.paymentType}
+                    label="Тип оплаты"
+                    onChange={(e) => setNewPayment({ ...newPayment, paymentType: e.target.value as any })}
+                    startAdornment={<Paid fontSize="small" color="action" />}
+                  >
+                    <MenuItem value="none">Не указано</MenuItem>
+                    <MenuItem value="kaspi">Kaspi</MenuItem>
+                    <MenuItem value="cash">Наличные</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  label='Комментарии'
+                  value={newPayment.comments}
+                  onChange={(e) => setNewPayment({ ...newPayment, comments: e.target.value })}
+                  multiline
+                  minRows={2}
+                  InputProps={{
+                    startAdornment: <Notes fontSize="small" color="action" sx={{ mr: 1, mt: 0.5, alignSelf: 'flex-start' }} />
+                  }}
+                />
+              </Box>
+            </Paper>
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: 'wrap' }}>
           <Button onClick={handleCloseModal}>Отмена</Button>
           {canManagePayments && editingPayment && editingPayment.status !== 'paid' && (
             <Button
               onClick={async () => {
-                await handleMarkAsPaid(editingPayment._id);
+                await handleMarkAsPaid(editingPayment._id, newPayment.paymentType === 'cash' ? 'cash' : 'kaspi');
                 handleCloseModal();
               }}
               color="success"
               variant="outlined"
+              startIcon={<Paid />}
             >
-              Мгновенная оплата
+              Оплатить сейчас
             </Button>
           )}
           {canManagePayments && (
             <Button onClick={handleSavePayment} variant='contained' color="primary">Сохранить</Button>
           )}
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={recalculationOpen} onClose={() => setRecalculationOpen(false)} maxWidth='md' fullWidth>
+        <DialogTitle>Перерасчет по посещаемости</DialogTitle>
+        <DialogContent>
+          {recalculationResult && (
+            <Box sx={{ pt: 1 }}>
+              <Box display="flex" alignItems="center" justifyContent="space-between" gap={2} flexWrap="wrap" mb={2}>
+                <Box>
+                  <Typography variant="h6" fontWeight="bold">
+                    {recalculationResult.calculation.childName || 'Ребенок'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {moment(recalculationResult.calculation.periodStart).format('DD.MM.YYYY')} - {moment(recalculationResult.calculation.periodEnd).format('DD.MM.YYYY')}
+                  </Typography>
+                </Box>
+                <Chip
+                  icon={<EventAvailable />}
+                  label={`${recalculationResult.calculation.presentDays} из ${recalculationResult.calculation.workingDays} рабочих дней`}
+                  color={recalculationResult.calculation.debt > 0 ? 'warning' : 'success'}
+                  variant="outlined"
+                />
+              </Box>
+
+              <Box sx={{ mb: 3 }}>
+                <LinearProgress
+                  variant="determinate"
+                  value={recalculationResult.calculation.workingDays > 0
+                    ? Math.min(100, Math.round((recalculationResult.calculation.presentDays / recalculationResult.calculation.workingDays) * 100))
+                    : 0}
+                  sx={{ height: 10, borderRadius: 5 }}
+                />
+                <Box display="flex" justifyContent="space-between" mt={0.75}>
+                  <Typography variant="caption" color="text.secondary">Присутствовал</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {recalculationResult.calculation.absentWorkingDays} рабочих дней без отметки присутствия
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : 'repeat(4, 1fr)'} gap={1.5} mb={2}>
+                {[
+                  ['Сумма оплаты', recalculationResult.calculation.baseAmount],
+                  ['Ставка за день', recalculationResult.calculation.dailyRate],
+                  ['По посещаемости', recalculationResult.calculation.recalculatedAmount],
+                  ['Вычет', recalculationResult.calculation.attendanceDeduction],
+                ].map(([label, value]) => (
+                  <Paper key={label as string} variant="outlined" sx={{ p: 1.5, borderRadius: 1 }}>
+                    <Typography variant="caption" color="text.secondary">{label}</Typography>
+                    <Typography variant="h6" fontWeight="bold">{Number(value).toLocaleString('ru-RU')} ₸</Typography>
+                  </Paper>
+                ))}
+              </Box>
+
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: 1, bgcolor: '#f7fbff', mb: 2 }}>
+                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Формула</Typography>
+                <Typography variant="body2">
+                  {recalculationResult.calculation.baseAmount.toLocaleString('ru-RU')} ₸ / {recalculationResult.calculation.workingDays} раб. дн. x {recalculationResult.calculation.presentDays} дн. = {recalculationResult.calculation.recalculatedAmount.toLocaleString('ru-RU')} ₸
+                </Typography>
+                <Divider sx={{ my: 1.5 }} />
+                <Box display="flex" justifyContent="space-between" gap={2} flexWrap="wrap">
+                  <Typography variant="body2">
+                    Итого к оплате: <b>{recalculationResult.calculation.totalDue.toLocaleString('ru-RU')} ₸</b>
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color={recalculationResult.calculation.debt > 0 ? 'error.main' : recalculationResult.calculation.overpayment > 0 ? 'info.main' : 'success.main'}
+                  >
+                    Сальдо: долг {recalculationResult.calculation.debt.toLocaleString('ru-RU')} ₸ / переплата {recalculationResult.calculation.overpayment.toLocaleString('ru-RU')} ₸
+                  </Typography>
+                </Box>
+              </Paper>
+
+              <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : '1fr 1fr'} gap={2}>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                    Дни присутствия
+                  </Typography>
+                  <Box display="flex" gap={0.75} flexWrap="wrap">
+                    {recalculationResult.calculation.presentDates.length > 0 ? (
+                      recalculationResult.calculation.presentDates.map((date) => (
+                        <Chip key={date} label={moment(date).format('DD.MM')} size="small" color="success" variant="outlined" />
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">Нет отметок присутствия</Typography>
+                    )}
+                  </Box>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                    Рабочие дни без присутствия
+                  </Typography>
+                  <Box display="flex" gap={0.75} flexWrap="wrap">
+                    {recalculationResult.calculation.absentDates.slice(0, 31).map((date) => (
+                      <Chip key={date} label={moment(date).format('DD.MM')} size="small" color="warning" variant="outlined" />
+                    ))}
+                    {recalculationResult.calculation.absentDates.length === 0 && (
+                      <Typography variant="body2" color="text.secondary">Нет пропущенных рабочих дней</Typography>
+                    )}
+                  </Box>
+                </Box>
+              </Box>
+
+              {recalculationResult.calculation.nonWorkingPresentDays > 0 && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  {recalculationResult.calculation.nonWorkingPresentDays} отметок присутствия пришлись на нерабочие дни и не вошли в расчет.
+                </Alert>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRecalculationOpen(false)} variant="contained">Понятно</Button>
         </DialogActions>
       </Dialog>
     </Box>
