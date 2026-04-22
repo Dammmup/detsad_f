@@ -528,6 +528,39 @@ const ChildPayments: React.FC = () => {
 
   const { items: sortedPayments, requestSort, sortConfig } = useSort(processedPayments);
 
+  const getPaymentDateKey = useCallback((value: any) => {
+    return value ? moment(value).format('YYYY-MM-DD') : '';
+  }, []);
+
+  const syncPaymentStatusFields = useCallback((payment: typeof newPayment) => {
+    const totalDue = Math.max(0, (payment.total || 0) + (payment.accruals || 0) - (payment.deductions || 0));
+
+    if (payment.status === 'paid') {
+      return {
+        ...payment,
+        paidAmount: payment.paidAmount && payment.paidAmount > 0 ? payment.paidAmount : totalDue,
+        paymentType: payment.paymentType === 'none' ? 'kaspi' : payment.paymentType,
+      };
+    }
+
+    return payment;
+  }, []);
+
+  const handleModalStatusChange = useCallback((status: 'active' | 'overdue' | 'paid' | 'draft') => {
+    setNewPayment((prev) => {
+      if (status === 'paid') {
+        return syncPaymentStatusFields({ ...prev, status });
+      }
+
+      return {
+        ...prev,
+        status,
+        paidAmount: prev.status === 'paid' ? 0 : prev.paidAmount,
+        paymentType: prev.status === 'paid' ? 'none' : prev.paymentType,
+      };
+    });
+  }, [syncPaymentStatusFields]);
+
   const handleMarkAsPaid = useCallback(async (paymentId: string, paymentType: 'kaspi' | 'cash' = 'kaspi') => {
     if (!canManagePayments) {
       setSnackbar({ open: true, message: 'Недостаточно прав для изменения оплат' });
@@ -586,8 +619,8 @@ const ChildPayments: React.FC = () => {
       setNewPayment({
         childId: childIdValue || '',
         period: {
-          start: payment.period?.start ? moment(payment.period.start).format('YYYY-MM-DD') : '',
-          end: payment.period?.end ? moment(payment.period.end).format('YYYY-MM-DD') : '',
+          start: getPaymentDateKey(payment.period?.start),
+          end: getPaymentDateKey(payment.period?.end),
         },
         amount: payment.amount || 0,
         total: payment.total || 0,
@@ -616,7 +649,7 @@ const ChildPayments: React.FC = () => {
       });
     }
     setModalOpen(true);
-  }, [childrenMap, canManagePayments]);
+  }, [childrenMap, canManagePayments, getPaymentDateKey]);
 
   // Автоматический перенос переплаты в новое поле "Переплата"
   useEffect(() => {
@@ -640,23 +673,37 @@ const ChildPayments: React.FC = () => {
       return;
     }
     try {
+      const syncedPayment = syncPaymentStatusFields(newPayment);
+
       if (editingPayment) {
-        await childPaymentApi.update(editingPayment._id, {
-          ...newPayment,
-          childId: newPayment.childId || undefined,
-        });
+        const payload: any = {
+          ...syncedPayment,
+          childId: syncedPayment.childId || undefined,
+        };
+        const originalPeriodStart = getPaymentDateKey(editingPayment.period?.start);
+        const originalPeriodEnd = getPaymentDateKey(editingPayment.period?.end);
+        const periodWasChanged =
+          syncedPayment.period?.start !== originalPeriodStart ||
+          syncedPayment.period?.end !== originalPeriodEnd;
+
+        if (!periodWasChanged) {
+          delete payload.period;
+        }
+
+        const updated = await childPaymentApi.update(editingPayment._id, payload);
+        setPayments((prev) => prev.map((payment) => payment._id === editingPayment._id ? updated : payment));
       } else {
         await childPaymentApi.create({
-          ...newPayment,
-          childId: newPayment.childId || undefined,
+          ...syncedPayment,
+          childId: syncedPayment.childId || undefined,
         });
       }
-      fetchPayments();
+      await fetchPayments();
       handleCloseModal();
     } catch (e: any) {
       setError(e?.message || 'Ошибка сохранения оплаты');
     }
-  }, [editingPayment, newPayment, fetchPayments, handleCloseModal, canManagePayments]);
+  }, [editingPayment, newPayment, fetchPayments, handleCloseModal, canManagePayments, getPaymentDateKey, syncPaymentStatusFields]);
 
   const handleDelete = useCallback(async (id: string) => {
     if (!canManagePayments) {
@@ -1212,7 +1259,20 @@ const ChildPayments: React.FC = () => {
             </Box>
 
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
-              <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : '220px 1fr'} gap={2}>
+              <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : '180px 220px 1fr'} gap={2}>
+                <FormControl fullWidth>
+                  <InputLabel>Статус</InputLabel>
+                  <Select
+                    value={newPayment.status}
+                    label="Статус"
+                    onChange={(e) => handleModalStatusChange(e.target.value as any)}
+                  >
+                    <MenuItem value="active">Активно</MenuItem>
+                    <MenuItem value="paid">Оплачено</MenuItem>
+                    <MenuItem value="overdue">Просрочено</MenuItem>
+                    <MenuItem value="draft">Черновик</MenuItem>
+                  </Select>
+                </FormControl>
                 <FormControl fullWidth>
                   <InputLabel>Тип оплаты</InputLabel>
                   <Select
