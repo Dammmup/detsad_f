@@ -216,6 +216,50 @@ const normalizeDetails = (details?: string) => {
     .trim();
 };
 
+const parseAttendanceChildrenFromDetails = (details?: string) => {
+  const normalized = normalizeDetails(details);
+  const marker = 'Отмеченные дети:';
+  const markerIndex = normalized.indexOf(marker);
+  if (markerIndex === -1) return [];
+
+  return normalized
+    .slice(markerIndex + marker.length)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.replace(/^\d+\.\s*/, ''))
+    .map((line) => {
+      const separatorIndex = line.indexOf('—');
+      if (separatorIndex === -1) {
+        return {
+          field: line,
+          oldValue: null,
+          newValue: 'отмечен(а)',
+        };
+      }
+
+      return {
+        field: line.slice(0, separatorIndex).trim(),
+        oldValue: null,
+        newValue: line.slice(separatorIndex + 1).trim(),
+      };
+    });
+};
+
+const getDisplayChanges = (log: AuditLogItem) => {
+  const directChanges = (log.changes || []).filter(
+    (change) => change.oldValue !== undefined || change.newValue !== undefined,
+  );
+
+  if (directChanges.length > 0) return directChanges;
+
+  if (log.entityType === 'childAttendance' && log.action === 'bulk_update') {
+    return parseAttendanceChildrenFromDetails(log.details);
+  }
+
+  return [];
+};
+
 const toApiDate = (value?: string) => {
   if (!value) return undefined;
   const date = new Date(value);
@@ -238,8 +282,7 @@ const buildAuditSummary = (log: AuditLogItem) => {
   if (log.action === 'delete') return `Удалено: ${entity}`;
   if (log.action === 'bulk_update') return details.split('\n')[0] || `Массово изменено: ${entity}`;
 
-  const readableChanges = (log.changes || [])
-    .filter((change) => change.oldValue !== undefined || change.newValue !== undefined)
+  const readableChanges = getDisplayChanges(log)
     .slice(0, 3)
     .map((change) => `${getFieldLabel(change.field)}: ${formatValue(change.oldValue, change.field)} → ${formatValue(change.newValue, change.field)}`);
 
@@ -490,9 +533,7 @@ const AuditLogPage: React.FC = () => {
               items.map((log, index) => {
                 const rowId = log._id || `${log.entityType}-${log.entityId}-${log.createdAt}-${index}`;
                 const isExpanded = expandedId === rowId;
-                const displayChanges = (log.changes || []).filter(
-                  (change) => change.oldValue !== undefined || change.newValue !== undefined,
-                );
+                const displayChanges = getDisplayChanges(log);
                 const changesCount = displayChanges.length;
                 const summary = buildAuditSummary(log);
 
