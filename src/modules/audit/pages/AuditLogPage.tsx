@@ -60,6 +60,91 @@ const ACTION_COLORS: Record<string, 'default' | 'primary' | 'secondary' | 'error
   status_change: 'warning',
 };
 
+const ENTITY_LABELS: Record<string, string> = {
+  staffAttendance: 'Посещаемость сотрудника',
+  staffShift: 'Смена сотрудника',
+  childAttendance: 'Посещаемость ребенка',
+  childPayment: 'Оплата ребенка',
+  child: 'Ребенок',
+  children: 'Ребенок',
+  group: 'Группа',
+  groups: 'Группа',
+  user: 'Пользователь',
+  users: 'Пользователь',
+  staff: 'Сотрудник',
+  payroll: 'Зарплата',
+  rent: 'Аренда',
+  document: 'Документ',
+  documents: 'Документ',
+  task: 'Задача',
+  taskList: 'Задача',
+  dish: 'Блюдо',
+  foodDish: 'Блюдо',
+  calendarEvent: 'Событие календаря',
+  mainEvent: 'Главное событие',
+  cyclogram: 'Циклограмма',
+  dailySchedule: 'Расписание дня',
+  externalSpecialist: 'Внешний специалист',
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  status: 'Статус',
+  actualStart: 'Фактическое время прихода',
+  actualEnd: 'Фактическое время ухода',
+  startTime: 'Время начала',
+  endTime: 'Время окончания',
+  date: 'Дата',
+  attendanceDate: 'Дата посещения',
+  isPresent: 'Присутствие',
+  present: 'Присутствие',
+  absent: 'Отсутствие',
+  reason: 'Причина',
+  comment: 'Комментарий',
+  notes: 'Заметки',
+  fullName: 'ФИО',
+  firstName: 'Имя',
+  lastName: 'Фамилия',
+  middleName: 'Отчество',
+  name: 'Название',
+  title: 'Название',
+  group: 'Группа',
+  groupId: 'Группа',
+  staffId: 'Сотрудник',
+  childId: 'Ребенок',
+  userId: 'Пользователь',
+  amount: 'Сумма',
+  total: 'Итого',
+  paid: 'Оплачено',
+  paymentDate: 'Дата оплаты',
+  phone: 'Телефон',
+  email: 'Email',
+  role: 'Роль',
+  isActive: 'Активен',
+  salary: 'Оклад',
+  baseSalary: 'Базовая зарплата',
+  penalties: 'Штрафы',
+  bonuses: 'Премии',
+};
+
+const VALUE_LABELS: Record<string, string> = {
+  active: 'Активно',
+  completed: 'Завершено',
+  late: 'Опоздание',
+  absent: 'Отсутствует',
+  present: 'Присутствует',
+  true: 'Да',
+  false: 'Нет',
+  admin: 'Администратор',
+  manager: 'Менеджер',
+  director: 'Директор',
+  teacher: 'Воспитатель',
+  assistant: 'Помощник воспитателя',
+  staff: 'Сотрудник',
+  nurse: 'Медсестра',
+  doctor: 'Врач',
+  cook: 'Повар',
+};
+
 const DEFAULT_FILTERS: AuditLogFilters = {
   entityType: '',
   entityId: '',
@@ -85,16 +170,50 @@ const formatDateTime = (value?: string) => {
   }).format(date);
 };
 
-const formatValue = (value: unknown) => {
-  if (value === null || value === undefined || value === '') return '—';
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
+const formatDateOnly = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date);
+};
+
+const formatValue = (value: unknown, field?: string) => {
+  if (value === null || value === undefined || value === '') return 'не указано';
+  if (typeof value === 'boolean') return value ? 'Да' : 'Нет';
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'string') {
+    if (VALUE_LABELS[value]) return VALUE_LABELS[value];
+    if (/^\d{4}-\d{2}-\d{2}T/.test(value)) return formatDateTime(value);
+    if ((field || '').toLowerCase().includes('date') && /^\d{4}-\d{2}-\d{2}/.test(value)) return formatDateOnly(value);
+    return value;
   }
   try {
     return JSON.stringify(value, null, 2);
   } catch {
     return String(value);
   }
+};
+
+const getEntityTypeLabel = (entityType?: string) => {
+  if (!entityType) return 'Сущность';
+  return ENTITY_LABELS[entityType] || entityType;
+};
+
+const getFieldLabel = (field?: string) => {
+  if (!field) return 'Поле';
+  return FIELD_LABELS[field] || field.replace(/([A-Z])/g, ' $1').trim();
+};
+
+const normalizeDetails = (details?: string) => {
+  if (!details) return '';
+  return details
+    .replace(/\bundefined\b/g, 'не указано')
+    .replace(/\bnull\b/g, 'не указано')
+    .replace(/Изменено:\s*/i, '')
+    .trim();
 };
 
 const toApiDate = (value?: string) => {
@@ -105,8 +224,27 @@ const toApiDate = (value?: string) => {
 
 const getEntityLabel = (log: AuditLogItem) => {
   const entityName = log.entityName?.trim();
-  if (entityName) return `${log.entityType}: ${entityName}`;
-  return log.entityType || '—';
+  const entityType = getEntityTypeLabel(log.entityType);
+  if (entityName) return `${entityType}: ${entityName}`;
+  return entityType;
+};
+
+const buildAuditSummary = (log: AuditLogItem) => {
+  const entity = getEntityLabel(log);
+  const action = ACTION_LABELS[log.action] || log.action;
+  const details = normalizeDetails(log.details);
+
+  if (log.action === 'create') return `Создано: ${entity}`;
+  if (log.action === 'delete') return `Удалено: ${entity}`;
+  if (log.action === 'bulk_update') return details.split('\n')[0] || `Массово изменено: ${entity}`;
+
+  const readableChanges = (log.changes || [])
+    .filter((change) => change.oldValue !== undefined || change.newValue !== undefined)
+    .slice(0, 3)
+    .map((change) => `${getFieldLabel(change.field)}: ${formatValue(change.oldValue, change.field)} → ${formatValue(change.newValue, change.field)}`);
+
+  if (readableChanges.length) return `${action}: ${entity}. ${readableChanges.join('; ')}`;
+  return details || `${action}: ${entity}`;
 };
 
 const AuditLogPage: React.FC = () => {
@@ -233,7 +371,7 @@ const AuditLogPage: React.FC = () => {
               <MenuItem value="">Все сущности</MenuItem>
               {meta.entityTypes.map((entityType) => (
                 <MenuItem value={entityType} key={entityType}>
-                  {entityType}
+                  {getEntityTypeLabel(entityType)}
                 </MenuItem>
               ))}
             </Select>
@@ -330,8 +468,8 @@ const AuditLogPage: React.FC = () => {
               <TableCell width={170}>Время</TableCell>
               <TableCell width={170}>Действие</TableCell>
               <TableCell width={220}>Пользователь</TableCell>
-              <TableCell>Сущность</TableCell>
-              <TableCell>Детали</TableCell>
+              <TableCell width={260}>Раздел</TableCell>
+              <TableCell>Что произошло</TableCell>
               <TableCell width={120} align="right">Изменения</TableCell>
             </TableRow>
           </TableHead>
@@ -352,7 +490,11 @@ const AuditLogPage: React.FC = () => {
               items.map((log, index) => {
                 const rowId = log._id || `${log.entityType}-${log.entityId}-${log.createdAt}-${index}`;
                 const isExpanded = expandedId === rowId;
-                const changesCount = log.changes?.length || 0;
+                const displayChanges = (log.changes || []).filter(
+                  (change) => change.oldValue !== undefined || change.newValue !== undefined,
+                );
+                const changesCount = displayChanges.length;
+                const summary = buildAuditSummary(log);
 
                 return (
                   <React.Fragment key={rowId}>
@@ -387,15 +529,10 @@ const AuditLogPage: React.FC = () => {
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {getEntityLabel(log)}
                         </Typography>
-                        {log.entityId && (
-                          <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
-                            {log.entityId}
-                          </Typography>
-                        )}
                       </TableCell>
                       <TableCell sx={{ maxWidth: 360 }}>
-                        <Typography variant="body2" noWrap title={log.details || ''}>
-                          {log.details || '—'}
+                        <Typography variant="body2" noWrap title={summary}>
+                          {summary}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
@@ -424,32 +561,32 @@ const AuditLogPage: React.FC = () => {
 
                               {log.details && (
                                 <Box>
-                                  <Typography variant="caption" color="text.secondary">Детали</Typography>
-                                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{log.details}</Typography>
+                                  <Typography variant="caption" color="text.secondary">Описание действия</Typography>
+                                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{normalizeDetails(log.details)}</Typography>
                                 </Box>
                               )}
 
                               <Divider />
 
-                              <Typography variant="subtitle2">Измененные поля</Typography>
+                              <Typography variant="subtitle2">Что изменилось</Typography>
                               {changesCount ? (
                                 <Table size="small">
                                   <TableHead>
                                     <TableRow>
-                                      <TableCell width="25%">Поле</TableCell>
+                                      <TableCell width="25%">Показатель</TableCell>
                                       <TableCell>Было</TableCell>
                                       <TableCell>Стало</TableCell>
                                     </TableRow>
                                   </TableHead>
                                   <TableBody>
-                                    {log.changes?.map((change, changeIndex) => (
+                                    {displayChanges.map((change, changeIndex) => (
                                       <TableRow key={`${change.field || 'field'}-${changeIndex}`}>
-                                        <TableCell>{change.field || '—'}</TableCell>
+                                        <TableCell>{getFieldLabel(change.field)}</TableCell>
                                         <TableCell sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                          {formatValue(change.oldValue)}
+                                          {formatValue(change.oldValue, change.field)}
                                         </TableCell>
                                         <TableCell sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                          {formatValue(change.newValue)}
+                                          {formatValue(change.newValue, change.field)}
                                         </TableCell>
                                       </TableRow>
                                     ))}
