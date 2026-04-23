@@ -15,6 +15,7 @@ import AnalyticsIcon from '@mui/icons-material/Analytics';
 import TodayIcon from '@mui/icons-material/Today';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
+import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 
 export interface SidebarItem {
   id: string;
@@ -161,6 +162,12 @@ const sidebarStructure: SidebarItem[] = [
         label: 'Циклограммы',
         link: '/app/cyclogram',
         icon: <ScheduleIcon />,
+      },
+      {
+        id: 'organization-audit',
+        label: 'Аудит',
+        link: '/app/audit',
+        icon: <ManageSearchIcon />,
       },
       {
         id: 'organization-settings',

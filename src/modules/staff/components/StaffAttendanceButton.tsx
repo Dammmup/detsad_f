@@ -43,6 +43,29 @@ const haversineDistance = (
   return R * c;
 };
 
+const ATTENDANCE_TIME_ZONE = 'Asia/Almaty';
+
+const getCurrentTimeInMinutes = () => {
+  const timeStr = new Date().toLocaleTimeString('en-GB', {
+    timeZone: ATTENDANCE_TIME_ZONE,
+    hour12: false,
+  });
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+const parseTimeToMinutes = (time: string) => {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+const formatMinutesAsTime = (totalMinutes: number) => {
+  const normalized = ((totalMinutes % 1440) + 1440) % 1440;
+  const hours = String(Math.floor(normalized / 60)).padStart(2, '0');
+  const minutes = String(normalized % 60).padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
 export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
   onStatusChange,
 }) => {
@@ -70,12 +93,7 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
     longitude: number;
     radius: number;
   } | null>(null);
-
-
-
-
-
-  const [workingHours, setWorkingHours] = useState({ start: '08:00', end: '23:00' });
+  const [workingHours, setWorkingHours] = useState({ start: '09:00', end: '18:00' });
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -210,13 +228,6 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         }
       }
 
-
-      const now = new Date();
-      const currentHours = now.getHours();
-      const currentMinutes = now.getMinutes();
-      const currentTimeInMinutes = currentHours * 60 + currentMinutes;
-
-
       const today = new Date().toISOString().split('T')[0];
       const shifts = await getStaffShifts({
         staffId: currentUser.id,
@@ -240,19 +251,9 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
         const startStr = (myShift as any).startTime || workingHours.start;
         const endStr = (myShift as any).endTime || workingHours.end;
 
-        const [shiftStartHour, shiftStartMinute] = startStr
-          .split(':')
-          .map(Number);
-        const [shiftEndHour, shiftEndMinute] = endStr
-          .split(':')
-          .map(Number);
-        const shiftStartInMinutes = shiftStartHour * 60 + shiftStartMinute;
-        const shiftEndInMinutes = shiftEndHour * 60 + shiftEndMinute;
-
-
-
-        const allowedStartRange = shiftStartInMinutes - 120;
-        const allowedEndRange = shiftEndInMinutes + 30;
+        const currentTimeInMinutes = getCurrentTimeInMinutes();
+        const allowedStartRange = parseTimeToMinutes(startStr) - 60;
+        const allowedEndRange = parseTimeToMinutes(endStr) + 60;
 
         if (
           currentTimeInMinutes < allowedStartRange ||
@@ -264,14 +265,14 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
             const hours = Math.floor(minutesUntilStart / 60);
             const minutes = minutesUntilStart % 60;
             setSnackbarMessage(
-              `Отметка прихода возможна за 2 часа до начала смены. Смена начинается в ${startStr}, можно отмечаться с ${String(Math.floor(allowedStartRange / 60)).padStart(2, '0')}:${String(allowedStartRange % 60).padStart(2, '0')}. Осталось ${hours}ч ${minutes}м.`,
+              `Отметка прихода возможна за 1 час до начала рабочего времени. Рабочее время ${startStr}-${endStr}, можно отмечаться с ${formatMinutesAsTime(allowedStartRange)}. Осталось ${hours}ч ${minutes}м.`,
             );
           } else {
             const minutesAfterEnd = currentTimeInMinutes - allowedEndRange;
             const hours = Math.floor(minutesAfterEnd / 60);
             const minutes = minutesAfterEnd % 60;
             setSnackbarMessage(
-              `Время смены уже прошло. Смена заканчивается в ${endStr}, разрешенное время отметки до ${String(Math.floor(allowedEndRange / 60)).padStart(2, '0')}:${String(allowedEndRange % 60).padStart(2, '0')}. Прошло ${hours}ч ${minutes}м.`,
+              `Время отметки прихода истекло. Рабочее время ${startStr}-${endStr}, разрешенное время отметки до ${formatMinutesAsTime(allowedEndRange)}. Прошло ${hours}ч ${minutes}м.`,
             );
           }
           setSnackbarSeverity('error');
@@ -386,29 +387,12 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
       });
 
       if (myShift && myShift.id) {
-
-        const now = new Date();
-        const currentHours = now.getHours();
-        const currentMinutes = now.getMinutes();
-        const currentTimeInMinutes = currentHours * 60 + currentMinutes;
-
-
         const startStr = (myShift as any).startTime || workingHours.start;
         const endStr = (myShift as any).endTime || workingHours.end;
 
-        const [shiftStartHour, shiftStartMinute] = startStr
-          .split(':')
-          .map(Number);
-        const [shiftEndHour, shiftEndMinute] = endStr
-          .split(':')
-          .map(Number);
-        const shiftStartInMinutes = shiftStartHour * 60 + shiftStartMinute;
-        const shiftEndInMinutes = shiftEndHour * 60 + shiftEndMinute;
-
-
-
-        const allowedStartRange = shiftStartInMinutes - 120;
-        const allowedEndRange = shiftEndInMinutes + 30;
+        const currentTimeInMinutes = getCurrentTimeInMinutes();
+        const allowedStartRange = parseTimeToMinutes(startStr) - 60;
+        const allowedEndRange = parseTimeToMinutes(endStr) + 60;
 
         if (
           currentTimeInMinutes < allowedStartRange ||
@@ -420,14 +404,14 @@ export const StaffAttendanceButton: React.FC<StaffAttendanceButtonProps> = ({
             const hours = Math.floor(minutesUntilStart / 60);
             const minutes = minutesUntilStart % 60;
             setSnackbarMessage(
-              `Отметка ухода возможна только после начала смены. Смена начинается в ${startStr}, можно отмечаться с ${String(Math.floor(allowedStartRange / 60)).padStart(2, '0')}:${String(allowedStartRange % 60).padStart(2, '0')}. Осталось ${hours}ч ${minutes}м.`,
+              `Отметка ухода возможна за 1 час до начала рабочего времени. Рабочее время ${startStr}-${endStr}, можно отмечаться с ${formatMinutesAsTime(allowedStartRange)}. Осталось ${hours}ч ${minutes}м.`,
             );
           } else {
             const minutesAfterEnd = currentTimeInMinutes - allowedEndRange;
             const hours = Math.floor(minutesAfterEnd / 60);
             const minutes = minutesAfterEnd % 60;
             setSnackbarMessage(
-              `Время смены уже прошло. Смена заканчивается в ${endStr}, разрешенное время отметки до ${String(Math.floor(allowedEndRange / 60)).padStart(2, '0')}:${String(allowedEndRange % 60).padStart(2, '0')}. Прошло ${hours}ч ${minutes}м.`,
+              `Время отметки ухода истекло. Рабочее время ${startStr}-${endStr}, разрешенное время отметки до ${formatMinutesAsTime(allowedEndRange)}. Прошло ${hours}ч ${minutes}м.`,
             );
           }
           setSnackbarSeverity('error');
