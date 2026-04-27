@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import moment from 'moment/min/moment-with-locales';
 import { useDate } from '../../../app/context/DateContext';
 import {
@@ -1343,9 +1343,9 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
               data={currentTotalRow}
               onUpdate={async (id, updates) => {
                 await updatePayroll(id, updates);
+                setTotalDialogOpen(false);
+                setCurrentTotalRow(null);
                 await loadData();
-                const updatedRow = rows.find(r => r._id === id);
-                if (updatedRow) setCurrentTotalRow(updatedRow);
               }}
             />
 
