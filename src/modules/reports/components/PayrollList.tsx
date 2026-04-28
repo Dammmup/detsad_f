@@ -42,7 +42,6 @@ import {
   FileUpload as FileUploadIcon,
   AccountBalance as DebtIcon,
   AccountBalanceWallet,
-  AccessTime,
   RestartAlt,
 } from '@mui/icons-material';
 import {
@@ -74,7 +73,6 @@ import PayrollTotalDialog from './PayrollTotalDialog';
 import { exportData } from '../../../shared/utils/exportUtils';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 import DateNavigator from '../../../shared/components/DateNavigator';
-import { staffAttendanceTrackingService, StaffAttendanceRecord } from '../../staff/services/staffAttendanceTracking';
 
 interface Props {
   userId?: string;
@@ -157,14 +155,6 @@ const PAYROLL_STATUS_LABELS: Record<string, string> = {
   draft: 'Черновик',
   approved: 'Утвержден',
   paid: 'Оплачено',
-};
-
-const ATTENDANCE_STATUS_LABELS: Record<string, string> = {
-  completed: 'Завершено',
-  in_progress: 'На смене',
-  absent: 'Отсутствовал',
-  present: 'Присутствовал',
-  scheduled: 'Запланировано',
 };
 
 const emptyPayrollForm: PayrollFormData = {
@@ -270,8 +260,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   const [editingPayroll, setEditingPayroll] = useState<PayrollRow | null>(null);
   const [payrollForm, setPayrollForm] = useState<PayrollFormData>(emptyPayrollForm);
   const [savingPayroll, setSavingPayroll] = useState(false);
-  const [attendanceRecords, setAttendanceRecords] = useState<StaffAttendanceRecord[]>([]);
-  const [attendanceLoading, setAttendanceLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -386,29 +374,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     loadData();
   }, [loadData]);
 
-  const loadAttendanceForPayroll = useCallback(async (row: PayrollRow) => {
-    setAttendanceLoading(true);
-    setAttendanceRecords([]);
-
-    try {
-      const startDate = moment(selectedMonth, 'YYYY-MM').startOf('month').format('YYYY-MM-DD');
-      const endDate = moment(selectedMonth, 'YYYY-MM').endOf('month').format('YYYY-MM-DD');
-      const response = await staffAttendanceTrackingService.getAllRecords({
-        staffId: row.staffId,
-        startDate,
-        endDate,
-      });
-
-      setAttendanceRecords(Array.isArray(response.data) ? response.data : []);
-    } catch (e) {
-      console.error('Error loading staff attendance records:', e);
-      setSnackbarMessage('Не удалось загрузить отметки прихода и ухода');
-      setSnackbarOpen(true);
-    } finally {
-      setAttendanceLoading(false);
-    }
-  }, [selectedMonth]);
-
   const payrollModalTotals = useMemo(() => {
     const includedPenalties = getIncludedPenaltyTotal(editingPayroll, payrollForm.excludedPenaltyTypes);
     const detailedAutoPenalties = getAutoPenaltyTotal(editingPayroll);
@@ -451,7 +416,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
       excludedPenaltyTypes: row.excludedPenaltyTypes || [],
     });
     setPayrollModalOpen(true);
-    void loadAttendanceForPayroll(row);
   };
 
   const handleClosePayrollModal = (force = false) => {
@@ -459,7 +423,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     setPayrollModalOpen(false);
     setEditingPayroll(null);
     setPayrollForm(emptyPayrollForm);
-    setAttendanceRecords([]);
   };
 
   const handlePayrollFormChange = (field: keyof PayrollFormData, value: any) => {
@@ -959,12 +922,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     return aTime - bTime;
   });
 
-  const sortedAttendanceRecords = [...attendanceRecords].sort((a, b) => {
-    const aTime = a.date ? new Date(a.date).getTime() : 0;
-    const bTime = b.date ? new Date(b.date).getTime() : 0;
-    return aTime - bTime;
-  });
-
   if (loading) {
     return (
       <Box
@@ -1210,7 +1167,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                   />
                 )}
               </Box>
-              <PayrollTotalDialog open={totalDialogOpen} onClose={() => setTotalDialogOpen(false)} data={currentTotalRow} />
+              <PayrollTotalDialog open={totalDialogOpen} onClose={() => setTotalDialogOpen(false)} data={currentTotalRow} period={selectedMonth} />
             </Box>
           );
         })()
@@ -1865,54 +1822,6 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
                     )}
                   </Paper>
 
-                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
-                    <Box display="flex" alignItems="center" gap={1} mb={2}>
-                      <AccessTime color="primary" fontSize="small" />
-                      <Typography variant="subtitle2" fontWeight="bold">Отметки прихода и ухода</Typography>
-                    </Box>
-
-                    {attendanceLoading ? (
-                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                        <CircularProgress size={24} />
-                      </Box>
-                    ) : sortedAttendanceRecords.length > 0 ? (
-                      <Box sx={{ overflowX: 'auto' }}>
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow>
-                              <TableCell>Дата</TableCell>
-                              <TableCell>Приход</TableCell>
-                              <TableCell>Уход</TableCell>
-                              <TableCell>Опоздание</TableCell>
-                              <TableCell>Статус</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {sortedAttendanceRecords.map((record) => (
-                              <TableRow key={record._id}>
-                                <TableCell>{record.date ? moment(record.date).format('DD.MM.YYYY') : '—'}</TableCell>
-                                <TableCell>{record.actualStart ? moment(record.actualStart).format('HH:mm') : '—'}</TableCell>
-                                <TableCell>{record.actualEnd ? moment(record.actualEnd).format('HH:mm') : '—'}</TableCell>
-                                <TableCell>{record.lateMinutes ? `${Math.round(record.lateMinutes)} мин` : '0 мин'}</TableCell>
-                                <TableCell>
-                                  <Chip
-                                    size="small"
-                                    label={ATTENDANCE_STATUS_LABELS[(record as any).status] || ((record.actualStart && record.actualEnd) ? 'Завершено' : record.actualStart ? 'На смене' : 'Без отметки')}
-                                    color={record.actualStart ? 'success' : 'default'}
-                                    variant="outlined"
-                                  />
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        За выбранный месяц отметки прихода и ухода не найдены.
-                      </Typography>
-                    )}
-                  </Paper>
                 </Box>
               </DialogContent>
               <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: 'wrap' }}>
@@ -1934,6 +1843,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
               open={totalDialogOpen}
               onClose={() => setTotalDialogOpen(false)}
               data={currentTotalRow}
+              period={selectedMonth}
               onUpdate={async (id, updates) => {
                 await updatePayroll(id, updates);
                 setTotalDialogOpen(false);

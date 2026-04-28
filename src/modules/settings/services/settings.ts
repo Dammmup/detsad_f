@@ -164,7 +164,6 @@ export const settingsService = {
 
 export const getKindergartenSettings = async () => {
   try {
-    console.log('Fetching kindergarten settings from API...');
 
     const response = await apiClient.get('/settings/kindergarten');
 
@@ -191,7 +190,6 @@ export const getKindergartenSettings = async () => {
       }
     };
 
-    console.log('Kindergarten settings data:', settings);
     return settings;
   } catch (error) {
     console.error('Error in getKindergartenSettings:', error);

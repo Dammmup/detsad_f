@@ -12,11 +12,11 @@ const PushNotificationPrompt: React.FC = () => {
 
         const checkPermission = async () => {
             const permission = await PushService.checkPermission();
-            console.log('Push notification permission status:', permission);
+            // console.log('Push notification permission status:', permission);
 
-            if (permission === 'granted') {
-                console.log('✅ Push notifications already granted. Prompt will not be shown.');
-            }
+            // if (permission === 'granted') {
+            //     console.log('✅ Push notifications already granted. Prompt will not be shown.');
+            // }
 
             // Если разрешение еще не спрашивали (статус 'default')
             if (permission === 'default') {
