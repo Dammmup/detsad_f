@@ -52,11 +52,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
 
     try {
-      const currentUser = getCurrentUser();
       const authenticated = await isAuthenticated();
+      const refreshedUser = getCurrentUser();
 
-      if (currentUser && authenticated) {
-        setUser(currentUser);
+      if (refreshedUser && authenticated) {
+        setUser(refreshedUser);
         setIsLoggedIn(true);
       } else {
         setUser(null);
@@ -126,11 +126,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const checkAuth = useCallback(async (): Promise<boolean> => {
     try {
-      const currentUser = getCurrentUser();
       const authenticated = await isAuthenticated();
+      const refreshedUser = getCurrentUser();
 
-      if (currentUser && authenticated) {
-        setUser(prev => prev ? prev : currentUser);
+      if (refreshedUser && authenticated) {
+        setUser(refreshedUser);
         setIsLoggedIn(prev => prev ? prev : true);
         return true;
       }

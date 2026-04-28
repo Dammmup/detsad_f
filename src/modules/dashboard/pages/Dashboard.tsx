@@ -21,6 +21,7 @@ import FinancialStatsWidget from '../components/FinancialStatsWidget';
 import StaffScheduleWidget from '../components/StaffScheduleWidget';
 import BirthdaysCalendarWidget from '../components/BirthdaysCalendarWidget';
 import TodayMenuWidget from '../components/TodayMenuWidget';
+import TodayMarkedChildrenWidget from '../components/TodayMarkedChildrenWidget';
 
 import DateNavigator from '../../../shared/components/DateNavigator';
 import ReportsWidget from '../../reports/components/ReportsWidget';
@@ -51,6 +52,7 @@ const Dashboard = () => {
       canViewReports: ['admin', 'manager', 'director'].includes(role),
       canViewFinancialStats: ['admin', 'director'].includes(role),
       canManageChildren: ['admin', 'manager', 'director'].includes(role),
+      canViewKitchenAttendanceCount: role === 'cook' || currentUser?.accessControls?.canSeeFood === true,
     };
   }, [currentUser]);
 
@@ -297,6 +299,12 @@ const Dashboard = () => {
                     </Button>
                   </CardContent>
                 </Card>
+              </Grid>
+            )}
+
+            {permissions.canViewKitchenAttendanceCount && (
+              <Grid item xs={12} sm={6} md={6}>
+                <TodayMarkedChildrenWidget />
               </Grid>
             )}
           </Grid>

@@ -48,7 +48,7 @@ export const Sidebar = ({
       if (item.id === 'children' && accessControls.canSeeChildren !== undefined && accessControls.canSeeChildren !== null) {
         return accessControls.canSeeChildren;
       }
-      if ((item.id === 'food-products' || item.id === 'food-calendar') && accessControls.canSeeFood !== undefined && accessControls.canSeeFood !== null) {
+      if ((item.id === 'food-kitchen' || item.id === 'food-products' || item.id === 'food-calendar' || item.id === 'food-journals') && accessControls.canSeeFood !== undefined && accessControls.canSeeFood !== null) {
         return accessControls.canSeeFood;
       }
       if (item.id === 'rent' && accessControls.canSeeRent !== undefined && accessControls.canSeeRent !== null) {

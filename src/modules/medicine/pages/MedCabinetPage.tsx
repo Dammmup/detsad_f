@@ -22,6 +22,7 @@ export default function MedCabinetPage() {
   const { user: currentUser } = useAuth();
   const role = currentUser?.role || '';
   const canViewMedical = ['admin', 'manager', 'director', 'doctor', 'nurse'].includes(role);
+  const canViewFoodJournals = canViewMedical || role === 'cook' || currentUser?.accessControls?.canSeeFood === true;
 
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab') as MedJournalType;
@@ -30,6 +31,13 @@ export default function MedCabinetPage() {
     }
   }, [searchParams, tab]);
 
+  useEffect(() => {
+    if (!canViewMedical && canViewFoodJournals && tab !== 'food') {
+      setTab('food');
+      setSearchParams({ tab: 'food' });
+    }
+  }, [canViewFoodJournals, canViewMedical, setSearchParams, tab]);
+
   const handleTabChange = (_: React.SyntheticEvent, value: MedJournalType) => {
     setTab(value);
   };
@@ -37,36 +45,37 @@ export default function MedCabinetPage() {
     { type: 'children', label: 'Журналы по детям' },
     { type: 'food', label: 'Журналы по питанию/пищеблоку' },
   ];
-  const filteredJournals = medJournals.filter((j) => j.type === tab);
+  const effectiveTab = canViewMedical ? tab : 'food';
+  const filteredJournals = medJournals.filter((j) => j.type === effectiveTab);
 
   return (
     <Box sx={{ p: { xs: 1, md: 3 } }}>
       <Typography variant='h4' gutterBottom>
         Медицинский кабинет
       </Typography>
-      {!canViewMedical && (
+      {!canViewFoodJournals && (
         <Alert severity="info" sx={{ mb: 2 }}>
           Доступ к журналам медкабинета ограничен для вашей роли.
         </Alert>
       )}
-      {canViewMedical && (
+      {canViewFoodJournals && (
       <Paper sx={{ mb: 2 }}>
         <Tabs
-          value={tab}
+          value={effectiveTab}
           onChange={handleTabChange}
           indicatorColor='primary'
           textColor='primary'
           variant='scrollable'
           scrollButtons='auto'
         >
-          {journalTypes.map((jt) => (
+          {journalTypes.filter((jt) => canViewMedical || jt.type === 'food').map((jt) => (
             <Tab key={jt.type} value={jt.type} label={jt.label} />
           ))}
         </Tabs>
       </Paper>
       )}
       <Stack spacing={2}>
-        {canViewMedical && filteredJournals.map((journal) => (
+        {canViewFoodJournals && filteredJournals.map((journal) => (
           <Button
             key={journal.id}
             variant='outlined'

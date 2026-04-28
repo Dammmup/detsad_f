@@ -59,6 +59,9 @@ const Login: React.FC = () => {
         phone: normalizedPhone,
         email: authResponse.user.phone || normalizedPhone,
         active: authResponse.user.active ?? true,
+        allowToSeePayroll: authResponse.user.allowToSeePayroll,
+        accessControls: authResponse.user.accessControls,
+        groupId: authResponse.user.groupId,
         createdAt: authResponse.user.createdAt || new Date().toISOString(),
         updatedAt: authResponse.user.updatedAt || new Date().toISOString(),
       };

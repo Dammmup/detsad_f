@@ -36,6 +36,7 @@ import WeeklyAttendance from '../modules/children/pages/WeeklyAttendance';
 import DailyAttendance from '../modules/children/pages/DailyAttendance';
 import ReportsSalary from '../modules/reports/components/PayrollList';
 import { logout, getCurrentUser } from '../services';
+import { useAuth } from './context/AuthContext';
 import ReportsWidget from '../modules/reports/components/ReportsWidget';
 import StaffAttendanceTracking from '../modules/staff/pages/StaffAttendanceTracking';
 import { Documents } from '../modules/documents/pages/Documents';
@@ -146,10 +147,33 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
     handleMenuClose();
   };
 
-  const currentUser = getCurrentUser();
+  const { user: authUser } = useAuth();
+  const currentUser = authUser || getCurrentUser();
   const userRole = currentUser?.role || 'staff';
   const isAdminOrManager = ['admin', 'manager', 'director'].includes(userRole);
+  const resolveAccess = React.useCallback((
+    key: 'canSeeChildren' | 'canSeeFood' | 'canSeeRent' | 'canSeeStaff' | 'canSeeSettings',
+    defaultAllowed: boolean,
+  ) => {
+    const value = currentUser?.accessControls?.[key];
+    if (value === true) return true;
+    if (value === false) return false;
+    return defaultAllowed;
+  }, [currentUser]);
+  const canSeeChildren = resolveAccess(
+    'canSeeChildren',
+    ['admin', 'manager', 'director', 'teacher', 'assistant', 'nurse', 'psychologist', 'music_teacher', 'physical_teacher'].includes(userRole),
+  );
+  const canSeeFood = resolveAccess(
+    'canSeeFood',
+    isAdminOrManager || userRole === 'cook' || userRole === 'nurse',
+  );
+  const canSeeRent = resolveAccess('canSeeRent', isAdminOrManager);
+  const canSeeStaff = resolveAccess('canSeeStaff', isAdminOrManager);
+  const canSeeSettings = resolveAccess('canSeeSettings', isAdminOrManager);
+  const canOpenSettingsPage = userRole === 'admin' || currentUser?.accessControls?.canSeeSettings === true;
   const hasMedAccess = isAdminOrManager || ['doctor', 'nurse'].includes(userRole);
+  const hasFoodJournalAccess = hasMedAccess || canSeeFood;
 
   return (
     <Box sx={{ display: 'flex', overflowX: 'hidden' }}>
@@ -331,21 +355,21 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
           <Routes>
             <Route path='dashboard' element={<Dashboard />} />
             {/* Дети */}
-            <Route path='children' element={<Children />} />
+            <Route path='children' element={canSeeChildren ? <Children /> : <Navigate to="/app/dashboard" />} />
             <Route
               path='children/attendance'
-              element={isAdminOrManager ? <WeeklyAttendance /> : <Navigate to="/app/children/daily-attendance" replace />}
+              element={isAdminOrManager && canSeeChildren ? <WeeklyAttendance /> : canSeeChildren ? <Navigate to="/app/children/daily-attendance" replace /> : <Navigate to="/app/dashboard" />}
             />
-            <Route path='children/daily-attendance' element={<DailyAttendance />} />
-            <Route path='children/payments' element={<ChildPayments />} />
+            <Route path='children/daily-attendance' element={canSeeChildren ? <DailyAttendance /> : <Navigate to="/app/dashboard" />} />
+            <Route path='children/payments' element={isAdminOrManager && canSeeChildren ? <ChildPayments /> : <Navigate to="/app/dashboard" />} />
             {/* Сотрудники */}
-            <Route path='staff' element={isAdminOrManager ? <Staff /> : <Navigate to="/app/dashboard" />} />
+            <Route path='staff' element={canSeeStaff ? <Staff /> : <Navigate to="/app/dashboard" />} />
             <Route path='staff/schedule' element={<StaffSchedule />} />
             <Route
               path='staff/attendance'
               element={<StaffAttendanceTracking />}
             />
-            <Route path='staff/reports' element={isAdminOrManager ? <ReportsWidget /> : <Navigate to="/app/dashboard" />} />
+            <Route path='staff/reports' element={canSeeStaff ? <ReportsWidget /> : <Navigate to="/app/dashboard" />} />
             {/* Документы */}
             <Route path='documents' element={<Documents />} />
             {/* Отчеты */}
@@ -360,23 +384,23 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
                 )
               } 
             />
-            <Route path='rent' element={isAdminOrManager ? <ReportsRent /> : <Navigate to="/app/dashboard" />} />
+            <Route path='rent' element={canSeeRent ? <ReportsRent /> : <Navigate to="/app/dashboard" />} />
             <Route path='accounting' element={isAdminOrManager ? <AccountingPage /> : <Navigate to="/app/dashboard" />} />
-            <Route path='audit' element={isAdminOrManager ? <AuditLogPage /> : <Navigate to="/app/dashboard" />} />
+            <Route path='audit' element={canSeeSettings ? <AuditLogPage /> : <Navigate to="/app/dashboard" />} />
 
             {/* Статистика */}
             <Route path='statistics' element={isAdminOrManager ? <Statistics /> : <Navigate to="/app/dashboard" />} />
 
             {/* Организация/Настройки */}
-            <Route path='groups' element={<Groups />} />
-            <Route path='cyclogram' element={<Cyclogram />} />
-            <Route path='settings' element={userRole === 'admin' ? <Settings /> : <Navigate to="/app/dashboard" />} />
-            <Route path='food/products' element={isAdminOrManager || userRole === 'cook' || userRole === 'nurse' ? <ProductAccountingPage /> : <Navigate to="/app/dashboard" />} />
-            <Route path='food/calendar' element={isAdminOrManager || userRole === 'cook' || userRole === 'nurse' ? <MenuCalendarPage /> : <Navigate to="/app/dashboard" />} />
+            <Route path='groups' element={canSeeChildren ? <Groups /> : <Navigate to="/app/dashboard" />} />
+            <Route path='cyclogram' element={canSeeSettings ? <Cyclogram /> : <Navigate to="/app/dashboard" />} />
+            <Route path='settings' element={canOpenSettingsPage ? <Settings /> : <Navigate to="/app/dashboard" />} />
+            <Route path='food/products' element={canSeeFood ? <ProductAccountingPage /> : <Navigate to="/app/dashboard" />} />
+            <Route path='food/calendar' element={canSeeFood ? <MenuCalendarPage /> : <Navigate to="/app/dashboard" />} />
             <Route path='med/menu-admin' element={isAdminOrManager ? <MenuItemsAdminPage /> : <Navigate to="/app/dashboard" />} />
 
             {/* Медицинский кабинет и журналы */}
-            <Route path='med' element={hasMedAccess ? <MedCabinetPage /> : <Navigate to="/app/dashboard" />} />
+            <Route path='med' element={hasFoodJournalAccess ? <MedCabinetPage /> : <Navigate to="/app/dashboard" />} />
             <Route path='med/passport' element={hasMedAccess ? <ChildHealthPassportPage /> : <Navigate to="/app/dashboard" />} />
             <Route path='med/mantoux' element={hasMedAccess ? <MantouxJournal /> : <Navigate to="/app/dashboard" />} />
             <Route path='med/somatic' element={hasMedAccess ? <SomaticJournal /> : <Navigate to="/app/dashboard" />} />
@@ -393,35 +417,35 @@ const SimpleLayout: React.FC<SimpleLayoutProps> = () => {
             <Route path='med/tub-positive' element={hasMedAccess ? <TubPositiveJournal /> : <Navigate to="/app/dashboard" />} />
             <Route
               path='med/vitaminization'
-              element={hasMedAccess ? <VitaminizationJournalPage /> : <Navigate to="/app/dashboard" />}
+              element={hasFoodJournalAccess ? <VitaminizationJournalPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/organoleptic-journal'
-              element={hasMedAccess ? <OrganolepticJournalPage /> : <Navigate to="/app/dashboard" />}
+              element={hasFoodJournalAccess ? <OrganolepticJournalPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/food-norms-control'
-              element={hasMedAccess ? <FoodNormsControlPage /> : <Navigate to="/app/dashboard" />}
+              element={hasFoodJournalAccess ? <FoodNormsControlPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/perishable-brak'
-              element={hasMedAccess ? <PerishableBrakPage /> : <Navigate to="/app/dashboard" />}
+              element={hasFoodJournalAccess ? <PerishableBrakPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/food-certificates'
-              element={hasMedAccess ? <ProductCertificatePage /> : <Navigate to="/app/dashboard" />}
+              element={hasFoodJournalAccess ? <ProductCertificatePage /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/detergents'
-              element={hasMedAccess ? <DetergentLogPage /> : <Navigate to="/app/dashboard" />}
+              element={hasFoodJournalAccess ? <DetergentLogPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/food-stock'
-              element={hasMedAccess ? <FoodStockLogPage /> : <Navigate to="/app/dashboard" />}
+              element={hasFoodJournalAccess ? <FoodStockLogPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route
               path='med/canteen-staff-health'
-              element={hasMedAccess ? <FoodStaffHealthPage /> : <Navigate to="/app/dashboard" />}
+              element={hasFoodJournalAccess ? <FoodStaffHealthPage /> : <Navigate to="/app/dashboard" />}
             />
             <Route path='profile' element={<ProfilePage />} />
 

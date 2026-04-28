@@ -52,6 +52,7 @@ class AuthApiClient extends BaseApiClient {
           staffId: response.user.staffId,
           staffName: response.user.staffName,
           allowToSeePayroll: response.user.allowToSeePayroll,
+          accessControls: response.user.accessControls,
         },
         token: response.token,
       };
