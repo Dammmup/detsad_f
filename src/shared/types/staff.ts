@@ -198,6 +198,7 @@ export interface PayrollRecord extends BaseRecord {
     vacationPaidDays?: number;
     vacationUnpaidDays?: number;
     carryOverDebt?: number;
+    isManualDebt?: boolean;
     notes?: string;
     fio?: string;
 }

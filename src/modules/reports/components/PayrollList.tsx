@@ -521,6 +521,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         advance: payrollForm.advance,
         deductions: payrollForm.deductions,
         carryOverDebt: payrollForm.carryOverDebt,
+        isManualDebt: true,
         status: payrollForm.status as 'draft' | 'approved' | 'paid',
         excludedPenaltyTypes: payrollForm.excludedPenaltyTypes,
         penalties: payrollModalTotals.includedPenalties,
