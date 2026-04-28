@@ -52,11 +52,11 @@ const Dashboard = () => {
       canViewReports: ['admin', 'manager', 'director'].includes(role),
       canViewFinancialStats: ['admin', 'director'].includes(role),
       canManageChildren: ['admin', 'manager', 'director'].includes(role),
-      canViewKitchenAttendanceCount: role === 'cook' || currentUser?.accessControls?.canSeeFood === true,
+      canViewKitchenAttendanceCount: role === 'cook' || role === 'manager' || role === 'director' || role === 'admin' || currentUser?.accessControls?.canSeeFood === true,
     };
   }, [currentUser]);
 
-  const handleAttendanceStatusChange = useCallback(() => {}, []);
+  const handleAttendanceStatusChange = useCallback(() => { }, []);
   const handleOpenAttendancePage = useCallback(() => {
     navigate('/app/children/attendance');
   }, [navigate]);
