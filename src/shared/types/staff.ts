@@ -157,7 +157,24 @@ export interface PayrollRecord extends BaseRecord {
     shiftRate?: number;
     latePenalties?: number;
     absencePenalties?: number;
+    missingChildAttendancePenalties?: number;
     userFines?: number;
+    fines?: Array<{
+        amount: number;
+        reason: string;
+        type: string;
+        notes?: string;
+        date?: Date | string;
+        createdAt?: Date | string;
+    }>;
+    excludedPenaltyTypes?: string[];
+    shiftDetails?: Array<{
+        date: Date | string;
+        earnings: number;
+        fines: number;
+        net: number;
+        reason?: string;
+    }>;
     penaltyDetails?: {
         type?: string;
         amount?: number;
@@ -165,6 +182,7 @@ export interface PayrollRecord extends BaseRecord {
         absencePenalties?: number;
         userFines?: number;
     };
+    bonusDetails?: any;
     history?: Array<{
         date: Date | string;
         action: string;
@@ -176,6 +194,10 @@ export interface PayrollRecord extends BaseRecord {
     normProduction?: number;
     normShifts?: number;
     normType?: 'production' | 'shifts';
+    vacationPay?: number;
+    vacationPaidDays?: number;
+    vacationUnpaidDays?: number;
+    carryOverDebt?: number;
     notes?: string;
     fio?: string;
 }

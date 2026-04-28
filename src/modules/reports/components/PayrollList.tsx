@@ -25,6 +25,11 @@ import {
   useTheme,
   useMediaQuery,
   Stack,
+  Paper,
+  Avatar,
+  Divider,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -36,7 +41,9 @@ import {
   Refresh as RefreshIcon,
   FileUpload as FileUploadIcon,
   AccountBalance as DebtIcon,
-  PeopleAlt as PeopleIcon,
+  AccountBalanceWallet,
+  AccessTime,
+  RestartAlt,
 } from '@mui/icons-material';
 import {
   Dialog,
@@ -67,6 +74,7 @@ import PayrollTotalDialog from './PayrollTotalDialog';
 import { exportData } from '../../../shared/utils/exportUtils';
 import AuditLogButton from '../../../shared/components/AuditLogButton';
 import DateNavigator from '../../../shared/components/DateNavigator';
+import { staffAttendanceTrackingService, StaffAttendanceRecord } from '../../staff/services/staffAttendanceTracking';
 
 interface Props {
   userId?: string;
@@ -110,7 +118,108 @@ interface PayrollRow {
   normType?: 'production' | 'shifts';
   deductions?: number;
   carryOverDebt?: number;
+  vacationPay?: number;
+  excludedPenaltyTypes?: string[];
+  shiftDetails?: Array<{
+    date: Date | string;
+    earnings: number;
+    fines: number;
+    net: number;
+    reason?: string;
+  }>;
 }
+
+interface PayrollFormData {
+  baseSalary: number;
+  baseSalaryType: 'month' | 'shift';
+  accruals: number;
+  bonuses: number;
+  advance: number;
+  deductions: number;
+  carryOverDebt: number;
+  status: string;
+  excludedPenaltyTypes: string[];
+}
+
+const AUTO_FINE_TYPES = ['late', 'absence', 'early_leave', 'missing_child_attendance'] as const;
+
+const FINE_TYPE_LABELS: Record<string, string> = {
+  late: 'Опоздания',
+  absence: 'Пропуски',
+  early_leave: 'Ранний уход',
+  missing_child_attendance: 'Пропуск отметки детей',
+  manual: 'Ручные вычеты',
+  violation: 'Нарушения',
+  other: 'Прочее',
+};
+
+const PAYROLL_STATUS_LABELS: Record<string, string> = {
+  draft: 'Черновик',
+  approved: 'Утвержден',
+  paid: 'Оплачено',
+};
+
+const ATTENDANCE_STATUS_LABELS: Record<string, string> = {
+  completed: 'Завершено',
+  in_progress: 'На смене',
+  absent: 'Отсутствовал',
+  present: 'Присутствовал',
+  scheduled: 'Запланировано',
+};
+
+const emptyPayrollForm: PayrollFormData = {
+  baseSalary: 0,
+  baseSalaryType: 'month',
+  accruals: 0,
+  bonuses: 0,
+  advance: 0,
+  deductions: 0,
+  carryOverDebt: 0,
+  status: 'draft',
+  excludedPenaltyTypes: [],
+};
+
+const money = (value: number) => `${Math.round(value || 0).toLocaleString()} ₸`;
+
+const sumFinesByType = (row: PayrollRow | null, type: string) => {
+  if (!row) return 0;
+  const fines = row.fines || [];
+  const fineTotal = fines
+    .filter((fine) => fine.type === type)
+    .reduce((sum, fine) => sum + (Number(fine.amount) || 0), 0);
+
+  if (fineTotal > 0 || fines.some((fine) => fine.type === type)) {
+    return fineTotal;
+  }
+
+  if (type === 'late') return row.latePenalties || 0;
+  if (type === 'absence') return row.absencePenalties || 0;
+  if (type === 'missing_child_attendance') return row.missingChildAttendancePenalties || 0;
+  if (type === 'manual') return row.userFines || 0;
+  return 0;
+};
+
+const getIncludedPenaltyTotal = (row: PayrollRow | null, excludedPenaltyTypes: string[]) => {
+  if (!row) return 0;
+  const excluded = new Set(excludedPenaltyTypes || []);
+  const fines = row.fines || [];
+
+  if (fines.length > 0) {
+    return fines.reduce((sum, fine) => {
+      if (excluded.has(fine.type)) return sum;
+      return sum + (Number(fine.amount) || 0);
+    }, 0);
+  }
+
+  const componentTypes = ['late', 'absence', 'missing_child_attendance', 'manual'];
+  return componentTypes.reduce((sum, type) => {
+    if (excluded.has(type)) return sum;
+    return sum + sumFinesByType(row, type);
+  }, 0);
+};
+
+const getAutoPenaltyTotal = (row: PayrollRow | null) =>
+  AUTO_FINE_TYPES.reduce((sum, type) => sum + sumFinesByType(row, type), 0);
 
 const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   const { user } = useAuth();
@@ -157,6 +266,12 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
   const [newFine, setNewFine] = useState({ amount: '', reason: '' });
   const [totalDialogOpen, setTotalDialogOpen] = useState(false);
   const [currentTotalRow, setCurrentTotalRow] = useState<PayrollRow | null>(null);
+  const [payrollModalOpen, setPayrollModalOpen] = useState(false);
+  const [editingPayroll, setEditingPayroll] = useState<PayrollRow | null>(null);
+  const [payrollForm, setPayrollForm] = useState<PayrollFormData>(emptyPayrollForm);
+  const [savingPayroll, setSavingPayroll] = useState(false);
+  const [attendanceRecords, setAttendanceRecords] = useState<StaffAttendanceRecord[]>([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -252,6 +367,9 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
             shiftRate: p.shiftRate || 0,
             bonusDetails: p.bonusDetails,
             carryOverDebt: p.carryOverDebt || 0,
+            vacationPay: p.vacationPay || 0,
+            excludedPenaltyTypes: p.excludedPenaltyTypes || [],
+            shiftDetails: p.shiftDetails || [],
           };
         }),
       );
@@ -268,17 +386,191 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     loadData();
   }, [loadData]);
 
+  const loadAttendanceForPayroll = useCallback(async (row: PayrollRow) => {
+    setAttendanceLoading(true);
+    setAttendanceRecords([]);
+
+    try {
+      const startDate = moment(selectedMonth, 'YYYY-MM').startOf('month').format('YYYY-MM-DD');
+      const endDate = moment(selectedMonth, 'YYYY-MM').endOf('month').format('YYYY-MM-DD');
+      const response = await staffAttendanceTrackingService.getAllRecords({
+        staffId: row.staffId,
+        startDate,
+        endDate,
+      });
+
+      setAttendanceRecords(Array.isArray(response.data) ? response.data : []);
+    } catch (e) {
+      console.error('Error loading staff attendance records:', e);
+      setSnackbarMessage('Не удалось загрузить отметки прихода и ухода');
+      setSnackbarOpen(true);
+    } finally {
+      setAttendanceLoading(false);
+    }
+  }, [selectedMonth]);
+
+  const payrollModalTotals = useMemo(() => {
+    const includedPenalties = getIncludedPenaltyTotal(editingPayroll, payrollForm.excludedPenaltyTypes);
+    const detailedAutoPenalties = getAutoPenaltyTotal(editingPayroll);
+    const excludedAutoPenalties = AUTO_FINE_TYPES.reduce((sum, type) => {
+      if (!payrollForm.excludedPenaltyTypes.includes(type)) return sum;
+      return sum + sumFinesByType(editingPayroll, type);
+    }, 0);
+    const vacationPay = editingPayroll?.vacationPay || 0;
+    const total = Math.round(
+      (payrollForm.accruals || 0) +
+      vacationPay +
+      (payrollForm.bonuses || 0) -
+      includedPenalties -
+      (payrollForm.advance || 0) -
+      (payrollForm.deductions || 0) -
+      (payrollForm.carryOverDebt || 0),
+    );
+
+    return {
+      includedPenalties,
+      detailedAutoPenalties,
+      excludedAutoPenalties,
+      total,
+    };
+  }, [editingPayroll, payrollForm]);
+
   const handleEditClick = (row: PayrollRow) => {
-    setEditingId(row.staffId);
-    setEditData({
-      accruals: row.accruals || undefined,
-      penalties: row.penalties || undefined,
-      advance: row.advance || undefined,
-      bonuses: row.bonuses || undefined,
-      bonusDetails: row.bonusDetails,
-      baseSalary: row.baseSalary || undefined,
+    setEditingId(null);
+    setEditData({});
+    setEditingPayroll(row);
+    setPayrollForm({
+      baseSalary: row.baseSalary || 0,
+      baseSalaryType: row.baseSalaryType || 'month',
+      accruals: row.accruals || 0,
+      bonuses: row.bonuses || 0,
+      advance: row.advance || 0,
+      deductions: row.deductions || 0,
+      carryOverDebt: row.carryOverDebt || 0,
       status: row.status || 'draft',
+      excludedPenaltyTypes: row.excludedPenaltyTypes || [],
     });
+    setPayrollModalOpen(true);
+    void loadAttendanceForPayroll(row);
+  };
+
+  const handleClosePayrollModal = (force = false) => {
+    if (savingPayroll && !force) return;
+    setPayrollModalOpen(false);
+    setEditingPayroll(null);
+    setPayrollForm(emptyPayrollForm);
+    setAttendanceRecords([]);
+  };
+
+  const handlePayrollFormChange = (field: keyof PayrollFormData, value: any) => {
+    setPayrollForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handlePayrollNumberChange = (field: keyof PayrollFormData, value: string) => {
+    handlePayrollFormChange(field, value === '' ? 0 : Number(value));
+  };
+
+  const handleTogglePenaltyType = (type: string, includeInPayout: boolean) => {
+    setPayrollForm((prev) => {
+      const next = new Set(prev.excludedPenaltyTypes || []);
+      if (includeInPayout) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return {
+        ...prev,
+        excludedPenaltyTypes: Array.from(next),
+      };
+    });
+  };
+
+  const handleExcludeAutoPenalties = () => {
+    setPayrollForm((prev) => ({
+      ...prev,
+      excludedPenaltyTypes: Array.from(new Set([
+        ...(prev.excludedPenaltyTypes || []),
+        ...AUTO_FINE_TYPES,
+      ])),
+    }));
+  };
+
+  const handleIncludeAutoPenalties = () => {
+    setPayrollForm((prev) => ({
+      ...prev,
+      excludedPenaltyTypes: (prev.excludedPenaltyTypes || []).filter(
+        (type) => !AUTO_FINE_TYPES.includes(type as typeof AUTO_FINE_TYPES[number]),
+      ),
+    }));
+  };
+
+  const handleSavePayrollModal = async () => {
+    if (!editingPayroll || !canManagePayroll) return;
+
+    try {
+      setSavingPayroll(true);
+      let payrollId = editingPayroll._id;
+      const payload: Partial<Payroll> = {
+        baseSalary: payrollForm.baseSalary,
+        baseSalaryType: payrollForm.baseSalaryType,
+        accruals: payrollForm.accruals,
+        bonuses: payrollForm.bonuses,
+        advance: payrollForm.advance,
+        deductions: payrollForm.deductions,
+        carryOverDebt: payrollForm.carryOverDebt,
+        status: payrollForm.status as 'draft' | 'approved' | 'paid',
+        excludedPenaltyTypes: payrollForm.excludedPenaltyTypes,
+        penalties: payrollModalTotals.includedPenalties,
+        latePenalties: editingPayroll.latePenalties || 0,
+        absencePenalties: editingPayroll.absencePenalties || 0,
+        missingChildAttendancePenalties: editingPayroll.missingChildAttendancePenalties || 0,
+        userFines: editingPayroll.userFines || 0,
+        total: payrollModalTotals.total,
+      };
+
+      if (!payrollId) {
+        const newPayroll = await createPayroll({
+          ...payload,
+          staffId: editingPayroll.staffId as any,
+          period: selectedMonth,
+          fines: editingPayroll.fines || [],
+          workedDays: editingPayroll.workedDays || 0,
+          workedShifts: editingPayroll.workedShifts || 0,
+          shiftRate: editingPayroll.shiftRate || 0,
+          vacationPay: editingPayroll.vacationPay || 0,
+        });
+        payrollId = newPayroll._id;
+      } else {
+        await updatePayroll(payrollId, payload);
+      }
+
+      setRows((prev) =>
+        prev.map((row) =>
+          row.staffId === editingPayroll.staffId
+            ? {
+              ...row,
+              ...payload,
+              _id: payrollId,
+              total: payrollModalTotals.total,
+              excludedPenaltyTypes: payrollForm.excludedPenaltyTypes,
+            } as PayrollRow
+            : row,
+        ),
+      );
+      setSnackbarMessage('Расчетный лист успешно обновлен');
+      setSnackbarOpen(true);
+      handleClosePayrollModal(true);
+      await loadData();
+    } catch (error) {
+      console.error('Error updating payroll:', error);
+      setSnackbarMessage('Ошибка при обновлении расчетного листа');
+      setSnackbarOpen(true);
+    } finally {
+      setSavingPayroll(false);
+    }
   };
 
   const handleOpenTotalDialog = (row: PayrollRow) => {
@@ -650,6 +942,27 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
       setError(e.message || 'Ошибка обновления ставки');
     }
   };
+
+  const payrollModalAutoRows = AUTO_FINE_TYPES
+    .map((type) => ({
+      type,
+      label: FINE_TYPE_LABELS[type],
+      amount: sumFinesByType(editingPayroll, type),
+      excluded: payrollForm.excludedPenaltyTypes.includes(type),
+    }))
+    .filter((item) => item.amount > 0);
+
+  const payrollModalFineRows = [...(editingPayroll?.fines || [])].sort((a, b) => {
+    const aTime = a.date ? new Date(a.date).getTime() : 0;
+    const bTime = b.date ? new Date(b.date).getTime() : 0;
+    return aTime - bTime;
+  });
+
+  const sortedAttendanceRecords = [...attendanceRecords].sort((a, b) => {
+    const aTime = a.date ? new Date(a.date).getTime() : 0;
+    const bTime = b.date ? new Date(b.date).getTime() : 0;
+    return aTime - bTime;
+  });
 
   if (loading) {
     return (
@@ -1336,6 +1649,285 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
               </>
             )}
 
+            <Dialog open={payrollModalOpen} onClose={() => handleClosePayrollModal()} maxWidth="md" fullWidth>
+              <DialogTitle sx={{ pb: 1 }}>
+                <Box display="flex" alignItems="center" justifyContent="space-between" gap={2} flexWrap="wrap">
+                  <Box>
+                    <Typography variant="h6" fontWeight="bold">
+                      Редактирование расчетного листа
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {editingPayroll?.staffName || 'Сотрудник'} · {selectedMonthLabel}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    label={PAYROLL_STATUS_LABELS[payrollForm.status] || payrollForm.status}
+                    color={payrollForm.status === 'paid' ? 'success' : payrollForm.status === 'approved' ? 'info' : 'warning'}
+                    variant="outlined"
+                  />
+                </Box>
+              </DialogTitle>
+              <DialogContent>
+                <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+                    <Box display="flex" alignItems="center" gap={1.5}>
+                      <Avatar sx={{ width: 44, height: 44, bgcolor: 'primary.main' }}>
+                        {editingPayroll?.staffName?.charAt(0) || 'С'}
+                      </Avatar>
+                      <Box minWidth={0}>
+                        <Typography variant="subtitle1" fontWeight="bold" noWrap>
+                          {editingPayroll?.staffName}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {editingPayroll?.baseSalaryType === 'shift' ? `${editingPayroll?.workedShifts || 0} смен` : `${editingPayroll?.workedDays || 0} дней`} · начислено {money(payrollForm.accruals)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+
+                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+                    <Box display="flex" alignItems="center" gap={1} mb={2}>
+                      <AccountBalanceWallet color="primary" fontSize="small" />
+                      <Typography variant="subtitle2" fontWeight="bold">Суммы и корректировки</Typography>
+                    </Box>
+                    <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : 'repeat(2, 1fr)'} gap={2}>
+                      <TextField
+                        label="Оклад / ставка"
+                        type="number"
+                        value={payrollForm.baseSalary === 0 ? '' : payrollForm.baseSalary}
+                        onChange={(e) => handlePayrollNumberChange('baseSalary', e.target.value)}
+                        disabled={!canManagePayroll}
+                        fullWidth
+                      />
+                      <FormControl fullWidth>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
+                          Тип оклада
+                        </Typography>
+                        <Select
+                          value={payrollForm.baseSalaryType}
+                          onChange={(e) => handlePayrollFormChange('baseSalaryType', e.target.value)}
+                          disabled={!canManagePayroll}
+                        >
+                          <MenuItem value="month">Месячный</MenuItem>
+                          <MenuItem value="shift">За смену</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <TextField
+                        label="Начисления"
+                        type="number"
+                        value={payrollForm.accruals === 0 ? '' : payrollForm.accruals}
+                        onChange={(e) => handlePayrollNumberChange('accruals', e.target.value)}
+                        disabled={!canManagePayroll}
+                        fullWidth
+                      />
+                      <TextField
+                        label="Премия"
+                        type="number"
+                        value={payrollForm.bonuses === 0 ? '' : payrollForm.bonuses}
+                        onChange={(e) => handlePayrollNumberChange('bonuses', e.target.value)}
+                        disabled={!canManagePayroll}
+                        fullWidth
+                      />
+                      <TextField
+                        label="Аванс"
+                        type="number"
+                        value={payrollForm.advance === 0 ? '' : payrollForm.advance}
+                        onChange={(e) => handlePayrollNumberChange('advance', e.target.value)}
+                        disabled={!canManagePayroll}
+                        fullWidth
+                      />
+                      <TextField
+                        label="Ручные удержания"
+                        type="number"
+                        value={payrollForm.deductions === 0 ? '' : payrollForm.deductions}
+                        onChange={(e) => handlePayrollNumberChange('deductions', e.target.value)}
+                        disabled={!canManagePayroll}
+                        fullWidth
+                      />
+                      <TextField
+                        label="Долг с прошлого месяца"
+                        type="number"
+                        value={payrollForm.carryOverDebt === 0 ? '' : payrollForm.carryOverDebt}
+                        onChange={(e) => handlePayrollNumberChange('carryOverDebt', e.target.value)}
+                        disabled={!canManagePayroll}
+                        fullWidth
+                      />
+                      <FormControl fullWidth>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
+                          Статус
+                        </Typography>
+                        <Select
+                          value={payrollForm.status}
+                          onChange={(e) => handlePayrollFormChange('status', e.target.value)}
+                          disabled={!canManagePayroll}
+                        >
+                          <MenuItem value="draft">Черновик</MenuItem>
+                          <MenuItem value="approved">Утвержден</MenuItem>
+                          <MenuItem value="paid">Оплачено</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Box>
+                  </Paper>
+
+                  <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : 'repeat(4, 1fr)'} gap={1.5}>
+                    {[
+                      ['Начислено', payrollForm.accruals + (editingPayroll?.vacationPay || 0) + payrollForm.bonuses, 'success.main'],
+                      ['Вычеты учтены', payrollModalTotals.includedPenalties, 'error.main'],
+                      ['Исключено', payrollModalTotals.excludedAutoPenalties, 'warning.main'],
+                      ['К выплате', payrollModalTotals.total, 'primary.main'],
+                    ].map(([label, value, color]) => (
+                      <Paper key={label as string} variant="outlined" sx={{ p: 1.5, borderRadius: 1, bgcolor: '#f8fafc' }}>
+                        <Typography variant="caption" color="text.secondary">{label}</Typography>
+                        <Typography variant="h6" fontWeight="bold" color={color as string}>
+                          {money(Number(value))}
+                        </Typography>
+                      </Paper>
+                    ))}
+                  </Box>
+
+                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+                    <Box display="flex" alignItems="center" justifyContent="space-between" gap={1} mb={2} flexWrap="wrap">
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <RestartAlt color="primary" fontSize="small" />
+                        <Typography variant="subtitle2" fontWeight="bold">Автоматические вычеты</Typography>
+                      </Box>
+                      <Box display="flex" gap={1} flexWrap="wrap">
+                        <Button size="small" variant="outlined" color="error" onClick={handleExcludeAutoPenalties} disabled={!canManagePayroll}>
+                          Обнулить авто-вычеты
+                        </Button>
+                        <Button size="small" variant="text" onClick={handleIncludeAutoPenalties} disabled={!canManagePayroll}>
+                          Учитывать все
+                        </Button>
+                      </Box>
+                    </Box>
+
+                    {payrollModalAutoRows.length > 0 ? (
+                      <Stack spacing={1}>
+                        {payrollModalAutoRows.map((item) => (
+                          <Box
+                            key={item.type}
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              gap: 2,
+                              p: 1,
+                              borderRadius: 1,
+                              bgcolor: item.excluded ? 'rgba(245, 158, 11, 0.08)' : 'grey.50',
+                            }}
+                          >
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold">{item.label}</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                В детализации: -{money(item.amount)}
+                              </Typography>
+                            </Box>
+                            <FormControlLabel
+                              control={
+                                <Switch
+                                  checked={!item.excluded}
+                                  onChange={(e) => handleTogglePenaltyType(item.type, e.target.checked)}
+                                  disabled={!canManagePayroll}
+                                />
+                              }
+                              label={<Typography variant="caption">{item.excluded ? 'Не учитывать' : 'Учитывать'}</Typography>}
+                              sx={{ m: 0 }}
+                            />
+                          </Box>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        Автоматических вычетов за период нет.
+                      </Typography>
+                    )}
+
+                    {payrollModalFineRows.length > 0 && (
+                      <>
+                        <Divider sx={{ my: 2 }} />
+                        <Box sx={{ maxHeight: 180, overflowY: 'auto' }}>
+                          {payrollModalFineRows.map((fine, index) => (
+                            <Box key={`${fine.type}-${index}`} sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '120px 1fr 120px', gap: 1, py: 0.75, borderBottom: '1px solid', borderColor: 'divider' }}>
+                              <Typography variant="caption" color="text.secondary">
+                                {fine.date ? moment(fine.date).format('DD.MM.YYYY') : '—'}
+                              </Typography>
+                              <Typography variant="body2">
+                                {FINE_TYPE_LABELS[fine.type] || 'Вычет'} · {fine.reason || 'Без причины'}
+                              </Typography>
+                              <Typography variant="body2" color={payrollForm.excludedPenaltyTypes.includes(fine.type) ? 'warning.main' : 'error.main'} textAlign={isMobile ? 'left' : 'right'}>
+                                -{money(Number(fine.amount) || 0)}
+                              </Typography>
+                            </Box>
+                          ))}
+                        </Box>
+                      </>
+                    )}
+                  </Paper>
+
+                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+                    <Box display="flex" alignItems="center" gap={1} mb={2}>
+                      <AccessTime color="primary" fontSize="small" />
+                      <Typography variant="subtitle2" fontWeight="bold">Отметки прихода и ухода</Typography>
+                    </Box>
+
+                    {attendanceLoading ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                        <CircularProgress size={24} />
+                      </Box>
+                    ) : sortedAttendanceRecords.length > 0 ? (
+                      <Box sx={{ overflowX: 'auto' }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>Дата</TableCell>
+                              <TableCell>Приход</TableCell>
+                              <TableCell>Уход</TableCell>
+                              <TableCell>Опоздание</TableCell>
+                              <TableCell>Статус</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {sortedAttendanceRecords.map((record) => (
+                              <TableRow key={record._id}>
+                                <TableCell>{record.date ? moment(record.date).format('DD.MM.YYYY') : '—'}</TableCell>
+                                <TableCell>{record.actualStart ? moment(record.actualStart).format('HH:mm') : '—'}</TableCell>
+                                <TableCell>{record.actualEnd ? moment(record.actualEnd).format('HH:mm') : '—'}</TableCell>
+                                <TableCell>{record.lateMinutes ? `${Math.round(record.lateMinutes)} мин` : '0 мин'}</TableCell>
+                                <TableCell>
+                                  <Chip
+                                    size="small"
+                                    label={ATTENDANCE_STATUS_LABELS[(record as any).status] || ((record.actualStart && record.actualEnd) ? 'Завершено' : record.actualStart ? 'На смене' : 'Без отметки')}
+                                    color={record.actualStart ? 'success' : 'default'}
+                                    variant="outlined"
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        За выбранный месяц отметки прихода и ухода не найдены.
+                      </Typography>
+                    )}
+                  </Paper>
+                </Box>
+              </DialogContent>
+              <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: 'wrap' }}>
+                <Button onClick={() => handleClosePayrollModal()} disabled={savingPayroll}>Отмена</Button>
+                <Button
+                  onClick={handleSavePayrollModal}
+                  variant="contained"
+                  color="primary"
+                  disabled={!canManagePayroll || savingPayroll}
+                  startIcon={savingPayroll ? <CircularProgress size={16} /> : <SaveIcon />}
+                >
+                  Сохранить
+                </Button>
+              </DialogActions>
+            </Dialog>
+
             <FinesDetailsDialog open={fineDialogOpen} onClose={() => setFineDialogOpen(false)} fines={currentFines} onAddFine={handleAddFine} onDeleteFine={handleDeleteFine} staffName={currentFineStaffName} canEdit={isAdmin} />
             <PayrollTotalDialog
               open={totalDialogOpen}
@@ -1410,4 +2002,3 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
 };
 
 export default PayrollList;
-
