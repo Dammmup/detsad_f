@@ -493,6 +493,7 @@ const StaffAttendanceTracking: React.FC = () => {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkForm, setBulkForm] = useState({ actualStart: '', actualEnd: '', notes: '', status: '' });
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [bulkConfirmDialogOpen, setBulkConfirmDialogOpen] = useState(false);
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
   const [bulkStatusForm, setBulkStatusForm] = useState({
     startDate: moment().startOf('month').format('YYYY-MM-DD'),
@@ -573,6 +574,18 @@ const StaffAttendanceTracking: React.FC = () => {
       _date: r.date ? new Date(r.date).getTime() : 0
     }));
   }, [records]);
+
+  const selectedEmployees = useMemo(() => {
+    // Получаем уникальные имена сотрудников из выбранных записей
+    const names = new Set<string>();
+    records.forEach(record => {
+      const id = record.id || (record as any)._id;
+      if (id && selectedIds.includes(id)) {
+        names.add(record.staffName || 'Неизвестный сотрудник');
+      }
+    });
+    return Array.from(names);
+  }, [records, selectedIds]);
 
   // 4. Custom hook SORT
   const { items: sortedRecords, requestSort, sortConfig } = useSort(processedRecords);
@@ -1632,17 +1645,6 @@ const StaffAttendanceTracking: React.FC = () => {
               {isSmallMobile ? 'Смена' : 'Создать смену'}
             </Button>
           )}
-          {canBulkUpdate && (
-            <Button
-              variant='contained'
-              color='secondary'
-              startIcon={<Edit />}
-              onClick={() => setBulkStatusDialogOpen(true)}
-              size={isSmallMobile ? 'small' : 'medium'}
-            >
-              {isSmallMobile ? 'Комп.' : 'Массовая корректировка'}
-            </Button>
-          )}
           {canViewRecords && (
             <Button
               variant='contained'
@@ -2117,13 +2119,50 @@ const StaffAttendanceTracking: React.FC = () => {
           {canBulkUpdate && (
             <Button
               variant='contained'
-              onClick={handleBulkUpdate}
-              disabled={isBulkUpdating || (!bulkForm.actualStart && !bulkForm.actualEnd && !bulkForm.notes)}
+              onClick={() => setBulkConfirmDialogOpen(true)}
+              disabled={isBulkUpdating || (!bulkForm.actualStart && !bulkForm.actualEnd && !bulkForm.notes && !bulkForm.status)}
               startIcon={isBulkUpdating ? <Schedule /> : <Check />}
             >
-              {isBulkUpdating ? 'Обновление...' : 'Обновить'}
+              Далее
             </Button>
           )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Подтверждение массового обновления */}
+      <Dialog
+        open={bulkConfirmDialogOpen}
+        onClose={() => setBulkConfirmDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Подтверждение</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Вы уверены, что хотите обновить записи (<strong>{selectedIds.length}</strong> шт.) для следующих сотрудников?
+          </Typography>
+          <Box sx={{ maxHeight: 200, overflowY: 'auto', bgcolor: 'background.default', p: 1, borderRadius: 1 }}>
+            {selectedEmployees.map((name, idx) => (
+              <Typography key={idx} variant="body2" sx={{ mb: 0.5 }}>
+                • {name}
+              </Typography>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkConfirmDialogOpen(false)}>Отмена</Button>
+          <Button 
+            onClick={() => {
+              setBulkConfirmDialogOpen(false);
+              handleBulkUpdate();
+            }} 
+            variant="contained" 
+            color="primary"
+            startIcon={isBulkUpdating ? <Schedule /> : <Check />}
+            disabled={isBulkUpdating}
+          >
+            {isBulkUpdating ? 'Обновление...' : 'Обновить'}
+          </Button>
         </DialogActions>
       </Dialog>
 
