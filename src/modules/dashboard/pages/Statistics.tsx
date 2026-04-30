@@ -47,6 +47,7 @@ import staffAttendanceApi from '../../staff/services/staffAttendance';
 import { getChildAttendance } from '../../children/services/childAttendance';
 import { getPayrollsByUsers } from '../../staff/services/payroll';
 import { shiftsApi } from '../../staff/services/shifts';
+import { getKindergartenSettings } from '../../settings/services/settings';
 import DateNavigator from '../../../shared/components/DateNavigator';
 
 interface StaffStats {
@@ -85,6 +86,52 @@ interface AttendanceStats {
     groupRanking: Array<{ groupName: string; rate: number }>;
 }
 
+interface NewControlsStats {
+    childMarkingToday: {
+        totalChildren: number;
+        marked: number;
+        presentForKitchen: number;
+        unmarked: number;
+        completionRate: number;
+        present: number;
+        late: number;
+        absent: number;
+        sick: number;
+        vacation: number;
+        windowStart: string;
+        windowEnd: string;
+        windowIsOpen: boolean;
+        minutesLeft: number;
+        groupGaps: Array<{ groupName: string; total: number; marked: number; unmarked: number }>;
+    };
+    shiftsToday: {
+        total: number;
+        covered: number;
+        completionRate: number;
+        inProgress: number;
+        completed: number;
+        scheduled: number;
+        late: number;
+        absent: number;
+        withoutMarks: number;
+    };
+    payrollAdjustments: {
+        sheetsWithExcludedPenalties: number;
+        excludedPenaltyTypesCount: number;
+        excludedPenaltyAmount: number;
+        manualDebtSheets: number;
+        manualDebtAmount: number;
+        missingChildAttendancePenaltyAmount: number;
+        latePenaltyAmount: number;
+    };
+    customAccess: {
+        employeesWithAccess: number;
+        totalGrantedAccesses: number;
+        bySection: Array<{ label: string; count: number }>;
+        topRoles: Array<{ role: string; count: number }>;
+    };
+}
+
 const ROLE_LABELS: { [key: string]: string } = {
     admin: 'Администратор',
     manager: 'Менеджер',
@@ -102,6 +149,51 @@ const GROUP_COLORS = [
     '#4caf50', '#2196f3', '#ff9800', '#9c27b0', '#f44336', '#00bcd4', '#8bc34a', '#ff5722'
 ];
 
+const ACCESS_CONTROL_LABELS: Record<string, string> = {
+    canSeeChildren: 'Дети',
+    canSeeFood: 'Питание',
+    canSeeRent: 'Аренда',
+    canSeeStaff: 'Сотрудники',
+    canSeeSettings: 'Настройки',
+};
+
+const getEntityId = (value: any): string => {
+    if (!value) return '';
+    if (typeof value === 'object') return value._id || value.id || '';
+    return String(value);
+};
+
+const parseTimeToMinutes = (value?: string): number | null => {
+    if (!value) return null;
+    const [hours, minutes] = value.split(':').map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    return hours * 60 + minutes;
+};
+
+const formatMinutesAsTime = (minutes: number): string => {
+    const normalized = ((minutes % 1440) + 1440) % 1440;
+    const hours = Math.floor(normalized / 60);
+    const mins = normalized % 60;
+    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+};
+
+const getFineAmountByType = (payroll: any, type: string): number => {
+    const fines = payroll?.fines || [];
+    const fineTotal = fines
+        .filter((fine: any) => fine.type === type)
+        .reduce((sum: number, fine: any) => sum + (Number(fine.amount) || 0), 0);
+
+    if (fineTotal > 0 || fines.some((fine: any) => fine.type === type)) {
+        return fineTotal;
+    }
+
+    if (type === 'late') return Number(payroll?.latePenalties) || 0;
+    if (type === 'absence') return Number(payroll?.absencePenalties) || 0;
+    if (type === 'missing_child_attendance') return Number(payroll?.missingChildAttendancePenalties) || 0;
+    if (type === 'manual') return Number(payroll?.userFines) || 0;
+    return 0;
+};
+
 const Statistics: React.FC = () => {
     const { currentDate } = useDate();
     const { user: currentUser } = useAuth();
@@ -115,6 +207,7 @@ const Statistics: React.FC = () => {
     const [childrenStats, setChildrenStats] = useState<ChildrenStats | null>(null);
     const [financeStats, setFinanceStats] = useState<FinanceStats | null>(null);
     const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
+    const [newControlsStats, setNewControlsStats] = useState<NewControlsStats | null>(null);
 
     const periodInfo = useMemo(() => {
         const date = moment(currentDate);
@@ -132,9 +225,22 @@ const Statistics: React.FC = () => {
         setError(null);
 
         try {
+            const todayDate = moment().format('YYYY-MM-DD');
 
             // Загружаем данные
-            const [users, children, groups, staffAttendanceRes, childAttendance, payrolls, shifts] = await Promise.all([
+            const [
+                users,
+                children,
+                groups,
+                staffAttendanceRes,
+                childAttendance,
+                payrolls,
+                shifts,
+                todayChildAttendance,
+                todayStaffAttendanceRes,
+                todayShifts,
+                settings,
+            ] = await Promise.all([
                 getUsers(),
                 childrenApi.getAll(),
                 getGroups(),
@@ -142,9 +248,14 @@ const Statistics: React.FC = () => {
                 getChildAttendance({ startDate: periodInfo.startOfMonth, endDate: periodInfo.endOfMonth }).catch(() => []),
                 getPayrollsByUsers({ period: periodInfo.period }).catch(() => []),
                 shiftsApi.getAll({ startDate: periodInfo.startOfMonth, endDate: periodInfo.endOfMonth }).catch(() => []),
+                getChildAttendance({ date: todayDate }).catch(() => []),
+                staffAttendanceApi.getAll({ startDate: todayDate, endDate: todayDate }).catch(() => ({ data: [] })),
+                shiftsApi.getAll({ startDate: todayDate, endDate: todayDate }).catch(() => []),
+                getKindergartenSettings().catch(() => null),
             ]);
             if (requestId !== requestIdRef.current) return;
             const staffAttendance = Array.isArray(staffAttendanceRes) ? staffAttendanceRes : (staffAttendanceRes?.data || []);
+            const todayStaffAttendance = Array.isArray(todayStaffAttendanceRes) ? todayStaffAttendanceRes : (todayStaffAttendanceRes?.data || []);
 
             // Статистика сотрудников
             const activeUsers = users.filter((u: any) => (u as any).active !== false);
@@ -413,6 +524,165 @@ const Statistics: React.FC = () => {
                 groupRanking
             });
 
+            // Сводка по новым контрольным функциям
+            const accessEntries = Object.entries(ACCESS_CONTROL_LABELS);
+            const employeesWithAccess = activeUsers.filter((user: any) =>
+                accessEntries.some(([key]) => user.accessControls?.[key] === true)
+            );
+            const totalGrantedAccesses = activeUsers.reduce((sum: number, user: any) => (
+                sum + accessEntries.filter(([key]) => user.accessControls?.[key] === true).length
+            ), 0);
+            const accessBySection = accessEntries.map(([key, label]) => ({
+                label,
+                count: activeUsers.filter((user: any) => user.accessControls?.[key] === true).length,
+            })).filter(item => item.count > 0);
+            const accessRoleCounts: Record<string, number> = {};
+            employeesWithAccess.forEach((user: any) => {
+                const userRole = user.role || 'other';
+                accessRoleCounts[userRole] = (accessRoleCounts[userRole] || 0) + 1;
+            });
+
+            const activeChildIds = new Set(activeChildren.map((child: any) => child._id || child.id));
+            const childGroupMap = new Map<string, string>();
+            activeChildren.forEach((child: any) => {
+                childGroupMap.set(child._id || child.id, getEntityId(child.groupId));
+            });
+
+            const todayChildAttendanceMap = new Map<string, any>();
+            (todayChildAttendance || []).forEach((record: any) => {
+                const childId = getEntityId(record.childId);
+                if (activeChildIds.has(childId)) {
+                    todayChildAttendanceMap.set(childId, record);
+                }
+            });
+            const childStatusCounts = Array.from(todayChildAttendanceMap.values()).reduce((acc: Record<string, number>, record: any) => {
+                const status = record.status || 'unknown';
+                acc[status] = (acc[status] || 0) + 1;
+                return acc;
+            }, {});
+            const groupGaps = groups.map((group: any) => {
+                const groupId = group._id || group.id;
+                const groupChildren = activeChildren.filter((child: any) => childGroupMap.get(child._id || child.id) === groupId);
+                const marked = groupChildren.filter((child: any) => todayChildAttendanceMap.has(child._id || child.id)).length;
+                return {
+                    groupName: group.name,
+                    total: groupChildren.length,
+                    marked,
+                    unmarked: Math.max(groupChildren.length - marked, 0),
+                };
+            }).filter(item => item.total > 0 && item.unmarked > 0)
+                .sort((a, b) => b.unmarked - a.unmarked)
+                .slice(0, 5);
+
+            const workingStart = settings?.workingHours?.start || '08:00';
+            const workingEnd = settings?.workingHours?.end || '18:00';
+            const startMinutes = parseTimeToMinutes(workingStart) ?? 8 * 60;
+            const endMinutes = parseTimeToMinutes(workingEnd) ?? 18 * 60;
+            const markingEndMinutes = Math.min(startMinutes + 4 * 60, endMinutes);
+            const nowMinutes = moment().hours() * 60 + moment().minutes();
+            const todayAttendanceByStaff = new Map<string, any>();
+            todayStaffAttendance.forEach((record: any) => {
+                const staffId = getEntityId(record.staffId || record.userId);
+                if (staffId) todayAttendanceByStaff.set(staffId, record);
+            });
+
+            let coveredShifts = 0;
+            let inProgressShifts = 0;
+            let completedShifts = 0;
+            let scheduledShifts = 0;
+            let lateShifts = 0;
+            let absentShifts = 0;
+            let shiftsWithoutMarks = 0;
+
+            (todayShifts || []).forEach((shift: any) => {
+                const staffId = getEntityId(shift.staffId || shift.userId);
+                const attendance = todayAttendanceByStaff.get(staffId);
+                const status = attendance?.status || shift.status;
+                const hasStart = Boolean(attendance?.actualStart);
+                const hasEnd = Boolean(attendance?.actualEnd);
+
+                if (status === 'absent') absentShifts++;
+                if (status === 'late' || status === 'late_arrival' || (Number(attendance?.lateMinutes) || 0) > 0) lateShifts++;
+                if (hasStart && hasEnd || status === 'completed' || status === 'checked_out') {
+                    completedShifts++;
+                    coveredShifts++;
+                    return;
+                }
+                if (hasStart || status === 'in_progress' || status === 'checked_in' || status === 'present') {
+                    inProgressShifts++;
+                    coveredShifts++;
+                    return;
+                }
+                if (status === 'scheduled' || status === 'pending_approval') scheduledShifts++;
+                if (status !== 'absent') shiftsWithoutMarks++;
+            });
+
+            const payrollAdjustments = (payrolls as any[]).reduce((acc, payroll: any) => {
+                const excludedTypes = payroll.excludedPenaltyTypes || [];
+                if (excludedTypes.length > 0) {
+                    acc.sheetsWithExcludedPenalties++;
+                    acc.excludedPenaltyTypesCount += excludedTypes.length;
+                    acc.excludedPenaltyAmount += excludedTypes.reduce((sum: number, type: string) => sum + getFineAmountByType(payroll, type), 0);
+                }
+                if (payroll.isManualDebt) {
+                    acc.manualDebtSheets++;
+                    acc.manualDebtAmount += Number(payroll.carryOverDebt) || 0;
+                }
+                acc.missingChildAttendancePenaltyAmount += getFineAmountByType(payroll, 'missing_child_attendance');
+                acc.latePenaltyAmount += getFineAmountByType(payroll, 'late');
+                return acc;
+            }, {
+                sheetsWithExcludedPenalties: 0,
+                excludedPenaltyTypesCount: 0,
+                excludedPenaltyAmount: 0,
+                manualDebtSheets: 0,
+                manualDebtAmount: 0,
+                missingChildAttendancePenaltyAmount: 0,
+                latePenaltyAmount: 0,
+            });
+
+            if (requestId !== requestIdRef.current) return;
+            setNewControlsStats({
+                childMarkingToday: {
+                    totalChildren: activeChildren.length,
+                    marked: todayChildAttendanceMap.size,
+                    presentForKitchen: (childStatusCounts.present || 0) + (childStatusCounts.late || 0),
+                    unmarked: Math.max(activeChildren.length - todayChildAttendanceMap.size, 0),
+                    completionRate: activeChildren.length > 0 ? Math.round((todayChildAttendanceMap.size / activeChildren.length) * 100) : 0,
+                    present: childStatusCounts.present || 0,
+                    late: childStatusCounts.late || 0,
+                    absent: childStatusCounts.absent || 0,
+                    sick: childStatusCounts.sick || 0,
+                    vacation: childStatusCounts.vacation || 0,
+                    windowStart: formatMinutesAsTime(startMinutes),
+                    windowEnd: formatMinutesAsTime(markingEndMinutes),
+                    windowIsOpen: nowMinutes >= startMinutes && nowMinutes <= markingEndMinutes,
+                    minutesLeft: Math.max(markingEndMinutes - nowMinutes, 0),
+                    groupGaps,
+                },
+                shiftsToday: {
+                    total: (todayShifts || []).length,
+                    covered: coveredShifts,
+                    completionRate: (todayShifts || []).length > 0 ? Math.round((coveredShifts / (todayShifts || []).length) * 100) : 0,
+                    inProgress: inProgressShifts,
+                    completed: completedShifts,
+                    scheduled: scheduledShifts,
+                    late: lateShifts,
+                    absent: absentShifts,
+                    withoutMarks: shiftsWithoutMarks,
+                },
+                payrollAdjustments,
+                customAccess: {
+                    employeesWithAccess: employeesWithAccess.length,
+                    totalGrantedAccesses,
+                    bySection: accessBySection,
+                    topRoles: Object.entries(accessRoleCounts)
+                        .map(([role, count]) => ({ role: ROLE_LABELS[role] || role, count }))
+                        .sort((a, b) => b.count - a.count)
+                        .slice(0, 4),
+                },
+            });
+
         } catch (err: any) {
             if (requestId !== requestIdRef.current) return;
             console.error('Error loading statistics:', err);
@@ -526,6 +796,200 @@ const Statistics: React.FC = () => {
                                 </Box>
                                 <AttachMoney sx={{ fontSize: 48, opacity: 0.5 }} />
                             </Box>
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                {/* Новые контрольные виджеты */}
+                <Grid item xs={12}>
+                    <Typography variant="h6" display="flex" alignItems="center" sx={{ mt: 1 }}>
+                        <CheckCircle sx={{ mr: 1, color: 'success.main' }} /> Новые контрольные показатели
+                    </Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6} md={3}>
+                    <Card>
+                        <CardContent>
+                            <Typography variant="body2" color="text.secondary">К готовке сегодня</Typography>
+                            <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
+                                <Typography variant="h4" fontWeight="bold">
+                                    {newControlsStats?.childMarkingToday.presentForKitchen || 0}
+                                </Typography>
+                                <ChildCare sx={{ fontSize: 42, color: 'success.main', opacity: 0.7 }} />
+                            </Box>
+                            <Typography variant="body2" color="text.secondary">
+                                Отмечено {newControlsStats?.childMarkingToday.marked || 0} из {newControlsStats?.childMarkingToday.totalChildren || 0} детей
+                            </Typography>
+                            <LinearProgress
+                                variant="determinate"
+                                value={newControlsStats?.childMarkingToday.completionRate || 0}
+                                color={(newControlsStats?.childMarkingToday.completionRate || 0) >= 90 ? 'success' : 'warning'}
+                                sx={{ mt: 1.5, height: 8, borderRadius: 4 }}
+                            />
+                            <Box display="flex" gap={1} flexWrap="wrap" mt={1.5}>
+                                <Chip size="small" label={`${newControlsStats?.childMarkingToday.completionRate || 0}% заполнено`} color="primary" />
+                                <Chip size="small" label={`Не отмечено: ${newControlsStats?.childMarkingToday.unmarked || 0}`} color={(newControlsStats?.childMarkingToday.unmarked || 0) > 0 ? 'warning' : 'success'} />
+                            </Box>
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                <Grid item xs={12} sm={6} md={3}>
+                    <Card>
+                        <CardContent>
+                            <Typography variant="body2" color="text.secondary">Окно отметки детей</Typography>
+                            <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
+                                <Typography variant="h5" fontWeight="bold">
+                                    {newControlsStats?.childMarkingToday.windowStart || '08:00'}-{newControlsStats?.childMarkingToday.windowEnd || '12:00'}
+                                </Typography>
+                                <Schedule sx={{ fontSize: 42, color: 'info.main', opacity: 0.7 }} />
+                            </Box>
+                            <Typography variant="body2" color="text.secondary">
+                                Воспитатели могут отмечать только в первые 4 часа рабочего дня
+                            </Typography>
+                            <Box display="flex" gap={1} flexWrap="wrap" mt={1.5}>
+                                <Chip
+                                    size="small"
+                                    label={newControlsStats?.childMarkingToday.windowIsOpen ? 'Окно открыто' : 'Окно закрыто'}
+                                    color={newControlsStats?.childMarkingToday.windowIsOpen ? 'success' : 'default'}
+                                />
+                                <Chip
+                                    size="small"
+                                    label={newControlsStats?.childMarkingToday.windowIsOpen
+                                        ? `Осталось ${newControlsStats?.childMarkingToday.minutesLeft || 0} мин`
+                                        : 'Отметки ограничены'
+                                    }
+                                    variant="outlined"
+                                />
+                            </Box>
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                <Grid item xs={12} sm={6} md={3}>
+                    <Card>
+                        <CardContent>
+                            <Typography variant="body2" color="text.secondary">Смены сегодня</Typography>
+                            <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
+                                <Typography variant="h4" fontWeight="bold">
+                                    {newControlsStats?.shiftsToday.covered || 0}/{newControlsStats?.shiftsToday.total || 0}
+                                </Typography>
+                                <People sx={{ fontSize: 42, color: 'primary.main', opacity: 0.7 }} />
+                            </Box>
+                            <Typography variant="body2" color="text.secondary">
+                                Приход/уход есть у {newControlsStats?.shiftsToday.completionRate || 0}% смен
+                            </Typography>
+                            <Box display="flex" gap={1} flexWrap="wrap" mt={1.5}>
+                                <Chip size="small" label={`В работе: ${newControlsStats?.shiftsToday.inProgress || 0}`} color="info" />
+                                <Chip size="small" label={`Завершено: ${newControlsStats?.shiftsToday.completed || 0}`} color="success" />
+                                <Chip size="small" label={`Без отметок: ${newControlsStats?.shiftsToday.withoutMarks || 0}`} color={(newControlsStats?.shiftsToday.withoutMarks || 0) > 0 ? 'warning' : 'default'} />
+                            </Box>
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                <Grid item xs={12} sm={6} md={3}>
+                    <Card>
+                        <CardContent>
+                            <Typography variant="body2" color="text.secondary">Исключенные вычеты</Typography>
+                            <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
+                                <Typography variant="h5" fontWeight="bold">
+                                    {formatCurrency(newControlsStats?.payrollAdjustments.excludedPenaltyAmount || 0)}
+                                </Typography>
+                                <AttachMoney sx={{ fontSize: 42, color: 'warning.main', opacity: 0.7 }} />
+                            </Box>
+                            <Typography variant="body2" color="text.secondary">
+                                В {newControlsStats?.payrollAdjustments.sheetsWithExcludedPenalties || 0} расчетных листах
+                            </Typography>
+                            <Box display="flex" gap={1} flexWrap="wrap" mt={1.5}>
+                                <Chip size="small" label={`Типов: ${newControlsStats?.payrollAdjustments.excludedPenaltyTypesCount || 0}`} color="warning" />
+                                <Chip size="small" label={`Ручной долг: ${newControlsStats?.payrollAdjustments.manualDebtSheets || 0}`} variant="outlined" />
+                            </Box>
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                    <Card>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom display="flex" alignItems="center">
+                                <ChildCare sx={{ mr: 1, color: 'success.main' }} /> Группы без полной отметки сегодня
+                            </Typography>
+                            {newControlsStats?.childMarkingToday.groupGaps && newControlsStats?.childMarkingToday.groupGaps.length > 0 ? (
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell>Группа</TableCell>
+                                            <TableCell align="right">Отмечено</TableCell>
+                                            <TableCell align="right">Не отмечено</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {newControlsStats?.childMarkingToday.groupGaps.map((group, index) => (
+                                            <TableRow key={index}>
+                                                <TableCell>{group.groupName}</TableCell>
+                                                <TableCell align="right">{group.marked}/{group.total}</TableCell>
+                                                <TableCell align="right">
+                                                    <Chip label={group.unmarked} size="small" color="warning" />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <Box textAlign="center" py={3}>
+                                    <CheckCircle sx={{ fontSize: 48, color: 'success.main', mb: 1 }} />
+                                    <Typography color="text.secondary">Все группы сегодня заполнены</Typography>
+                                </Box>
+                            )}
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                    <Card>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom display="flex" alignItems="center">
+                                <People sx={{ mr: 1, color: 'info.main' }} /> Индивидуальные доступы
+                            </Typography>
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} sm={5}>
+                                    <Typography variant="h4" fontWeight="bold">
+                                        {newControlsStats?.customAccess.employeesWithAccess || 0}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        сотрудников с отдельными доступами
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary" mt={1}>
+                                        Всего выдано: {newControlsStats?.customAccess.totalGrantedAccesses || 0}
+                                    </Typography>
+                                </Grid>
+                                <Grid item xs={12} sm={7}>
+                                    <Box display="flex" gap={1} flexWrap="wrap">
+                                        {newControlsStats?.customAccess.bySection && newControlsStats?.customAccess.bySection.length > 0 ? (
+                                            newControlsStats?.customAccess.bySection.map((section, index) => (
+                                                <Chip
+                                                    key={section.label}
+                                                    label={`${section.label}: ${section.count}`}
+                                                    sx={{ bgcolor: GROUP_COLORS[index % GROUP_COLORS.length], color: 'white' }}
+                                                />
+                                            ))
+                                        ) : (
+                                            <Typography color="text.secondary">Отдельных доступов пока нет</Typography>
+                                        )}
+                                    </Box>
+                                    {newControlsStats?.customAccess.topRoles && newControlsStats?.customAccess.topRoles.length > 0 && (
+                                        <Box mt={2}>
+                                            <Typography variant="body2" color="text.secondary" mb={1}>По ролям</Typography>
+                                            <Box display="flex" gap={1} flexWrap="wrap">
+                                                {newControlsStats?.customAccess.topRoles.map((role) => (
+                                                    <Chip key={role.role} label={`${role.role}: ${role.count}`} size="small" variant="outlined" />
+                                                ))}
+                                            </Box>
+                                        </Box>
+                                    )}
+                                </Grid>
+                            </Grid>
                         </CardContent>
                     </Card>
                 </Grid>
@@ -804,6 +1268,18 @@ const Statistics: React.FC = () => {
                                     <Typography variant="body2" sx={{ opacity: 0.7, color: '#f44336' }}>Штрафы</Typography>
                                     <Typography variant="h5" fontWeight="bold" sx={{ color: '#f44336' }}>
                                         -{formatCurrency(financeStats?.totalPenalties || 0)}
+                                    </Typography>
+                                </Grid>
+                                <Grid item xs={6} md={3}>
+                                    <Typography variant="body2" sx={{ opacity: 0.7, color: '#ffb74d' }}>Штрафы за отметки детей</Typography>
+                                    <Typography variant="h5" fontWeight="bold" sx={{ color: '#ffb74d' }}>
+                                        -{formatCurrency(newControlsStats?.payrollAdjustments.missingChildAttendancePenaltyAmount || 0)}
+                                    </Typography>
+                                </Grid>
+                                <Grid item xs={6} md={3}>
+                                    <Typography variant="body2" sx={{ opacity: 0.7, color: '#90caf9' }}>Исключено из вычетов</Typography>
+                                    <Typography variant="h5" fontWeight="bold" sx={{ color: '#90caf9' }}>
+                                        {formatCurrency(newControlsStats?.payrollAdjustments.excludedPenaltyAmount || 0)}
                                     </Typography>
                                 </Grid>
                             </Grid>

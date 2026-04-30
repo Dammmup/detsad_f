@@ -119,6 +119,16 @@ const isWeekend = (date: Date): boolean => {
 };
 
 const DAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+const ALL_STAFF_VALUE = '__all_staff__';
+const WEEKDAY_OPTIONS = [
+  { label: 'Пн', value: 1 },
+  { label: 'Вт', value: 2 },
+  { label: 'Ср', value: 3 },
+  { label: 'Чт', value: 4 },
+  { label: 'Пт', value: 5 },
+  { label: 'Сб', value: 6 },
+  { label: 'Вс', value: 0 },
+];
 
 // Вспомогательный компонент для чипа смены, чтобы избежать инлайновых функций
 const ShiftChip = React.memo(({ shift, displayStatus, onEdit, canEdit }: any) => {
@@ -399,6 +409,14 @@ const StaffSchedule: React.FC = () => {
     });
   }, [sortedStaff, nameFilter, filterRole]);
 
+  const filteredStaffIds = useMemo(
+    () => filteredStaff.map((s: any) => String(s.id || s._id)).filter(Boolean),
+    [filteredStaff]
+  );
+
+  const allFilteredStaffSelected = filteredStaffIds.length > 0 && filteredStaffIds.every((id) => selectedStaff.includes(id));
+  const someFilteredStaffSelected = filteredStaffIds.some((id) => selectedStaff.includes(id));
+
   const availableRoleLabels = useMemo(() => Object.values(ROLE_LABELS).sort(), []);
 
   const shiftsByStaff = useMemo(() => {
@@ -447,7 +465,7 @@ const StaffSchedule: React.FC = () => {
     handleExportFullMonth();
   };
 
-  const [assignmentType, setAssignmentType] = useState<'single' | 'period'>('single');
+  const [assignmentType, setAssignmentType] = useState<'single' | 'period' | 'dates'>('single');
   const [assignmentAction, setAssignmentAction] = useState<'create' | 'delete'>('create');
   const [formData, setFormData] = useState<any>({
     userId: '',
@@ -457,6 +475,8 @@ const StaffSchedule: React.FC = () => {
     startDate: moment().format('YYYY-MM-DD'),
     endDate: moment().format('YYYY-MM-DD'),
     selectedDays: [1, 2, 3, 4, 5], // Пн-Пт по умолчанию
+    selectedDates: [],
+    dateToAdd: moment().format('YYYY-MM-DD'),
     notes: '',
     status: ShiftStatus.scheduled,
     alternativeStaffId: '',
@@ -517,6 +537,8 @@ const StaffSchedule: React.FC = () => {
       startDate: moment().format('YYYY-MM-DD'),
       endDate: moment().format('YYYY-MM-DD'),
       selectedDays: [1, 2, 3, 4, 5],
+      selectedDates: [],
+      dateToAdd: moment().format('YYYY-MM-DD'),
       notes: '',
       status: ShiftStatus.scheduled,
       alternativeStaffId: '',
@@ -531,6 +553,10 @@ const StaffSchedule: React.FC = () => {
     }
     if (assignmentType === 'single' && !formData.date) {
       enqueueSnackbar('Выберите дату', { variant: 'error' });
+      return false;
+    }
+    if (assignmentType === 'dates' && (!formData.selectedDates || formData.selectedDates.length === 0)) {
+      enqueueSnackbar('Выберите хотя бы один день', { variant: 'error' });
       return false;
     }
     if (assignmentType === 'period') {
@@ -656,6 +682,30 @@ const StaffSchedule: React.FC = () => {
     }
   }, [staffById]);
 
+  const getTargetDates = useCallback(() => {
+    if (assignmentType === 'single') {
+      return formData.date ? [moment(formData.date).format('YYYY-MM-DD')] : [];
+    }
+
+    if (assignmentType === 'dates') {
+      return Array.from(new Set((formData.selectedDates || []).map((date: string) => moment(date).format('YYYY-MM-DD')))).sort();
+    }
+
+    const dates: string[] = [];
+    const start = moment(formData.startDate);
+    const end = moment(formData.endDate);
+    const current = start.clone();
+
+    while (current.isSameOrBefore(end)) {
+      if ((formData.selectedDays || []).includes(current.day())) {
+        dates.push(current.format('YYYY-MM-DD'));
+      }
+      current.add(1, 'day');
+    }
+
+    return dates;
+  }, [assignmentType, formData.date, formData.endDate, formData.selectedDates, formData.selectedDays, formData.startDate]);
+
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canManageSchedule) {
@@ -677,64 +727,44 @@ const StaffSchedule: React.FC = () => {
           enqueueSnackbar('Смена обновлена', { variant: 'success' });
         }
       } else {
+        const targetDates = getTargetDates();
         if (assignmentAction === 'delete') {
           const idsToDelete: string[] = [];
           const staffs = selectedStaff.length > 0 ? selectedStaff : [formData.staffId];
+          const targetDateSet = new Set(targetDates);
 
           for (const sId of staffs) {
             const staffShifts = shifts.filter(s => (s.staffId as any)?._id === sId || s.staffId === sId);
-            const start = moment(formData.startDate).startOf('day');
-            const end = moment(formData.endDate).endOf('day');
 
             staffShifts.forEach(shift => {
-              const sDate = moment(shift.date);
-              if (sDate.isSameOrAfter(start) && sDate.isSameOrBefore(end)) {
-                if (formData.selectedDays.includes(sDate.day())) {
-                  const id = shift.id || shift._id;
-                  if (id) idsToDelete.push(id);
-                }
+              const sDate = moment(shift.date).format('YYYY-MM-DD');
+              if (targetDateSet.has(sDate)) {
+                const id = shift.id || shift._id || `${sId}_${sDate}`;
+                if (id) idsToDelete.push(id);
               }
             });
           }
 
           if (idsToDelete.length > 0) {
-            await Promise.all(idsToDelete.map(id => deleteShift(id)));
-            enqueueSnackbar(`Удалено смен: ${idsToDelete.length}`, { variant: 'success' });
+            const result = await shiftsApi.bulkDelete(idsToDelete);
+            enqueueSnackbar(`Удалено смен: ${result?.success || idsToDelete.length}`, { variant: 'success' });
           } else {
-            enqueueSnackbar('Нет смен для удаления в указанном периоде', { variant: 'info' });
+            enqueueSnackbar('Нет смен для удаления в выбранные дни', { variant: 'info' });
           }
         } else {
           // Create shifts logic
           const shiftsToCreate: any[] = [];
           const staffs = selectedStaff.length > 0 ? selectedStaff : [formData.staffId];
 
-          if (assignmentType === 'single') {
+          for (const dateStr of targetDates) {
             for (const sId of staffs) {
               const member = staffById.get(String(sId));
               shiftsToCreate.push({
                 ...formData,
                 staffId: sId,
                 staffName: member?.fullName || '',
+                date: dateStr,
               });
-            }
-          } else {
-            const start = moment(formData.startDate);
-            const end = moment(formData.endDate);
-            let current = start.clone();
-
-            while (current.isSameOrBefore(end)) {
-              if (formData.selectedDays.includes(current.day())) {
-                for (const sId of staffs) {
-                  const member = staffById.get(String(sId));
-                  shiftsToCreate.push({
-                    ...formData,
-                    staffId: sId,
-                    staffName: member?.fullName || '',
-                    date: current.format('YYYY-MM-DD'),
-                  });
-                }
-              }
-              current.add(1, 'day');
             }
           }
 
@@ -756,7 +786,7 @@ const StaffSchedule: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [assignmentType, formData, selectedStaff, staffById, editingShift, assignmentAction, shifts, currentDate, enqueueSnackbar, handleCloseModal, validateForm, canManageSchedule]);
+  }, [formData, selectedStaff, staffById, editingShift, assignmentAction, shifts, currentDate, enqueueSnackbar, handleCloseModal, validateForm, canManageSchedule, getTargetDates]);
 
   const handleEditShift = useCallback((shift: Shift) => {
     if (!canManageSchedule) {
@@ -774,6 +804,8 @@ const StaffSchedule: React.FC = () => {
       alternativeStaffId: shift.alternativeStaffId || '',
     });
     setEditingShift(shift);
+    setAssignmentAction('create');
+    setAssignmentType('single');
     setModalOpen(true);
   }, [enqueueSnackbar, canManageSchedule]);
 
@@ -818,6 +850,8 @@ const StaffSchedule: React.FC = () => {
       staffName: staffMember?.fullName || '',
       date: dateStr,
     }));
+    setAssignmentAction('create');
+    setAssignmentType('single');
     setModalOpen(true);
   }, [staffById, canManageSchedule]);
 
@@ -826,6 +860,17 @@ const StaffSchedule: React.FC = () => {
       prev.includes(staffId) ? prev.filter(id => id !== staffId) : [...prev, staffId]
     );
   }, []);
+
+  const handleToggleAllFilteredStaff = useCallback(() => {
+    setSelectedStaff((prev) => {
+      const visibleIds = new Set(filteredStaffIds);
+      const allSelected = filteredStaffIds.length > 0 && filteredStaffIds.every((id) => prev.includes(id));
+      if (allSelected) {
+        return prev.filter((id) => !visibleIds.has(id));
+      }
+      return Array.from(new Set([...prev, ...filteredStaffIds]));
+    });
+  }, [filteredStaffIds]);
 
   const handleEditShiftCallback = useCallback((shift: any) => {
     handleEditShift(shift);
@@ -901,7 +946,11 @@ const StaffSchedule: React.FC = () => {
                         variant='contained'
                         color='primary'
                         startIcon={<AddIcon />}
-                        onClick={() => setModalOpen(true)}
+                        onClick={() => {
+                          setAssignmentAction('create');
+                          setAssignmentType('single');
+                          setModalOpen(true);
+                        }}
                         sx={{ ml: 2 }}
                       >
                         Добавить смену
@@ -927,6 +976,7 @@ const StaffSchedule: React.FC = () => {
                         startIcon={<DeleteIcon />}
                         onClick={() => {
                           setAssignmentAction('delete');
+                          setAssignmentType('period');
                           setModalOpen(true);
                         }}
                       >
@@ -992,13 +1042,33 @@ const StaffSchedule: React.FC = () => {
                   ))}
                 </Select>
               </FormControl>
+
+              {canManageSchedule && (
+                <Button
+                  variant={allFilteredStaffSelected ? 'contained' : 'outlined'}
+                  size="small"
+                  onClick={handleToggleAllFilteredStaff}
+                  disabled={filteredStaffIds.length === 0}
+                >
+                  {allFilteredStaffSelected ? 'Снять выбор' : 'Выбрать всех'}
+                </Button>
+              )}
             </Box>
 
             <TableContainer component={Paper}>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell align="center" sx={{ fontWeight: 'bold', width: '50px' }}>#</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', width: '50px' }}>
+                      {canManageSchedule ? (
+                        <Checkbox
+                          size="small"
+                          checked={allFilteredStaffSelected}
+                          indeterminate={!allFilteredStaffSelected && someFilteredStaffSelected}
+                          onChange={handleToggleAllFilteredStaff}
+                        />
+                      ) : '#'}
+                    </TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>
                       <TableSortLabel
                         active={sortConfig.key === 'fullName'}
@@ -1068,6 +1138,7 @@ const StaffSchedule: React.FC = () => {
                         >
                           <FormControlLabel value="single" control={<Radio />} label="Один день" />
                           <FormControlLabel value="period" control={<Radio />} label="Период" />
+                          <FormControlLabel value="dates" control={<Radio />} label="Определенные дни" />
                         </RadioGroup>
 
                         <RadioGroup
@@ -1088,7 +1159,7 @@ const StaffSchedule: React.FC = () => {
                   <FormControl fullWidth required>
                     <InputLabel>Сотрудник(и)</InputLabel>
                     <Select
-                      multiple={!editingShift && selectedStaff.length > 1}
+                      multiple={!editingShift}
                       value={editingShift ? formData.staffId : (selectedStaff.length > 0 ? selectedStaff : (formData.staffId ? [formData.staffId] : []))}
                       onChange={(e) => {
                         if (editingShift) {
@@ -1096,7 +1167,14 @@ const StaffSchedule: React.FC = () => {
                         } else {
                           const val = e.target.value;
                           if (Array.isArray(val)) {
-                            setSelectedStaff(val);
+                            if (val.includes(ALL_STAFF_VALUE)) {
+                              setSelectedStaff(filteredStaffIds);
+                              setFormData((prev: any) => ({ ...prev, staffId: '', staffName: '' }));
+                            } else {
+                              const staffIds = val.filter(Boolean);
+                              setSelectedStaff(staffIds);
+                              setFormData((prev: any) => ({ ...prev, staffId: staffIds[0] || '', staffName: staffById.get(String(staffIds[0]))?.fullName || '' }));
+                            }
                           } else {
                             handleStaffSelect(e as any);
                             setSelectedStaff([val]);
@@ -1104,11 +1182,30 @@ const StaffSchedule: React.FC = () => {
                         }
                       }}
                       label='Сотрудник(и)'
+                      renderValue={(selected) => {
+                        const values = Array.isArray(selected) ? selected : [selected];
+                        if (!editingShift && values.length === filteredStaffIds.length && filteredStaffIds.length > 0) {
+                          return `Все сотрудники (${values.length})`;
+                        }
+                        if (values.length > 2) {
+                          return `Выбрано сотрудников: ${values.length}`;
+                        }
+                        return values
+                          .map((id) => staffById.get(String(id))?.fullName || id)
+                          .join(', ');
+                      }}
                       required
                     >
-                      {staff.map((s) => (
+                      {!editingShift && (
+                        <MenuItem value={ALL_STAFF_VALUE}>
+                          <Checkbox checked={allFilteredStaffSelected} indeterminate={!allFilteredStaffSelected && someFilteredStaffSelected} />
+                          <ListItemText primary={`Все сотрудники (${filteredStaffIds.length})`} />
+                        </MenuItem>
+                      )}
+                      {filteredStaff.map((s) => (
                         <MenuItem key={s.id || s._id} value={s.id || s._id}>
-                          {s.fullName} ({ROLE_LABELS[s.role as string] || s.role})
+                          {!editingShift && <Checkbox checked={selectedStaff.includes(String(s.id || s._id))} />}
+                          <ListItemText primary={`${s.fullName} (${ROLE_LABELS[s.role as string] || s.role})`} />
                         </MenuItem>
                       ))}
                     </Select>
@@ -1124,6 +1221,47 @@ const StaffSchedule: React.FC = () => {
                       onChange={(date) => date && handleDateChange(date.toDate())}
                       renderInput={(params) => <TextField {...params} fullWidth required />}
                     />
+                  </Grid>
+                ) : assignmentType === 'dates' ? (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" gutterBottom>Определенные дни:</Typography>
+                    <Box display="flex" gap={1} flexWrap="wrap" alignItems="center" mb={1.5}>
+                      <DatePicker
+                        label='Добавить день'
+                        inputFormat='DD.MM.YYYY'
+                        value={moment(formData.dateToAdd || formData.date)}
+                        onChange={(date) => date && setFormData({ ...formData, dateToAdd: date.format('YYYY-MM-DD') })}
+                        renderInput={(params) => <TextField {...params} size="small" sx={{ minWidth: 190 }} />}
+                      />
+                      <Button
+                        variant="outlined"
+                        onClick={() => {
+                          const dateToAdd = moment(formData.dateToAdd || formData.date).format('YYYY-MM-DD');
+                          const selectedDates = Array.from(new Set([...(formData.selectedDates || []), dateToAdd])).sort();
+                          setFormData({ ...formData, selectedDates });
+                        }}
+                      >
+                        Добавить день
+                      </Button>
+                    </Box>
+                    <Box display="flex" flexWrap="wrap" gap={1}>
+                      {(formData.selectedDates || []).length > 0 ? (
+                        (formData.selectedDates || []).map((date: string) => (
+                          <Chip
+                            key={date}
+                            label={moment(date).format('DD.MM.YYYY')}
+                            onDelete={() => setFormData({
+                              ...formData,
+                              selectedDates: (formData.selectedDates || []).filter((item: string) => item !== date)
+                            })}
+                          />
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          Добавьте даты, к которым нужно применить операцию.
+                        </Typography>
+                      )}
+                    </Box>
                   </Grid>
                 ) : (
                   <>
@@ -1148,15 +1286,7 @@ const StaffSchedule: React.FC = () => {
                     <Grid item xs={12}>
                       <Typography variant="subtitle2" gutterBottom>Дни недели:</Typography>
                       <Box display="flex" flexWrap="wrap" gap={1}>
-                        {[
-                          { label: 'Пн', value: 1 },
-                          { label: 'Вт', value: 2 },
-                          { label: 'Ср', value: 3 },
-                          { label: 'Чт', value: 4 },
-                          { label: 'Пт', value: 5 },
-                          { label: 'Сб', value: 6 },
-                          { label: 'Вс', value: 0 },
-                        ].map((day) => (
+                        {WEEKDAY_OPTIONS.map((day) => (
                           <FormControlLabel
                             key={day.value}
                             control={
