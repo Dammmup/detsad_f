@@ -42,8 +42,9 @@ class ShiftsApiClient extends BaseCrudApiClient<Shift> {
     return data;
   }
 
-  async bulkDelete(ids: string[]): Promise<any> {
-    const { data } = await apiClient.post(`${this.endpoint}/bulk-delete`, { ids });
+  async bulkDelete(payload: string[] | { staffIds: string[]; dates: string[] }): Promise<any> {
+    const body = Array.isArray(payload) ? { ids: payload } : payload;
+    const { data } = await apiClient.post(`${this.endpoint}/bulk-delete`, body);
     return data;
   }
 

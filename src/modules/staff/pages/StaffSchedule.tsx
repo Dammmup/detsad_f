@@ -682,13 +682,13 @@ const StaffSchedule: React.FC = () => {
     }
   }, [staffById]);
 
-  const getTargetDates = useCallback(() => {
+  const getTargetDates = useCallback((): string[] => {
     if (assignmentType === 'single') {
       return formData.date ? [moment(formData.date).format('YYYY-MM-DD')] : [];
     }
 
     if (assignmentType === 'dates') {
-      return Array.from(new Set((formData.selectedDates || []).map((date: string) => moment(date).format('YYYY-MM-DD')))).sort();
+      return Array.from(new Set<string>((formData.selectedDates || []).map((date: string) => moment(date).format('YYYY-MM-DD')))).sort();
     }
 
     const dates: string[] = [];
@@ -729,25 +729,17 @@ const StaffSchedule: React.FC = () => {
       } else {
         const targetDates = getTargetDates();
         if (assignmentAction === 'delete') {
-          const idsToDelete: string[] = [];
-          const staffs = selectedStaff.length > 0 ? selectedStaff : [formData.staffId];
-          const targetDateSet = new Set(targetDates);
+          const staffs = Array.from(
+            new Set<string>((selectedStaff.length > 0 ? selectedStaff : [formData.staffId]).filter(Boolean).map(String))
+          );
 
-          for (const sId of staffs) {
-            const staffShifts = shifts.filter(s => (s.staffId as any)?._id === sId || s.staffId === sId);
-
-            staffShifts.forEach(shift => {
-              const sDate = moment(shift.date).format('YYYY-MM-DD');
-              if (targetDateSet.has(sDate)) {
-                const id = shift.id || shift._id || `${sId}_${sDate}`;
-                if (id) idsToDelete.push(id);
-              }
-            });
-          }
-
-          if (idsToDelete.length > 0) {
-            const result = await shiftsApi.bulkDelete(idsToDelete);
-            enqueueSnackbar(`Удалено смен: ${result?.success || idsToDelete.length}`, { variant: 'success' });
+          if (staffs.length > 0 && targetDates.length > 0) {
+            const result = await shiftsApi.bulkDelete({ staffIds: staffs, dates: targetDates });
+            const deletedCount = result?.success || 0;
+            enqueueSnackbar(
+              deletedCount > 0 ? `Удалено смен: ${deletedCount}` : 'Нет смен для удаления в выбранные дни',
+              { variant: deletedCount > 0 ? 'success' : 'info' }
+            );
           } else {
             enqueueSnackbar('Нет смен для удаления в выбранные дни', { variant: 'info' });
           }
@@ -786,7 +778,7 @@ const StaffSchedule: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [formData, selectedStaff, staffById, editingShift, assignmentAction, shifts, currentDate, enqueueSnackbar, handleCloseModal, validateForm, canManageSchedule, getTargetDates]);
+  }, [formData, selectedStaff, staffById, editingShift, assignmentAction, currentDate, enqueueSnackbar, handleCloseModal, validateForm, canManageSchedule, getTargetDates]);
 
   const handleEditShift = useCallback((shift: Shift) => {
     if (!canManageSchedule) {
