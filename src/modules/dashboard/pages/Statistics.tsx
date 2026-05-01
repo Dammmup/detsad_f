@@ -21,6 +21,8 @@ import {
     TableRow,
     TableCell,
     TableBody,
+    Button,
+    TextField,
 } from '@mui/material';
 import {
     Analytics,
@@ -48,7 +50,6 @@ import { getChildAttendance } from '../../children/services/childAttendance';
 import { getPayrollsByUsers } from '../../staff/services/payroll';
 import { shiftsApi } from '../../staff/services/shifts';
 import { getKindergartenSettings } from '../../settings/services/settings';
-import DateNavigator from '../../../shared/components/DateNavigator';
 
 interface StaffStats {
     totalStaff: number;
@@ -194,6 +195,14 @@ const getFineAmountByType = (payroll: any, type: string): number => {
     return 0;
 };
 
+const getMonthRange = (date: Date) => {
+    const target = moment(date);
+    return {
+        startDate: target.clone().startOf('month').format('YYYY-MM-DD'),
+        endDate: target.clone().endOf('month').format('YYYY-MM-DD'),
+    };
+};
+
 const Statistics: React.FC = () => {
     const { currentDate } = useDate();
     const { user: currentUser } = useAuth();
@@ -208,15 +217,74 @@ const Statistics: React.FC = () => {
     const [financeStats, setFinanceStats] = useState<FinanceStats | null>(null);
     const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
     const [newControlsStats, setNewControlsStats] = useState<NewControlsStats | null>(null);
+    const [dateRange, setDateRange] = useState(() => getMonthRange(currentDate));
 
     const periodInfo = useMemo(() => {
-        const date = moment(currentDate);
+        const rawStart = moment(dateRange.startDate, 'YYYY-MM-DD', true);
+        const rawEnd = moment(dateRange.endDate, 'YYYY-MM-DD', true);
+        const fallback = moment(currentDate);
+        const safeStart = rawStart.isValid() ? rawStart : fallback.clone().startOf('month');
+        const safeEnd = rawEnd.isValid() ? rawEnd : fallback.clone().endOf('month');
+        const start = moment.min(safeStart, safeEnd).startOf('day');
+        const end = moment.max(safeStart, safeEnd).endOf('day');
+        const payrollPeriods: string[] = [];
+        const cursor = start.clone().startOf('month');
+        const lastPayrollMonth = end.clone().startOf('month');
+
+        while (cursor.isSameOrBefore(lastPayrollMonth)) {
+            payrollPeriods.push(cursor.format('YYYY-MM'));
+            cursor.add(1, 'month');
+        }
+
         return {
-            startOfMonth: date.startOf('month').format('YYYY-MM-DD'),
-            endOfMonth: date.endOf('month').format('YYYY-MM-DD'),
-            period: date.format('YYYY-MM'),
-            label: date.format('MMMM YYYY'),
+            startDate: start.format('YYYY-MM-DD'),
+            endDate: end.format('YYYY-MM-DD'),
+            focusDate: end.format('YYYY-MM-DD'),
+            focusDateLabel: end.format('DD.MM.YYYY'),
+            label: start.isSame(end, 'day')
+                ? start.format('DD.MM.YYYY')
+                : `${start.format('DD.MM.YYYY')} - ${end.format('DD.MM.YYYY')}`,
+            daysCount: end.diff(start, 'days') + 1,
+            payrollPeriods,
+            payrollLabel: payrollPeriods.join(', '),
         };
+    }, [currentDate, dateRange.endDate, dateRange.startDate]);
+
+    useEffect(() => {
+        setDateRange(getMonthRange(currentDate));
+    }, [currentDate]);
+
+    const handleStartDateChange = useCallback((value: string) => {
+        if (!value) return;
+        setDateRange((prev) => ({
+            startDate: value,
+            endDate: moment(value).isAfter(moment(prev.endDate)) ? value : prev.endDate,
+        }));
+    }, []);
+
+    const handleEndDateChange = useCallback((value: string) => {
+        if (!value) return;
+        setDateRange((prev) => ({
+            startDate: moment(value).isBefore(moment(prev.startDate)) ? value : prev.startDate,
+            endDate: value,
+        }));
+    }, []);
+
+    const applyQuickPeriod = useCallback((period: 'today' | 'week' | 'month') => {
+        const base = period === 'today' ? moment() : moment(currentDate);
+        if (period === 'today') {
+            const today = base.format('YYYY-MM-DD');
+            setDateRange({ startDate: today, endDate: today });
+            return;
+        }
+        if (period === 'week') {
+            setDateRange({
+                startDate: base.clone().startOf('isoWeek').format('YYYY-MM-DD'),
+                endDate: base.clone().endOf('isoWeek').format('YYYY-MM-DD'),
+            });
+            return;
+        }
+        setDateRange(getMonthRange(base.toDate()));
     }, [currentDate]);
 
     const loadStatistics = useCallback(async () => {
@@ -225,7 +293,8 @@ const Statistics: React.FC = () => {
         setError(null);
 
         try {
-            const todayDate = moment().format('YYYY-MM-DD');
+            const focusDate = periodInfo.focusDate;
+            const focusDateIsToday = focusDate === moment().format('YYYY-MM-DD');
 
             // Загружаем данные
             const [
@@ -244,13 +313,13 @@ const Statistics: React.FC = () => {
                 getUsers(),
                 childrenApi.getAll(),
                 getGroups(),
-                staffAttendanceApi.getAll({ startDate: periodInfo.startOfMonth, endDate: periodInfo.endOfMonth }).catch(() => ({ data: [] })),
-                getChildAttendance({ startDate: periodInfo.startOfMonth, endDate: periodInfo.endOfMonth }).catch(() => []),
-                getPayrollsByUsers({ period: periodInfo.period }).catch(() => []),
-                shiftsApi.getAll({ startDate: periodInfo.startOfMonth, endDate: periodInfo.endOfMonth }).catch(() => []),
-                getChildAttendance({ date: todayDate }).catch(() => []),
-                staffAttendanceApi.getAll({ startDate: todayDate, endDate: todayDate }).catch(() => ({ data: [] })),
-                shiftsApi.getAll({ startDate: todayDate, endDate: todayDate }).catch(() => []),
+                staffAttendanceApi.getAll({ startDate: periodInfo.startDate, endDate: periodInfo.endDate }).catch(() => ({ data: [] })),
+                getChildAttendance({ startDate: periodInfo.startDate, endDate: periodInfo.endDate }).catch(() => []),
+                Promise.all(periodInfo.payrollPeriods.map((period) => getPayrollsByUsers({ period }).catch(() => []))).then((items) => items.flat()),
+                shiftsApi.getAll({ startDate: periodInfo.startDate, endDate: periodInfo.endDate }).catch(() => []),
+                getChildAttendance({ date: focusDate }).catch(() => []),
+                staffAttendanceApi.getAll({ startDate: focusDate, endDate: focusDate }).catch(() => ({ data: [] })),
+                shiftsApi.getAll({ startDate: focusDate, endDate: focusDate }).catch(() => []),
                 getKindergartenSettings().catch(() => null),
             ]);
             if (requestId !== requestIdRef.current) return;
@@ -465,10 +534,10 @@ const Statistics: React.FC = () => {
             });
 
             // Финансовая статистика
-            const totalSalaryFund = (payrolls as any[]).reduce((sum: number, p: any) => sum + (p.totalAmount || 0), 0);
+            const totalSalaryFund = (payrolls as any[]).reduce((sum: number, p: any) => sum + (p.totalAmount || p.total || 0), 0);
             const avgSalary = payrolls.length > 0 ? Math.round(totalSalaryFund / payrolls.length) : 0;
-            const totalBonuses = (payrolls as any[]).reduce((sum: number, p: any) => sum + (p.bonusAmount || 0), 0);
-            const totalPenalties = (payrolls as any[]).reduce((sum: number, p: any) => sum + (p.penaltyAmount || 0), 0);
+            const totalBonuses = (payrolls as any[]).reduce((sum: number, p: any) => sum + (p.bonusAmount || p.bonuses || 0), 0);
+            const totalPenalties = (payrolls as any[]).reduce((sum: number, p: any) => sum + (p.penaltyAmount || p.penalties || 0), 0);
 
             if (requestId !== requestIdRef.current) return;
             setFinanceStats({
@@ -514,13 +583,14 @@ const Statistics: React.FC = () => {
             setAttendanceStats({
                 avgChildAttendance,
                 avgStaffAttendance: avgAttendanceRate,
-                byWeekday: [
-                    { day: 'Пн', rate: avgChildAttendance + Math.floor(Math.random() * 10) - 5 },
-                    { day: 'Вт', rate: avgChildAttendance + Math.floor(Math.random() * 10) - 5 },
-                    { day: 'Ср', rate: avgChildAttendance + Math.floor(Math.random() * 10) - 5 },
-                    { day: 'Чт', rate: avgChildAttendance + Math.floor(Math.random() * 10) - 5 },
-                    { day: 'Пт', rate: avgChildAttendance + Math.floor(Math.random() * 10) - 5 },
-                ],
+                byWeekday: [1, 2, 3, 4, 5, 6, 7].map((weekday) => {
+                    const records = childAttendance.filter((att: any) => moment(att.date).isoWeekday() === weekday);
+                    const present = records.filter((att: any) => att.status === 'present').length;
+                    return {
+                        day: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][weekday - 1],
+                        rate: records.length > 0 ? Math.round((present / records.length) * 100) : 0,
+                    };
+                }),
                 groupRanking
             });
 
@@ -656,7 +726,7 @@ const Statistics: React.FC = () => {
                     vacation: childStatusCounts.vacation || 0,
                     windowStart: formatMinutesAsTime(startMinutes),
                     windowEnd: formatMinutesAsTime(markingEndMinutes),
-                    windowIsOpen: nowMinutes >= startMinutes && nowMinutes <= markingEndMinutes,
+                    windowIsOpen: focusDateIsToday && nowMinutes >= startMinutes && nowMinutes <= markingEndMinutes,
                     minutesLeft: Math.max(markingEndMinutes - nowMinutes, 0),
                     groupGaps,
                 },
@@ -696,7 +766,7 @@ const Statistics: React.FC = () => {
 
     const formatCurrency = useCallback((amount: number) => {
         return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'KZT', maximumFractionDigits: 0 }).format(amount);
-    }, [periodInfo]);
+    }, []);
 
     useEffect(() => {
         if (!canViewStatistics) {
@@ -729,14 +799,58 @@ const Statistics: React.FC = () => {
 
     return (
         <Paper sx={{ p: 3, m: 2 }}>
-            <DateNavigator />
-
             {/* Заголовок */}
-            <Box display='flex' justifyContent='space-between' alignItems='center' mb={3}>
+            <Box display='flex' justifyContent='space-between' alignItems='center' flexWrap="wrap" gap={2} mb={3}>
                 <Typography variant='h5' display='flex' alignItems='center'>
                     <Analytics sx={{ mr: 1 }} /> Статистика за {periodInfo.label}
                 </Typography>
+                <Box display="flex" gap={1} flexWrap="wrap">
+                    <Chip label={`${periodInfo.daysCount} дн.`} color="primary" variant="outlined" />
+                    <Chip label={`Расчетные месяцы: ${periodInfo.payrollLabel}`} variant="outlined" />
+                </Box>
             </Box>
+
+            <Card variant="outlined" sx={{ mb: 3 }}>
+                <CardContent>
+                    <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={12} sm={6} md={3}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                type="date"
+                                label="Начало периода"
+                                value={dateRange.startDate}
+                                onChange={(event) => handleStartDateChange(event.target.value)}
+                                InputLabelProps={{ shrink: true }}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={3}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                type="date"
+                                label="Конец периода"
+                                value={dateRange.endDate}
+                                onChange={(event) => handleEndDateChange(event.target.value)}
+                                InputLabelProps={{ shrink: true }}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <Box display="flex" gap={1} flexWrap="wrap" justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
+                                <Button variant="outlined" onClick={() => applyQuickPeriod('today')}>
+                                    Сегодня
+                                </Button>
+                                <Button variant="outlined" onClick={() => applyQuickPeriod('week')}>
+                                    Неделя
+                                </Button>
+                                <Button variant="outlined" onClick={() => applyQuickPeriod('month')}>
+                                    Месяц
+                                </Button>
+                            </Box>
+                        </Grid>
+                    </Grid>
+                </CardContent>
+            </Card>
 
             {error && (
                 <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
@@ -810,7 +924,7 @@ const Statistics: React.FC = () => {
                 <Grid item xs={12} sm={6} md={3}>
                     <Card>
                         <CardContent>
-                            <Typography variant="body2" color="text.secondary">К готовке сегодня</Typography>
+                            <Typography variant="body2" color="text.secondary">К готовке на {periodInfo.focusDateLabel}</Typography>
                             <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
                                 <Typography variant="h4" fontWeight="bold">
                                     {newControlsStats?.childMarkingToday.presentForKitchen || 0}
@@ -869,7 +983,7 @@ const Statistics: React.FC = () => {
                 <Grid item xs={12} sm={6} md={3}>
                     <Card>
                         <CardContent>
-                            <Typography variant="body2" color="text.secondary">Смены сегодня</Typography>
+                            <Typography variant="body2" color="text.secondary">Смены на {periodInfo.focusDateLabel}</Typography>
                             <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
                                 <Typography variant="h4" fontWeight="bold">
                                     {newControlsStats?.shiftsToday.covered || 0}/{newControlsStats?.shiftsToday.total || 0}
@@ -913,7 +1027,7 @@ const Statistics: React.FC = () => {
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom display="flex" alignItems="center">
-                                <ChildCare sx={{ mr: 1, color: 'success.main' }} /> Группы без полной отметки сегодня
+                                <ChildCare sx={{ mr: 1, color: 'success.main' }} /> Группы без полной отметки на {periodInfo.focusDateLabel}
                             </Typography>
                             {newControlsStats?.childMarkingToday.groupGaps && newControlsStats?.childMarkingToday.groupGaps.length > 0 ? (
                                 <Table size="small">
@@ -939,7 +1053,7 @@ const Statistics: React.FC = () => {
                             ) : (
                                 <Box textAlign="center" py={3}>
                                     <CheckCircle sx={{ fontSize: 48, color: 'success.main', mb: 1 }} />
-                                    <Typography color="text.secondary">Все группы сегодня заполнены</Typography>
+                                    <Typography color="text.secondary">Все группы на эту дату заполнены</Typography>
                                 </Box>
                             )}
                         </CardContent>
