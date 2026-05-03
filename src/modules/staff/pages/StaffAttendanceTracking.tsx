@@ -593,7 +593,7 @@ const StaffAttendanceTracking: React.FC = () => {
   const stats = useMemo(() => {
     const totalRecords = records.length;
     const completedRecords = records.filter(
-      (r) => r.statuses.includes(ShiftStatus.completed) || (r.actualStart && r.actualEnd),
+      (r) => !r.statuses.includes(ShiftStatus.absent) && (r.statuses.includes(ShiftStatus.completed) || (r.actualStart && r.actualEnd)),
     ).length;
     const totalPenalties = records.reduce((sum, r) => sum + (r.penalties || 0), 0);
     const avgWorkHours =
@@ -1859,6 +1859,7 @@ const StaffAttendanceTracking: React.FC = () => {
             fullWidth
             margin='normal'
             InputLabelProps={{ shrink: true }}
+            disabled={markForm.status === 'absent'}
           />
           <TextField
             label='Время ухода'
@@ -1869,6 +1870,7 @@ const StaffAttendanceTracking: React.FC = () => {
             fullWidth
             margin='normal'
             InputLabelProps={{ shrink: true }}
+            disabled={markForm.status === 'absent'}
           />
           <TextField
             label='Статус'
@@ -1973,6 +1975,7 @@ const StaffAttendanceTracking: React.FC = () => {
                   }
                   fullWidth
                   InputLabelProps={{ shrink: true }}
+                  disabled={selectedRecord.statuses[0] === 'absent'}
                 />
               </Grid>
               <Grid item xs={6}>
@@ -1987,6 +1990,7 @@ const StaffAttendanceTracking: React.FC = () => {
                   }
                   fullWidth
                   InputLabelProps={{ shrink: true }}
+                  disabled={selectedRecord.statuses[0] === 'absent'}
                 />
               </Grid>
               <Grid item xs={12}>

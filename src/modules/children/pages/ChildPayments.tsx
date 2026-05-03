@@ -97,8 +97,8 @@ const PaymentRow = React.memo(({
 
   return (
     <TableRow hover>
-      <TableCell sx={{ p: isMobile ? 1 : 2, fontWeight: 'bold', width: 40 }}>{index + 1}</TableCell>
-      <TableCell sx={{ p: isMobile ? 1 : 2, textAlign: 'center', width: 120 }}>
+      <TableCell sx={{ p: isMobile ? 1 : 2, fontWeight: 'bold', width: 36 }}>{index + 1}</TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2, textAlign: 'center', width: 90 }}>
         <Box display="flex" gap={0.5} justifyContent="center">
           {canManage ? (
             payment.status === 'paid' ? (
@@ -151,18 +151,17 @@ const PaymentRow = React.memo(({
           )}
         </Box>
       </TableCell>
-      <TableCell sx={{ p: isMobile ? 0.5 : 1 }}>
+      <TableCell sx={{ p: isMobile ? 0.5 : 1, minWidth: 180 }}>
         <Box display="flex" alignItems="center" gap={1}>
           <Avatar src={child?.photo} sx={{ width: 28, height: 28 }}>
             {child?.fullName?.charAt(0)}
           </Avatar>
-          <Box display="flex" flexDirection="row">
+          <Box display="flex" flexDirection="column" sx={{ minWidth: 0, flex: 1 }}>
             <Typography
               variant="body2"
               fontWeight="bold"
               noWrap
               sx={{
-                maxWidth: '100%',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 display: 'block'
@@ -182,44 +181,47 @@ const PaymentRow = React.memo(({
           </Box>
         </Box>
       </TableCell>
-      <TableCell sx={{ p: isMobile ? 0.5 : 1 }}>
+      <TableCell sx={{ p: isMobile ? 0.5 : 1, width: 110 }}>
         <Chip label={groupName} size="small" variant="outlined" sx={{ maxWidth: 110 }} />
       </TableCell>
-      <TableCell sx={{ p: isMobile ? 0.5 : 1, whiteSpace: 'nowrap' }}>
+      <TableCell sx={{ p: isMobile ? 0.5 : 1, whiteSpace: 'nowrap', width: 140 }}>
         {moment(payment.period.start).format('DD.MM.YY')} - {moment(payment.period.end).format('DD.MM.YY')}
       </TableCell>
-      <TableCell sx={{ p: isMobile ? 1 : 2, fontWeight: 'bold' }}>
+      <TableCell sx={{ p: isMobile ? 0.5 : 1, whiteSpace: 'nowrap', width: 100 }}>
+        {payment.dueDate ? moment(payment.dueDate).format('DD.MM.YY') : '-'}
+      </TableCell>
+      <TableCell sx={{ p: isMobile ? 1 : 2, fontWeight: 'bold', whiteSpace: 'nowrap', width: 100 }}>
         <Typography variant="body2" color="success.main" fontWeight="bold">
           {payment.paidAmount?.toLocaleString()} ₸
         </Typography>
       </TableCell>
-      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+      <TableCell sx={{ p: isMobile ? 1 : 2, whiteSpace: 'nowrap', width: 90 }}>
         <Typography variant="body2" color="error.main" fontWeight="bold">
           {debt.toLocaleString()} ₸
         </Typography>
       </TableCell>
-      <TableCell sx={{ p: isMobile ? 1 : 2 }}>
+      <TableCell sx={{ p: isMobile ? 1 : 2, whiteSpace: 'nowrap', width: 100 }}>
         <Typography variant="body2" color="info.main" fontWeight="bold">
           {overpayment.toLocaleString()} ₸
         </Typography>
       </TableCell>
-      <TableCell sx={{ p: isMobile ? 0.5 : 1, textAlign: 'center', width: 80 }}>{payment.accruals?.toLocaleString() || 0} ₸</TableCell>
-      <TableCell sx={{ p: isMobile ? 0.5 : 1, textAlign: 'center', width: 80 }}>{payment.deductions?.toLocaleString() || 0} ₸</TableCell>
+      <TableCell sx={{ p: isMobile ? 0.5 : 1, textAlign: 'center', width: 80, whiteSpace: 'nowrap' }}>{payment.accruals?.toLocaleString() || 0} ₸</TableCell>
+      <TableCell sx={{ p: isMobile ? 0.5 : 1, textAlign: 'center', width: 80, whiteSpace: 'nowrap' }}>{payment.deductions?.toLocaleString() || 0} ₸</TableCell>
       <TableCell sx={{ p: isMobile ? 0.5 : 1 }}>
         <Tooltip title={payment.comments || ''}>
-          <Typography variant="caption" noWrap sx={{ maxWidth: 150, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <Typography variant="caption" noWrap sx={{ maxWidth: 120, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {payment.comments}
           </Typography>
         </Tooltip>
       </TableCell>
-      <TableCell sx={{ p: isMobile ? 0.5 : 1, width: 100 }}>
+      <TableCell sx={{ p: isMobile ? 0.5 : 1, width: 100, whiteSpace: 'nowrap' }}>
         <Chip
           label={payment.status === 'paid' ? 'Оплачено' : payment.status === 'active' ? 'Активно' : 'Просрочено'}
           size="small"
           sx={{ bgcolor: getPaymentStatusColor(payment.status), color: '#fff' }}
         />
       </TableCell>
-      <TableCell align="right" sx={{ p: isMobile ? 0.5 : 1, width: 80 }}>
+      <TableCell align="right" sx={{ p: isMobile ? 0.5 : 1, width: 110 }}>
         <Box display="flex" justifyContent="flex-end" gap={0.5}>
           {canManage && (
             <>
@@ -853,12 +855,12 @@ const ChildPayments: React.FC = () => {
                   variant='outlined'
                   size="small"
                   color='secondary'
-                  startIcon={isGenerating ? <CircularProgress size={16} /> : <Refresh />}
+                  startIcon={isGenerating ? <CircularProgress size={16} /> : <Calculate />}
                   onClick={handleGeneratePayments}
                   disabled={isGenerating || loading}
                   sx={{ minWidth: isMobile ? 'fit-content' : 'auto', whiteSpace: 'nowrap' }}
                 >
-                  Обновить
+                  Сгенерировать листы
                 </Button>
                 <Button
                   variant="outlined"
@@ -1015,12 +1017,12 @@ const ChildPayments: React.FC = () => {
               </Box>
             ) : (
               <TableContainer component={Paper} sx={{ mt: 2, boxShadow: 3, maxWidth: 1600, ml: 'auto', mr: 'auto', overflowX: 'auto' }}>
-                <Table size={isMobile ? 'small' : 'medium'} sx={{ width: '100%', tableLayout: 'fixed' }}>
+                <Table size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 1300, tableLayout: 'auto' }}>
                   <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold', width: 40, p: isMobile ? 0.5 : 1 }}>#</TableCell>
-                      <TableCell align='center' sx={{ fontWeight: 'bold', width: 100, p: isMobile ? 0.5 : 1 }}>Оплата</TableCell>
-                      <TableCell sx={{ p: isMobile ? 0.5 : 1 }}>
+                      <TableCell sx={{ fontWeight: 'bold', width: 36, p: isMobile ? 0.5 : 1 }}>#</TableCell>
+                      <TableCell align='center' sx={{ fontWeight: 'bold', width: 90, p: isMobile ? 0.5 : 1 }}>Оплата</TableCell>
+                      <TableCell sx={{ p: isMobile ? 0.5 : 1, minWidth: 180 }}>
                         <TableSortLabel
                           active={sortConfig.key === '_childName'}
                           direction={sortConfig.direction || 'asc'}
@@ -1029,7 +1031,7 @@ const ChildPayments: React.FC = () => {
                           Ребенок
                         </TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ width: 120, p: isMobile ? 0.5 : 1 }}>
+                      <TableCell sx={{ width: 110, p: isMobile ? 0.5 : 1 }}>
                         <TableSortLabel
                           active={sortConfig.key === '_groupName'}
                           direction={sortConfig.direction || 'asc'}
@@ -1038,7 +1040,7 @@ const ChildPayments: React.FC = () => {
                           Группа
                         </TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ width: 160, p: isMobile ? 0.5 : 1 }}>
+                      <TableCell sx={{ width: 140, p: isMobile ? 0.5 : 1, whiteSpace: 'nowrap' }}>
                         <TableSortLabel
                           active={sortConfig.key === '_periodStart'}
                           direction={sortConfig.direction || 'asc'}
@@ -1047,7 +1049,10 @@ const ChildPayments: React.FC = () => {
                           Период
                         </TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ width: 110, p: isMobile ? 0.5 : 1 }}>
+                      <TableCell sx={{ width: 100, p: isMobile ? 0.5 : 1, whiteSpace: 'nowrap' }}>
+                        Срок до
+                      </TableCell>
+                      <TableCell sx={{ width: 100, p: isMobile ? 0.5 : 1, whiteSpace: 'nowrap' }}>
                         <TableSortLabel
                           active={sortConfig.key === 'paidAmount'}
                           direction={sortConfig.direction || 'asc'}
@@ -1056,7 +1061,7 @@ const ChildPayments: React.FC = () => {
                           Оплачено
                         </TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ width: 110, p: isMobile ? 0.5 : 1 }}>
+                      <TableCell sx={{ width: 90, p: isMobile ? 0.5 : 1, whiteSpace: 'nowrap' }}>
                         <TableSortLabel
                           active={sortConfig.key === '_debt'}
                           direction={sortConfig.direction || 'asc'}
@@ -1065,7 +1070,7 @@ const ChildPayments: React.FC = () => {
                           Долг
                         </TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ width: 120, p: isMobile ? 0.5 : 1 }}>
+                      <TableCell sx={{ width: 100, p: isMobile ? 0.5 : 1, whiteSpace: 'nowrap' }}>
                         <TableSortLabel
                           active={sortConfig.key === '_overpayment'}
                           direction={sortConfig.direction || 'asc'}
@@ -1074,10 +1079,10 @@ const ChildPayments: React.FC = () => {
                           Переплата
                         </TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ width: 90, textAlign: 'center', p: isMobile ? 0.5 : 1 }}>Надбавки</TableCell>
-                      <TableCell sx={{ width: 90, textAlign: 'center', p: isMobile ? 0.5 : 1 }}>Вычеты</TableCell>
-                      <TableCell sx={{ width: 150, p: isMobile ? 0.5 : 1 }}>Комментарии</TableCell>
-                      <TableCell sx={{ width: 120, p: isMobile ? 0.5 : 1 }}>
+                      <TableCell sx={{ width: 80, textAlign: 'center', p: isMobile ? 0.5 : 1, whiteSpace: 'nowrap' }}>Надбавки</TableCell>
+                      <TableCell sx={{ width: 80, textAlign: 'center', p: isMobile ? 0.5 : 1, whiteSpace: 'nowrap' }}>Вычеты</TableCell>
+                      <TableCell sx={{ width: 120, p: isMobile ? 0.5 : 1 }}>Комментарии</TableCell>
+                      <TableCell sx={{ width: 100, p: isMobile ? 0.5 : 1 }}>
                         <TableSortLabel
                           active={sortConfig.key === 'status'}
                           direction={sortConfig.direction || 'asc'}
@@ -1086,7 +1091,7 @@ const ChildPayments: React.FC = () => {
                           Статус
                         </TableSortLabel>
                       </TableCell>
-                      <TableCell align='right' sx={{ width: 130, p: isMobile ? 0.5 : 1 }}>Действия</TableCell>
+                      <TableCell align='right' sx={{ width: 110, p: isMobile ? 0.5 : 1 }}>Действия</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
