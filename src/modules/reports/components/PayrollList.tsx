@@ -476,14 +476,7 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
     try {
       setSavingPayroll(true);
       let payrollId = editingPayroll._id;
-      const payload: Partial<Payroll> = {
-        baseSalary: payrollForm.baseSalary,
-        baseSalaryType: payrollForm.baseSalaryType,
-        accruals: payrollForm.accruals,
-        bonuses: payrollForm.bonuses,
-        advance: payrollForm.advance,
-        deductions: payrollForm.deductions,
-        carryOverDebt: payrollForm.carryOverDebt,
+      const basePayload: Partial<Payroll> = {
         isManualDebt: true,
         status: payrollForm.status as 'draft' | 'approved' | 'paid',
         excludedPenaltyTypes: payrollForm.excludedPenaltyTypes,
@@ -494,6 +487,31 @@ const PayrollList: React.FC<Props> = ({ userId, personalOnly }) => {
         userFines: editingPayroll.userFines || 0,
         total: payrollModalTotals.total,
       };
+
+      let payload: Partial<Payroll> = { ...basePayload };
+
+      if (!payrollId) {
+        // Create: send all fields
+        payload = {
+          ...basePayload,
+          baseSalary: payrollForm.baseSalary,
+          baseSalaryType: payrollForm.baseSalaryType,
+          accruals: payrollForm.accruals,
+          bonuses: payrollForm.bonuses,
+          advance: payrollForm.advance,
+          deductions: payrollForm.deductions,
+          carryOverDebt: payrollForm.carryOverDebt,
+        };
+      } else {
+        // Update: only send fields that have actually changed
+        if (payrollForm.baseSalary !== (editingPayroll.baseSalary || 0)) payload.baseSalary = payrollForm.baseSalary;
+        if (payrollForm.baseSalaryType !== (editingPayroll.baseSalaryType || 'month')) payload.baseSalaryType = payrollForm.baseSalaryType;
+        if (payrollForm.accruals !== (editingPayroll.accruals || 0)) payload.accruals = payrollForm.accruals;
+        if (payrollForm.bonuses !== (editingPayroll.bonuses || 0)) payload.bonuses = payrollForm.bonuses;
+        if (payrollForm.advance !== (editingPayroll.advance || 0)) payload.advance = payrollForm.advance;
+        if (payrollForm.deductions !== (editingPayroll.deductions || 0)) payload.deductions = payrollForm.deductions;
+        if (payrollForm.carryOverDebt !== (editingPayroll.carryOverDebt || 0)) payload.carryOverDebt = payrollForm.carryOverDebt;
+      }
 
       if (!payrollId) {
         const newPayroll = await createPayroll({

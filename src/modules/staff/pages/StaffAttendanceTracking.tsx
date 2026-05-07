@@ -2093,6 +2093,7 @@ const StaffAttendanceTracking: React.FC = () => {
             value={bulkForm.actualEnd}
             onChange={(e) => setBulkForm(prev => ({ ...prev, actualEnd: e.target.value }))}
             InputLabelProps={{ shrink: true }}
+            disabled={bulkForm.status === 'checked_in'}
           />
           <TextField
             label="Статус"
@@ -2100,7 +2101,14 @@ const StaffAttendanceTracking: React.FC = () => {
             fullWidth
             sx={{ mb: 2, mt: 2 }}
             value={bulkForm.status}
-            onChange={(e) => setBulkForm(prev => ({ ...prev, status: e.target.value }))}
+            onChange={(e) => {
+              const newStatus = e.target.value;
+              setBulkForm(prev => ({
+                ...prev,
+                status: newStatus,
+                ...(newStatus === 'checked_in' ? { actualEnd: '' } : {})
+              }));
+            }}
           >
             <MenuItem value="">Не менять статус</MenuItem>
             {Object.entries(STATUS_TEXT).map(([key, label]) => (
