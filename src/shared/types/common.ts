@@ -174,6 +174,7 @@ export interface IChildPayment {
   paymentType?: 'none' | 'kaspi' | 'cash';
   paymentDate?: Date;
   paidAt?: Date;
+  dueDate?: Date | string;
   createdAt: string;
   updatedAt: string;
 }

@@ -61,6 +61,53 @@ import DateNavigator from '../../../shared/components/DateNavigator';
 import { useSort } from '../../../shared/hooks/useSort';
 import { useAuth } from '../../../app/context/AuthContext';
 
+const getRefId = (value: unknown): string => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+
+  if (typeof value === 'object') {
+    const ref = value as { _id?: unknown; id?: unknown };
+    const id = ref._id ?? ref.id;
+    return id ? String(id) : '';
+  }
+
+  return '';
+};
+
+const getMonthPaymentPeriod = (date: Date) => ({
+  start: moment(date).startOf('month').format('YYYY-MM-DD'),
+  end: moment(date).endOf('month').format('YYYY-MM-DD'),
+});
+
+const createDefaultPaymentForm = (date: Date) => ({
+  childId: '',
+  period: getMonthPaymentPeriod(date),
+  amount: 0,
+  total: 0,
+  paidAmount: 0,
+  status: 'active' as 'active' | 'overdue' | 'paid' | 'draft',
+  accruals: 0,
+  deductions: 0,
+  overpayment: 0,
+  comments: '',
+  paymentType: 'none' as 'none' | 'kaspi' | 'cash',
+  dueDate: '',
+});
+
+const normalizePaymentPeriod = (
+  period: { start?: string; end?: string } | undefined,
+  fallbackDate: Date,
+) => {
+  const anchorDate = period?.start ? moment(period.start).toDate() : fallbackDate;
+  const defaultPeriod = getMonthPaymentPeriod(anchorDate);
+
+  return {
+    start: period?.start || defaultPeriod.start,
+    end: period?.end || defaultPeriod.end,
+  };
+};
+
 // Мемоизированная строка таблицы для предотвращения лишних рендеров
 const PaymentRow = React.memo(({
   payment,
@@ -72,7 +119,6 @@ const PaymentRow = React.memo(({
   onRecalculateAttendance,
   onOpenModal,
   onDelete,
-  getPaymentStatusColor,
   index,
   canManage,
   recalculatingId,
@@ -95,8 +141,22 @@ const PaymentRow = React.memo(({
     [payment.total, payment.accruals, payment.paidAmount, payment.deductions]
   );
 
+  const rowColor = useMemo(() => {
+    if (payment.status === 'paid' || payment.paymentType === 'kaspi' || payment.paymentType === 'cash') {
+      return 'rgba(76, 175, 80, 0.15)';
+    }
+    if (!payment.dueDate) return 'inherit';
+    const now = moment().startOf('day');
+    const due = moment(payment.dueDate).startOf('day');
+    const diff = due.diff(now, 'days');
+    
+    if (diff < 0) return 'rgba(244, 67, 54, 0.15)';
+    if (diff <= 3 && diff >= 0) return 'rgba(255, 193, 7, 0.15)';
+    return 'inherit';
+  }, [payment.status, payment.paymentType, payment.dueDate]);
+
   return (
-    <TableRow hover>
+    <TableRow hover sx={{ backgroundColor: rowColor }}>
       <TableCell sx={{ p: isMobile ? 1 : 2, fontWeight: 'bold', width: 36 }}>{index + 1}</TableCell>
       <TableCell sx={{ p: isMobile ? 1 : 2, textAlign: 'center', width: 90 }}>
         <Box display="flex" gap={0.5} justifyContent="center">
@@ -214,13 +274,6 @@ const PaymentRow = React.memo(({
           </Typography>
         </Tooltip>
       </TableCell>
-      <TableCell sx={{ p: isMobile ? 0.5 : 1, width: 100, whiteSpace: 'nowrap' }}>
-        <Chip
-          label={payment.status === 'paid' ? 'Оплачено' : payment.status === 'active' ? 'Активно' : 'Просрочено'}
-          size="small"
-          sx={{ bgcolor: getPaymentStatusColor(payment.status), color: '#fff' }}
-        />
-      </TableCell>
       <TableCell align="right" sx={{ p: isMobile ? 0.5 : 1, width: 110 }}>
         <Box display="flex" justifyContent="flex-end" gap={0.5}>
           {canManage && (
@@ -256,7 +309,6 @@ const PaymentCard = React.memo(({
   onRecalculateAttendance,
   onOpenModal,
   onDelete,
-  getPaymentStatusColor,
   index,
   canManage,
   recalculatingId,
@@ -279,8 +331,22 @@ const PaymentCard = React.memo(({
     [payment.total, payment.accruals, payment.paidAmount, payment.deductions]
   );
 
+  const cardColor = useMemo(() => {
+    if (payment.status === 'paid' || payment.paymentType === 'kaspi' || payment.paymentType === 'cash') {
+      return 'rgba(76, 175, 80, 0.15)';
+    }
+    if (!payment.dueDate) return '#fff';
+    const now = moment().startOf('day');
+    const due = moment(payment.dueDate).startOf('day');
+    const diff = due.diff(now, 'days');
+    
+    if (diff < 0) return 'rgba(244, 67, 54, 0.15)';
+    if (diff <= 3 && diff >= 0) return 'rgba(255, 193, 7, 0.15)';
+    return '#fff';
+  }, [payment.status, payment.paymentType, payment.dueDate]);
+
   return (
-    <Paper sx={{ mb: 2, p: 2, borderRadius: 2, boxShadow: 1, border: '1px solid #eee' }}>
+    <Paper sx={{ mb: 2, p: 2, borderRadius: 2, boxShadow: 1, border: '1px solid #eee', backgroundColor: cardColor }}>
       <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
         <Box display="flex" alignItems="center" gap={1.5}>
           <Avatar src={child?.photo} sx={{ width: 40, height: 40 }}>
@@ -293,11 +359,6 @@ const PaymentCard = React.memo(({
             <Chip label={groupName} size="small" variant="outlined" sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }} />
           </Box>
         </Box>
-        <Chip
-          label={payment.status === 'paid' ? 'Оплачено' : payment.status === 'active' ? 'Активно' : 'Просрочено'}
-          size="small"
-          sx={{ bgcolor: getPaymentStatusColor(payment.status), color: '#fff', fontSize: '0.7rem' }}
-        />
       </Box>
 
       <Box display="grid" gridTemplateColumns="1fr 1fr" gap={1} mb={1.5}>
@@ -389,19 +450,7 @@ const ChildPayments: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<IChildPayment | null>(null);
-  const [newPayment, setNewPayment] = useState({
-    childId: '',
-    period: { start: '', end: '' },
-    amount: 0,
-    total: 0,
-    paidAmount: 0,
-    status: 'active' as 'active' | 'overdue' | 'paid' | 'draft',
-    accruals: 0,
-    deductions: 0,
-    overpayment: 0,
-    comments: '',
-    paymentType: 'none' as 'none' | 'kaspi' | 'cash',
-  });
+  const [newPayment, setNewPayment] = useState(() => createDefaultPaymentForm(currentDate));
 
   const [nameFilter, setNameFilter] = useState('');
   const [groupFilter, setGroupFilter] = useState<string[]>([]);
@@ -417,25 +466,21 @@ const ChildPayments: React.FC = () => {
 
   const childrenMap = useMemo(() => {
     const map = new Map<string, Child>();
-    children.forEach(c => map.set(c._id || c.id || '', c));
+    children.forEach(c => {
+      const id = getRefId(c);
+      if (id) map.set(id, c);
+    });
     return map;
   }, [children]);
 
   const groupsMap = useMemo(() => {
     const map = new Map<string, Group>();
-    groups.forEach(g => map.set(g._id || g.id || '', g));
+    groups.forEach(g => {
+      const id = getRefId(g);
+      if (id) map.set(id, g);
+    });
     return map;
   }, [groups]);
-
-  const getPaymentStatusColor = useCallback((status: string) => {
-    switch (status) {
-      case 'paid': return '#4CAF50';
-      case 'overdue': return '#F44336';
-      case 'active': return '#FFC107';
-      case 'draft': return '#9E9E9E';
-      default: return '#B0B0B0';
-    }
-  }, []);
 
   const fetchPayments = useCallback(async () => {
     if (!canManagePayments) {
@@ -498,12 +543,12 @@ const ChildPayments: React.FC = () => {
     const search = nameFilter.toLowerCase();
     return payments
       .filter((payment) => {
-        const childId = typeof payment.childId === 'string' ? payment.childId : payment.childId?._id;
+        const childId = getRefId(payment.childId);
         if (!childId) return false;
         const child = childrenMap.get(childId);
         const matchesName = !search || (child?.fullName?.toLowerCase().includes(search));
 
-        const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
+        const gId = getRefId(child?.groupId);
         const matchesGroup = groupFilter.length === 0 || groupFilter.includes(gId || '');
 
         const matchesType = paymentTypeFilter === 'all' || payment.paymentType === paymentTypeFilter;
@@ -513,9 +558,9 @@ const ChildPayments: React.FC = () => {
         return matchesName && matchesGroup && matchesType && matchesStatus;
       })
       .map(p => {
-        const childId = typeof p.childId === 'string' ? p.childId : p.childId?._id;
+        const childId = getRefId(p.childId);
         const child = childrenMap.get(childId || '');
-        const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
+        const gId = getRefId(child?.groupId);
         const groupName = gId ? groupsMap.get(gId)?.name || 'Нет группы' : 'Нет группы';
         return {
           ...p,
@@ -617,7 +662,7 @@ const ChildPayments: React.FC = () => {
     }
     if (payment) {
       setEditingPayment(payment);
-      const childIdValue = typeof payment.childId === 'object' ? (payment.childId as any)._id : payment.childId;
+      const childIdValue = getRefId(payment.childId);
       setNewPayment({
         childId: childIdValue || '',
         period: {
@@ -633,25 +678,14 @@ const ChildPayments: React.FC = () => {
         overpayment: payment.overpayment || 0,
         comments: payment.comments || '',
         paymentType: payment.paymentType || 'none',
+        dueDate: payment.dueDate ? getPaymentDateKey(payment.dueDate) : '',
       });
     } else {
       setEditingPayment(null);
-      setNewPayment({
-        childId: '',
-        period: { start: '', end: '' },
-        amount: 0,
-        total: 0,
-        paidAmount: 0,
-        status: 'active',
-        accruals: 0,
-        deductions: 0,
-        overpayment: 0,
-        comments: '',
-        paymentType: 'none',
-      });
+      setNewPayment(createDefaultPaymentForm(currentDate));
     }
     setModalOpen(true);
-  }, [childrenMap, canManagePayments, getPaymentDateKey]);
+  }, [canManagePayments, currentDate, getPaymentDateKey]);
 
   // Автоматический перенос переплаты в новое поле "Переплата"
   useEffect(() => {
@@ -676,36 +710,40 @@ const ChildPayments: React.FC = () => {
     }
     try {
       const syncedPayment = syncPaymentStatusFields(newPayment);
+      const normalizedPeriod = normalizePaymentPeriod(syncedPayment.period, currentDate);
+      const payloadBase: any = {
+        ...syncedPayment,
+        period: normalizedPeriod,
+        monthPeriod: moment(normalizedPeriod.start).format('YYYY-MM'),
+        amount: syncedPayment.amount || syncedPayment.total || 0,
+        childId: syncedPayment.childId || undefined,
+        dueDate: syncedPayment.dueDate ? new Date(syncedPayment.dueDate) : undefined,
+      };
 
       if (editingPayment) {
-        const payload: any = {
-          ...syncedPayment,
-          childId: syncedPayment.childId || undefined,
-        };
+        const payload: any = { ...payloadBase };
         const originalPeriodStart = getPaymentDateKey(editingPayment.period?.start);
         const originalPeriodEnd = getPaymentDateKey(editingPayment.period?.end);
         const periodWasChanged =
-          syncedPayment.period?.start !== originalPeriodStart ||
-          syncedPayment.period?.end !== originalPeriodEnd;
+          normalizedPeriod.start !== originalPeriodStart ||
+          normalizedPeriod.end !== originalPeriodEnd;
 
         if (!periodWasChanged) {
           delete payload.period;
+          delete payload.monthPeriod;
         }
 
         const updated = await childPaymentApi.update(editingPayment._id, payload);
         setPayments((prev) => prev.map((payment) => payment._id === editingPayment._id ? updated : payment));
       } else {
-        await childPaymentApi.create({
-          ...syncedPayment,
-          childId: syncedPayment.childId || undefined,
-        });
+        await childPaymentApi.create(payloadBase);
       }
       await fetchPayments();
       handleCloseModal();
     } catch (e: any) {
       setError(e?.message || 'Ошибка сохранения оплаты');
     }
-  }, [editingPayment, newPayment, fetchPayments, handleCloseModal, canManagePayments, getPaymentDateKey, syncPaymentStatusFields]);
+  }, [editingPayment, newPayment, currentDate, fetchPayments, handleCloseModal, canManagePayments, getPaymentDateKey, syncPaymentStatusFields]);
 
   const handleDelete = useCallback(async (id: string) => {
     if (!canManagePayments) {
@@ -773,9 +811,7 @@ const ChildPayments: React.FC = () => {
   }, [canManagePayments]);
 
   const selectedChild = useMemo(() => childrenMap.get(newPayment.childId) || null, [childrenMap, newPayment.childId]);
-  const selectedChildGroupId = selectedChild
-    ? (typeof selectedChild.groupId === 'object' ? (selectedChild.groupId as any)._id || (selectedChild.groupId as any).id : selectedChild.groupId)
-    : '';
+  const selectedChildGroupId = getRefId(selectedChild?.groupId);
   const selectedGroupName = selectedChildGroupId ? groupsMap.get(selectedChildGroupId)?.name || 'Без группы' : 'Без группы';
   const netDue = (newPayment.total || 0) + (newPayment.accruals || 0) - (newPayment.deductions || 0);
   const modalDebt = Math.max(0, netDue - (newPayment.paidAmount || 0));
@@ -991,9 +1027,9 @@ const ChildPayments: React.FC = () => {
             isMobile ? (
               <Box mt={2}>
                 {sortedPayments.map((payment, index) => {
-                  const childId = typeof payment.childId === 'string' ? payment.childId : payment.childId?._id;
+                  const childId = getRefId(payment.childId);
                   const child = childrenMap.get(childId || '');
-                  const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
+                  const gId = getRefId(child?.groupId);
                   const groupName = gId ? groupsMap.get(gId)?.name || 'Нет группы' : 'Нет группы';
 
                   return (
@@ -1007,7 +1043,6 @@ const ChildPayments: React.FC = () => {
                       onRecalculateAttendance={handleRecalculateAttendance}
                       onOpenModal={handleOpenModal}
                       onDelete={handleDelete}
-                      getPaymentStatusColor={getPaymentStatusColor}
                       index={index}
                       canManage={canManagePayments}
                       recalculatingId={recalculatingId}
@@ -1082,23 +1117,14 @@ const ChildPayments: React.FC = () => {
                       <TableCell sx={{ width: 80, textAlign: 'center', p: isMobile ? 0.5 : 1, whiteSpace: 'nowrap' }}>Надбавки</TableCell>
                       <TableCell sx={{ width: 80, textAlign: 'center', p: isMobile ? 0.5 : 1, whiteSpace: 'nowrap' }}>Вычеты</TableCell>
                       <TableCell sx={{ width: 120, p: isMobile ? 0.5 : 1 }}>Комментарии</TableCell>
-                      <TableCell sx={{ width: 100, p: isMobile ? 0.5 : 1 }}>
-                        <TableSortLabel
-                          active={sortConfig.key === 'status'}
-                          direction={sortConfig.direction || 'asc'}
-                          onClick={() => requestSort('status')}
-                        >
-                          Статус
-                        </TableSortLabel>
-                      </TableCell>
                       <TableCell align='right' sx={{ width: 110, p: isMobile ? 0.5 : 1 }}>Действия</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {sortedPayments.map((payment, index) => {
-                      const childId = typeof payment.childId === 'string' ? payment.childId : payment.childId?._id;
+                      const childId = getRefId(payment.childId);
                       const child = childrenMap.get(childId || '');
-                      const gId = child ? (typeof child.groupId === 'object' ? (child.groupId as any)._id || (child.groupId as any).id : child.groupId) : null;
+                      const gId = getRefId(child?.groupId);
                       const groupName = gId ? groupsMap.get(gId)?.name || 'Нет группы' : 'Нет группы';
 
                       return (
@@ -1113,7 +1139,6 @@ const ChildPayments: React.FC = () => {
                           onRecalculateAttendance={handleRecalculateAttendance}
                           onOpenModal={handleOpenModal}
                           onDelete={handleDelete}
-                          getPaymentStatusColor={getPaymentStatusColor}
                           index={index}
                           canManage={canManagePayments}
                           recalculatingId={recalculatingId}
@@ -1172,12 +1197,12 @@ const ChildPayments: React.FC = () => {
               <Autocomplete
                 options={children}
                 getOptionLabel={(option) => {
-                  const gId = typeof option.groupId === 'object' ? (option.groupId as any)?._id : option.groupId;
+                  const gId = getRefId(option.groupId);
                   const group = groupsMap.get(gId || '');
                   return `${option.fullName} (${group ? group.name : 'Без группы'})`;
                 }}
                 value={selectedChild}
-                onChange={(_, newValue) => setNewPayment({ ...newPayment, childId: newValue?._id || '' })}
+                onChange={(_, newValue) => setNewPayment({ ...newPayment, childId: getRefId(newValue) })}
                 renderInput={(params) => <TextField {...params} label='Ребенок' variant='outlined' />}
               />
             </Paper>
@@ -1185,9 +1210,9 @@ const ChildPayments: React.FC = () => {
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
               <Box display="flex" alignItems="center" gap={1} mb={2}>
                 <CalendarMonth color="primary" fontSize="small" />
-                <Typography variant="subtitle2" fontWeight="bold">Период расчетного листа</Typography>
+                <Typography variant="subtitle2" fontWeight="bold">Период расчетного листа и срок оплаты</Typography>
               </Box>
-              <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : '1fr 1fr'} gap={2}>
+              <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : '1fr 1fr 1fr'} gap={2}>
                 <TextField
                   label='Начало периода'
                   type='date'
@@ -1201,6 +1226,14 @@ const ChildPayments: React.FC = () => {
                   type='date'
                   value={newPayment.period.end}
                   onChange={(e) => setNewPayment({ ...newPayment, period: { ...newPayment.period, end: e.target.value } })}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+                <TextField
+                  label='Крайний срок оплаты'
+                  type='date'
+                  value={newPayment.dueDate || ''}
+                  onChange={(e) => setNewPayment({ ...newPayment, dueDate: e.target.value })}
                   InputLabelProps={{ shrink: true }}
                   fullWidth
                 />
@@ -1264,20 +1297,7 @@ const ChildPayments: React.FC = () => {
             </Box>
 
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
-              <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : '180px 220px 1fr'} gap={2}>
-                <FormControl fullWidth>
-                  <InputLabel>Статус</InputLabel>
-                  <Select
-                    value={newPayment.status}
-                    label="Статус"
-                    onChange={(e) => handleModalStatusChange(e.target.value as any)}
-                  >
-                    <MenuItem value="active">Активно</MenuItem>
-                    <MenuItem value="paid">Оплачено</MenuItem>
-                    <MenuItem value="overdue">Просрочено</MenuItem>
-                    <MenuItem value="draft">Черновик</MenuItem>
-                  </Select>
-                </FormControl>
+              <Box display="grid" gridTemplateColumns={isMobile ? '1fr' : '220px 1fr'} gap={2}>
                 <FormControl fullWidth>
                   <InputLabel>Тип оплаты</InputLabel>
                   <Select
